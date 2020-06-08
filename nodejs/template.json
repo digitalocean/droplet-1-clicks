@@ -55,7 +55,7 @@
       "environment_vars": [
         "NODE_VERSION={{user `node_version`}}",
         "appiication_name={{user `appiication_name`}}",
-        "application_version=$(nodejs --version)",
+        "application_version=$(node --version)",
         "DEBIAN_FRONTEND=noninteractive",
         "LC_ALL=C",
         "LANG=en_US.UTF-8",
