@@ -30,7 +30,7 @@ const helpText = `
 <body>
   <div>
     <h1>Sammy welcomes you to your Droplet!</h1>
-    <img src="https://assets.digitalocean.com/blog/static/sammy-the-shark-gets-a-birthday-makeover-from-simon-oxley/sammytheshark.gif" />
+    <img src="/assets/sammytheshark.gif" />
     <h2>Things to do with this script</h2>
     <p>This message is coming to you via a simple NodeJS application that's live on your Droplet! This droplet is all set up with NodeJS, PM2 for process management, and nginx.</p>
     <p>This app is running at port 3000, and is being served to you by nginx, which has mapped port 3000 to be served as the root URI over HTTP (port 80) -- a technique known as a "reverse proxy." We'll be teaching you how to use this technique right here on this page. If you want to kick the tires right now, try some of these things:</p>

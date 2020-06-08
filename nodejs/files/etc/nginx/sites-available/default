@@ -17,7 +17,6 @@
 ##
 
 # Default server configuration
-#
 server {
 	listen 80 default_server;
 	listen [::]:80 default_server;
@@ -45,49 +44,23 @@ server {
 
 	server_name hellonode;
 
-        location / {
-            proxy_pass http://localhost:3000;
-            proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection 'upgrade';
-            proxy_set_header Host $host;
-            proxy_cache_bypass $http_upgrade;
-        }
-	# pass PHP scripts to FastCGI server
-	#
-	#location ~ \.php$ {
-	#	include snippets/fastcgi-php.conf;
-	#
-	#	# With php-fpm (or other unix sockets):
-	#	fastcgi_pass unix:/var/run/php/php7.0-fpm.sock;
-	#	# With php-cgi (or other tcp sockets):
-	#	fastcgi_pass 127.0.0.1:9000;
-	#}
+	location ^~ /assets/ {
+		gzip_static on;
+		expires 12h;
+		add_header Cache-Control public;
+  }
 
-	# deny access to .htaccess files, if Apache's document root
-	# concurs with nginx's one
-	#
-	#location ~ /\.ht {
-	#	deny all;
-	#}
+	location / {
+		proxy_http_version 1.1;
+		proxy_cache_bypass $http_upgrade;
+
+		proxy_set_header Upgrade $http_upgrade;
+		proxy_set_header Connection 'upgrade';
+		proxy_set_header Host $host;
+		proxy_set_header X-Real-IP $remote_addr;
+		proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+		proxy_set_header X-Forwarded-Proto $scheme;
+
+		proxy_pass http://localhost:3000;
+	}
 }
-
-
-# Virtual Host configuration for example.com
-#
-# You can move that to a different file under sites-available/ and symlink that
-# to sites-enabled/ to enable it.
-#
-#server {
-#	listen 80;
-#	listen [::]:80;
-#
-#	server_name example.com;
-#
-#	root /var/www/example.com;
-#	index index.html;
-#
-#	location / {
-#		try_files $uri $uri/ =404;
-#	}
-#}
