@@ -1,0 +1,73 @@
+
+{
+  "variables": {
+    "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
+    "image_name": "django-snapshot-{{timestamp}}",
+    "apt_packages": "gunicorn3 nginx postfix postgresql python3-certbot python3-certbot-nginx python3-dev python3-django python3-gevent python3-gunicorn python3-netifaces python3-pip python3-psycopg2 python3-setuptools python3-virtualenv super",
+    "appiication_name": "Django",
+    "appiication_version": "$(dpkg-query --showformat='${Version}' -W  python3-django)"
+  },
+  "sensitive-variables": ["do_api_token"],
+  "builders": [
+    {
+      "type": "digitalocean",
+      "api_token": "{{user `do_api_token`}}",
+      "image": "ubuntu-18-04-x64",
+      "region": "nyc3",
+      "size": "s-1vcpu-1gb",
+      "ssh_username": "root",
+      "snapshot_name": "{{user `image_name`}}"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "file",
+      "source": "django/files/etc/",
+      "destination": "/etc/"
+    },
+    {
+      "type": "file",
+      "source": "django/files/var/",
+      "destination": "/var/"
+    },
+    {
+      "type": "file",
+      "source": "common/files/var/lib/digitalocean/application.info",
+      "destination": "/var/lib/digitalocean/application.info"
+    },
+    {
+      "type": "shell",
+      "environment_vars": [
+        "DEBIAN_FRONTEND=noninteractive",
+        "LC_ALL=C",
+        "LANG=en_US.UTF-8",
+        "LC_CTYPE=en_US.UTF-8"
+      ],
+      "inline": [
+        "cloud-init status --wait",
+        "apt -qqy update",
+        "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' full-upgrade",
+        "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' install {{user `apt_packages`}}",
+        "apt-get -qqy clean"
+      ]
+    },
+    {
+      "type": "shell",
+      "environment_vars": [
+        "appiication_name={{user `appiication_name`}}",
+        "application_version={{user `appiication_version`}}",
+        "DEBIAN_FRONTEND=noninteractive",
+        "LC_ALL=C",
+        "LANG=en_US.UTF-8",
+        "LC_CTYPE=en_US.UTF-8"
+      ],
+      "scripts": [
+        "django/scripts/011-configure-postfix.sh",
+        "django/scripts/012-django.sh",
+        "common/scripts/014-ufw-nginx.sh",
+        "common/scripts/020-application-tag.sh",
+        "common/scripts/900-cleanup.sh"
+      ]
+    }
+  ]
+}
