@@ -59,3 +59,25 @@ make validate-{{image-name}}
 ```
 
 Learn more about using Packer in [the official Packer documentation](https://www.packer.io/docs/index.html).
+
+### Debugging
+
+* [Debugging Documentation](https://www.packer.io/docs/debugging)
+
+Get additional log information by setting the `PACKER_LOG` environment variable to any value other than "".
+
+```sh
+PACKER_LOG=1 packer build {{image-name}}/template.json
+```
+
+Add the `-debug` flag to prompt the user to continue at every Packer build step. The `-debug` flag also generates a .pem file that can be used to ssh into the droplet to inspect the current state.
+
+```sh
+packer build -debug {{image-name}}/template.json
+```
+
+Add the `-on-error=ask` flag. When the build fails, it will prompt the user to either retry, cleanup, or abort the build.
+
+```sh
+packer build -on-error=ask {{image-name}}/template.json
+```
