@@ -1,0 +1,40 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+# Read in the passwords....
+. /root/.digitalocean_passwords
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's One-Click Django Droplet.
+To keep this Droplet secure, the UFW firewall is enabled. 
+All ports are BLOCKED except 22 (SSH), 80 (HTTP), and 443 (HTTPS).
+
+Use these SFTP credentials to upload files with FileZilla/WinSCP/rsync:
+    Host: ${myip}
+    User: django
+    Pass: ${DJANGO_USER_PASSWORD}
+
+Django is configured to use Postgres as its database. Use the following
+credentials to manage the database:
+    Database: django
+    User:     django
+    Pass:     ${DJANGO_POSTGRESS_PASS}
+
+In a web browser, you can view:
+ * The Django One-Click Quickstart guide: http://do.co/django1804#start
+ * The new Django site: http://$myip
+
+On the server:
+  * The Django application is served from /home/django/django_project
+  * The Django passwords and keys are saved in /root/.digitalocean_passwords
+  * Certbot is preinstalled. Run it to configure HTTPS.
+
+For help and more information, visit http://do.co/django1804
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF

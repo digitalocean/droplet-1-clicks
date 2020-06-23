@@ -1,0 +1,70 @@
+#!/bin/bash -x
+exec > >(tee /var/log/one_click_setup.log) 2>&1
+
+# Create the example project
+(cd /home/django &&
+    setuid django django-admin startproject django_project)
+
+PROJECT_DIR=/home/django/django_project
+SETTINGS_DIR="${PROJECT_DIR}/django_project"
+STATIC_DIR="${SETTINGS_DIR}/static"
+SETTINGS_FILE="${SETTINGS_DIR}/settings.py"
+
+# Generate some passwords
+cat > /root/.digitalocean_passwords <<EOM
+DJANGO_USER=django
+DJANGO_USER_PASSWORD=$(openssl rand -hex 16)
+DJANGO_POSTGRESS_PASS=$(openssl rand -hex 16)
+DJANGO_SECRET_KEY=$(openssl rand -hex 16)
+SECRET_KEY=$(openssl rand -hex 16)
+EOM
+
+echo "SETTINGS_FILE=$SETTINGS_FILE" >> /root/.digitalocean_passwords
+
+source /root/.digitalocean_passwords
+
+# Create the settings directory if it doesn't exist
+if [[ ! -d "$SETTINGS_DIR" ]]
+then
+    mkdir -p "$SETTINGS_DIR"
+fi
+
+for src_file_name in settings.py urls.py views.py static
+do
+    dest_file="${SETTINGS_DIR}/${src_file_name}"
+
+    # If an existing settings file exists, save the original
+    if [[ -f "$dest_file" ]]
+    then
+        mv "$dest_file" "${dest_file}.orig"
+    fi
+
+    cp -r "/var/lib/digitalocean/${src_file_name}" "${dest_file}"
+done
+
+# Set the django user password
+echo "${DJANGO_USER}:${DJANGO_USER_PASSWORD}" | chpasswd -
+
+# Set up postgres user and database
+setuid postgres psql -U postgres -d postgres -c "CREATE USER ${DJANGO_USER} PASSWORD '${DJANGO_POSTGRESS_PASS}';"
+setuid postgres createdb django
+
+sed -e "s/@DBPASSWORD@/${DJANGO_POSTGRESS_PASS}/" \
+    -e "s/@SECRET_KEY@/${DJANGO_SECRET_KEY}/" \
+    -i "${SETTINGS_FILE}"
+
+# Sync the database
+setuid postgres django \
+    python3 "${PROJECT_DIR}/manage.py" syncdb --noinput
+
+# Now start up gunicorn
+systemctl enable gunicorn
+systemctl start gunicorn
+systemctl restart nginx
+
+# Remove the ssh force logout command
+sed -e '/Match user root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
