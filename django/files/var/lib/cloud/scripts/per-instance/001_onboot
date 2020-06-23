@@ -7,6 +7,7 @@ exec > >(tee /var/log/one_click_setup.log) 2>&1
 
 PROJECT_DIR=/home/django/django_project
 SETTINGS_DIR="${PROJECT_DIR}/django_project"
+STATIC_DIR="${SETTINGS_DIR}/static"
 SETTINGS_FILE="${SETTINGS_DIR}/settings.py"
 
 # Generate some passwords
@@ -28,13 +29,18 @@ then
     mkdir -p "$SETTINGS_DIR"
 fi
 
-# If an existing settings file exists, save the original
-if [[ -f "$SETTINGS_FILE" ]]
-then
-    mv "$SETTINGS_FILE" "${SETTINGS_FILE}.orig"
-fi
+for src_file_name in settings.py urls.py views.py static
+do
+    dest_file="${SETTINGS_DIR}/${src_file_name}"
 
-cp /var/lib/digitalocean/settings.py "${SETTINGS_FILE}"
+    # If an existing settings file exists, save the original
+    if [[ -f "$dest_file" ]]
+    then
+        mv "$dest_file" "${dest_file}.orig"
+    fi
+
+    cp -r "/var/lib/digitalocean/${src_file_name}" "${dest_file}"
+done
 
 # Set the django user password
 echo "${DJANGO_USER}:${DJANGO_USER_PASSWORD}" | chpasswd -
@@ -52,7 +58,13 @@ setuid postgres django \
     python3 "${PROJECT_DIR}/manage.py" syncdb --noinput
 
 # Now start up gunicorn
-systemctl unmask gunicorn; sleep 2;
-systemctl enable gunicorn; sleep 2;
-systemctl start gunicorn; sleep 5;
+systemctl enable gunicorn
+systemctl start gunicorn
 systemctl restart nginx
+
+# Remove the ssh force logout command
+sed -e '/Match user root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
