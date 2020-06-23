@@ -12,7 +12,7 @@
       "type": "digitalocean",
       "api_token": "{{user `do_api_token`}}",
       "image": "ubuntu-20-04-x64",
-      "region": "nyc3",
+      "region": "sfo3",
       "size": "s-1vcpu-1gb",
       "ssh_username": "root",
       "snapshot_name": "{{user `image_name`}}"
@@ -63,7 +63,8 @@
       ],
       "scripts": [
         "common/scripts/010-nodejs.sh",
-        "nodejs/scripts/011-packages.sh",
+        "nodejs/scripts/011-pm2.sh",
+        "common/scripts/012-force-ssh-logout.sh",
         "common/scripts/014-ufw-nginx.sh",
         "common/scripts/020-application-tag.sh",
         "common/scripts/900-cleanup.sh"

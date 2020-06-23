@@ -33,6 +33,7 @@ const helpText = `
     <img src="/assets/sammytheshark.gif" />
     <h2>Things to do with this script</h2>
     <p>This message is coming to you via a simple NodeJS application that's live on your Droplet! This droplet is all set up with NodeJS, PM2 for process management, and nginx.</p>
+    <p>Run all pm2 commands using the nodejs user or a second instance of pm2 will start. The login and password are stored in the <code>NODE_USER*</code> values you see when you call  <code>cat /root/.digitalocean_passwords</code> while logged in over SSH.</p>
     <p>This app is running at port 3000, and is being served to you by nginx, which has mapped port 3000 to be served as the root URI over HTTP (port 80) -- a technique known as a "reverse proxy." We'll be teaching you how to use this technique right here on this page. If you want to kick the tires right now, try some of these things:</p>
     <ul>
       <li>SSH into your Droplet and modify this script at <code>/var/www/html/hello.js</code> and see the results live by calling <code>pm2 restart hello</code></li>
