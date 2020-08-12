@@ -1,6 +1,6 @@
 #!/bin/sh
 
-	# Create the nodejs user
+# Create the nodejs user
 useradd --home-dir /home/nodejs \
         --shell /bin/bash \
         --create-home \
