@@ -9,7 +9,7 @@ myip=$(hostname -I | awk '{print$1}')
 cat <<EOF
 ********************************************************************************
 
-Welcome to DigitalOcean's One-Click Node.js Droplet.
+Welcome to DigitalOcean's 1-Click Node.js Droplet.
 To keep this Droplet secure, the UFW firewall is enabled.
 All ports are BLOCKED except 22 (SSH), 80 (HTTP), and 443 (HTTPS).
 
@@ -19,7 +19,7 @@ Use these SFTP credentials to upload files with FileZilla/WinSCP/rsync:
     Pass: ${NODE_USER_PASSWORD}
 
 In a web browser, you can view:
- * The Node.js One-Click Quickstart guide: http://do.co/node1804#start
+ * The Node.js 1-Click Quickstart guide: http://do.co/node1804#start
  * The new Node site: http://$myip
 
 On the server:
