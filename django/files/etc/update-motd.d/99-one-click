@@ -9,8 +9,8 @@ myip=$(hostname -I | awk '{print$1}')
 cat <<EOF
 ********************************************************************************
 
-Welcome to DigitalOcean's One-Click Django Droplet.
-To keep this Droplet secure, the UFW firewall is enabled. 
+Welcome to DigitalOcean's 1-Click Django Droplet.
+To keep this Droplet secure, the UFW firewall is enabled.
 All ports are BLOCKED except 22 (SSH), 80 (HTTP), and 443 (HTTPS).
 
 Use these SFTP credentials to upload files with FileZilla/WinSCP/rsync:
@@ -25,7 +25,7 @@ credentials to manage the database:
     Pass:     ${DJANGO_POSTGRESS_PASS}
 
 In a web browser, you can view:
- * The Django One-Click Quickstart guide: http://do.co/django1804#start
+ * The Django 1-Click Quickstart guide: http://do.co/django1804#start
  * The new Django site: http://$myip
 
 On the server:

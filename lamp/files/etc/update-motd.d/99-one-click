@@ -6,12 +6,12 @@ myip=$(hostname -I | awk '{print$1}')
 cat <<EOF
 ********************************************************************************
 
-Welcome to DigitalOcean's One-Click LAMP Droplet.
+Welcome to DigitalOcean's 1-Click LAMP Droplet.
 To keep this Droplet secure, the UFW firewall is enabled.
 All ports are BLOCKED except 22 (SSH), 80 (HTTP), and 443 (HTTPS).
 
 In a web browser, you can view:
- * The LAMP One-Click Quickstart guide: https://do.co/3gY97ha#start
+ * The LAMP 1-Click Quickstart guide: https://do.co/3gY97ha#start
  * Your LAMP website: http://$myip
 
 On the server:
