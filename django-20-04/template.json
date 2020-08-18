@@ -2,10 +2,10 @@
 {
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
-    "image_name": "lamp-snapshot-{{timestamp}}",
-    "apt_packages": "apache2 expect fail2ban lamp-server^ libapache2-mod-php mysql-server php php-apcu php-gd php-mysql postfix python3-certbot-apache software-properties-common",
-    "appiication_name": "LAMP",
-    "appiication_version": ""
+    "image_name": "django-20-04-snapshot-{{timestamp}}",
+    "apt_packages": "gunicorn nginx postfix postgresql python3 python3-certbot python3-certbot-nginx python3-dev python3-django python3-gevent python3-gunicorn python3-netifaces python3-pip python3-psycopg2 python3-setuptools python3-virtualenv super",
+    "appiication_name": "Django",
+    "appiication_version": "$(dpkg-query --showformat='${Version}' -W  python3-django)"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
@@ -13,7 +13,7 @@
       "type": "digitalocean",
       "api_token": "{{user `do_api_token`}}",
       "image": "ubuntu-20-04-x64",
-      "region": "nyc3",
+      "region": "sfo3",
       "size": "s-1vcpu-1gb",
       "ssh_username": "root",
       "snapshot_name": "{{user `image_name`}}"
@@ -28,18 +28,18 @@
     },
     {
       "type": "file",
-      "source": "common/files/var/",
-      "destination": "/var/"
-    },
-    {
-      "type": "file",
-      "source": "lamp/files/etc/",
+      "source": "django-20-04/files/etc/",
       "destination": "/etc/"
     },
     {
       "type": "file",
-      "source": "lamp/files/var/",
+      "source": "django-20-04/files/var/",
       "destination": "/var/"
+    },
+    {
+    "type": "file",
+    "source": "common/files/var/lib/digitalocean/application.info",
+    "destination": "/var/lib/digitalocean/application.info"
     },
     {
       "type": "shell",
@@ -50,6 +50,7 @@
         "LC_CTYPE=en_US.UTF-8"
       ],
       "inline": [
+        "cloud-init status --wait",
         "apt -qqy update",
         "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' full-upgrade",
         "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' install {{user `apt_packages`}}",
@@ -67,7 +68,10 @@
         "LC_CTYPE=en_US.UTF-8"
       ],
       "scripts": [
-        "lamp/scripts/011-lamp.sh",
+        "django-20-04/scripts/011-configure-postfix.sh",
+        "django-20-04/scripts/012-django.sh",
+        "common/scripts/012-force-ssh-logout.sh",
+        "common/scripts/014-ufw-nginx.sh",
         "common/scripts/020-application-tag.sh",
         "common/scripts/900-cleanup.sh"
       ]

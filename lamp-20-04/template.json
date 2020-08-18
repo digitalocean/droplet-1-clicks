@@ -2,10 +2,10 @@
 {
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
-    "image_name": "{{IMAGE_LABEL}}-snapshot-{{timestamp}}",
-    "apt_packages": "{{TODO}}",
-    "appiication_name": "{{TODO}}",
-    "appiication_version": "{{TODO}}"
+    "image_name": "lamp-20-04-snapshot-{{timestamp}}",
+    "apt_packages": "apache2 expect fail2ban lamp-server^ libapache2-mod-php mysql-server php php-apcu php-gd php-mysql postfix python3-certbot-apache software-properties-common",
+    "appiication_name": "LAMP",
+    "appiication_version": ""
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
@@ -33,12 +33,12 @@
     },
     {
       "type": "file",
-      "source": "{{IMAGE_LABEL}}/files/etc/",
+      "source": "lamp-20-04/files/etc/",
       "destination": "/etc/"
     },
     {
       "type": "file",
-      "source": "{{IMAGE_LABEL}}/files/var/",
+      "source": "lamp-20-04/files/var/",
       "destination": "/var/"
     },
     {
@@ -67,6 +67,7 @@
         "LC_CTYPE=en_US.UTF-8"
       ],
       "scripts": [
+        "lamp-20-04/scripts/011-lamp.sh",
         "common/scripts/020-application-tag.sh",
         "common/scripts/900-cleanup.sh"
       ]
