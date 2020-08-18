@@ -1,7 +1,7 @@
 {
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
-    "image_name": "nodejs-snapshot-{{timestamp}}",
+    "image_name": "nodejs-20-04-snapshot-{{timestamp}}",
     "node_version": "node_12.x",
     "apt_packages": "nginx",
     "appiication_name": "Node.js"
@@ -32,12 +32,12 @@
     },
     {
       "type": "file",
-      "source": "nodejs/files/etc/",
+      "source": "nodejs-20-04/files/etc/",
       "destination": "/etc/"
     },
     {
       "type": "file",
-      "source": "nodejs/files/var/",
+      "source": "nodejs-20-04/files/var/",
       "destination": "/var/"
     },
     {
@@ -68,7 +68,7 @@
       ],
       "scripts": [
         "common/scripts/010-nodejs.sh",
-        "nodejs/scripts/011-pm2.sh",
+        "nodejs-20-04/scripts/011-pm2.sh",
         "common/scripts/012-force-ssh-logout.sh",
         "common/scripts/014-ufw-nginx.sh",
         "common/scripts/020-application-tag.sh",
