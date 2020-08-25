@@ -11,7 +11,7 @@ To keep this Droplet secure, the UFW firewall is enabled.
 All ports are BLOCKED except 22 (SSH), 2375 (Docker) and 2376 (Docker).
 
 * The Docker One-Click Quickstart guide is available at:
-  https://do.co/docker1804#start
+  https://do.co/3j6j3po#start
 
 * You can SSH to this Droplet in a terminal as root: ssh root@$myip
 
