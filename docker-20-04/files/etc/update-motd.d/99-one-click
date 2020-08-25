@@ -21,7 +21,7 @@ All ports are BLOCKED except 22 (SSH), 2375 (Docker) and 2376 (Docker).
 * Docker Compose is installed and configured per Docker's recommendations:
   https://docs.docker.com/compose/install/#install-compose
 
-For help and more information, visit http://do.co/docker1804
+For help and more information, visit https://do.co/3j6j3po
 
 ********************************************************************************
 
