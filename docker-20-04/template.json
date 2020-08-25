@@ -1,0 +1,80 @@
+
+{
+  "variables": {
+    "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
+    "image_name": "template-snapshot-{{timestamp}}",
+    "apt_packages": "apt-transport-https ca-certificates curl jq linux-image-extra-virtual software-properties-common ",
+    "appiication_name": "Docker",
+    "appiication_version": "19.03.12"
+  },
+  "sensitive-variables": ["do_api_token"],
+  "builders": [
+    {
+      "type": "digitalocean",
+      "api_token": "{{user `do_api_token`}}",
+      "image": "ubuntu-20-04-x64",
+      "region": "nyc3",
+      "size": "s-1vcpu-1gb",
+      "ssh_username": "root",
+      "snapshot_name": "{{user `image_name`}}"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "inline": [
+        "cloud-init status --wait"
+      ]
+    },
+    {
+      "type": "file",
+      "source": "common/files/var/",
+      "destination": "/var/"
+    },
+    {
+      "type": "file",
+      "source": "docker-20-04/files/etc/",
+      "destination": "/etc/"
+    },
+    {
+      "type": "file",
+      "source": "docker-20-04/files/var/",
+      "destination": "/var/"
+    },
+    {
+      "type": "shell",
+      "environment_vars": [
+        "DEBIAN_FRONTEND=noninteractive",
+        "LC_ALL=C",
+        "LANG=en_US.UTF-8",
+        "LC_CTYPE=en_US.UTF-8"
+      ],
+      "inline": [
+        "apt -qqy update",
+        "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' full-upgrade",
+        "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' install {{user `apt_packages`}}",
+        "apt-get -qqy clean"
+      ]
+    },
+    {
+      "type": "shell",
+      "environment_vars": [
+        "appiication_name={{user `appiication_name`}}",
+        "application_version={{user `appiication_version`}}",
+        "DEBIAN_FRONTEND=noninteractive",
+        "LC_ALL=C",
+        "LANG=en_US.UTF-8",
+        "LC_CTYPE=en_US.UTF-8"
+      ],
+      "scripts": [
+        "docker-20-04/scripts/010-docker",
+        "docker-20-04/scripts/011-docker-compose",
+        "docker-20-04/scripts/012-grub-opts",
+        "docker-20-04/scripts/013-docker-dns",
+        "docker-20-04/scripts/014-ufw-rules",
+        "common/scripts/020-application-tag.sh",
+        "common/scripts/900-cleanup.sh"
+      ]
+    }
+  ]
+}
