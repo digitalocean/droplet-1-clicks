@@ -2,16 +2,6 @@
 ## PART: common/docker/010-install-docker
 ##
 ## vi: syntax=sh expandtab ts=4
-pkgs=(apt-transport-https
-      ca-certificates
-      curl
-      jq
-      linux-image-extra-virtual
-      software-properties-common
-)
-
-apt-get -qqy update
-apt-get -qqy install ${pkgs[@]}
 
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
 

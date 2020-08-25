@@ -1,4 +1,3 @@
-
 {
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
@@ -7,7 +6,9 @@
     "appiication_name": "Docker",
     "appiication_version": "19.03.12"
   },
-  "sensitive-variables": ["do_api_token"],
+  "sensitive-variables": [
+    "do_api_token"
+  ],
   "builders": [
     {
       "type": "digitalocean",
