@@ -54,8 +54,9 @@ sed -e "s/@DBPASSWORD@/${DJANGO_POSTGRESS_PASS}/" \
     -i "${SETTINGS_FILE}"
 
 # Sync the database
-setuid postgres django \
-    python3 "${PROJECT_DIR}/manage.py" syncdb --noinput
+python3 "${PROJECT_DIR}/manage.py" migrate --noinput
+
+echo "from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.create_superuser('$DJANGO_USER', 'temp@example.com', '$DJANGO_USER_PASSWORD')" | python3 "${PROJECT_DIR}/manage.py" shell
 
 # Now start up gunicorn
 systemctl enable gunicorn
