@@ -1,7 +1,4 @@
-##############################################
-## PART: common/docker/010-install-docker
-##
-## vi: syntax=sh expandtab ts=4
+#!/bin/sh
 
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
 

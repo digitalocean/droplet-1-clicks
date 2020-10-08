@@ -68,11 +68,11 @@
         "LC_CTYPE=en_US.UTF-8"
       ],
       "scripts": [
-        "docker-20-04/scripts/010-docker",
-        "docker-20-04/scripts/011-docker-compose",
-        "docker-20-04/scripts/012-grub-opts",
-        "docker-20-04/scripts/013-docker-dns",
-        "docker-20-04/scripts/014-ufw-rules",
+        "docker-20-04/scripts/010-docker.sh",
+        "docker-20-04/scripts/011-docker-compose.sh",
+        "docker-20-04/scripts/012-grub-opts.sh",
+        "docker-20-04/scripts/013-docker-dns.sh",
+        "docker-20-04/scripts/014-ufw-rules.sh",
         "common/scripts/020-application-tag.sh",
         "common/scripts/900-cleanup.sh"
       ]
