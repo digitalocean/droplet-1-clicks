@@ -1,0 +1,29 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's 1-Click Docker Droplet.
+To keep this Droplet secure, the UFW firewall is enabled.
+All ports are BLOCKED except 22 (SSH), 2375 (Docker) and 2376 (Docker).
+
+* The Docker 1-Click Quickstart guide is available at:
+  https://do.co/3j6j3po#start
+
+* You can SSH to this Droplet in a terminal as root: ssh root@$myip
+
+* Docker is installed and configured per Docker's recommendations:
+  https://docs.docker.com/install/linux/docker-ce/ubuntu/
+
+* Docker Compose is installed and configured per Docker's recommendations:
+  https://docs.docker.com/compose/install/#install-compose
+
+For help and more information, visit https://do.co/3j6j3po
+
+********************************************************************************
+
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
