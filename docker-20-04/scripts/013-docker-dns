@@ -1,7 +1,0 @@
-################################
-## PART: use Google DNS
-##
-## vi: syntax=sh expandtab ts=4
-
-sed -e 's|#DOCKER_OPTS|DOCKER_OPTS|g' \
-    -i /etc/default/docker

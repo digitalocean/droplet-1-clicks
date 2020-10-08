@@ -1,8 +1,4 @@
-################################
-## PART: update grub boot loader
-##
-## vi: syntax=sh expandtab ts=4
-
+#!/bin/sh
 
 sed -e 's|GRUB_CMDLINE_LINUX="|GRUB_CMDLINE_LINUX="cgroup_enable=memory swapaccount=1|g' \
     -i /etc/default/grub
