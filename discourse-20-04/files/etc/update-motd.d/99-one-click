@@ -1,0 +1,21 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+Welcome to the DigitalOcean Discourse 1-Click Application
+
+On your first login you will be prompted to configure your Discourse installation.
+
+All Discourse scripts and files may be found in /var/discourse and the setup
+utility can be run again by launching discourse-setup in that directory.
+
+Learn more about using this applicaition here:
+https://www.digitalocean.com/docs/marketplace/discourse/
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
