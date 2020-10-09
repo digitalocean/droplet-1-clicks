@@ -68,7 +68,7 @@
         "LC_CTYPE=en_US.UTF-8"
       ],
       "scripts": [
-        "docker-20-04/scripts/010-docker.sh",
+        "common/scripts/010-docker.sh",
         "docker-20-04/scripts/011-docker-compose.sh",
         "docker-20-04/scripts/012-grub-opts.sh",
         "docker-20-04/scripts/013-docker-dns.sh",
