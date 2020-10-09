@@ -1,0 +1,88 @@
+
+{
+  "variables": {
+    "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
+    "image_name": "wordpress-18-04-snapshot-{{timestamp}}",
+    "apt_packages": "apache2 fail2ban libapache2-mod-php mysql-server php7.4 php7.4-apcu php7.4-bz2 php7.4-curl php7.4-gd php7.4-gmp php7.4-intl php7.4-json php7.4-mbstring php7.4-mysql php7.4-pspell php7.4-soap php7.4-tidy php7.4-xml php7.4-xmlrpc php7.4-xsl php7.4-zip postfix python-certbot-apache software-properties-common unzip",
+    "appiication_name": "WordPress",
+    "appiication_version": "5.5.1",
+    "fail2ban_version": "4.3.0.8"
+  },
+  "sensitive-variables": ["do_api_token"],
+  "builders": [
+    {
+      "type": "digitalocean",
+      "api_token": "{{user `do_api_token`}}",
+      "image": "ubuntu-18-04-x64",
+      "region": "nyc3",
+      "size": "s-1vcpu-1gb",
+      "ssh_username": "root",
+      "snapshot_name": "{{user `image_name`}}"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "inline": [
+        "cloud-init status --wait"
+      ]
+    },
+    {
+      "type": "file",
+      "source": "common/files/var/",
+      "destination": "/var/"
+    },
+    {
+      "type": "file",
+      "source": "wordpress-18-04/files/etc/",
+      "destination": "/etc/"
+    },
+    {
+      "type": "file",
+      "source": "wordpress-18-04/files/opt/",
+      "destination": "/opt/"
+    },
+    {
+      "type": "file",
+      "source": "wordpress-18-04/files/var/",
+      "destination": "/var/"
+    },
+    {
+      "type": "shell",
+      "environment_vars": [
+        "DEBIAN_FRONTEND=noninteractive",
+        "LC_ALL=C",
+        "LANG=en_US.UTF-8",
+        "LC_CTYPE=en_US.UTF-8"
+      ],
+      "inline": [
+        "add-apt-repository ppa:certbot/certbot",
+        "add-apt-repository -y ppa:ondrej/php",
+        "apt -qqy update",
+        "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' full-upgrade",
+        "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' install {{user `apt_packages`}}",
+        "apt-get -qqy clean"
+      ]
+    },
+    {
+      "type": "shell",
+      "environment_vars": [
+        "appiication_name={{user `appiication_name`}}",
+        "application_version={{user `appiication_version`}}",
+        "fail2ban_version={{user `fail2ban_version`}}",
+        "DEBIAN_FRONTEND=noninteractive",
+        "LC_ALL=C",
+        "LANG=en_US.UTF-8",
+        "LC_CTYPE=en_US.UTF-8"
+      ],
+      "scripts": [
+        "wordpress-18-04/scripts/010-php.sh",
+        "wordpress-18-04/scripts/011-wordpress.sh",
+        "wordpress-18-04/scripts/012-apache.sh",
+        "common/scripts/012-force-ssh-logout.sh",
+        "common/scripts/020-application-tag.sh",
+        "common/scripts/900-cleanup.sh"
+      ]
+    }
+  ]
+}
