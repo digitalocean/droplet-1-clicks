@@ -91,4 +91,3 @@ do
     sed -e "0,/put your unique phrase here/s/put your unique phrase here/${wp_salt}/" \
         -i /var/www/wordpress/wp-config.php;
 done
-
