@@ -1,7 +1,6 @@
 #!/bin/sh
 
 ufw limit ssh
-ufw allow http
-ufw allow https
+ufw allow mysql
 
 ufw --force enable
