@@ -6,3 +6,5 @@ sed -e 's|DEFAULT_FORWARD_POLICY=.*|DEFAULT_FORWARD_POLICY="ACCEPT"|g' \
 ufw limit ssh
 ufw allow 2375/tcp
 ufw allow 2376/tcp
+
+ufw --force enable
