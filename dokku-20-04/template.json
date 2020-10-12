@@ -1,20 +1,19 @@
+
 {
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
-    "image_name": "docker-18-04-snapshot-{{timestamp}}",
-    "apt_packages": "apt-transport-https ca-certificates curl jq linux-image-extra-virtual software-properties-common ",
-    "appiication_name": "Docker",
-    "appiication_version": "19.03.12",
+    "image_name": "dokku-20-04-snapshot-{{timestamp}}",
+    "apt_packages": "apt-transport-https nginx python3 python3-apt python3-pycurl software-properties-common",
+    "appiication_name": "Dokku",
+    "appiication_version": "0.21.4",
     "docker_compose_version": "1.27.4"
   },
-  "sensitive-variables": [
-    "do_api_token"
-  ],
+  "sensitive-variables": ["do_api_token"],
   "builders": [
     {
       "type": "digitalocean",
       "api_token": "{{user `do_api_token`}}",
-      "image": "ubuntu-18-04-x64",
+      "image": "ubuntu-20-04-x64",
       "region": "nyc3",
       "size": "s-1vcpu-1gb",
       "ssh_username": "root",
@@ -35,13 +34,8 @@
     },
     {
       "type": "file",
-      "source": "docker-18-04/files/etc/",
+      "source": "dokku-20-04/files/etc/",
       "destination": "/etc/"
-    },
-    {
-      "type": "file",
-      "source": "docker-18-04/files/var/",
-      "destination": "/var/"
     },
     {
       "type": "shell",
@@ -63,6 +57,7 @@
       "environment_vars": [
         "appiication_name={{user `appiication_name`}}",
         "application_version={{user `appiication_version`}}",
+        "dokku_version={{user `appiication_version`}}",
         "docker_compose_version={{user `docker_compose_version`}}",
         "DEBIAN_FRONTEND=noninteractive",
         "LC_ALL=C",
@@ -72,9 +67,11 @@
       "scripts": [
         "common/scripts/010-docker.sh",
         "common/scripts/011-docker-compose.sh",
+        "dokku-20-04/scripts/010-dokku.sh",
         "common/scripts/012-grub-opts.sh",
         "common/scripts/013-docker-dns.sh",
         "common/scripts/014-ufw-docker.sh",
+        "common/scripts/014-ufw-nginx.sh",
         "common/scripts/020-application-tag.sh",
         "common/scripts/900-cleanup.sh"
       ]

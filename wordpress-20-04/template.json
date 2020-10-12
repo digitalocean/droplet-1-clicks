@@ -1,20 +1,19 @@
+
 {
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
-    "image_name": "docker-18-04-snapshot-{{timestamp}}",
-    "apt_packages": "apt-transport-https ca-certificates curl jq linux-image-extra-virtual software-properties-common ",
-    "appiication_name": "Docker",
-    "appiication_version": "19.03.12",
-    "docker_compose_version": "1.27.4"
+    "image_name": "wordpress-20-04-snapshot-{{timestamp}}",
+    "apt_packages": "apache2 fail2ban libapache2-mod-php mysql-server php php-apcu php-bz2 php-curl php-gd php-gmp php-intl php-json php-mbstring php-mysql php-pspell php-soap php-tidy php-xml php-xmlrpc php-xsl php-zip postfix python3-certbot-apache software-properties-common unzip",
+    "appiication_name": "WordPress",
+    "appiication_version": "5.5.1",
+    "fail2ban_version": "4.3.0.8"
   },
-  "sensitive-variables": [
-    "do_api_token"
-  ],
+  "sensitive-variables": ["do_api_token"],
   "builders": [
     {
       "type": "digitalocean",
       "api_token": "{{user `do_api_token`}}",
-      "image": "ubuntu-18-04-x64",
+      "image": "ubuntu-20-04-x64",
       "region": "nyc3",
       "size": "s-1vcpu-1gb",
       "ssh_username": "root",
@@ -35,12 +34,17 @@
     },
     {
       "type": "file",
-      "source": "docker-18-04/files/etc/",
+      "source": "wordpress-20-04/files/etc/",
       "destination": "/etc/"
     },
     {
       "type": "file",
-      "source": "docker-18-04/files/var/",
+      "source": "wordpress-20-04/files/opt/",
+      "destination": "/opt/"
+    },
+    {
+      "type": "file",
+      "source": "wordpress-20-04/files/var/",
       "destination": "/var/"
     },
     {
@@ -63,18 +67,17 @@
       "environment_vars": [
         "appiication_name={{user `appiication_name`}}",
         "application_version={{user `appiication_version`}}",
-        "docker_compose_version={{user `docker_compose_version`}}",
+        "fail2ban_version={{user `fail2ban_version`}}",
         "DEBIAN_FRONTEND=noninteractive",
         "LC_ALL=C",
         "LANG=en_US.UTF-8",
         "LC_CTYPE=en_US.UTF-8"
       ],
       "scripts": [
-        "common/scripts/010-docker.sh",
-        "common/scripts/011-docker-compose.sh",
-        "common/scripts/012-grub-opts.sh",
-        "common/scripts/013-docker-dns.sh",
-        "common/scripts/014-ufw-docker.sh",
+        "wordpress-20-04/scripts/010-php.sh",
+        "wordpress-20-04/scripts/011-wordpress.sh",
+        "wordpress-20-04/scripts/012-apache.sh",
+        "common/scripts/012-force-ssh-logout.sh",
         "common/scripts/020-application-tag.sh",
         "common/scripts/900-cleanup.sh"
       ]
