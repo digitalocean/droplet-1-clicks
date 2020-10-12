@@ -81,3 +81,7 @@ Add the `-on-error=ask` flag. When the build fails, it will prompt the user to e
 ```sh
 packer build -on-error=ask {{image-name}}/template.json
 ```
+
+## Notes
+
+* MySQL and phpMyAdmin use the same files and build script. They have separate template.json files to set different image names and application tag info.
