@@ -1,0 +1,16 @@
+[Unit]
+Description=ExampleApp
+Requires=network.target
+
+[Service]
+Type=simple
+User=rails
+Group=rails
+WorkingDirectory=/home/rails/example/
+ExecStart=/bin/bash -lc 'bundle exec puma'
+TimeoutSec=30s
+RestartSec=30s
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
