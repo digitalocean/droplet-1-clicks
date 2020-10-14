@@ -20,7 +20,7 @@ On the server:
 For help and more information, visit https://do.co/2IdNb4T
 
 ********************************************************************************
-NOTE:  This image includes version 4.4 of MongoDB.
+NOTE:  This image includes version 4.0.3 of MongoDB.
 To upgrade to a newer release run the following commands:
 
 sudo mv /etc/apt/sources.list.d/mongodb.list.disabled /etc/apt/sources.list.d/mongodb.list
