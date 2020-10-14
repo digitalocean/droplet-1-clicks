@@ -5,7 +5,8 @@
     "image_name": "mongodb-18-04-snapshot-{{timestamp}}",
     "apt_packages": "apt-transport-https gnupg",
     "appiication_name": "MongoDB",
-    "appiication_version": "4.4"
+    "appiication_version": "4.0.3",
+    "repo_version": "4.0"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
@@ -62,6 +63,7 @@
         "appiication_name={{user `appiication_name`}}",
         "application_version={{user `appiication_version`}}",
         "mongodb_version={{user `appiication_version`}}",
+        "repo_version={{user `repo_version`}}",
         "DEBIAN_FRONTEND=noninteractive",
         "LC_ALL=C",
         "LANG=en_US.UTF-8",
