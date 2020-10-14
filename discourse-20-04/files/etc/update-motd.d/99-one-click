@@ -16,6 +16,8 @@ utility can be run again by launching discourse-setup in that directory.
 Learn more about using this applicaition here:
 https://www.digitalocean.com/docs/marketplace/discourse/
 
+For help and more information, visit https://do.co/3dmapBw
+
 ********************************************************************************
 To delete this message of the day: rm -rf $(readlink -f ${0})
 EOF

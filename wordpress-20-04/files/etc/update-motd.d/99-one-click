@@ -7,11 +7,11 @@ cat <<EOF
 ********************************************************************************
 
 Welcome to DigitalOcean's One-Click WordPress Droplet.
-To keep this Droplet secure, the UFW firewall is enabled. 
+To keep this Droplet secure, the UFW firewall is enabled.
 All ports are BLOCKED except 22 (SSH), 80 (HTTP), and 443 (HTTPS).
 
 In a web browser, you can view:
- * The WordPress One-Click Quickstart guide: http://do.co/wordpress#start
+ * The WordPress One-Click Quickstart guide: https://do.co/34TfYn8#start
  * The new WordPress site: http://$myip
 
 On the server:
@@ -21,7 +21,7 @@ On the server:
  * The must-use WordPress security plugin, fail2ban, is located at
    /var/www/html/wp-content/mu-plugins/fail2ban.php
  * Certbot is preinstalled. Run it to configure HTTPS. See
-   http://do.co/wordpress1804#enable-https for more detail.
+   https://do.co/34TfYn8#enable-https for more detail.
  * For security, xmlrpc calls are blocked by default.  This block can be
     disabled by running "a2disconf block-xmlrpc" in the terminal.
 
@@ -29,7 +29,7 @@ IMPORTANT:
    After connecting to the Droplet for the first time,
    immediately add the WordPress administrator at http://$myip.
 
-For help and more information, visit http://do.co/wordpress1804
+For help and more information, visit https://do.co/34TfYn8
 
 ********************************************************************************
 To delete this message of the day: rm -rf $(readlink -f ${0})
