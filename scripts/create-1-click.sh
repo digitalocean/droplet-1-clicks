@@ -1,5 +1,6 @@
 #!/bin/sh
 
+template_dir=_template
 build_template=template.json
 
 exit_err() {
@@ -25,9 +26,9 @@ create() {
     exit 1
   fi
 
-  mkdir "$image_label" "$image_label/files" "$image_label/scripts"
+  cp -r "$template_dir" "$image_label"
 
-  < "$build_template" \
+  < "$template_dir/$build_template" \
   sed \
     -e "s#{{NAME}}#${name}#g;" \
     -e "s#{{IMAGE_LABEL}}#${image_label}#g;" \
