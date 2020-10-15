@@ -79,7 +79,8 @@
         "wordpress-18-04/scripts/010-php.sh",
         "wordpress-18-04/scripts/011-wordpress.sh",
         "wordpress-18-04/scripts/012-apache.sh",
-        "common/scripts/012-force-ssh-logout.sh",
+        "common/scripts/014-ufw-apache.sh",
+        "common/scripts/018-force-ssh-logout.sh",
         "common/scripts/020-application-tag.sh",
         "common/scripts/900-cleanup.sh"
       ]

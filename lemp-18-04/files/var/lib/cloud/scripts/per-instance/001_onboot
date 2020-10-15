@@ -34,3 +34,10 @@ sed -e "s|server_name localhost|servername ${myip}|g" \
     -i /etc/nginx/sites-available/00-digitalocean
 
 systemctl restart nginx
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh

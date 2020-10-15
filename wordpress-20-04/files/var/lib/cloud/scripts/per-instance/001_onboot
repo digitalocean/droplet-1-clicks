@@ -17,12 +17,6 @@ root_mysql_pass="${root_mysql_pass}"
 wordpress_mysql_pass="${wordpress_mysql_pass}"
 EOM
 
-# Protect the droplet
-ufw limit ssh
-ufw allow https
-ufw allow http
-ufw --force enable
-
 # Set up Postfix defaults
 hostname=$(hostname)
 sed -i "s/myhostname \= wp-build/myhostname = $hostname/g" /etc/postfix/main.cf;
@@ -91,3 +85,10 @@ do
     sed -e "0,/put your unique phrase here/s/put your unique phrase here/${wp_salt}/" \
         -i /var/www/wordpress/wp-config.php;
 done
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
