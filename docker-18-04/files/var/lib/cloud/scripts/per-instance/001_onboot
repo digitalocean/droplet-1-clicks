@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/bin/sh
 
-# Remove the force command
+# Remove the ssh force logout command
 sed -e '/Match User root/d' \
     -e '/.*ForceCommand.*droplet.*/d' \
     -i /etc/ssh/sshd_config

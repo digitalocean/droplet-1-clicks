@@ -13,7 +13,7 @@ source /root/.digitalocean_passwords
 echo "${NODE_USER}:${NODE_USER_PASSWORD}" | chpasswd -
 
 # Remove the ssh force logout command
-sed -e '/Match user root/d' \
+sed -e '/Match User root/d' \
     -e '/.*ForceCommand.*droplet.*/d' \
     -i /etc/ssh/sshd_config
 

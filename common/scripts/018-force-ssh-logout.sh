@@ -9,7 +9,7 @@ EOM
 # to your cloud-init scripts
 # /var/lib/cloud/scripts/per-instance/onboot/001_onboot
 # # Remove the ssh force logout command
-# sed -e '/Match user root/d' \
+# sed -e '/Match User root/d' \
 #     -e '/.*ForceCommand.*droplet.*/d' \
 #     -i /etc/ssh/sshd_config
 #

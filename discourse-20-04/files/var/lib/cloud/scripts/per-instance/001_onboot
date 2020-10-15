@@ -17,3 +17,10 @@ git pull
 DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get -qqy upgrade
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh

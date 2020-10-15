@@ -72,6 +72,7 @@
         "mysql-20-04/scripts/010-php-my-admin.sh",
         "common/scripts/014-ufw-apache.sh",
         "common/scripts/014-ufw-mysql.sh",
+        "common/scripts/018-force-ssh-logout.sh",
         "common/scripts/020-application-tag.sh",
         "common/scripts/900-cleanup.sh"
       ]

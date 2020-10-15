@@ -1,11 +1,5 @@
 #!/bin/bash
 
-# Protect the droplet
-ufw limit ssh
-ufw allow https
-ufw allow http
-ufw --force enable
-
 #Generate Mysql root password.
 root_mysql_pass=$(openssl rand -hex 24)
 debian_sys_maint_mysql_pass=$(openssl rand -hex 24)
@@ -58,3 +52,10 @@ user     = debian-sys-maint
 password = ${debian_sys_maint_mysql_pass}
 socket   = /var/run/mysqld/mysqld.sock
 EOM
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh

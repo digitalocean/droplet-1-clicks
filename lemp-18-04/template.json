@@ -69,6 +69,7 @@
       "scripts": [
         "lemp-18-04/scripts/011-lemp.sh",
         "common/scripts/014-ufw-nginx.sh",
+        "common/scripts/018-force-ssh-logout.sh",
         "common/scripts/020-application-tag.sh",
         "common/scripts/900-cleanup.sh"
       ]
