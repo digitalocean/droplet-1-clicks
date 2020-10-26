@@ -4,8 +4,8 @@
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "mongodb-18-04-snapshot-{{timestamp}}",
     "apt_packages": "apt-transport-https gnupg",
-    "appiication_name": "MongoDB",
-    "appiication_version": "4.0.3",
+    "application_name": "MongoDB",
+    "application_version": "4.0.3",
     "repo_version": "4.0"
   },
   "sensitive-variables": ["do_api_token"],
@@ -60,9 +60,9 @@
     {
       "type": "shell",
       "environment_vars": [
-        "appiication_name={{user `appiication_name`}}",
-        "application_version={{user `appiication_version`}}",
-        "mongodb_version={{user `appiication_version`}}",
+        "application_name={{user `application_name`}}",
+        "application_version={{user `application_version`}}",
+        "mongodb_version={{user `application_version`}}",
         "repo_version={{user `repo_version`}}",
         "DEBIAN_FRONTEND=noninteractive",
         "LC_ALL=C",

@@ -35,8 +35,8 @@ The following variables are required.
 
 * `do_api_token` defines the DO API Token used to create resources via DigitalOcean's API. By default it is set to the value of the `DIGITALOCEAN_API_TOKEN` environment variable.
 * `image_name` defines the name of the resulting snapshot, which by default is `{{image-name}}-snapshot-` with a UNIX timestamp appended.
-* `appiication_name` defines the name of the 1-Click in the Marketplace. It is saved to /var/lib/digitalocean/application.info
-* `appiication_version` defines the version of the most prominent software installed, usually what gives the 1-Click its name. If you are installing the latest version of software, this can be a command (See the nodejs 1-Click). It is saved to /var/lib/digitalocean/application.info. Some applications are a bundle of applications and don't have a specific version (See the LAMP 1-Click).
+* `application_name` defines the name of the 1-Click in the Marketplace. It is saved to /var/lib/digitalocean/application.info
+* `application_version` defines the version of the most prominent software installed, usually what gives the 1-Click its name. If you are installing the latest version of software, this can be a command (See the nodejs 1-Click). It is saved to /var/lib/digitalocean/application.info. Some applications are a bundle of applications and don't have a specific version (See the LAMP 1-Click).
 
 If a 1-Click is installing a particular version of software through a script and not apt, include a variable for the version. (See the nodejs 1-Click)
 

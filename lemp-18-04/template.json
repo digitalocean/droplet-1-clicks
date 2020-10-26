@@ -4,8 +4,8 @@
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "lemp-18-04-snapshot-{{timestamp}}",
     "apt_packages": "fail2ban mysql-server nginx php-apcu php-curl php-mysql php-fpm postfix python-certbot-nginx software-properties-common",
-    "appiication_name": "LEMP",
-    "appiication_version": ""
+    "application_name": "LEMP",
+    "application_version": ""
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
@@ -59,8 +59,8 @@
     {
       "type": "shell",
       "environment_vars": [
-        "appiication_name={{user `appiication_name`}}",
-        "application_version={{user `appiication_version`}}",
+        "application_name={{user `application_name`}}",
+        "application_version={{user `application_version`}}",
         "DEBIAN_FRONTEND=noninteractive",
         "LC_ALL=C",
         "LANG=en_US.UTF-8",

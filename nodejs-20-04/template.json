@@ -4,7 +4,7 @@
     "image_name": "nodejs-20-04-snapshot-{{timestamp}}",
     "node_version": "node_12.x",
     "apt_packages": "nginx",
-    "appiication_name": "Node.js"
+    "application_name": "Node.js"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
@@ -59,7 +59,7 @@
       "type": "shell",
       "environment_vars": [
         "NODE_VERSION={{user `node_version`}}",
-        "appiication_name={{user `appiication_name`}}",
+        "application_name={{user `application_name`}}",
         "application_version=$(node --version)",
         "DEBIAN_FRONTEND=noninteractive",
         "LC_ALL=C",
