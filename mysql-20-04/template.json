@@ -4,8 +4,8 @@
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "mysql-20-04-snapshot-{{timestamp}}",
     "apt_packages": "apache2 apache2-utils mysql-server php php-gd php-mysql phpmyadmin python3-certbot-apache libapache2-mod-php lamp-server^ ",
-    "appiication_name": "MySQL",
-    "appiication_version": "8.0.21",
+    "application_name": "MySQL",
+    "application_version": "8.0.21",
     "phpmyadmin_version": "5.0.3"
   },
   "sensitive-variables": ["do_api_token"],
@@ -60,8 +60,8 @@
     {
       "type": "shell",
       "environment_vars": [
-        "appiication_name={{user `appiication_name`}}",
-        "application_version={{user `appiication_version`}}",
+        "application_name={{user `application_name`}}",
+        "application_version={{user `application_version`}}",
         "phpmyadmin_version={{user `phpmyadmin_version`}}",
         "DEBIAN_FRONTEND=noninteractive",
         "LC_ALL=C",

@@ -4,8 +4,8 @@
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "wordpress-20-04-snapshot-{{timestamp}}",
     "apt_packages": "apache2 fail2ban libapache2-mod-php mysql-server php php-apcu php-bz2 php-curl php-gd php-gmp php-intl php-json php-mbstring php-mysql php-pspell php-soap php-tidy php-xml php-xmlrpc php-xsl php-zip postfix python3-certbot-apache software-properties-common unzip",
-    "appiication_name": "WordPress",
-    "appiication_version": "5.5.1",
+    "application_name": "WordPress",
+    "application_version": "5.5.1",
     "fail2ban_version": "4.3.0.8"
   },
   "sensitive-variables": ["do_api_token"],
@@ -65,8 +65,8 @@
     {
       "type": "shell",
       "environment_vars": [
-        "appiication_name={{user `appiication_name`}}",
-        "application_version={{user `appiication_version`}}",
+        "application_name={{user `application_name`}}",
+        "application_version={{user `application_version`}}",
         "fail2ban_version={{user `fail2ban_version`}}",
         "DEBIAN_FRONTEND=noninteractive",
         "LC_ALL=C",

@@ -12,7 +12,7 @@ distro_codename="$(lsb_release -s -c)"
 distro_arch="$(uname -m)"
 
 cat >> /var/lib/digitalocean/application.info <<EOM
-appiication_name="${appiication_name}"
+application_name="${application_name}"
 build_date="${build_date}"
 distro="${distro}"
 distro_release="${distro_release}"
