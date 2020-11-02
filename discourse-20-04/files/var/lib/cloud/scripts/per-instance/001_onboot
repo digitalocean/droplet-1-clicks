@@ -4,12 +4,6 @@
 # created from your image.  Things like generating passwords, configuration requiring IP address
 # or other items that will be unique to each instance should be done in scripts here.
 
-# Enable Firewall
-ufw limit ssh
-ufw allow http
-ufw allow https
-ufw --force enable
-
 # Install latest updates on first boot
 cd /var/discourse
 git pull
