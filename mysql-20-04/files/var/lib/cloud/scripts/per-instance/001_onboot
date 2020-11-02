@@ -5,13 +5,6 @@ export LC_ALL=C
 export LANG=en_US.UTF-8
 export LC_CTYPE=en_US.UTF-8
 
-# Protect the droplet
-ufw limit ssh
-ufw allow https
-ufw allow http
-ufw allow mysql
-ufw --force enable
-
 #Generate Mysql root password.
 root_mysql_pass=$(openssl rand -hex 24)
 admin_mysql_pass=$(openssl rand -hex 24)
