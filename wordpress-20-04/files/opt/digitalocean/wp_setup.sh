@@ -13,7 +13,7 @@ then
   mv /var/www/wordpress /var/www/html
 fi
 chown -Rf www-data:www-data /var/www/html
-echo "This script will copy the WordPress instalation into"
+echo "This script will copy the WordPress installation into"
 echo "Your web root and move the existing one to /var/www/html.old"
 echo "--------------------------------------------------"
 echo "This setup requires a domain name.  If you do not have one yet, you may"
