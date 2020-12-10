@@ -107,14 +107,14 @@ wp plugin activate wp-fail2ban --allow-root --path="/var/www/html"
 chown -Rf www-data.www-data /var/www/
 cp /etc/skel/.bashrc /root
 
-if [ -f "/root/.digitalocean_dbaas_password" ]; then
+if [ -f "/root/.digitalocean_dbaas_credentials" ]; then
   echo "DBaaS credentials found, applying..."
   # grab all the data from the password file
-  username=$(sed -n "s/^mysql_username=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_password)
-  password=$(sed -n "s/^mysql_password=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_password)
-  host=$(sed -n "s/^mysql_host=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_password)
-  port=$(sed -n "s/^mysql_port=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_password)
-  database=$(sed -n "s/^mysql_database=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_password)
+  username=$(sed -n "s/^mysql_username=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+  password=$(sed -n "s/^mysql_password=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+  host=$(sed -n "s/^mysql_host=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+  port=$(sed -n "s/^mysql_port=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+  database=$(sed -n "s/^mysql_database=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
 
   # update the wp-config.php with stored credentials
   sed -i "s/'DB_USER', '.*'/'DB_USER', '$username'/g" /var/www/html/wp-config.php;
@@ -122,8 +122,16 @@ if [ -f "/root/.digitalocean_dbaas_password" ]; then
   sed -i "s/'DB_PASSWORD', '.*'/'DB_PASSWORD', '$password'/g" /var/www/html/wp-config.php;
   sed -i "s/'DB_HOST', '.*'/'DB_HOST', '$host:$port'/g" /var/www/html/wp-config.php;
 
+  # finally, add required SSL flag
+  cat >> /var/www/html/wp-config.php <<EOM
+
+/** Connect to MySQL cluster over SSL **/
+define( 'MYSQL_CLIENT_FLAGS', MYSQLI_CLIENT_SSL );
+
+EOM
+
   # do some cleanup
-  rm /root/.digitalocean_dbaas_password
+  rm /root/.digitalocean_dbaas_credentials
   echo "Done applying DBaaS credentials"
 fi
 
