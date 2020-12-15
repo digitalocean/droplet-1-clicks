@@ -13,7 +13,7 @@ then
   mv /var/www/wordpress /var/www/html
 fi
 chown -Rf www-data:www-data /var/www/html
-echo "This script will copy the WordPress instalation into"
+echo "This script will copy the WordPress installation into"
 echo "Your web root and move the existing one to /var/www/html.old"
 echo "--------------------------------------------------"
 echo "This setup requires a domain name.  If you do not have one yet, you may"
@@ -106,4 +106,5 @@ wp plugin install wp-fail2ban --allow-root --path="/var/www/html"
 wp plugin activate wp-fail2ban --allow-root --path="/var/www/html"
 chown -Rf www-data.www-data /var/www/
 cp /etc/skel/.bashrc /root
+
 echo "Installation complete. Access your new WordPress site in a browser to continue."
