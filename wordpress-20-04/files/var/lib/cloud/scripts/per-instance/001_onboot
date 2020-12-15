@@ -105,9 +105,8 @@ EOM
 
 # with everything done, if we are using dbaas, disable the local MySQL instance.
 if [ -f "/root/.digitalocean_dbaas_credentials" ]; then
-  systemctl status mysql.service # to verify that it is running
-  systemctl stop mysql.service # to turn of mysql
-  systemctl disable mysql.service # to prevent it from turning back on
+  systemctl stop mysql.service # turn off mysql
+  systemctl disable mysql.service # prevent it from turning back on
 fi
 
 # WordPress Salts
