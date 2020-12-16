@@ -26,37 +26,12 @@ systemctl restart postfix &
 mysqladmin -u root -h localhost create wordpress
 mysqladmin -u root -h localhost password ${root_mysql_pass}
 
-if [ -f "/root/.digitalocean_dbaas_credentials" ]; then
-  # grab all the data from the password file
-  username=$(sed -n "s/^mysql_username=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
-  password=$(sed -n "s/^mysql_password=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
-  host=$(sed -n "s/^mysql_host=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
-  port=$(sed -n "s/^mysql_port=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
-  database=$(sed -n "s/^mysql_database=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
-
-  # update the wp-config.php with stored credentials
-  sed -i "s/'DB_USER', '.*'/'DB_USER', '$username'/g" /var/www/html/wp-config.php;
-  sed -i "s/'DB_NAME', '.*'/'DB_NAME', '$database'/g" /var/www/html/wp-config.php;
-  sed -i "s/'DB_PASSWORD', '.*'/'DB_PASSWORD', '$password'/g" /var/www/html/wp-config.php;
-  sed -i "s/'DB_HOST', '.*'/'DB_HOST', '$host:$port'/g" /var/www/html/wp-config.php;
-
-  # finally, add required SSL flag
-  cat >> /var/www/html/wp-config.php <<EOM
-
-/** Connect to MySQL cluster over SSL **/
-define( 'MYSQL_CLIENT_FLAGS', MYSQLI_CLIENT_SSL );
-
-EOM
-
-else
-  # populate the wordpress config file with local db credentials.
-  cp /var/www/wordpress/wp-config-sample.php /var/www/wordpress/wp-config.php
-  sed -e "s/'DB_NAME', 'database_name_here'/'DB_NAME', 'wordpress'/g" \
-      -e "s/'DB_USER', 'username_here'/'DB_USER', 'wordpress'/g" \
-      -e "s/'DB_PASSWORD', 'password_here'/'DB_PASSWORD', '${wordpress_mysql_pass}'/g" \
-      -i /var/www/wordpress/wp-config.php
-fi
-
+# populate the wordpress config file
+cp /var/www/wordpress/wp-config-sample.php /var/www/wordpress/wp-config.php
+sed -e "s/'DB_NAME', 'database_name_here'/'DB_NAME', 'wordpress'/g" \
+    -e "s/'DB_USER', 'username_here'/'DB_USER', 'wordpress'/g" \
+    -e "s/'DB_PASSWORD', 'password_here'/'DB_PASSWORD', '${wordpress_mysql_pass}'/g" \
+    -i /var/www/wordpress/wp-config.php
 
 chown -Rf www-data:www-data /var/www/wordpress
 
@@ -102,12 +77,6 @@ user     = debian-sys-maint
 password = ${debian_sys_maint_mysql_pass}
 socket   = /var/run/mysqld/mysqld.sock
 EOM
-
-# with everything done, if we are using dbaas, disable the local MySQL instance.
-if [ -f "/root/.digitalocean_dbaas_credentials" ]; then
-  systemctl stop mysql.service # turn off mysql
-  systemctl disable mysql.service # prevent it from turning back on
-fi
 
 # WordPress Salts
 for i in `seq 1 8`

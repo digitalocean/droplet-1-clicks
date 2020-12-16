@@ -6,13 +6,52 @@
 # provided by the user and offer the option to set up
 # LetsEncrypt as well.
 
-# Enable WordPress on firstlogin
+# Enable WordPress on first login
 if [[ -d /var/www/wordpress ]]
 then
   mv /var/www/html /var/www/html.old
   mv /var/www/wordpress /var/www/html
 fi
 chown -Rf www-data:www-data /var/www/html
+
+# if applicable, configure wordpress to use mysql dbaas
+if [ -f "/root/.digitalocean_dbaas_credentials" ]; then
+  # grab all the data from the password file
+  username=$(sed -n "s/^mysql_username=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+  password=$(sed -n "s/^mysql_password=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+  host=$(sed -n "s/^mysql_host=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+  port=$(sed -n "s/^mysql_port=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+  database=$(sed -n "s/^mysql_database=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+
+  # update the wp-config.php with stored credentials
+  sed -i "s/'DB_USER', '.*'/'DB_USER', '$username'/g" /var/www/html/wp-config.php;
+  sed -i "s/'DB_NAME', '.*'/'DB_NAME', '$database'/g" /var/www/html/wp-config.php;
+  sed -i "s/'DB_PASSWORD', '.*'/'DB_PASSWORD', '$password'/g" /var/www/html/wp-config.php;
+  sed -i "s/'DB_HOST', '.*'/'DB_HOST', '$host:$port'/g" /var/www/html/wp-config.php;
+
+  # add required SSL flag
+  cat >> /var/www/html/wp-config.php <<EOM
+/** Connect to MySQL cluster over SSL **/
+define( 'MYSQL_CLIENT_FLAGS', MYSQLI_CLIENT_SSL );
+EOM
+
+  # wait for db to become available
+  echo -e "\nWaiting for your database to become available (this may take a few minutes)"
+  while ! mysqladmin ping -h "$host" -P "$port" --silent; do
+      printf .
+      sleep 2
+  done
+  echo -e "\nDatabase available!\n"
+
+  # cleanup
+  unset username password host port database
+  rm -f /root/.digitalocean_dbaas_credentials
+
+  # disable the local MySQL instance
+  systemctl stop mysql.service
+  systemctl disable mysql.service
+fi
+
 echo "This script will copy the WordPress installation into"
 echo "Your web root and move the existing one to /var/www/html.old"
 echo "--------------------------------------------------"
@@ -22,6 +61,7 @@ echo "--------------------------------------------------"
 echo "Enter the domain name for your new WordPress site."
 echo "(ex. example.org or test.example.org) do not include www or http/s"
 echo "--------------------------------------------------"
+
 a=0
 while [ $a -eq 0 ]
 do
