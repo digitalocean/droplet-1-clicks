@@ -1,0 +1,21 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+Welcome to Gitlab's 1-Click Docker Droplet.
+
+* You can SSH to this Droplet in a terminal as root: ssh root@$myip
+
+* Gitlab is installed and configured per Gitlab's ubuntu installation guide:
+  https://about.gitlab.com/install/#ubuntu
+
+For help and more information, visit https://about.gitlab.com/
+
+********************************************************************************
+
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
