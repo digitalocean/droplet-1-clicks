@@ -25,6 +25,8 @@ In a web browser, you can view:
 On the server:
   * The Node.js application is served from /var/www/html
   * The Node.js passwords and keys are saved in /root/.digitalocean_passwords
+  * If you chose to integrate with a DigitalOcean Mongo Database as a Service,
+    those credentials will be saved in /root/.digitalocean_dbaas_credentials
 
 For help and more information, visit https://do.co/313ycRT
 
