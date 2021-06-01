@@ -18,9 +18,7 @@ Use these SFTP credentials to upload files with FileZilla/WinSCP/rsync:
     User: ${NODE_USER}
     Pass: ${NODE_USER_PASSWORD}
 
-In a web browser, you can view:
- * The Node.js 1-Click Quickstart guide: https://do.co/313ycRT4#start
- * The new Node site: http://$myip
+In a web browser, you can view the Node site at: http://$myip
 
 On the server:
   * The Node.js application is served from /var/www/html
