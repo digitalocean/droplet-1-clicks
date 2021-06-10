@@ -2,7 +2,7 @@
 {
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
-    "image_name": "gilab-20-04-snapshot-{{timestamp}}",
+    "image_name": "gitlab-20-04-snapshot-{{timestamp}}",
     "apt_packages": "curl openssh-server ca-certificates tzdata perl postfix",
     "application_name": "Gitlab",
     "application_version": "latest"
