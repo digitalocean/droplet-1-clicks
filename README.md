@@ -29,14 +29,14 @@ To run the Packer build that this template uses by default, you'll need to [inst
 
 ### Creating a new 1-Click
 
-To start adapting this configuration for your own image, you can create a scaffold using the command `make {{image-name}}` which will create a directory `{{image-name}}` with a basic Packer build config.
+To start adopting this configuration for your image, you can create a scaffold using the command `make {{image-name}}` which will create a directory `{{image-name}}` with a basic Packer build config.
 
 The following variables are required.
 
-* `do_api_token` defines the DO API Token used to create resources via DigitalOcean's API. By default it is set to the value of the `DIGITALOCEAN_API_TOKEN` environment variable.
+* `do_api_token` defines the DO API Token used to create resources via DigitalOcean's API. By default, it is set to the value of the `DIGITALOCEAN_API_TOKEN` environment variable.
 * `image_name` defines the name of the resulting snapshot, which by default is `{{image-name}}-snapshot-` with a UNIX timestamp appended.
 * `application_name` defines the name of the 1-Click in the Marketplace. It is saved to /var/lib/digitalocean/application.info
-* `application_version` defines the version of the most prominent software installed, usually what gives the 1-Click its name. If you are installing the latest version of software, this can be a command (See the nodejs 1-Click). It is saved to /var/lib/digitalocean/application.info. Some applications are a bundle of applications and don't have a specific version (See the LAMP 1-Click).
+* `application_version` defines the version of the most prominent software installed, usually what gives the 1-Click its name. If you are installing the latest version of the software, this can be a command (See the nodejs 1-Click). It is saved to /var/lib/digitalocean/application.info. Some applications are a bundle of applications and don't have a specific version (See the LAMP 1-Click).
 
 If a 1-Click is installing a particular version of software through a script and not apt, include a variable for the version. (See the nodejs 1-Click)
 
@@ -48,11 +48,11 @@ By using [Packer's DigitalOcean Builder](https://www.packer.io/docs/builders/dig
 
 This configuration uses Packer's [file provisioner](https://www.packer.io/docs/provisioners/file.html) to upload complete directories to the Droplet. The contents of `files/var/` will be uploaded to `/var/`. Likewise, the contents of `files/etc/` will be uploaded to `/etc/`. One important thing to note about the file provisioner, from Packer's docs:
 
-> The destination directory must already exist. If you need to create it, use a shell provisioner just prior to the file provisioner in order to create the directory. If the destination directory does not exist, the file provisioner may succeed, but it will have undefined results.
+> The destination directory must already exist. If you need to create it, use a shell provisioner just before the file provisioner to create the directory. If the destination directory does not exist, the file provisioner may succeed, but it will have undefined results.
 
 This configuration also uses Packer's [shell provisioner](https://www.packer.io/docs/provisioners/shell.html) to run scripts from the `/scripts` directory and update installed APT packages using an inline task.
 
-After making changes to the configuration, packer validate command.
+After making changes to the configuration, the packer validates the command.
 
 ```sh
 make validate-{{image-name}}
