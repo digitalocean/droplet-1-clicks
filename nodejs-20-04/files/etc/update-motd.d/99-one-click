@@ -5,6 +5,15 @@
 # Read in the passwords....
 . /root/.digitalocean_passwords
 
+dbaas_text=""
+if [ -f "/root/.digitalocean_dbaas_credentials" ]; then
+    dbaas_text="* The MongoDB credentials are saved in /root/.digitalocean_dbaas_credentials
+
+When using a managed MongoDB cluster, the database may take up to 5 minutes
+after creation before it's ready for use.
+"
+fi
+
 myip=$(hostname -I | awk '{print$1}')
 cat <<EOF
 ********************************************************************************
@@ -23,7 +32,7 @@ In a web browser, you can view the Node site at: http://$myip
 On the server:
   * The Node.js application is served from /var/www/html
   * The Node.js passwords and keys are saved in /root/.digitalocean_passwords
-
+  ${dbaas_text}
 For help and more information, visit https://do.co/313ycRT
 
 ********************************************************************************
