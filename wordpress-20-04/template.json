@@ -3,7 +3,7 @@
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "wordpress-20-04-snapshot-{{timestamp}}",
-    "apt_packages": "apache2 fail2ban libapache2-mod-php mysql-server php php-apcu php-bz2 php-curl php-gd php-gmp php-intl php-json php-mbstring php-mysql php-pspell php-soap php-tidy php-xml php-xmlrpc php-xsl php-zip postfix python3-certbot-apache software-properties-common unzip",
+    "apt_packages": "apache2 fail2ban libapache2-mod-php8.0 mysql-server php8.0 php8.0-apcu php8.0-bz2 php8.0-curl php8.0-gd php8.0-gmp php8.0-intl php8.0-mbstring php8.0-mysql php8.0-pspell php8.0-soap php8.0-tidy php8.0-xml php8.0-xmlrpc php8.0-xsl php8.0-zip postfix python3-certbot-apache software-properties-common unzip",
     "application_name": "WordPress",
     "application_version": "5.5.1",
     "fail2ban_version": "4.3.0.8"
@@ -56,6 +56,9 @@
         "LC_CTYPE=en_US.UTF-8"
       ],
       "inline": [
+        "add-apt-repository -y ppa:ondrej/php",
+        "wget -c https://repo.mysql.com//mysql-apt-config_0.8.13-1_all.deb",
+        "dpkg -i mysql-apt-config_0.8.13-1_all.deb",
         "apt -qqy update",
         "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' full-upgrade",
         "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' install {{user `apt_packages`}}",
