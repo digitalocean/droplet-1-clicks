@@ -3,7 +3,7 @@
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "lamp-20-04-snapshot-{{timestamp}}",
-    "apt_packages": "apache2 expect fail2ban lamp-server^ libapache2-mod-php mysql-server php php-apcu php-gd php-mysql postfix python3-certbot-apache software-properties-common",
+    "apt_packages": "apache2 expect fail2ban lamp-server^ libapache2-mod-php8.0 mysql-server php8.0 php8.0-apcu php8.0-gd php8.0-mysql postfix python3-certbot-apache software-properties-common",
     "application_name": "LAMP",
     "application_version": ""
   },
@@ -52,6 +52,7 @@
       "inline": [
         "apt -qqy update",
         "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' full-upgrade",
+        "add-apt-repository -y ppa:ondrej/php",
         "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' install {{user `apt_packages`}}",
         "apt-get -qqy clean"
       ]
