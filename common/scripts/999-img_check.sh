@@ -1,10 +1,10 @@
 #!/bin/bash
-#
+
 # DigitalOcean Marketplace Image Validation Tool
-# © 2018 DigitalOcean LLC.
-# This code is licensed under MIT license (see LICENSE.txt for details)
-#
-VERSION="v. 1.5"
+# © 2021 DigitalOcean LLC.
+# This code is licensed under Apache 2.0 license (see LICENSE.md for details)
+
+VERSION="v. 1.6"
 RUNDATE=$( date )
 
 # Script should be run with SUDO
@@ -73,7 +73,7 @@ function checkAgent {
      echo -en "\e[41m[FAIL]\e[0m DigitalOcean Monitoring Agent detected.\n"
             ((FAIL++))
             STATUS=2
-      if [[ $OS == "CentOS Linux" ]]; then
+      if [[ $OS == "CentOS Linux" ]] || [[ $OS == "CentOS Stream" ]] || [[ $OS == "Rocky Linux" ]]; then
         echo "The agent can be removed with 'sudo yum remove do-agent' "
       elif [[ $OS == "Ubuntu" ]]; then
         echo "The agent can be removed with 'sudo apt-get purge do-agent' "
@@ -246,7 +246,7 @@ function checkUsers {
                   echo -en "\e[32m[PASS]\e[0m User ${user} has no password set.\n"
                   ((PASS++))
               else
-                  echo -en "\e[41m[FAIL]\e[0m User ${user} has a password set on their account.\n"
+                  echo -en "\e[41m[FAIL]\e[0m User ${user} has a password set on their account. Only system users are allowed on the image.\n"
                   ((FAIL++))
                   STATUS=2
               fi
@@ -345,7 +345,7 @@ function checkFirewall {
         FW_VER="\e[93m[WARN]\e[0m No firewall is configured. Ensure ${fw} is installed and configured\n"
         ((WARN++))
       fi
-    elif [[ $OS == "CentOS Linux" ]]; then
+    elif [[ $OS == "CentOS Linux" ]] || [[ $OS == "CentOS Stream" ]] || [[ $OS == "Rocky Linux" ]]; then
       if [ -f /usr/lib/systemd/system/csf.service ]; then
         fw="csf"
         if [[ $(systemctl status $fw >/dev/null 2>&1) ]]; then
@@ -379,7 +379,7 @@ function checkFirewall {
       # we will check some of the most common
       if cmdExists 'ufw'; then
         fw="ufw"
-        ufwa=$(ufw status | sed -e "s/^Status:\ //")
+        ufwa=$(ufw status |head -1| sed -e "s/^Status:\ //")
         if [[ $ufwa == "active" ]]; then
         FW_VER="\e[32m[PASS]\e[0m Firewall service (${fw}) is active\n"
         ((PASS++))
@@ -442,12 +442,12 @@ function checkUpdates {
         else
             echo -en "\e[32m[PASS]\e[0m There are no pending security updates for this image.\n\n"
         fi
-    elif [[ $OS == "CentOS Linux" ]]; then
-        echo -en "\nChecking for available updates with yum, this may take a minute...\n\n"
+    elif [[ $OS == "CentOS Linux" ]] || [[ $OS == "CentOS Stream" ]] || [[ $OS == "Rocky Linux" ]]; then
+        echo -en "\nChecking for available security updates, this may take a minute...\n\n"
 
-        update_count=$(yum list updates -q | grep -vc "Updated Packages")
+        update_count=$(yum check-update --security --quiet | wc -l)
          if [[ $update_count -gt 0 ]]; then
-            echo -en "\e[41m[FAIL]\e[0m There are ${update_count} updates available for this image that have not been installed.\n"
+            echo -en "\e[41m[FAIL]\e[0m There are ${update_count} security updates available for this image that have not been installed.\n"
             ((FAIL++))
             STATUS=2
         else
@@ -508,12 +508,10 @@ function checkMongoDB {
        ((PASS++))
      fi
 
-   elif [[ $OS == "CentOS Linux" ]]; then
+   elif [[ $OS == "CentOS Linux" ]] || [[ $OS == "CentOS Stream" ]] || [[ $OS == "Rocky Linux" ]]; then
 
     if [[ -f "/usr/bin/mongod" ]]; then
        version=$(/usr/bin/mongod --version --quiet | grep "db version" | sed -e "s/^db\ version\ v//")
-
-
        if version_gt $version 4.0.0; then
         if version_gt $version 4.0.3; then
           echo -en "\e[41m[FAIL]\e[0m An SSPL version of MongoDB is present"
@@ -604,6 +602,20 @@ elif [[ $OS == "CentOS Linux" ]]; then
     else
         osv=2
     fi
+elif [[ $OS == "CentOS Stream" ]]; then
+        ost=1
+    if [[ $VER == "8" ]]; then
+        osv=1
+    else
+        osv=2
+    fi
+elif [[ $OS == "Rocky Linux" ]]; then
+        ost=1
+    if [[ $VER =~ "8." ]]; then
+        osv=1
+    else
+        osv=2
+    fi
 else
     ost=0
 fi
@@ -675,8 +687,8 @@ if [[ $STATUS == 0 ]]; then
     exit 0
 elif [[ $STATUS == 1 ]]; then
     echo -en "Please review all [WARN] items above and ensure they are intended or resolved.  If you do not have a specific requirement, we recommend resolving these items before image submission\n\n"
-    exit 1
+    exit 0
 else
-    echo -en "Some critical tests failed.  These items must be resolved and this scan re-run before you submit your image to the marketplace.\n\n"
+    echo -en "Some critical tests failed.  These items must be resolved and this scan re-run before you submit your image to the DigitalOcean Marketplace.\n\n"
     exit 1
 fi
