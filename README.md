@@ -52,7 +52,7 @@ This configuration uses Packer's [file provisioner](https://www.packer.io/docs/p
 
 This configuration also uses Packer's [shell provisioner](https://www.packer.io/docs/provisioners/shell.html) to run scripts from the `/scripts` directory and update installed APT packages using an inline task.
 
-After making changes to the configuration, the packer validates the command.
+After making changes to the configuration, run the packer validate command.
 
 ```sh
 make validate-{{image-name}}
