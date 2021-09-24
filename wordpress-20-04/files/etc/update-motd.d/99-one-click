@@ -16,8 +16,12 @@ In a web browser, you can view:
 
 On the server:
  * The default web root is located at /var/www/html
- * The MySQL root password and MySQL wordpress user password are saved
-   in /root/.digitalocean_password
+ * If you're using the embedded database, the MySQL root password
+   and MySQL wordpress user password are saved in /root/.digitalocean_password
+   If you've opted in to using a Dbaas instance with DigitalOcean, you will
+   find your credentials written to /root/.digitalocean_dbaas_credentials and
+   you will have access to a DATABASE_URL environment variable holding your
+   database connection string.
  * The must-use WordPress security plugin, fail2ban, is located at
    /var/www/html/wp-content/mu-plugins/fail2ban.php
  * Certbot is preinstalled. Run it to configure HTTPS. See

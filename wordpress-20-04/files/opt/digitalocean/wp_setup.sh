@@ -17,11 +17,11 @@ chown -Rf www-data:www-data /var/www/html
 # if applicable, configure wordpress to use mysql dbaas
 if [ -f "/root/.digitalocean_dbaas_credentials" ]; then
   # grab all the data from the password file
-  username=$(sed -n "s/^mysql_username=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
-  password=$(sed -n "s/^mysql_password=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
-  host=$(sed -n "s/^mysql_host=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
-  port=$(sed -n "s/^mysql_port=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
-  database=$(sed -n "s/^mysql_database=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+  username=$(sed -n "s/^db_username=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+  password=$(sed -n "s/^db_password=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+  host=$(sed -n "s/^db_host=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+  port=$(sed -n "s/^db_port=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+  database=$(sed -n "s/^db_database=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
 
   # update the wp-config.php with stored credentials
   sed -i "s/'DB_USER', '.*'/'DB_USER', '$username'/g" /var/www/html/wp-config.php;
