@@ -2,7 +2,6 @@
 
 # non-interactive install
 export DEBIAN_FRONTEND=noninteractive
-apt-get -qqy -o Dpkg::Options::=\"--force-confdef\" -o "
 
 # Add a swap file to prevent build time OOM errors
 fallocate -l 8G /swapfile
@@ -16,11 +15,11 @@ curl https://download.jitsi.org/jitsi-key.gpg.key | sudo sh -c 'gpg --dearmor > 
 echo 'deb [signed-by=/usr/share/keyrings/jitsi-keyring.gpg] https://download.jitsi.org stable/' | sudo tee /etc/apt/sources.list.d/jitsi-stable.list > /dev/null
 
 # update apt
-apt-get -qqy -o Dpkg::Options::=\"--force-confdef\" update
-apt-get -qqy -o Dpkg::Options::=\"--force-confdef\" upgrade
+apt-get -qqy -o Dpkg::Options::=--force-confdef update
+apt-get -qqy -o Dpkg::Options::=--force-confdef upgrade
 
 # requisites for jitsi
-apt-get -qqy -o Dpkg::Options::=\"--force-confdef\" install ca-certificates-java coturn fontconfig-config fonts-dejavu-core fonts-lato java-common javascript-common\
+apt-get -qqy -o Dpkg::Options::=--force-confdef install ca-certificates-java coturn fontconfig-config fonts-dejavu-core fonts-lato java-common javascript-common\
  libavahi-client3 libavahi-common-data libavahi-common3 libcups2 libevent-core-2.1-7\
  libevent-extra-2.1-7 libevent-openssl-2.1-7 libevent-pthreads-2.1-7 libfontconfig1 libgd3 libgraphite2-3\
  libharfbuzz0b libhiredis0.14 libidn11 libjbig0 libjpeg-turbo8 libjpeg8 libjs-jquery liblcms2-2\
@@ -36,14 +35,14 @@ apt-get -qqy -o Dpkg::Options::=\"--force-confdef\" install ca-certificates-java
 # echo "jitsi-meet-web-config jitsi-meet/cert-choice select Generate a new self-signed certificate (You will later get a chance to obtain a Let's encrypt certificate)" | debconf-set-selections
 
 # install let's encrypt
-apt-get -qqy -o Dpkg::Options::=\"--force-confdef\" install python3-certbot-nginx
+apt-get -qqy -o Dpkg::Options::=--force-confdef install python3-certbot-nginx
 
 # install Digital Ocean agent
 curl -sSL https://repos.insights.digitalocean.com/install.sh | bash
 
 # add some security
 echo "y" | ufw enable
-apt-get -qqy -o Dpkg::Options::=\"--force-confdef\" install fail2ban
+apt-get -qqy -o Dpkg::Options::=--force-confdef install fail2ban
 systemctl start fail2ban
 systemctl enable fail2ban
 printf '[sshd]\nenabled = true\nport = 22\nfilter = sshd\nlogpath = /var/log/auth.log\nmaxretry = 5' | tee -a /etc/fail2ban/jail.local

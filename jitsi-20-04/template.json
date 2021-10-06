@@ -1,8 +1,7 @@
 {
   "variables": {
     "token": "{{env `DIGITALOCEAN_TOKEN`}}",
-    "image_name": "marketplace-snapshot-{{timestamp}}",
-    "apt_packages": "nginx"
+    "image_name": "marketplace-snapshot-{{timestamp}}"
   },
   "builders": [
     {
@@ -29,16 +28,8 @@
     },
     {
       "type": "file",
-      "source": "files/root/",
-      "destination": "/root/"
-    },
-    {
-      "type": "shell",
-      "inline": [
-        "apt -qqy update",
-        "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' full-upgrade",
-        "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' install {{user `apt_packages`}}"
-      ]
+      "source": "files/var/",
+      "destination": "/var/"
     },
     {
       "type": "shell",
