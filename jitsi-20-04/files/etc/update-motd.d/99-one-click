@@ -12,7 +12,8 @@ https://github.com/pachadotdev/droplet-1-clicks/tree/master/jitsi-20-04
 I you want to use this image, you agree to the Apache License.
 See https://github.com/jitsi/jitsi/blob/master/LICENSE.
 
-Type 'bash i-agree-to-jitsi-license.sh' to complete Jitsi setup.
+Type 'bash complete-jitsi-setup.sh' to complete Jitsi setup if and only if you
+agree to the Jitsi License.
 
 ********************************************************************************
 To delete this message of the day: rm -rf $(readlink -f ${0})

@@ -28,8 +28,8 @@
     },
     {
       "type": "file",
-      "source": "files/var/",
-      "destination": "/var/"
+      "source": "files/root/",
+      "destination": "/root/"
     },
     {
       "type": "shell",
