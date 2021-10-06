@@ -7,7 +7,7 @@ cat <<EOF
 ********************************************************************************
 
 Please read the instructions at
-https://marketplace.digitalocean.com/apps/jitsi-server.
+https://github.com/pachadotdev/droplet-1-clicks/tree/master/jitsi-20-04
 
 I you want to use this image, you agree to the Apache License.
 See https://github.com/jitsi/jitsi/blob/master/LICENSE.

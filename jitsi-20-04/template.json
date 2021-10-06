@@ -29,11 +29,6 @@
     },
     {
       "type": "file",
-      "source": "files/var/",
-      "destination": "/var/"
-    },
-    {
-      "type": "file",
       "source": "files/root/",
       "destination": "/root/"
     },
