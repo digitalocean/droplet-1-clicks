@@ -16,7 +16,12 @@ In a web browser, you can view:
 
 On the server:
  * The default web root is located at /var/www/html
- * The MySQL root password is saved in /root/.digitalocean_password
+ * If you're using the embedded database, the MySQL root password
+   is saved in /root/.digitalocean_password. If you've opted in to
+   using a DBaaS instance with DigitalOcean, you will find your
+   credentials written to /root/.digitalocean_dbaas_credentials
+   and you will have access to a DATABASE_URL environment variable
+   holding your database connection string.
  * Certbot is preinstalled. Run it to configure HTTPS. See
    https://do.co/3gY97ha#enable-https for more detail.
 
