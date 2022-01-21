@@ -14,8 +14,11 @@ SETTINGS_FILE="${SETTINGS_DIR}/settings.py"
 cat > /root/.digitalocean_passwords <<EOM
 DJANGO_USER=django
 DJANGO_USER_PASSWORD=$(openssl rand -hex 16)
+DJANGO_POSTGRESS_HOST=localhost
+DJANGO_POSTGRESS_PORT=5432
 DJANGO_POSTGRESS_PASS=$(openssl rand -hex 16)
 DJANGO_SECRET_KEY=$(openssl rand -hex 16)
+PG_PASS=""
 SECRET_KEY=$(openssl rand -hex 16)
 EOM
 
@@ -42,15 +45,33 @@ do
     cp -r "/var/lib/digitalocean/${src_file_name}" "${dest_file}"
 done
 
+if [ -f "/root/.digitalocean_dbaas_credentials" ]; then
+  # grab all the data from the dbaas credentials file
+  DJANGO_POSTGRESS_HOST=$(sed -n "s/^db_host=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+  DJANGO_POSTGRESS_PORT=$(sed -n "s/^db_port=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+  PG_PASS=$(sed -n "s/^db_password=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+
+  # wait for db to become available
+  echo -e "\nWaiting for your database to become available (this may take a few minutes)"
+  while ! pg_isready -h "$DJANGO_POSTGRESS_HOST" -p "$DJANGO_POSTGRESS_PORT"; do
+     printf .
+     sleep 2
+  done
+
+  echo -e "\nDatabase available!\n"
+fi
+
 # Set the django user password
 echo "${DJANGO_USER}:${DJANGO_USER_PASSWORD}" | chpasswd -
 
 # Set up postgres user and database
-setuid postgres psql -U postgres -d postgres -c "CREATE USER ${DJANGO_USER} PASSWORD '${DJANGO_POSTGRESS_PASS}';"
+setuid postgres PGPASSWORD=$PG_PASS psql -h $DJANGO_POSTGRESS_HOST -p $DJANGO_POSTGRESS_PORT -U postgres -d postgres -c "CREATE USER ${DJANGO_USER} PASSWORD '${DJANGO_POSTGRESS_PASS}';"
 setuid postgres createdb django
 
 sed -e "s/@DBPASSWORD@/${DJANGO_POSTGRESS_PASS}/" \
     -e "s/@SECRET_KEY@/${DJANGO_SECRET_KEY}/" \
+    -e "s/@DBHOST@/${DJANGO_POSTGRESS_HOST}/" \
+    -e "s/@DBPORT@/${DJANGO_POSTGRESS_PORT}/" \
     -i "${SETTINGS_FILE}"
 
 # Sync the database
