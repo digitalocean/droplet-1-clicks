@@ -93,6 +93,7 @@ DATABASES = {
         'PASSWORD': '@DBPASSWORD@',
         'HOST': '@DBHOST@',
         'PORT': '@DBPORT@',
+        'OPTIONS': {'sslmode': 'require'},
     }
 }
 
