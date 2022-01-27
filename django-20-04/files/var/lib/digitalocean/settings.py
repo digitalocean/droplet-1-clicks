@@ -91,8 +91,9 @@ DATABASES = {
         'NAME': 'django',
         'USER': 'django',
         'PASSWORD': '@DBPASSWORD@',
-        'HOST': 'localhost',
-        'PORT': '',
+        'HOST': '@DBHOST@',
+        'PORT': '@DBPORT@',
+        'OPTIONS': {'sslmode': 'require'},
     }
 }
 

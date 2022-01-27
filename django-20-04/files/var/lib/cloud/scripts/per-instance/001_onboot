@@ -10,6 +10,13 @@ SETTINGS_DIR="${PROJECT_DIR}/django_project"
 STATIC_DIR="${SETTINGS_DIR}/static"
 SETTINGS_FILE="${SETTINGS_DIR}/settings.py"
 
+PG_PASS=""
+PG_USER=postgres
+PG_DB=postgres
+
+DJANGO_POSTGRESS_HOST=localhost
+DJANGO_POSTGRESS_PORT=5432
+
 # Generate some passwords
 cat > /root/.digitalocean_passwords <<EOM
 DJANGO_USER=django
@@ -46,11 +53,37 @@ done
 echo "${DJANGO_USER}:${DJANGO_USER_PASSWORD}" | chpasswd -
 
 # Set up postgres user and database
-setuid postgres psql -U postgres -d postgres -c "CREATE USER ${DJANGO_USER} PASSWORD '${DJANGO_POSTGRESS_PASS}';"
-setuid postgres createdb django
+if [ -f "/root/.digitalocean_dbaas_credentials" ] && [ "$(sed -n "s/^db_protocol=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)" = "postgresql" ];
+then
+  # grab all the data from the dbaas credentials file
+  DJANGO_POSTGRESS_HOST=$(sed -n "s/^db_host=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+  DJANGO_POSTGRESS_PORT=$(sed -n "s/^db_port=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+  PG_USER=$(sed -n "s/^db_username=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+  PG_DB=$(sed -n "s/^db_database=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+  PG_PASS=$(sed -n "s/^db_password=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+
+  # wait for db to become available
+  echo -e "\nWaiting for your database to become available (this may take a few minutes)"
+  while ! pg_isready -h "$DJANGO_POSTGRESS_HOST" -p "$DJANGO_POSTGRESS_PORT"; do
+     printf .
+     sleep 2
+  done
+
+  echo -e "\nDatabase available!\n"
+
+  PGPASSWORD=$PG_PASS psql -h $DJANGO_POSTGRESS_HOST -p $DJANGO_POSTGRESS_PORT -U $PG_USER -d $PG_DB -c "CREATE USER ${DJANGO_USER} PASSWORD '${DJANGO_POSTGRESS_PASS}';" --set=sslmode=require
+  PGPASSWORD=$PG_PASS psql -h $DJANGO_POSTGRESS_HOST -p $DJANGO_POSTGRESS_PORT -U $PG_USER -d $PG_DB -c "CREATE DATABASE django;" --set=sslmode=require
+
+  # If no dbaas - set local database
+else
+  setuid postgres psql -U postgres -d postgres -c "CREATE USER ${DJANGO_USER} PASSWORD '${DJANGO_POSTGRESS_PASS}';"
+  setuid postgres createdb django
+fi
 
 sed -e "s/@DBPASSWORD@/${DJANGO_POSTGRESS_PASS}/" \
     -e "s/@SECRET_KEY@/${DJANGO_SECRET_KEY}/" \
+    -e "s/@DBHOST@/${DJANGO_POSTGRESS_HOST}/" \
+    -e "s/@DBPORT@/${DJANGO_POSTGRESS_PORT}/" \
     -i "${SETTINGS_FILE}"
 
 # Sync the database
