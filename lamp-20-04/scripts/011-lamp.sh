@@ -25,5 +25,4 @@ if [ -f "/root/.digitalocean_dbaas_credentials" ]; then
 
   # cleanup
   unset host port
-  rm -rf /etc/mysql
 fi
