@@ -13,9 +13,6 @@ On your first login you will be prompted to configure your Discourse installatio
 All Discourse scripts and files may be found in /var/discourse and the setup
 utility can be run again by launching discourse-setup in that directory.
 
-Learn more about using this applicaition here:
-https://www.digitalocean.com/docs/marketplace/discourse/
-
 For help and more information, visit https://do.co/3dmapBw
 
 ********************************************************************************
