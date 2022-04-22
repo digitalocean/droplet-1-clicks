@@ -1,0 +1,21 @@
+server.port: 5601
+server.host: "{{ datasource "ip_address" }}"
+opensearch.hosts: ["https://{{ datasource "ip_address" }}:9200"]
+opensearch.ssl.verificationMode: none
+opensearch.username: "kibanaserver"
+opensearch.password: "{{ datasource "kibanaserver_password" }}"
+opensearch.requestHeadersWhitelist: [ authorization,securitytenant ]
+
+opensearch_security.multitenancy.enabled: true
+opensearch_security.multitenancy.tenants.preferred: ["Private", "Global"]
+opensearch_security.readonly_mode.roles: ["kibana_read_only"]
+opensearch_security.cookie.secure: true
+
+server.ssl.enabled: true
+server.ssl.certificate: {{ datasource "opensearch_config_home" }}/opensearch_http.pem
+server.ssl.key: {{ datasource "opensearch_config_home" }}/opensearch_http.key
+
+opensearch.ssl.certificateAuthorities: [ "{{ datasource "opensearch_config_home" }}/root-ca.pem" ]
+
+opensearch.ssl.certificate: {{ datasource "opensearch_config_home" }}/opensearch.pem
+opensearch.ssl.key: {{ datasource "opensearch_config_home" }}/opensearch.key

@@ -1,0 +1,67 @@
+---
+
+- name: setup group
+  group:
+    name: "{{ opensearch_group }}"
+    system: true
+    state: present
+
+- name: setup user
+  user:
+    name: "{{ opensearch_user }}"
+    group: "{{ opensearch_group }}"
+    system: true
+
+- name: Set vm.max_map_count in sysctl.conf
+  sysctl:
+    name: vm.max_map_count
+    value: 262144
+    state: present
+
+- name: Set open files limit in sysctl.conf
+  sysctl:
+    name: fs.file-max
+    value: 65536
+    state: present
+
+- name: create base directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ opensearch_user }}"
+    group: "{{ opensearch_group }}"
+    mode: 0744
+  loop:
+    - "{{ opensearch_home }}"
+    - "{{ opensearch_dashboards_home }}"
+    - "{{ nodecerts_home }}"
+
+- name: Download gomplate
+  get_url:
+    url: "https://github.com/hairyhenderson/gomplate/releases/download/v3.10.0/gomplate_linux-amd64"
+    dest: "/usr/bin/gomplate"
+    mode: a+x
+
+- name: include opensearch
+  include: opensearch.yml
+
+- name: include dashboards
+  include: dashboards.yml
+
+- name: include security
+  include: security.yml
+
+- name: Add opensearch init script
+  template:
+    src: 001_onboot
+    dest: "/var/lib/cloud/scripts/per-instance/001_onboot"
+    owner: "{{ opensearch_user }}"
+    group: "{{ opensearch_group }}"
+    mode: a+x
+
+- name: Run config script on boot
+  cron:
+    name: "configure-opensearch"
+    special_time: "reboot"
+    job: "/bin/bash /var/lib/cloud/scripts/per-instance/001_onboot"
+    user: "{{ opensearch_user }}"

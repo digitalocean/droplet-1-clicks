@@ -1,0 +1,41 @@
+---
+
+- name: Download opensearch
+  get_url:
+    url: "{{ opensearch_url }}"
+    dest: "/tmp/opensearch.tar.gz"
+
+- name: Unpack opensearch tarball
+  unarchive:
+    copy: no
+    src: "/tmp/opensearch.tar.gz"
+    dest: "{{ opensearch_home }}"
+    owner: "{{ opensearch_user }}"
+    group: "{{ opensearch_group }}"
+    mode: 0700
+    extra_opts:
+      - --strip-components=1
+
+- name: Add opensearch config template
+  copy:
+    src: opensearch.yml.template
+    dest: "{{ opensearch_config_file }}.template"
+    owner: "{{ opensearch_user }}"
+    group: "{{ opensearch_group }}"
+
+- name: Add opensearch jvm options template
+  copy:
+    src: jvm.options.template
+    dest: "{{ opensearch_config_home }}/jvm.options.template"
+    owner: "{{ opensearch_user }}"
+    group: "{{ opensearch_group }}"
+
+- name: Remove opensearch config file
+  file:
+    path: "{{ opensearch_config_file }}"
+    state: absent
+
+- name: OpenSearch Install | create systemd service
+  template:
+    src: opensearch.service
+    dest: "{{ systemctl_path }}/opensearch.service"

@@ -1,0 +1,40 @@
+---
+
+- name: Download dashboards
+  get_url:
+    url: "{{ opensearch_dashboards_url }}"
+    dest: "/tmp/dashboards.tar.gz"
+
+- name: Unpack dashboards tarball
+  unarchive:
+    copy: no
+    src: "/tmp/dashboards.tar.gz"
+    dest: "{{ opensearch_dashboards_home }}"
+    owner: "{{ opensearch_user }}"
+    group: "{{ opensearch_group }}"
+    extra_opts:
+      - --strip-components=1
+
+- name: Dashboards Install | create systemd service
+  template:
+    src: opensearch_dashboards.service
+    dest: "{{ systemctl_path }}/opensearch_dashboards.service"
+
+- name: Add dashboards jvm options template
+  copy:
+    src: jvm.options.template
+    dest: "{{ opensearch_dashboards_config_home }}/jvm.options.template"
+    owner: "{{ opensearch_user }}"
+    group: "{{ opensearch_group }}"
+
+- name: Copy template config file
+  copy:
+    src: "opensearch_dashboards.yml.template"
+    dest: "{{ opensearch_dashboards_config_file }}.template"
+    owner: "{{ opensearch_user }}"
+    group: "{{ opensearch_group }}"
+
+- name: Remove dashboards config file
+  file:
+    path: "{{ opensearch_dashboards_config_file }}"
+    state: absent
