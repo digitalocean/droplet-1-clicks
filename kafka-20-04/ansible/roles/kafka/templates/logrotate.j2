@@ -1,0 +1,13 @@
+{{ log_dir }}/*.log {
+  rotate 7
+  daily
+  missingok
+  notifempty
+  delaycompress
+  compress
+  create 0644 syslog adm
+  sharedscripts
+  postrotate
+    /usr/lib/rsyslog/rsyslog-rotate
+  endscript
+}

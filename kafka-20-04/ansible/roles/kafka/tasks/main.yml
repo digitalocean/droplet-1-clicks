@@ -1,0 +1,21 @@
+---
+# Ansible will proceed with remaining hosts if it fails to gather facts for some hosts.
+# We only want to continue if all hosts are reachable
+- assert:
+    that:
+      - ansible_play_hosts == ansible_play_hosts_all
+
+- import_tasks: install.yml
+- import_tasks: firewall.yml
+
+- name: Copy MOTD
+  template:
+    src: "motd.j2"
+    dest: "/etc/update-motd.d/99-one-click"
+    mode: 0755
+
+- name: Copy on-boot script
+  template:
+    src: "001_onboot.j2"
+    dest: "/var/lib/cloud/scripts/per-instance/001_onboot"
+    mode: 0755

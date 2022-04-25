@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# This script is designed to run once for initial Kafka configuration.
+set -euo pipefail
+
+this_file="$0"
+server_properties_file="{{ kafka_dir }}/config/server.properties"
+server_properties_tmp=$(mktemp)
+service_tmp=$(mktemp)
+
+finish() {
+  rm -rf $server_properties_tmp
+  rm -rf $service_tmp
+  #TODO:shred -u $this_file
+  #TODO:delete ~julianmiller (https://github.com/hashicorp/packer/issues/9118#issuecomment-644529777)
+}
+trap finish EXIT
+
+# Generate admin password
+export {{ kafka_admin_pass_placeholder }}=$(openssl rand -base64 45)
+export {{ kafka_admin_user_placeholder }}=$(openssl rand -base64 45)
+echo "kafka_user='${{ kafka_admin_user_placeholder }}'" > /root/.kafka_credentials
+echo "kafka_password='${{ kafka_admin_pass_placeholder }}'" >> /root/.kafka_credentials
+export {{ kafka_public_ipv4_addr_placeholder }}=$(curl http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address)
+
+# Update Kafka server properties file
+cat $server_properties_file | envsubst > $server_properties_tmp
+chown kafka:kafka $server_properties_tmp
+chmod 644 $server_properties_tmp
+mv $server_properties_tmp $server_properties_file
+
+# Update systemd environment
+# Dynamically set heap size based on physical memory available
+PHYS_MEM="$(($(getconf _PHYS_PAGES) * $(getconf PAGE_SIZE) / (1000 * 1000)))"
+MAX_HEAP="$(($PHYS_MEM * 80/100))m"
+export KAFKA_HEAP_OPTS="-Xms$MAX_HEAP -Xmx$MAX_HEAP -XX:MetaspaceSize=96m -XX:+UseG1GC -XX:MaxGCPauseMillis=20 -XX:InitiatingHeapOccupancyPercent=35 -XX:G1HeapRegionSize=16M -XX:MinMetaspaceFreeRatio=50 -XX:MaxMetaspaceFreeRatio=80"
+cat /etc/systemd/system/kafka.service | envsubst > $service_tmp
+mv $service_tmp /etc/systemd/system/kafka.service
+
+systemctl enable --now kafka.service
+
+rm -rf "{{ kafka_first_run_cron_file }}"
+
+sed -e '/Match User root/d' \
+     -e '/.*ForceCommand.*droplet.*/d' \
+     -i /etc/ssh/sshd_config
+
+systemctl restart ssh

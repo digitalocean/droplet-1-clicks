@@ -1,0 +1,16 @@
+---
+- name: Rate limit ssh coneections
+  community.general.ufw:
+    rule: limit
+    name: OpenSSH
+
+- name: Allow Kafka port 9092
+  community.general.ufw:
+    rule: allow
+    port: "9092"
+    proto: tcp
+
+- name: Deny everything else and enable UFW
+  community.general.ufw:
+    state: enabled
+    policy: deny

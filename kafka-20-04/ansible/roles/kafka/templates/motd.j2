@@ -1,0 +1,43 @@
+#!/usr/bin/env sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+. /root/.kafka_credentials
+cat <<EOF
+********************************************************************************
+Welcome to DigitalOcean's 1-Click Kafka/ZooKeeper Droplet.
+To keep this Droplet secure, the UFW firewall is enabled.
+All ports are BLOCKED except 22 (SSH) and 9092 (Kafka).
+
+On this server:
+ * The default Kafka credentials are saved in /root/.kafka_credentials
+ * Create a test topic
+
+    {{ kafka_dir }}/bin/kafka-topics.sh \\
+      --create \\
+      --topic test-topic \\
+      --bootstrap-server localhost:19092
+
+Get started with a client like kcat: https://github.com/edenhill/kcat
+ 1. Produce a test message:
+
+    echo 'Hello, World!' | kcat -P -b $myip:9092 \\
+      -t test-topic \\
+      -X security.protocol=SASL_PLAINTEXT \\
+      -X sasl.mechanisms=PLAIN \\
+      -X sasl.username=$kafka_user \\
+      -X sasl.password=$kafka_password
+
+ 2. Consume the test message
+
+    kcat -C -b $myip:9092 \\
+      -t test-topic \\
+      -X security.protocol=SASL_PLAINTEXT \\
+      -X sasl.mechanisms=PLAIN \\
+      -X sasl.username=$kafka_user \\
+      -X sasl.password=$kafka_password
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
