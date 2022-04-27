@@ -34,6 +34,7 @@
     {
       "type": "ansible",
       "playbook_file": "kafka-20-04/ansible/kafka.yml",
+      "user": "root",
       "ansible_env_vars": [
         "ANSIBLE_HOST_KEY_CHECKING=False",
         "ANSIBLE_SSH_ARGS='-o ForwardAgent=yes -o ControlMaster=auto -o ControlPersist=60s'",

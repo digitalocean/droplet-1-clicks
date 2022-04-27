@@ -2,46 +2,89 @@
 # This script is designed to run once for initial Kafka configuration.
 set -euo pipefail
 
-this_file="$0"
-server_properties_file="{{ kafka_dir }}/config/server.properties"
-server_properties_tmp=$(mktemp)
-service_tmp=$(mktemp)
+myip=$(hostname -I | awk '{print$1}')
+tmp_dir="$(mktemp -d)"
+ssl_dir="/opt/kafka/one-click-ssl"
 
-finish() {
-  rm -rf $server_properties_tmp
-  rm -rf $service_tmp
-  #TODO:shred -u $this_file
-  #TODO:delete ~julianmiller (https://github.com/hashicorp/packer/issues/9118#issuecomment-644529777)
+cleanup() {
+  rm -rf "$tmp_dir"
 }
-trap finish EXIT
+trap cleanup EXIT
 
-# Generate admin password
-export {{ kafka_admin_pass_placeholder }}=$(openssl rand -base64 45)
-export {{ kafka_admin_user_placeholder }}=$(openssl rand -base64 45)
-echo "kafka_user='${{ kafka_admin_user_placeholder }}'" > /root/.kafka_credentials
-echo "kafka_password='${{ kafka_admin_pass_placeholder }}'" >> /root/.kafka_credentials
-export {{ kafka_public_ipv4_addr_placeholder }}=$(curl http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address)
+gen_cert() {
+  declare dest_dir="$ssl_dir"
+  mkdir -p "$dest_dir" && pushd "$dest_dir"
 
-# Update Kafka server properties file
-cat $server_properties_file | envsubst > $server_properties_tmp
-chown kafka:kafka $server_properties_tmp
-chmod 644 $server_properties_tmp
-mv $server_properties_tmp $server_properties_file
+  declare store_pass="$(openssl rand -base64 12)"
+  echo "$store_pass" > .store_pass
 
-# Update systemd environment
-# Dynamically set heap size based on physical memory available
-PHYS_MEM="$(($(getconf _PHYS_PAGES) * $(getconf PAGE_SIZE) / (1000 * 1000)))"
-MAX_HEAP="$(($PHYS_MEM * 80/100))m"
-export KAFKA_HEAP_OPTS="-Xms$MAX_HEAP -Xmx$MAX_HEAP -XX:MetaspaceSize=96m -XX:+UseG1GC -XX:MaxGCPauseMillis=20 -XX:InitiatingHeapOccupancyPercent=35 -XX:G1HeapRegionSize=16M -XX:MinMetaspaceFreeRatio=50 -XX:MaxMetaspaceFreeRatio=80"
-cat /etc/systemd/system/kafka.service | envsubst > $service_tmp
-mv $service_tmp /etc/systemd/system/kafka.service
+  # Generate CA key and cert
+  openssl req -new -newkey rsa:4096 -x509 -subj "/CN=DigitalOcean Kafka One-Click" -keyout ca.key -out ca.crt -nodes
 
-systemctl enable --now kafka.service
+  # Generate Kafka server cert and store in new keystore
+  keytool -genkey -keyalg RSA -keystore kafka.keystore.jks -dname "CN=$HOSTNAME" -storepass "$store_pass" -keypass "$store_pass" -storetype pkcs12 -ext "SAN=dns:localhost,ip:$myip,ip:127.0.0.1"
 
-rm -rf "{{ kafka_first_run_cron_file }}"
+  # Generate CSR for Kafka server
+  declare cert_csr_tmp="$(mktemp -p $tmp_dir)"
+  keytool -keystore kafka.keystore.jks -certreq -file "$cert_csr_tmp" -storepass "$store_pass" -keypass "$store_pass"
 
-sed -e '/Match User root/d' \
-     -e '/.*ForceCommand.*droplet.*/d' \
-     -i /etc/ssh/sshd_config
+  # Sign Kafka server CSR with CA
+  openssl x509 -req -CA ca.crt -CAkey ca.key -in "$cert_csr_tmp" -out kafka.crt -CAcreateserial -passin "pass:$store_pass"
+  rm -rf ca.srl
 
-systemctl restart ssh
+  # Import CA cert into keystore
+  keytool -keystore kafka.keystore.jks -alias CARoot -import -file ca.crt -storepass "$store_pass" -keypass "$store_pass" -noprompt
+
+  # Import signed Kafka server cert into keystore
+  keytool -keystore kafka.keystore.jks -import -file kafka.crt -storepass "$store_pass" -keypass "$store_pass" -noprompt
+
+  # Import CA cert into new truststore
+  keytool -keystore kafka.truststore.jks -alias CARoot -import -file ca.crt -storepass "$store_pass" -keypass "$store_pass" -noprompt
+
+  chown -R kafka:kafka "$dest_dir"
+  chmod -R 400 ${dest_dir}/*
+
+  popd
+}
+
+configure_kafka_properties() {
+  declare server_properties_file="{{ kafka_dir }}/config/server.properties"
+  declare server_properties_tmp="$(mktemp -p $tmp_dir)"
+
+  # Generate admin password
+  export {{ kafka_admin_pass_placeholder }}=$(openssl rand -base64 45)
+  export {{ kafka_admin_user_placeholder }}=$(openssl rand -base64 45)
+  echo "kafka_user='${{ kafka_admin_user_placeholder }}'" > /root/.kafka_credentials
+  echo "kafka_password='${{ kafka_admin_pass_placeholder }}'" >> /root/.kafka_credentials
+  export {{ kafka_public_ipv4_addr_placeholder }}="$myip"
+
+  # Update Kafka server properties file
+  cat "$server_properties_file" | envsubst > "$server_properties_tmp"
+  chown kafka:kafka "$server_properties_tmp"
+  chmod 640 $server_properties_tmp
+  mv "$server_properties_tmp" "$server_properties_file"
+}
+
+configure_kafka_service() {
+  # Update systemd environment
+  # Dynamically set heap size based on physical memory available
+  declare service_tmp=$(mktemp -p $tmp_dir)
+  PHYS_MEM="$(($(getconf _PHYS_PAGES) * $(getconf PAGE_SIZE) / (1000 * 1000)))"
+  MAX_HEAP="$(($PHYS_MEM * 80/100))m"
+  export KAFKA_HEAP_OPTS="-Xms$MAX_HEAP -Xmx$MAX_HEAP -XX:MetaspaceSize=96m -XX:+UseG1GC -XX:MaxGCPauseMillis=20 -XX:InitiatingHeapOccupancyPercent=35 -XX:G1HeapRegionSize=16M -XX:MinMetaspaceFreeRatio=50 -XX:MaxMetaspaceFreeRatio=80"
+  cat /etc/systemd/system/kafka.service | envsubst > "$service_tmp"
+  mv "$service_tmp" /etc/systemd/system/kafka.service
+
+  systemctl enable --now kafka.service
+}
+
+oneclick_cleanup() {
+  sed -e '/Match User root/d' \
+      -e '/.*ForceCommand.*droplet.*/d' \
+      -i /etc/ssh/sshd_config
+
+  systemctl restart ssh
+}
+
+gen_cert
+configure_kafka_properties
