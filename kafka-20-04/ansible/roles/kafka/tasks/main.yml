@@ -5,17 +5,22 @@
     that:
       - ansible_play_hosts == ansible_play_hosts_all
 
+- group:
+    name: kafka
+    system: yes
+
+- user:
+    name: kafka
+    group: kafka
+    system: yes
+
+- import_tasks: files.yml
 - import_tasks: install.yml
 - import_tasks: firewall.yml
 
-- name: Copy MOTD
-  template:
-    src: "motd.j2"
-    dest: "/etc/update-motd.d/99-one-click"
-    mode: 0755
-
-- name: Copy on-boot script
-  template:
-    src: "001_onboot.j2"
-    dest: "/var/lib/cloud/scripts/per-instance/001_onboot"
+- name: Install gomplate
+  get_url:
+    url: "https://github.com/hairyhenderson/gomplate/releases/download/v3.10.0/gomplate_linux-amd64"
+    dest: "/usr/local/sbin/gomplate"
+    checksum: "sha256:eec0f85433c9c8aad93e8cd84c79d238f436b3e62f35b15471f5929bc741763a"
     mode: 0755

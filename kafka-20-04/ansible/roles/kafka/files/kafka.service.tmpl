@@ -8,9 +8,9 @@ After=zookeeper.service
 Type=simple
 User=kafka
 Group=kafka
-Environment=KAFKA_HEAP_OPTS="$KAFKA_HEAP_OPTS"
-ExecStart={{ kafka_dir }}/bin/kafka-server-start.sh {{ kafka_dir }}/config/server.properties
-ExecStop={{ kafka_dir }}/bin/kafka-server-stop.sh
+Environment=KAFKA_HEAP_OPTS="{{ .Env.kafka_heap_opts }}"
+ExecStart={{ .Env.kafka_dir }}/bin/kafka-server-start.sh {{ .Env.kafka_dir }}/config/server.properties
+ExecStop={{ .Env.kafka_dir }}/bin/kafka-server-stop.sh
 Restart=on-abnormal
 LimitNOFILE=65536
 StandardOutput=syslog

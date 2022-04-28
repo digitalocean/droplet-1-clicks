@@ -2,41 +2,39 @@
 #
 # Configured as part of the DigitalOcean 1-Click Image build process
 
-myip=$(hostname -I | awk '{print$1}')
-. /root/.kafka_credentials
 cat <<EOF
 ********************************************************************************
 Welcome to DigitalOcean's 1-Click Kafka/ZooKeeper Droplet.
+Kafka is running as a systemd service (kafka.service).
 To keep this Droplet secure, the UFW firewall is enabled.
-All ports are BLOCKED except 22 (SSH) and 9092 (Kafka).
+All ports are BLOCKED except 22 (SSH) and 9093 (Kafka SSL).
 
-On this server:
- * The default Kafka credentials are saved in /root/.kafka_credentials
- * Create a test topic
+To get started on this server:
+
+ 1. Create a topic
 
     {{ kafka_dir }}/bin/kafka-topics.sh \\
       --create \\
-      --topic test-topic \\
-      --bootstrap-server localhost:19092
+      --topic quickstart \\
+      --bootstrap-server localhost:9092
 
-Get started with a client like kcat: https://github.com/edenhill/kcat
- 1. Produce a test message:
+ 2. Produce your first event
 
-    echo 'Hello, World!' | kcat -P -b $myip:9092 \\
-      -t test-topic \\
-      -X security.protocol=SASL_PLAINTEXT \\
-      -X sasl.mechanisms=PLAIN \\
-      -X sasl.username=$kafka_user \\
-      -X sasl.password=$kafka_password
+    echo 'Hello, World!' | {{ kafka_dir }}/bin/kafka-console-producer.sh \\
+      --topic quickstart \\
+      --bootstrap-server localhost:9092
 
- 2. Consume the test message
+ 3. Consume the event
 
-    kcat -C -b $myip:9092 \\
-      -t test-topic \\
-      -X security.protocol=SASL_PLAINTEXT \\
-      -X sasl.mechanisms=PLAIN \\
-      -X sasl.username=$kafka_user \\
-      -X sasl.password=$kafka_password
+    {{ kafka_dir }}/bin/kafka-console-consumer.sh \\
+      --from-beginning \\
+      --max-messages 1 \\
+      --topic quickstart \\
+      --bootstrap-server localhost:9092
+
+ * Learn more about configuring your clients by running:
+
+    less {{ kafka_dir }}/one-click-ssl/README.md
 
 ********************************************************************************
 To delete this message of the day: rm -rf $(readlink -f ${0})

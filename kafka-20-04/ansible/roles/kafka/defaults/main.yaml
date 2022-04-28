@@ -5,11 +5,8 @@ kafka_scala_version: "2.13"
 data_dir: /var/lib/kafka
 log_dir: /var/log/kafka
 kafka_dir: "/opt/kafka"
+templates_dir: "{{ kafka_dir }}/do-templates"
 
 kafka_mirror: https://archive.apache.org/dist/kafka
 kafka_url: "{{ kafka_mirror }}/{{ kafka_version }}/kafka_{{ kafka_scala_version }}-{{ kafka_version }}.tgz"
-
-kafka_first_run_cron_file: /etc/cron.d/kafka_first_run
-kafka_admin_user_placeholder: "KAFKA_ADMIN_USER_PLACEHOLDER"
-kafka_admin_pass_placeholder: "KAFKA_ADMIN_PASS_PLACEHOLDER"
-kafka_public_ipv4_addr_placeholder: "KAFKA_PUBLIC_IPV4_ADDR_PLACEHOLDER"
+kafka_archive_checksum: "sha256:3fd643f16d11ccdb81a7b296f305d7fa0ae6c9e39e1a701bac56929e2e4d6710"

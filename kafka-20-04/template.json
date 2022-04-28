@@ -56,6 +56,12 @@
         "common/scripts/020-application-tag.sh",
         "common/scripts/900-cleanup.sh"
       ]
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "rm -rf /root/.ansible"
+      ]
     }
   ]
 }

@@ -28,17 +28,14 @@ broker.id=0
 #     listeners = listener_name://host_name:port
 #   EXAMPLE:
 #     listeners = PLAINTEXT://your.host.name:9092
-listeners=SASL_SSL://:9092,SASL_PLAINTEXT://:9093,PLAINTEXT://127.0.0.1:9094
+listeners=INTERNAL_PLAINTEXT://127.0.0.1:9092,PUBLIC_SSL://:9093
 
-# Hostname and port the broker will advertise to producers and consumers. If not set,
-# it uses the value for "listeners" if configured.  Otherwise, it will use the value
-# returned from java.net.InetAddress.getCanonicalHostName().
-advertised.listeners=SASL_SSL://${{ kafka_public_ipv4_addr_placeholder }}:9092,SASL_PLAINTEXT://${{ kafka_public_ipv4_addr_placeholder }}:9093,PLAINTEXT://127.0.0.1:9094
+advertised.listeners=INTERNAL_PLAINTEXT://127.0.0.1:9092,PUBLIC_SSL://{{ .Env.droplet_public_ip }}:9093
 
 # Maps listener names to security protocols, the default is for them to be the same. See the config documentation for more details
-listener.security.protocol.map=SASL_SSL:SASL_SSL,SASL_PLAINTEXT:SASL_PLAINTEXT,PLAINTEXT:PLAINTEXT
+listener.security.protocol.map=INTERNAL_PLAINTEXT:PLAINTEXT,PUBLIC_SSL:SASL_SSL
 
-inter.broker.listener.name=PLAINTEXT
+inter.broker.listener.name=INTERNAL_PLAINTEXT
 
 # The number of threads that the server uses for receiving requests from the network and sending responses to the network
 num.network.threads=3
@@ -57,18 +54,18 @@ socket.request.max.bytes=104857600
 
 ############################# SSL/TLS Settings #############################
 
-ssl.keystore.location=/opt/kafka/one-click-ssl/kafka.keystore.jks
-ssl.keystore.password=$TODO_PASS
-ssl.key.password=$TODO_PASS
-ssl.truststore.location=/opt/kafka/one-click-ssl/kafka.truststore.jks
-ssl.truststore.password=$TODO_PASS
+ssl.keystore.location={{ .Env.keystore_location }}
+ssl.keystore.password={{ .Env.keystore_password }}
+ssl.key.password={{ .Env.keystore_password }}
+ssl.truststore.location={{ .Env.truststore_location }}
+ssl.truststore.password={{ .Env.truststore_password }}
 ssl.enabled.protocols=TLSv1.3,TLSv1.2
 # ssl.client.auth=required
 
 ############################# Log Basics #############################
 
 # A comma separated list of directories under which to store log files
-log.dirs={{ data_dir }}
+log.dirs={{ .Env.data_dir }}
 
 # The default number of log partitions per topic. More partitions allow greater
 # parallelism for consumption, but this will also result in more files across
@@ -152,25 +149,9 @@ group.initial.rebalance.delay.ms=0
 ############################# Access Control & JAAS #############################
 authorizer.class.name=kafka.security.authorizer.AclAuthorizer
 allow.everyone.if.no.acl.found=true
-
-super.users=User:${{ kafka_admin_user_placeholder }}
-
-# bin/kafka-configs.sh --bootstrap-server localhost:19092 --alter --add-config 'SCRAM-SHA-256=[password=<password>]' --entity-type users --entity-name <username>
-# TODO:
-#kcat -C -b 104.131.45.55:9093 \
-#      -t test-topic \
-#      -X security.protocol=SASL_SSL \
-#      -X sasl.mechanism=SCRAM-SHA-256 \
-#      -X sasl.username=<username> \
-#      -X sasl.password=<password> \
-#      -X ssl.ca.location=./kafka.ca.crt
-listener.name.sasl_ssl.sasl.enabled.mechanisms=SCRAM-SHA-256
-listener.name.sasl_ssl.scram-sha-256.sasl.jaas.config=org.apache.kafka.common.security.scram.ScramLoginModule required \
-  username="${{ kafka_admin_user_placeholder }}" \
-  password="${{ kafka_admin_pass_placeholder }}";
-
-listener.name.sasl_plaintext.sasl.enabled.mechanisms=PLAIN
-listener.name.sasl_plaintext.plain.sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required \
-   username="${{ kafka_admin_user_placeholder }}" \
-   password="${{ kafka_admin_pass_placeholder }}" \
-   user_admin="${{ kafka_admin_pass_placeholder }}";
+sasl.enabled.mechanisms=SCRAM-SHA-256
+super.users=User:{{ .Env.kafka_default_user }}
+listener.name.public_ssl.sasl.enabled.mechanisms=SCRAM-SHA-256
+listener.name.public_ssl.scram-sha-256.sasl.jaas.config=org.apache.kafka.common.security.scram.ScramLoginModule required \
+  username="{{ .Env.kafka_default_user }}" \
+  password="{{ .Env.kafka_default_password }}";

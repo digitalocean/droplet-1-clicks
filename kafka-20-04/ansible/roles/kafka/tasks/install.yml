@@ -1,42 +1,24 @@
 ---
-- group:
-    name: kafka
-    system: yes
-
-- user:
-    name: kafka
-    group: kafka
-    system: yes
-
-- name: Setup nofile limit for kafka user
+- name: Install | Setup nofile limit for kafka user
   community.general.pam_limits:
     domain: kafka
     limit_type: soft
     limit_item: nofile
     value: "65536"
 
-- name: Create kafka directories
-  file:
-    path: "{{ item }}"
-    state: directory
-    owner: kafka
-    group: kafka
-  loop:
-    - "{{ kafka_dir }}"
-    - "{{ data_dir }}"
-
-- name: Check if kafka folder is empty so we don't download kafka again
+- name: Install | Check if kafka folder is empty so we don't download kafka again
   find:
     paths: "{{ kafka_dir }}"
   register: kafka_files_found
 
-- name: Download kafka
+- name: Install | Download kafka
   when: kafka_files_found.matched == 0
   get_url:
     url: "{{ kafka_url }}"
+    checksum: "{{ kafka_archive_checksum }}"
     dest: "/tmp/kafka_{{ kafka_scala_version }}-{{ kafka_version }}.tar.gz"
 
-- name: Unpack tarball
+- name: Install | Unpack tarball
   when: kafka_files_found.matched == 0
   unarchive:
     copy: no
@@ -45,40 +27,15 @@
     extra_opts:
       - --strip-components=1
 
-- name: ZooKeeper systemd service
-  template:
-    src: zookeeper.service.j2
-    dest: /etc/systemd/system/zookeeper.service
-
-- name: Kafka systemd service
-  template:
-    src: kafka.service.j2
-    dest: /etc/systemd/system/kafka.service
-
-- name: Kafka broker config file
-  template:
-    src: "server.properties.j2"
-    dest: "{{ kafka_dir }}/config/server.properties"
-
-- name: Log configuration
-  template:
-    src: "syslog.conf.j2"
-    dest: "/etc/rsyslog.d/10-kafka.conf"
-
-- name: Logrotate configuration
-  template:
-    src: "logrotate.j2"
-    dest: "/etc/logrotate.d/kafka"
-
-- name: Restart rsyslog service
-  service:
-    name: rsyslog
-    enabled: yes
-    state: restarted
-
-- name: Change kafka folder ownership to kafka
+- name: Install | Change kafka folder ownership to kafka
   file:
     path: "{{ kafka_dir }}"
     owner: kafka
     group: kafka
     recurse: yes
+
+- name: Install | Restart rsyslog service
+  service:
+    name: rsyslog
+    enabled: yes
+    state: restarted

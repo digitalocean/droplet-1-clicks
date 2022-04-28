@@ -2,9 +2,25 @@
 # This script is designed to run once for initial Kafka configuration.
 set -euo pipefail
 
-myip=$(hostname -I | awk '{print$1}')
+# j2 templated variables
+kafka_dir="{{ kafka_dir }}"
+data_dir="{{ data_dir }}"
+templates_dir="{{ templates_dir }}"
+
+# Common variables
 tmp_dir="$(mktemp -d)"
-ssl_dir="/opt/kafka/one-click-ssl"
+public_ip=$(curl -w "\n" http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address)
+private_ip=$(curl -w "\n" http://169.254.169.254/metadata/v1/interfaces/private/0/ipv4/address)
+
+# SSL
+ssl_dir="${kafka_dir}/one-click-ssl"
+mkdir -p "$ssl_dir"
+keystore_password="$(openssl rand -base64 12)"
+echo "$keystore_password" > "${ssl_dir}/.keystore_password"
+
+# Generate default Kafka credentials
+kafka_default_user=$(openssl rand -base64 45)
+kafka_default_password=$(openssl rand -base64 45)
 
 cleanup() {
   rm -rf "$tmp_dir"
@@ -13,33 +29,30 @@ trap cleanup EXIT
 
 gen_cert() {
   declare dest_dir="$ssl_dir"
-  mkdir -p "$dest_dir" && pushd "$dest_dir"
-
-  declare store_pass="$(openssl rand -base64 12)"
-  echo "$store_pass" > .store_pass
+  pushd "$dest_dir"
 
   # Generate CA key and cert
   openssl req -new -newkey rsa:4096 -x509 -subj "/CN=DigitalOcean Kafka One-Click" -keyout ca.key -out ca.crt -nodes
 
   # Generate Kafka server cert and store in new keystore
-  keytool -genkey -keyalg RSA -keystore kafka.keystore.jks -dname "CN=$HOSTNAME" -storepass "$store_pass" -keypass "$store_pass" -storetype pkcs12 -ext "SAN=dns:localhost,ip:$myip,ip:127.0.0.1"
+  keytool -genkey -keyalg RSA -keystore kafka.keystore.jks -dname "CN=$HOSTNAME" -storepass "$keystore_password" -keypass "$keystore_password" -storetype pkcs12 -ext "SAN=dns:localhost,ip:127.0.0.1,ip:$public_ip,ip:$private_ip"
 
   # Generate CSR for Kafka server
   declare cert_csr_tmp="$(mktemp -p $tmp_dir)"
-  keytool -keystore kafka.keystore.jks -certreq -file "$cert_csr_tmp" -storepass "$store_pass" -keypass "$store_pass"
+  keytool -keystore kafka.keystore.jks -certreq -file "$cert_csr_tmp" -storepass "$keystore_password" -keypass "$keystore_password"
 
   # Sign Kafka server CSR with CA
-  openssl x509 -req -CA ca.crt -CAkey ca.key -in "$cert_csr_tmp" -out kafka.crt -CAcreateserial -passin "pass:$store_pass"
+  openssl x509 -req -CA ca.crt -CAkey ca.key -in "$cert_csr_tmp" -out kafka.crt -CAcreateserial -passin "pass:$keystore_password"
   rm -rf ca.srl
 
   # Import CA cert into keystore
-  keytool -keystore kafka.keystore.jks -alias CARoot -import -file ca.crt -storepass "$store_pass" -keypass "$store_pass" -noprompt
+  keytool -keystore kafka.keystore.jks -alias CARoot -import -file ca.crt -storepass "$keystore_password" -keypass "$keystore_password" -noprompt
 
   # Import signed Kafka server cert into keystore
-  keytool -keystore kafka.keystore.jks -import -file kafka.crt -storepass "$store_pass" -keypass "$store_pass" -noprompt
+  keytool -keystore kafka.keystore.jks -import -file kafka.crt -storepass "$keystore_password" -keypass "$keystore_password" -noprompt
 
   # Import CA cert into new truststore
-  keytool -keystore kafka.truststore.jks -alias CARoot -import -file ca.crt -storepass "$store_pass" -keypass "$store_pass" -noprompt
+  keytool -keystore kafka.truststore.jks -alias CARoot -import -file ca.crt -storepass "$keystore_password" -keypass "$keystore_password" -noprompt
 
   chown -R kafka:kafka "$dest_dir"
   chmod -R 400 ${dest_dir}/*
@@ -48,34 +61,62 @@ gen_cert() {
 }
 
 configure_kafka_properties() {
-  declare server_properties_file="{{ kafka_dir }}/config/server.properties"
-  declare server_properties_tmp="$(mktemp -p $tmp_dir)"
+  # Render Kafka server properties file
+  (
+    droplet_public_ip="$public_ip" \
+    kafka_default_user="$kafka_default_user" \
+    kafka_default_password="$kafka_default_password" \
+    keystore_location="${ssl_dir}/kafka.keystore.jks" \
+    keystore_password="$keystore_password" \
+    truststore_location="${ssl_dir}/kafka.truststore.jks" \
+    truststore_password="$keystore_password" \
+    data_dir="$data_dir" \
+    gomplate -f "${templates_dir}/server.properties.tmpl" -o "${kafka_dir}/config/server.properties"
+  )
 
-  # Generate admin password
-  export {{ kafka_admin_pass_placeholder }}=$(openssl rand -base64 45)
-  export {{ kafka_admin_user_placeholder }}=$(openssl rand -base64 45)
-  echo "kafka_user='${{ kafka_admin_user_placeholder }}'" > /root/.kafka_credentials
-  echo "kafka_password='${{ kafka_admin_pass_placeholder }}'" >> /root/.kafka_credentials
-  export {{ kafka_public_ipv4_addr_placeholder }}="$myip"
-
-  # Update Kafka server properties file
-  cat "$server_properties_file" | envsubst > "$server_properties_tmp"
-  chown kafka:kafka "$server_properties_tmp"
-  chmod 640 $server_properties_tmp
-  mv "$server_properties_tmp" "$server_properties_file"
+  chown kafka:kafka "${kafka_dir}/config/server.properties"
+  chmod 640 "${kafka_dir}/config/server.properties"
 }
 
 configure_kafka_service() {
-  # Update systemd environment
   # Dynamically set heap size based on physical memory available
-  declare service_tmp=$(mktemp -p $tmp_dir)
-  PHYS_MEM="$(($(getconf _PHYS_PAGES) * $(getconf PAGE_SIZE) / (1000 * 1000)))"
-  MAX_HEAP="$(($PHYS_MEM * 80/100))m"
-  export KAFKA_HEAP_OPTS="-Xms$MAX_HEAP -Xmx$MAX_HEAP -XX:MetaspaceSize=96m -XX:+UseG1GC -XX:MaxGCPauseMillis=20 -XX:InitiatingHeapOccupancyPercent=35 -XX:G1HeapRegionSize=16M -XX:MinMetaspaceFreeRatio=50 -XX:MaxMetaspaceFreeRatio=80"
-  cat /etc/systemd/system/kafka.service | envsubst > "$service_tmp"
-  mv "$service_tmp" /etc/systemd/system/kafka.service
+  declare phys_mem="$(($(getconf _PHYS_PAGES) * $(getconf PAGE_SIZE) / (1000 * 1000)))"
+  declare max_heap="$(($phys_mem * 80/100))m"
 
+  # Render systemd service file
+  (
+    kafka_dir="$kafka_dir" \
+    kafka_heap_opts="-Xms$max_heap -Xmx$max_heap -XX:MetaspaceSize=96m -XX:+UseG1GC -XX:MaxGCPauseMillis=20 -XX:InitiatingHeapOccupancyPercent=35 -XX:G1HeapRegionSize=16M -XX:MinMetaspaceFreeRatio=50 -XX:MaxMetaspaceFreeRatio=80" \
+    gomplate -f "${templates_dir}/kafka.service.tmpl" -o "/etc/systemd/system/kafka.service"
+  )
+
+  chmod 640 "/etc/systemd/system/kafka.service"
   systemctl enable --now kafka.service
+
+  echo "Ensuring Kafka is running..."
+  sleep 5
+  systemctl is-active --quiet kafka
+}
+
+add_kafka_default_user() {
+  "${kafka_dir}/bin/kafka-configs.sh" --bootstrap-server localhost:9092 --alter --add-config "SCRAM-SHA-256=[password=$kafka_default_password]" --entity-type users --entity-name "$kafka_default_user"
+}
+
+add_example_config() {
+  (
+    droplet_public_ip="$public_ip" \
+    kafka_default_user="$kafka_default_user" \
+    kafka_default_password="$kafka_default_password" \
+    gomplate -f "${templates_dir}/example.librdkafka.config.tmpl" -o "${ssl_dir}/example.librdkafka.config"
+  )
+}
+
+add_readme() {
+  (
+    droplet_public_ip="$public_ip" \
+    kafka_dir="$kafka_dir" \
+    gomplate -f "${templates_dir}/README.md.tmpl" -o "${ssl_dir}/README.md"
+  )
 }
 
 oneclick_cleanup() {
@@ -88,3 +129,8 @@ oneclick_cleanup() {
 
 gen_cert
 configure_kafka_properties
+configure_kafka_service
+add_kafka_default_user
+add_example_config
+add_readme
+oneclick_cleanup
