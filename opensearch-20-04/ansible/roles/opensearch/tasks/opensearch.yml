@@ -4,6 +4,7 @@
   get_url:
     url: "{{ opensearch_url }}"
     dest: "/tmp/opensearch.tar.gz"
+    checksum: "{{ opensearch_checksum }}"
 
 - name: Unpack opensearch tarball
   unarchive:

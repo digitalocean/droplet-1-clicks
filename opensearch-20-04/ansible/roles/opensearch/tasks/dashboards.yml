@@ -4,6 +4,7 @@
   get_url:
     url: "{{ opensearch_dashboards_url }}"
     dest: "/tmp/dashboards.tar.gz"
+    checksum: "{{ opensearch_dashboards_checksum }}"
 
 - name: Unpack dashboards tarball
   unarchive:
