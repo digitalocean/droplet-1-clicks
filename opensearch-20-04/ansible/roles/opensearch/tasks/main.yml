@@ -41,6 +41,7 @@
     url: "https://github.com/hairyhenderson/gomplate/releases/download/v3.10.0/gomplate_linux-amd64"
     dest: "/usr/bin/gomplate"
     mode: a+x
+    checksum: "sha256:eec0f85433c9c8aad93e8cd84c79d238f436b3e62f35b15471f5929bc741763a"
 
 - name: include opensearch
   include: opensearch.yml
