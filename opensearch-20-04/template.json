@@ -63,16 +63,24 @@
       ],
       "scripts": [
         "opensearch-20-04/scripts/014-ufw-opensearch.sh",
-        "common/scripts/020-application-tag.sh"
+        "common/scripts/020-application-tag.sh",
+        "common/scripts/900-cleanup.sh"
       ]
     },
     {
       "type": "ansible",
       "playbook_file": "./opensearch-20-04/ansible/opensearch-playbook.yml",
+      "user": "root",
       "ansible_env_vars": [
         "ANSIBLE_HOST_KEY_CHECKING=False",
         "ANSIBLE_SSH_ARGS='-o ForwardAgent=yes -o ControlMaster=auto -o ControlPersist=60s'",
         "ANSIBLE_NOCOLOR=True"
+      ]
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "rm -rf /root/.ansible"
       ]
     }
   ]
