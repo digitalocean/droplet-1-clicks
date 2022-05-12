@@ -31,25 +31,48 @@ gen_cert() {
   declare dest_dir="$ssl_dir"
   pushd "$dest_dir"
 
+  # Create openssl certificate signing request (CSR) config
+  declare csr_conf_tmp="$(mktemp -p $tmp_dir)"
+  cat <<EOF >> "$csr_conf_tmp"
+[req]
+distinguished_name = req_distinguished_name
+req_extensions = req_ext
+prompt = no
+
+[req_distinguished_name]
+CN = $HOSTNAME
+
+[req_ext]
+subjectAltName = @alt_names
+
+[alt_names]
+DNS.1 = localhost
+IP.1  = 127.0.0.1
+IP.2  = $public_ip
+IP.3  = $private_ip
+EOF
+
   # Generate CA key and cert
   openssl req -new -newkey rsa:4096 -x509 -subj "/CN=DigitalOcean Kafka One-Click" -days 3650 -keyout ca.key -out ca.crt -nodes
 
-  # Generate Kafka server cert and store in new keystore
-  keytool -genkey -keyalg RSA -keystore kafka.keystore.jks -dname "CN=$HOSTNAME" -storepass "$keystore_password" -keypass "$keystore_password" -storetype pkcs12 -ext "SAN=dns:localhost,ip:127.0.0.1,ip:$public_ip,ip:$private_ip"
+  # Generate Kafka private key
+  openssl genrsa -out kafka.key 4096
 
-  # Generate CSR for Kafka server
+  # Create Kafka certificate signing request (CSR)
   declare cert_csr_tmp="$(mktemp -p $tmp_dir)"
-  keytool -keystore kafka.keystore.jks -certreq -file "$cert_csr_tmp" -storepass "$keystore_password" -keypass "$keystore_password"
+  openssl req -new -key kafka.key -out "$cert_csr_tmp" -config "$csr_conf_tmp"
 
   # Sign Kafka server CSR with CA
-  openssl x509 -req -CA ca.crt -CAkey ca.key -days 3650 -in "$cert_csr_tmp" -out kafka.crt -CAcreateserial -passin "pass:$keystore_password"
+  openssl x509 -req -days 3650 -in "$cert_csr_tmp" -CA ca.crt -CAkey ca.key -CAcreateserial -out kafka.crt -extensions req_ext -extfile "$csr_conf_tmp"
   rm -rf ca.srl
+
+  # Create new keystore and import Kafka key and cert
+  declare keystore_tmp="$(mktemp -p $tmp_dir)"
+  openssl pkcs12 -export -in kafka.crt -inkey kafka.key -certfile kafka.crt -out "$keystore_tmp" -passout "pass:$keystore_password"
+  keytool -importkeystore -srckeystore "$keystore_tmp" -srcstoretype pkcs12 -destkeystore kafka.keystore.jks -deststoretype pkcs12 -srcstorepass "$keystore_password" -deststorepass "$keystore_password"
 
   # Import CA cert into keystore
   keytool -keystore kafka.keystore.jks -alias CARoot -import -file ca.crt -storepass "$keystore_password" -keypass "$keystore_password" -noprompt
-
-  # Import signed Kafka server cert into keystore
-  keytool -keystore kafka.keystore.jks -import -file kafka.crt -storepass "$keystore_password" -keypass "$keystore_password" -noprompt
 
   # Import CA cert into new truststore
   keytool -keystore kafka.truststore.jks -alias CARoot -import -file ca.crt -storepass "$keystore_password" -keypass "$keystore_password" -noprompt
