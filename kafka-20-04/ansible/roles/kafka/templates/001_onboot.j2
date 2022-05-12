@@ -32,7 +32,7 @@ gen_cert() {
   pushd "$dest_dir"
 
   # Generate CA key and cert
-  openssl req -new -newkey rsa:4096 -x509 -subj "/CN=DigitalOcean Kafka One-Click" -keyout ca.key -out ca.crt -nodes
+  openssl req -new -newkey rsa:4096 -x509 -subj "/CN=DigitalOcean Kafka One-Click" -days 3650 -keyout ca.key -out ca.crt -nodes
 
   # Generate Kafka server cert and store in new keystore
   keytool -genkey -keyalg RSA -keystore kafka.keystore.jks -dname "CN=$HOSTNAME" -storepass "$keystore_password" -keypass "$keystore_password" -storetype pkcs12 -ext "SAN=dns:localhost,ip:127.0.0.1,ip:$public_ip,ip:$private_ip"
@@ -42,7 +42,7 @@ gen_cert() {
   keytool -keystore kafka.keystore.jks -certreq -file "$cert_csr_tmp" -storepass "$keystore_password" -keypass "$keystore_password"
 
   # Sign Kafka server CSR with CA
-  openssl x509 -req -CA ca.crt -CAkey ca.key -in "$cert_csr_tmp" -out kafka.crt -CAcreateserial -passin "pass:$keystore_password"
+  openssl x509 -req -CA ca.crt -CAkey ca.key -days 3650 -in "$cert_csr_tmp" -out kafka.crt -CAcreateserial -passin "pass:$keystore_password"
   rm -rf ca.srl
 
   # Import CA cert into keystore
