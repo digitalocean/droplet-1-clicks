@@ -1,0 +1,21 @@
+[Unit]
+Description=Apache Kafka Broker
+Documentation=http://kafka.apache.org/documentation.html
+Requires=zookeeper.service
+After=zookeeper.service
+
+[Service]
+Type=simple
+User=kafka
+Group=kafka
+Environment=KAFKA_HEAP_OPTS="{{ .Env.kafka_heap_opts }}"
+ExecStart={{ .Env.kafka_dir }}/bin/kafka-server-start.sh {{ .Env.kafka_dir }}/config/server.properties
+ExecStop={{ .Env.kafka_dir }}/bin/kafka-server-stop.sh
+Restart=on-abnormal
+LimitNOFILE=65536
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=kafka
+
+[Install]
+WantedBy=multi-user.target

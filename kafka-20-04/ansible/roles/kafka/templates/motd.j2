@@ -1,0 +1,41 @@
+#!/usr/bin/env sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+cat <<EOF
+********************************************************************************
+Welcome to DigitalOcean's 1-Click Kafka/ZooKeeper Droplet.
+Kafka is running as a systemd service (kafka.service).
+To keep this Droplet secure, the UFW firewall is enabled.
+All ports are BLOCKED except 22 (SSH) and 9093 (Kafka SSL).
+
+To get started on this server:
+
+ 1. Create a topic
+
+    {{ kafka_dir }}/bin/kafka-topics.sh \\
+      --create \\
+      --topic quickstart \\
+      --bootstrap-server localhost:9092
+
+ 2. Produce your first event
+
+    echo 'Hello, World!' | {{ kafka_dir }}/bin/kafka-console-producer.sh \\
+      --topic quickstart \\
+      --bootstrap-server localhost:9092
+
+ 3. Consume the event
+
+    {{ kafka_dir }}/bin/kafka-console-consumer.sh \\
+      --from-beginning \\
+      --max-messages 1 \\
+      --topic quickstart \\
+      --bootstrap-server localhost:9092
+
+ * Learn more about configuring your clients by running:
+
+    less {{ kafka_dir }}/one-click-ssl/README.md
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF

@@ -1,0 +1,48 @@
+---
+- name: Files | Create Kafka directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: kafka
+    group: kafka
+  loop:
+    - "{{ kafka_dir }}"
+    - "{{ data_dir }}"
+    - "{{ templates_dir }}"
+
+- name: Files | Copy first-boot templates
+  copy:
+    src: "{{ item }}"
+    dest: "{{ templates_dir }}/{{ item }}"
+  loop:
+    - kafka.service.tmpl
+    - server.properties.tmpl
+    - example.librdkafka.config.tmpl
+    - README.md.tmpl
+
+- name: Files | ZooKeeper systemd service
+  template:
+    src: zookeeper.service.j2
+    dest: /etc/systemd/system/zookeeper.service
+
+- name: Files | MOTD
+  template:
+    src: "motd.j2"
+    dest: "/etc/update-motd.d/99-one-click"
+    mode: 0755
+
+- name: Files | On-boot script
+  template:
+    src: "001_onboot.j2"
+    dest: "/var/lib/cloud/scripts/per-instance/001_onboot"
+    mode: 0755
+
+- name: Files | Syslog configuration
+  template:
+    src: "syslog.conf.j2"
+    dest: "/etc/rsyslog.d/10-kafka.conf"
+
+- name: Files | Logrotate configuration
+  template:
+    src: "logrotate.j2"
+    dest: "/etc/logrotate.d/kafka"

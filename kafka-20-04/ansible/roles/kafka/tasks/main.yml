@@ -1,0 +1,26 @@
+---
+# Ansible will proceed with remaining hosts if it fails to gather facts for some hosts.
+# We only want to continue if all hosts are reachable
+- assert:
+    that:
+      - ansible_play_hosts == ansible_play_hosts_all
+
+- group:
+    name: kafka
+    system: yes
+
+- user:
+    name: kafka
+    group: kafka
+    system: yes
+
+- import_tasks: files.yml
+- import_tasks: install.yml
+- import_tasks: firewall.yml
+
+- name: Install gomplate
+  get_url:
+    url: "https://github.com/hairyhenderson/gomplate/releases/download/v3.10.0/gomplate_linux-amd64"
+    dest: "/usr/local/sbin/gomplate"
+    checksum: "sha256:eec0f85433c9c8aad93e8cd84c79d238f436b3e62f35b15471f5929bc741763a"
+    mode: 0755

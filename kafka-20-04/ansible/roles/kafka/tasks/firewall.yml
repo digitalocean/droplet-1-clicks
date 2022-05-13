@@ -1,0 +1,16 @@
+---
+- name: Firewall | Rate limit ssh coneections
+  community.general.ufw:
+    rule: limit
+    name: OpenSSH
+
+- name: Firewall | Allow Kafka SSL port 9093
+  community.general.ufw:
+    rule: allow
+    port: "9093"
+    proto: tcp
+
+- name: Firewall | Deny everything else and enable UFW
+  community.general.ufw:
+    state: enabled
+    policy: deny
