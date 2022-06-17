@@ -8,7 +8,6 @@ wget "https://wordpress.org/wordpress-${application_version}.tar.gz" \
 mkdir -p /var/www
 tar -C /var/www \
     -xvvf /tmp/wordpress.tar.gz
-
 wpfail2ban="wp-fail2ban.${fail2ban_version}.zip"
 wget https://downloads.wordpress.org/plugin/${wpfail2ban} -O /tmp/wp-fail2ban.zip
 unzip /tmp/wp-fail2ban.zip -d /tmp/
