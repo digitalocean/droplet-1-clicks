@@ -1,4 +1,4 @@
-.PHONY: buld-% update-scripts validate-%
+.PHONY: build-% update-scripts validate-%
 
 %:
 	./scripts/create-1-click.sh $* $*-20-04
