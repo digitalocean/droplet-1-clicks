@@ -4,8 +4,8 @@
     "image_name": "docker-18-04-snapshot-{{timestamp}}",
     "apt_packages": "apt-transport-https ca-certificates curl jq linux-image-extra-virtual software-properties-common ",
     "application_name": "Docker",
-    "application_version": "19.03.12",
-    "docker_compose_version": "1.27.4"
+    "application_version": "20.10.17",
+    "docker_compose_version": "2.6.0"
   },
   "sensitive-variables": [
     "do_api_token"
