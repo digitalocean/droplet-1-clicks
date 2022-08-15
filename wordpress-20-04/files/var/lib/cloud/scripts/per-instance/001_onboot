@@ -17,6 +17,15 @@ root_mysql_pass="${root_mysql_pass}"
 wordpress_mysql_pass="${wordpress_mysql_pass}"
 EOM
 
+# there are no available memory for WP on tiny droplets sometimes. Simple fix: turn off mysql 
+# perfomance schema for these droplets
+dropletMemory=$(LANG=C free|awk '/^Mem:/{print $2}')
+if [ $dropletMemory -lt 2000000 ]; then
+	echo "[mysqld]
+performance_schema=off" > /etc/mysql/mysql.conf.d/performance.cnf
+	systemctl restart mysql
+fi
+
 # Set up Postfix defaults
 hostname=$(hostname)
 sed -i "s/myhostname \= wp-build/myhostname = $hostname/g" /etc/postfix/main.cf;
