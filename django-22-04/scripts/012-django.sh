@@ -1,5 +1,11 @@
 #!/bin/sh
 
+# Replace with the version of Django you want to install: 4.1.1, etc...
+VERSION=${DJANGO_VERSION}
+
+# Install Django
+python3 -m pip install Django=="$VERSION"
+
 # Create the django user
 useradd --home-dir /home/django \
         --shell /bin/bash \
