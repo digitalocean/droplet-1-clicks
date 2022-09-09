@@ -1,11 +1,5 @@
 #!/bin/sh
 
-# Replace with the version of Django you want to install: 4.1.1, etc...
-VERSION=${DJANGO_VERSION}
-
-# Install Django
-python3 -m pip install Django=="$VERSION"
-
 # Create the django user
 useradd --home-dir /home/django \
         --shell /bin/bash \
@@ -15,6 +9,7 @@ useradd --home-dir /home/django \
 
 # Setup the home directory
 chown -R django: /home/django
+chmod 755 /home/django
 
 if [ -f "/root/.digitalocean_dbaas_credentials" ] && [ "$(sed -n "s/^db_protocol=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)" = "postgresql" ]; then
    # grab host & port to block until database connection is ready
@@ -37,3 +32,9 @@ if [ -f "/root/.digitalocean_dbaas_credentials" ] && [ "$(sed -n "s/^db_protocol
    unset host port
    rm -rf /etc/postgresql
  fi
+
+# Replace with the version of Django you want to install: 4.1.1, etc...
+VERSION=${DJANGO_VERSION}
+
+# Install Django
+python3 -m pip install Django=="$VERSION"
