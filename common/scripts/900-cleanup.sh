@@ -42,3 +42,4 @@ dd if=/dev/zero of=/zerofile &
     done
 sync; rm /zerofile; sync
 cat /dev/null > /var/log/lastlog; cat /dev/null > /var/log/wtmp
+sudo apt-get --yes purge droplet-agent*
