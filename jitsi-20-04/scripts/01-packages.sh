@@ -8,6 +8,22 @@ fallocate -l 8G /swapfile
 mkswap /swapfile
 swapon /swapfile
 
+# Retrieve the latest package versions across all repositories
+sudo apt update
+
+# Ensure support for apt repositories served via HTTPS
+sudo apt install apt-transport-https
+
+# Jitsi requires dependencies from Ubuntu's universe package repository
+sudo apt-add-repository universe
+sudo apt update
+
+# Add the Prosody package repository
+echo deb http://packages.prosody.im/debian $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list
+wget https://prosody.im/files/prosody-debian-packages.key -O- | sudo apt-key add -
+apt install lua5.2
+
+
 # First install the Jitsi repository key onto your system:
 curl https://download.jitsi.org/jitsi-key.gpg.key | sudo sh -c 'gpg --dearmor > /usr/share/keyrings/jitsi-keyring.gpg'
 
