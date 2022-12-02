@@ -15,7 +15,7 @@ fi
 chown -Rf www-data:www-data /var/www/html
 
 # if applicable, configure wordpress to use mysql dbaas
-if [ -f "/root/.digitalocean_dbaas_credentials" ]; then
+if [ -f "/root/.digitalocean_dbaas_credentials" ] && [ "$(sed -n "s/^db_protocol=\"\([^:]*\):.*\"$/\1/p" /root/.digitalocean_dbaas_credentials)" = "mysql" ]; then
   # grab all the data from the password file
   username=$(sed -n "s/^db_username=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
   password=$(sed -n "s/^db_password=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
