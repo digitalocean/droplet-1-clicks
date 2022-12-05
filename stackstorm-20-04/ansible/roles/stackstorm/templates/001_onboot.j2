@@ -1,0 +1,19 @@
+#!/usr/bin/bash -x
+exec > >(tee /var/log/one_click_setup.log) 2>&1
+
+# Generate some passwords
+cat > /root/.digitalocean_passwords <<EOM
+export ST2_AUTH_USERNAME="st2admin"
+export ST2_AUTH_PASSWORD="$(openssl rand -hex 16)"
+EOM
+
+source /root/.digitalocean_passwords
+
+htpasswd -b -c /etc/st2/htpasswd "$ST2_AUTH_USERNAME" "$ST2_AUTH_PASSWORD"
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
