@@ -39,8 +39,8 @@
     },
     {
       "type": "file",
-      "source": "wordpress-20-04/files/opt/",
-      "destination": "/opt/"
+      "source": "wordpress-20-04/files/root/",
+      "destination": "/root/"
     },
     {
       "type": "file",
