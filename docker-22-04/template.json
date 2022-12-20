@@ -1,7 +1,7 @@
 {
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
-    "image_name": "docker-20-04-snapshot-{{timestamp}}",
+    "image_name": "docker-22-04-snapshot-{{timestamp}}",
     "apt_packages": "apt-transport-https ca-certificates curl jq linux-image-extra-virtual software-properties-common ",
     "application_name": "Docker",
     "application_version": "20.10.21",
@@ -14,7 +14,7 @@
     {
       "type": "digitalocean",
       "api_token": "{{user `do_api_token`}}",
-      "image": "ubuntu-20-04-x64",
+      "image": "ubuntu-22-04-x64",
       "region": "nyc3",
       "size": "s-1vcpu-1gb",
       "ssh_username": "root",
@@ -35,7 +35,7 @@
     },
     {
       "type": "file",
-      "source": "docker-20-04/files/etc/",
+      "source": "docker-22-04/files/etc/",
       "destination": "/etc/"
     },
     {
