@@ -1,13 +1,13 @@
 {
   "variables": {
     "token": "{{env `DIGITALOCEAN_TOKEN`}}",
-    "image_name": "Bikram-NFS-server-{{timestamp}}"
+    "image_name": "NFS-server-{{timestamp}}"
   },
   "builders": [
     {
       "type": "digitalocean",
       "api_token": "{{user `token`}}",
-      "image": "ubuntu-20-04-x64",
+      "image": "ubuntu-22-04-x64",
       "region": "sfo3",
       "size": "s-1vcpu-1gb",
       "ssh_username": "root",
