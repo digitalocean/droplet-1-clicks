@@ -1,0 +1,60 @@
+{
+  "variables": {
+    "token": "{{env `DIGITALOCEAN_TOKEN`}}",
+    "image_name": "Bikram-NFS-server-{{timestamp}}"
+  },
+  "builders": [
+    {
+      "type": "digitalocean",
+      "api_token": "{{user `token`}}",
+      "image": "ubuntu-20-04-x64",
+      "region": "sfo3",
+      "size": "s-1vcpu-1gb",
+      "ssh_username": "root",
+      "snapshot_name": "{{user `image_name`}}"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "inline": [
+        "cloud-init status --wait"
+      ]
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "apt-get -y update",
+        "DEBIAN_FRONTEND=noninteractive apt-get -y upgrade"
+      ]
+    },
+    {
+      "type": "file",
+      "source": "files/etc/update-motd.d/99-one-click",
+      "destination": "/etc/update-motd.d/99-one-click"
+    },
+    {
+      "type": "file",
+      "source": "files/var/lib/cloud/scripts/per-instance/001_onboot",
+      "destination": "/var/lib/cloud/scripts/per-instance/001_onboot"
+    },
+    {
+      "type": "file",
+      "source": "files/root/local-partition.sh",
+      "destination": "/root/local-partition.sh"
+    },
+    {
+      "type": "file",
+      "source": "files/root/nfs-whitelist.sh",
+      "destination": "/root/nfs-whitelist.sh"
+    },
+    {
+      "type": "shell",
+      "scripts": [
+        "scripts/01-packages.sh",
+        "scripts/90-cleanup.sh",
+        "scripts/99-img_check.sh"
+      ]
+    }
+  ]
+}
