@@ -33,12 +33,12 @@
     },
     {
       "type": "file",
-      "source": "mysql-22-04/files/etc/",
+      "source": "mysql-20-04/files/etc/",
       "destination": "/etc/"
     },
     {
       "type": "file",
-      "source": "mysql-22-04/files/var/",
+      "source": "mysql-20-04/files/var/",
       "destination": "/var/"
     },
     {
@@ -68,7 +68,7 @@
         "LC_CTYPE=en_US.UTF-8"
       ],
       "scripts": [
-        "mysql-22-04/scripts/010-php-my-admin.sh",
+        "mysql-20-04/scripts/010-php-my-admin.sh",
         "common/scripts/014-ufw-apache.sh",
         "common/scripts/014-ufw-mysql.sh",
         "common/scripts/018-force-ssh-logout.sh",
