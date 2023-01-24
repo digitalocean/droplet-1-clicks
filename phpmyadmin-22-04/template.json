@@ -5,7 +5,7 @@
     "image_name": "phpmyadmin-22-04-snapshot-{{timestamp}}",
     "apt_packages": "apache2 apache2-utils mysql-server php php-gd php-mysql phpmyadmin python3-certbot-apache libapache2-mod-php lamp-server^",
     "application_name": "phpMyAdmin",
-    "application_version": "5.0.3"
+    "application_version": "5.2.0"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
