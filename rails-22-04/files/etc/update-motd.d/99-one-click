@@ -1,0 +1,48 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+. /root/.digitalocean_passwords
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+-------------------------------------------------------------------------------
+Thank you for using DigitalOcean's Rails Application.
+
+The "ufw" firewall is enabled. All ports except for 22, 80, and 443 are BLOCKED.
+
+Let's Encrypt has been pre-installed for you. If you have a domain name, and
+you will be using it with this 1-Click app, please see: https://do.co/2GOFe5J
+
+You can use the following SFTP credentials to upload your files (using FileZilla/WinSCP/Rsync):
+  * Host: ${myip}
+  * User: rails
+  * Pass: ${RAIL_USER_PASS}
+If you provided an ssh-key when creating this Droplet, the key should be used for SFTP as well
+
+You can use the following Postgres database credentials:
+  * User: rails
+  * Pass: ${RAIL_POSTGRESS_PASS}
+
+Ruby has been configured to use vendored bundles. Please use the 'rails' user to
+interact with the default project via "su - rails"
+
+Passwords have been saved in /root/.digitalocean.passwords
+
+Nginx is configured to forward requests for rails to a local unix socket
+    Public IP: http://${myip}
+    Access Logs: /var/log/nginx/access.log
+    Error Logs: /var/log/nginx/error.log
+
+Rails using the Puma server is managed via 'systemd'.
+    Proccess management: systemctl {start|stop|restart} rails.service
+    systemd Unit file: /etc/systemd/system/rails.service
+
+Ruby information:
+    All Gems and processes have been installed locally to the 'rails' user. Please
+    'su - rails' to use this environment.
+
+You can learn more about using this image here: https://do.co/2GTOVjB
+
+-------------------------------------------------------------------------------------
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF

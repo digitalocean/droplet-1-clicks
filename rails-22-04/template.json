@@ -1,0 +1,90 @@
+
+{
+  "variables": {
+    "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
+    "image_name": "rails-22-04-snapshot-{{timestamp}}",
+    "apt_packages": "autoconf automake bison build-essential g++ gawk gcc git jq libffi-dev libgdbm-dev libgmp-dev libncurses5-dev libpq-dev libreadline6-dev libsqlite3-dev libssl-dev libtool libyaml-dev make nginx pkg-config postgresql python3-certbot python3-certbot-nginx software-properties-common sqlite3 super zlib1g-dev",
+    "application_name": "Ruby on Rails",
+    "application_version": "6.0.3.4",
+    "ruby_version": "2.7.2",
+    "puma_version": "5.0.2",
+    "pg_version": "1.2.3",
+    "sassc_version": "2.4.0",
+    "node_version": "node_12.x"
+  },
+  "sensitive-variables": ["do_api_token"],
+  "builders": [
+    {
+      "type": "digitalocean",
+      "api_token": "{{user `do_api_token`}}",
+      "image": "ubuntu-22-04-x64",
+      "region": "nyc3",
+      "size": "s-1vcpu-1gb",
+      "ssh_username": "root",
+      "snapshot_name": "{{user `image_name`}}"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "inline": [
+        "cloud-init status --wait"
+      ]
+    },
+    {
+      "type": "file",
+      "source": "common/files/var/",
+      "destination": "/var/"
+    },
+    {
+      "type": "file",
+      "source": "rails-22-04/files/etc/",
+      "destination": "/etc/"
+    },
+    {
+      "type": "file",
+      "source": "rails-22-04/files/var/",
+      "destination": "/var/"
+    },
+    {
+      "type": "shell",
+      "environment_vars": [
+        "DEBIAN_FRONTEND=noninteractive",
+        "LC_ALL=C",
+        "LANG=en_US.UTF-8",
+        "LC_CTYPE=en_US.UTF-8"
+      ],
+      "inline": [
+        "apt -qqy update",
+        "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' full-upgrade",
+        "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' install {{user `apt_packages`}}",
+        "apt-get -qqy clean"
+      ]
+    },
+    {
+      "type": "shell",
+      "environment_vars": [
+        "application_name={{user `application_name`}}",
+        "application_version={{user `application_version`}}",
+        "ruby_version={{user `ruby_version`}}",
+        "rails_version={{user `application_version`}}",
+        "puma_version={{user `puma_version`}}",
+        "pg_version={{user `pg_version`}}",
+        "sassc_version={{user `sassc_version`}}",
+        "NODE_VERSION={{user `node_version`}}",
+        "DEBIAN_FRONTEND=noninteractive",
+        "LC_ALL=C",
+        "LANG=en_US.UTF-8",
+        "LC_CTYPE=en_US.UTF-8"
+      ],
+      "scripts": [
+        "common/scripts/010-nodejs.sh",
+        "rails-22-04/scripts/010-rails.sh",
+        "common/scripts/014-ufw-nginx.sh",
+        "common/scripts/018-force-ssh-logout.sh",
+        "common/scripts/020-application-tag.sh",
+        "common/scripts/900-cleanup.sh"
+      ]
+    }
+  ]
+}
