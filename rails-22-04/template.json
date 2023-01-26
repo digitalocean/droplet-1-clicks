@@ -10,7 +10,7 @@
     "puma_version": "6.0.2",
     "pg_version": "1.4.5",
     "sassc_version": "2.4.0",
-    "node_version": "node_12.x"
+    "node_version": "node_19.x"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
