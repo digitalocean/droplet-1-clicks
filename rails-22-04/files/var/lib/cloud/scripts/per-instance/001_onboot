@@ -1,0 +1,84 @@
+#!/bin/bash
+
+exec > >(tee /var/log/one_click_setup.log) 2>&1
+
+# Some random passwords
+echo "## Generate Passwords"
+export APP_DATABASE_PASSWORD=$(openssl rand -hex 16)
+export ftp_pass=$(openssl rand -hex 16)
+
+echo "## Adding PostgreSQL credentials to Rails users environment"
+cat >> /home/rails/.bashrc << EOF
+export EXAMPLE_DATABASE_PASSWORD=${APP_DATABASE_PASSWORD}
+EOF
+
+
+cp -f /var/lib/digitalocean/database.yml /home/rails/example/config/.
+chown -f rails.rails /home/rails/example/config/database.yml
+
+
+################################################################
+# Create the database
+echo "## Create Database(s) as postgres user"
+setuid postgres bash <<EOM
+psql -U postgres -d postgres -c "CREATE USER rails WITH CREATEDB PASSWORD '${APP_DATABASE_PASSWORD}';"
+createdb example_development
+createdb example_test
+createdb example_production
+EOM
+
+# Apply the db settings
+echo "## Apply db settings to rails project"
+setuid rails bash <<EOC
+cd /home/rails/example
+source /home/rails/.rvm/scripts/rvm
+export GEM_HOME="/home/rails/example/vendor/bundle"
+export RAILS_ENV=production
+bundle exec rake db:create
+EOC
+
+###############################################################
+
+# Save the crendentials
+echo "## Saving credentials and writing passwords file"
+rake_bin="/home/rails/example/bin/rake"
+secret_key_base=$(openssl rand 64 -hex)
+
+cat > /root/.digitalocean_passwords << EOM
+RAILS_PROD_SECRET=${secret_key_base}
+RAIL_POSTGRESS_PASS=${APP_DATABASE_PASSWORD}
+RAIL_USER_PASS=${ftp_pass}
+EOM
+
+###############################################################
+
+# Set up Rails service
+echo "## Create the rails systemd service"
+sudo cp /var/lib/digitalocean/rails.service /etc/systemd/system/rails.service
+sudo systemctl enable rails.service
+sudo systemctl start rails.service
+
+# Set up nginx
+echo "## Set up NGINX"
+ln -s /etc/nginx/sites-available/rails /etc/nginx/sites-enabled/rails
+unlink /etc/nginx/sites-enabled/default
+service nginx restart
+
+# Remove the Rails user's sudo acces
+rm -f /etc/sudoers.d/rails
+
+# Setup the rails sftp user
+echo "## Enabling SFTP for the rails user"
+echo "rails:${ftp_pass}" | chpasswd
+if [ -e /root/.ssh/authorized_keys ]; then
+    mkdir -p /home/rails/.ssh
+    cp /root/.ssh/authorized_keys /home/rails/.ssh/
+    chown -Rf rails:rails /home/rails/.ssh
+fi
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
