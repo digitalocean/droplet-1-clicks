@@ -11,5 +11,5 @@ git clone https://github.com/discourse/discourse_docker.git /var/discourse
 
 # Add first-login task
 cat >> /root/.bashrc <<EOM
-/opt/digitalocean/setup_discourse.sh
+/opt/digitalocean_discourse/setup_discourse.sh
 EOM
