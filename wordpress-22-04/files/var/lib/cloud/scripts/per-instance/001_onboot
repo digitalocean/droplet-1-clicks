@@ -1,0 +1,103 @@
+#!/bin/bash
+
+#Generate Mysql root password.
+root_mysql_pass=$(openssl rand -hex 24)
+wordpress_mysql_pass=$(openssl rand -hex 24)
+debian_sys_maint_mysql_pass=$(openssl rand -hex 24)
+
+# Don't enable WordPress until first login
+cat >> /root/.bashrc <<EOM
+chmod +x /root/wp_setup.sh
+/root/wp_setup.sh
+EOM
+
+# Save the passwords
+cat > /root/.digitalocean_password <<EOM
+root_mysql_pass="${root_mysql_pass}"
+wordpress_mysql_pass="${wordpress_mysql_pass}"
+EOM
+
+# there are no available memory for WP on tiny droplets sometimes. Simple fix: turn off mysql 
+# perfomance schema for these droplets
+dropletMemory=$(LANG=C free|awk '/^Mem:/{print $2}')
+if [ $dropletMemory -lt 2000000 ]; then
+	echo "[mysqld]
+performance_schema=off" > /etc/mysql/mysql.conf.d/performance.cnf
+	systemctl restart mysql
+fi
+
+# Set up Postfix defaults
+hostname=$(hostname)
+sed -i "s/myhostname \= wp-build/myhostname = $hostname/g" /etc/postfix/main.cf;
+sed -i "s/inet_interfaces = all/inet_interfaces = loopback-only/g" /etc/postfix/main.cf;
+systemctl restart postfix &
+
+mysqladmin -u root -h localhost create wordpress
+mysqladmin -u root -h localhost password ${root_mysql_pass}
+
+# populate the wordpress config file
+cp /var/www/wordpress/wp-config-sample.php /var/www/wordpress/wp-config.php
+sed -e "s/'DB_NAME', 'database_name_here'/'DB_NAME', 'wordpress'/g" \
+    -e "s/'DB_USER', 'username_here'/'DB_USER', 'wordpress'/g" \
+    -e "s/'DB_PASSWORD', 'password_here'/'DB_PASSWORD', '${wordpress_mysql_pass}'/g" \
+    -i /var/www/wordpress/wp-config.php
+
+chown -Rf www-data:www-data /var/www/wordpress
+
+mysql -uroot -p${root_mysql_pass} \
+      -e "CREATE USER 'wordpress'@'localhost' IDENTIFIED BY '${wordpress_mysql_pass}'"
+
+mysql -uroot -p${root_mysql_pass} \
+      -e "GRANT ALL PRIVILEGES ON wordpress.* TO wordpress@localhost"
+
+mysql -uroot -p${root_mysql_pass} \
+      -e "ALTER USER 'debian-sys-maint'@'localhost' IDENTIFIED BY '${debian_sys_maint_mysql_pass}'"
+
+MYSQL_ROOT_PASSWORD=${wordpress_mysql_pass}
+
+SECURE_MYSQL=$(expect -c "
+set timeout 10
+spawn mysql_secure_installation
+expect \"Enter current password for root (enter for none):\"
+send \"$MYSQL_ROOT_PASSWORD\r\"
+expect \"Change the root password?\"
+send \"n\r\"
+expect \"Remove anonymous users?\"
+send \"y\r\"
+expect \"Disallow root login remotely?\"
+send \"y\r\"
+expect \"Remove test database and access to it?\"
+send \"y\r\"
+expect \"Reload privilege tables now?\"
+send \"y\r\"
+expect eof
+")
+
+cat > /etc/mysql/debian.cnf <<EOM
+# Automatically generated for Debian scripts. DO NOT TOUCH!
+[client]
+host     = localhost
+user     = debian-sys-maint
+password = ${debian_sys_maint_mysql_pass}
+socket   = /var/run/mysqld/mysqld.sock
+[mysql_upgrade]
+host     = localhost
+user     = debian-sys-maint
+password = ${debian_sys_maint_mysql_pass}
+socket   = /var/run/mysqld/mysqld.sock
+EOM
+
+# WordPress Salts
+for i in `seq 1 8`
+do
+    wp_salt=$(</dev/urandom tr -dc 'a-zA-Z0-9!@#$%^&*()\-_ []{}<>~`+=,.;:/?|' | head -c 64 | sed -e 's/[\/&]/\\&/g')
+    sed -e "0,/put your unique phrase here/s/put your unique phrase here/${wp_salt}/" \
+        -i /var/www/wordpress/wp-config.php;
+done
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
