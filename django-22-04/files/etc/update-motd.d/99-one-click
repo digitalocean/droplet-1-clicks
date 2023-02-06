@@ -7,15 +7,15 @@
 
 dbaas_text=""
 if [ -f "/root/.digitalocean_dbaas_credentials" ]; then
-    dbaas_text="Django is configured to use local Postgres as its database. Use the following credentials to manage the database:
-    Database: django
-    User:     ${DJANGO_USER}
-    Pass:     ${DJANGO_POSTGRESS_PASS}"
-else
     dbaas_text="Django is configured to use managed Postgres as its database. Use the following credentials to manage the database:
     Database: django
     Host:     ${DJANGO_POSTGRESS_HOST}
     Port:     ${DJANGO_POSTGRESS_PORT}
+    User:     ${DJANGO_USER}
+    Pass:     ${DJANGO_POSTGRESS_PASS}"
+else
+    dbaas_text="Django is configured to use local Postgres as its database. Use the following credentials to manage the database:
+    Database: django
     User:     ${DJANGO_USER}
     Pass:     ${DJANGO_POSTGRESS_PASS}"
 fi
