@@ -7,10 +7,11 @@
 
 dbaas_text=""
 if [ -f "/root/.digitalocean_dbaas_credentials" ]; then
+    . /root/.digitalocean_dbaas_credentials
     dbaas_text="Django is configured to use managed Postgres as its database. Use the following credentials to manage the database:
     Database: django
-    Host:     ${DJANGO_POSTGRESS_HOST}
-    Port:     ${DJANGO_POSTGRESS_PORT}
+    Host:     ${db_host}
+    Port:     ${db_port}
     User:     ${DJANGO_USER}
     Pass:     ${DJANGO_POSTGRESS_PASS}"
 else
