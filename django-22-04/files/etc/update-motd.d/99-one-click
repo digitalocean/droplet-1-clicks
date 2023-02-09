@@ -5,6 +5,22 @@
 # Read in the passwords....
 . /root/.digitalocean_passwords
 
+dbaas_text=""
+if [ -f "/root/.digitalocean_dbaas_credentials" ]; then
+    . /root/.digitalocean_dbaas_credentials
+    dbaas_text="Django is configured to use managed Postgres as its database. Use the following credentials to manage the database:
+    Database: django
+    Host:     ${db_host}
+    Port:     ${db_port}
+    User:     ${DJANGO_USER}
+    Pass:     ${DJANGO_POSTGRESS_PASS}"
+else
+    dbaas_text="Django is configured to use local Postgres as its database. Use the following credentials to manage the database:
+    Database: django
+    User:     ${DJANGO_USER}
+    Pass:     ${DJANGO_POSTGRESS_PASS}"
+fi
+
 myip=$(hostname -I | awk '{print$1}')
 cat <<EOF
 ********************************************************************************
@@ -23,11 +39,7 @@ Use these SFTP credentials to upload files with FileZilla/WinSCP/rsync:
     User: ${DJANGO_USER}
     Pass: ${DJANGO_USER_PASSWORD}
 
-Django is configured to use Postgres as its database. Use the following
-credentials to manage the database:
-    Database: django
-    User:     ${DJANGO_USER}
-    Pass:     ${DJANGO_POSTGRESS_PASS}
+${dbaas_text}
 
 In a web browser, you can view:
  * The Django 1-Click Quickstart guide: https://do.co/3bY3b67#start
