@@ -45,11 +45,6 @@
       "destination": "/var/"
     },
     {
-      "type": "file",
-      "source": "mern-22-04/files/tmp/",
-      "destination": "/tmp/"
-    },
-    {
       "type": "shell",
       "environment_vars": [
         "DEBIAN_FRONTEND=noninteractive",
