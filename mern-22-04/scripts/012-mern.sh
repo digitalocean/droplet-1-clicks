@@ -33,6 +33,8 @@ cp /etc/sample-project/src/* /home/mern/client/src
 # Delete sample project
 rm -r /etc/sample-project
 
+cd /home/mern/client/src && npm run build
+
 sudo npm install pm2@latest -g --no-optional
 
 su - nodejs -c "pm2 serve /home/mern/client/build 3000 --name \"sample_mern_app\" --spa"
