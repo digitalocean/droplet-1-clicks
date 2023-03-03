@@ -34,5 +34,3 @@ sudo npm install pm2@latest -g --no-optional
 su - nodejs -c "pm2 serve /home/mern/client/src 3000 --name \"sample_mern_app\" --spa"
 sudo env "PATH=$PATH:/usr/bin" /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u nodejs --hp /home/nodejs
 su - nodejs -c "pm2 save"
-
-
