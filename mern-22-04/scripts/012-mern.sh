@@ -1,11 +1,16 @@
 #!/bin/sh
 
-
 cd /home/
-npm install -g express-generator
-npm install -g create-react-app
-create-react-app mern
-cd mern/src
-rm App.css App.js logo.svg
-mkdir my-test-dir
+
+# Create express application
+npx express-generate mern/server
+
+# Create react application inside of express application
+npx create-react-app mern/client
+
+# Copy sample project
+cd mern/client/src
 mv /sample/src/* .
+
+# Delete sample project
+rm -r /sample
