@@ -15,13 +15,17 @@ chown -R nodejs: /var/www/html
 
 usermod -aG sudo nodejs
 
-cd /home/
+# Create mern folder
+mkdir /home/mern
+cd /home/mern
 
 # Create express application
-npx express-generate mern/server
+npx express-generate server
 
-# Create react application inside of express application
-npx create-react-app mern/client
+# Create react application
+npx create-react-app client
+
+cd client && npm run build
 
 # Copy sample project
 cp /tmp/sample-project/src/* /home/mern/client/src
@@ -31,6 +35,6 @@ rm -r /tmp/sample-project
 
 sudo npm install pm2@latest -g --no-optional
 
-su - nodejs -c "pm2 serve /home/mern/client/src 3000 --name \"sample_mern_app\" --spa"
+su - nodejs -c "pm2 serve /home/mern/client/build 3000 --name \"sample_mern_app\" --spa"
 sudo env "PATH=$PATH:/usr/bin" /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u nodejs --hp /home/nodejs
 su - nodejs -c "pm2 save"
