@@ -11,7 +11,7 @@ function App() {
 				</p>
 				<a
 					className="App-link"
-					href="https://marketplace.digitalocean.com/apps/phpmyadmin#getting-started"
+					href="https://marketplace.digitalocean.com/apps/mern#getting-started"
 					target="_blank"
 					rel="noopener noreferrer"
 				>
