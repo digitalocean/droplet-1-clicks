@@ -28,10 +28,10 @@ npx create-react-app client
 cd client && npm run build
 
 # Copy sample project
-cp /tmp/sample-project/src/* /home/mern/client/src
+cp /etc/sample-project/src/* /home/mern/client/src
 
 # Delete sample project
-rm -r /tmp/sample-project
+rm -r /etc/sample-project
 
 sudo npm install pm2@latest -g --no-optional
 
