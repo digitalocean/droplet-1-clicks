@@ -32,6 +32,7 @@ cp /etc/sample-project/src/* /home/mern/client/src
 
 # Delete sample project
 rm -r /etc/sample-project
+rm /home/mern/client/src/logo.svg
 
 cd /home/mern/client/src && npm run build
 
