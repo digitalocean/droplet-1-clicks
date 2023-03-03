@@ -47,7 +47,7 @@
     {
       "type": "file",
       "source": "mern-22-04/files/tmp",
-      "destination": "/tmp/"
+      "destination": "/tmp/sample-project"
     },
     {
       "type": "shell",

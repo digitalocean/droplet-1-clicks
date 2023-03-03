@@ -24,10 +24,10 @@ npx express-generate mern/server
 npx create-react-app mern/client
 
 # Copy sample project
-cp /tmp/src/* /home/mern/client/src
+cp /tmp/sample-project/src/* /home/mern/client/src
 
 # Delete sample project
-rm -r /tmp
+rm -r /tmp/sample-project
 
 sudo npm install pm2@latest -g --no-optional
 
