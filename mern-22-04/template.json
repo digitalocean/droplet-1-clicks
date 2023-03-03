@@ -46,7 +46,7 @@
     },
     {
       "type": "file",
-      "source": "mern-22-04/files/tmp",
+      "source": "mern-22-04/files/tmp/",
       "destination": "/tmp/"
     },
     {
