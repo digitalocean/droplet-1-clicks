@@ -21,6 +21,13 @@ service mongod start
 # create mongodb admin
 echo 'db.createUser({user: "admin" , pwd: "'${admin_mongodb_password}'" , roles: [{ role: "userAdminAnyDatabase" , db: "admin"}], "mechanisms":["SCRAM-SHA-1"]});' | mongosh admin
 
+cat >> /etc/mongod.conf <<EOM
+
+# Enabling authorization for MongoDB
+security:
+  authorization: "enabled"
+EOM
+
 service mongod stop
 service mongod start --auth
 
