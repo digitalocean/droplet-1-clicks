@@ -12,16 +12,3 @@ apt-get -qqy install mongodb-org=${mongodb_version} mongodb-org-mongos=${mongodb
 
 # Stop MongoDB from updating to an SSPL version until user decides to
 mv -f /etc/apt/sources.list.d/mongodb.list /etc/apt/sources.list.d/mongodb.list.disabled
-
-#systemctl start mongod
-#systemctl enable mongod
-
-# Create mongodb user
-#echo 'db.createUser({user: "admin" , pwd: "${admin_mysql_password}" , roles: [{ role: "userAdminAnyDatabase" , db: "admin"}], "mechanisms":["SCRAM-SHA-1"]})' > file.js
-#mongosh admin file.js
-
-#mongosh
-#use admin
-#db.createUser({user: "admin" , pwd: "${admin_mysql_password}" , roles: [{ role: "userAdminAnyDatabase" , db: "admin"}], "mechanisms":["SCRAM-SHA-1"]})
-#quit()
-#echo "${admin_mysql_password}"

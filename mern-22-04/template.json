@@ -3,7 +3,7 @@
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "mern-22-04-snapshot-{{timestamp}}",
-    "apt_packages": "apt-transport-https gnupg2 nginx wget curl unzip git",
+    "apt_packages": "apt-transport-https gnupg2 nginx wget curl unzip git python3-certbot-nginx",
     "application_name": "MERN",
     "mongo_version": "6.0.4",
     "mongo_repo_version": "6.0",
@@ -43,11 +43,6 @@
       "type": "file",
       "source": "mern-22-04/files/var/",
       "destination": "/var/"
-    },
-    {
-      "type": "file",
-      "source": "mern-22-04/files/var/tmp",
-      "destination": "/sample/"
     },
     {
       "type": "shell",

@@ -7,13 +7,10 @@ systemctl enable mongod
 systemctl start mongod
 
 #Generate root passwords.
-node_user_pass=$(openssl rand -hex 24)
 admin_mongodb_pass=$(openssl rand -hex 24)
 
 # Generate some passwords
-cat > /root/.digitalocean_passwords <<EOM
-node_user=nodejs
-node_user_password="${node_user_pass}"
+cat > /root/.digitalocean_passwords << EOM
 admin_mongodb_password="${admin_mongodb_pass}"
 EOM
 
@@ -22,14 +19,17 @@ source /root/.digitalocean_passwords
 service mongod start
 
 # create mongodb admin
-echo 'db.createUser({user: "admin" , pwd: "'${admin_mongodb_password}'" , roles: [{ role: "userAdminAnyDatabase" , db: "admin"}], "mechanisms":["SCRAM-SHA-1"]});' | mongosh admin
+echo 'db.createUser({user: "admin" , pwd: "'${admin_mongodb_pass}'" , roles: [{ role: "userAdminAnyDatabase" , db: "admin"}], "mechanisms":["SCRAM-SHA-1"]});' | mongosh admin
+
+cat >> /etc/mongod.conf <<EOM
+
+# Enabling authorization for MongoDB
+security:
+  authorization: "enabled"
+EOM
 
 service mongod stop
 service mongod start --auth
-
-
-# Set the nodejs user password
-echo "${node_user}:${node_user_password}" | chpasswd -
 
 # Remove the ssh force logout command
 sed -e '/Match User root/d' \

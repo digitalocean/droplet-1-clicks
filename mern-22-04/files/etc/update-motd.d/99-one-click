@@ -13,24 +13,33 @@ Welcome to DigitalOcean's 1-Click MERN Droplet.
 To keep this Droplet secure, the UFW firewall is enabled.
 All ports are BLOCKED except 22 (SSH), 80 (HTTP), and 443 (HTTPS).
 
-Use these SFTP credentials to upload files with FileZilla/WinSCP/rsync:
-    Host: ${myip}
-    User: ${node_user}
-    Pass: ${node_user_password}
-
-Access to MongoDB:
+MERN is configured with local MongoDB database. Use the following
+credentials to manage the database:
     Username: admin
     Password: ${admin_mongodb_password}
 
 In a web browser, you can view:
+ * Your MERN website: http://$myip
  * The MERN 1-Click Quickstart guide: link to Getting started after deploying MERN
 
 On the server:
   * The default web root is located at /var/www/html
   * MongoDB is running on port 27017 and is bound to the local interface.
   * The passwords and keys are saved in /root/.digitalocean_passwords
+  * Certbot is preinstalled. Run it to configure HTTPS. See
+    https://do.co/2GOFe5J#enable-https for more detail.
+  * To manage sample application pm2 deployment, login as nodejs user:
+  $ su - nodejs
 
 For help and more information, visit link to 1-click
+
+********************************************************************************
+NOTE:  This image includes version 6.0.4 of MongoDB.
+To upgrade to a newer release run the following commands:
+
+sudo mv /etc/apt/sources.list.d/mongodb.list.disabled /etc/apt/sources.list.d/mongodb.list
+sudo apt-get update
+sudo apt-get upgrade
 
 ********************************************************************************
 To delete this message of the day: rm -rf $(readlink -f ${0})
