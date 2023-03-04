@@ -10,7 +10,7 @@ systemctl start mongod
 admin_mongodb_pass=$(openssl rand -hex 24)
 
 # Generate some passwords
-cat > /root/.digitalocean_passwords <<EOM
+cat > /root/.digitalocean_passwords << EOM
 admin_mongodb_password="${admin_mongodb_pass}"
 EOM
 
@@ -19,7 +19,7 @@ source /root/.digitalocean_passwords
 service mongod start
 
 # create mongodb admin
-echo 'db.createUser({user: "admin" , pwd: "'${admin_mongodb_password}'" , roles: [{ role: "userAdminAnyDatabase" , db: "admin"}], "mechanisms":["SCRAM-SHA-1"]});' | mongosh admin
+echo 'db.createUser({user: "admin" , pwd: "'${admin_mongodb_pass}'" , roles: [{ role: "userAdminAnyDatabase" , db: "admin"}], "mechanisms":["SCRAM-SHA-1"]});' | mongosh admin
 
 cat >> /etc/mongod.conf <<EOM
 
