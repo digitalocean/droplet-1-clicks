@@ -19,7 +19,7 @@ source /root/.digitalocean_passwords
 service mongod start
 
 # create mongodb admin
-echo 'db.createUser({user: "admin" , pwd: "'${admin_mongodb_pass}'" , roles: [{ role: "userAdminAnyDatabase" , db: "admin"}], "mechanisms":["SCRAM-SHA-1"]});' | mongosh admin
+echo 'db.createUser({user: "admin" , pwd: "'${admin_mongodb_pass}'" , roles: [{ role: "root" , db: "admin"}], "mechanisms":["SCRAM-SHA-1"]});' | mongosh admin
 
 cat >> /etc/mongod.conf <<EOM
 

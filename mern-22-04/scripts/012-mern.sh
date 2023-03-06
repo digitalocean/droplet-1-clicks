@@ -1,26 +1,26 @@
 #!/bin/sh
 
-# Create the nodejs user
-useradd --home-dir /home/nodejs \
+# Create the mern user
+useradd --home-dir /home/mern \
         --shell /bin/bash \
         --create-home \
         --system \
-        nodejs
+        mern
 
 # Setup the home directory
-chown -R nodejs: /home/nodejs
+chown -R mern: /home/mern
 
 # Setup
-chown -R nodejs: /var/www/html
+chown -R mern: /var/www/html
 
-usermod -aG sudo nodejs
+usermod -aG sudo mern
 
 # Create mern folder
 mkdir /home/mern
 cd /home/mern
 
 # Create express application
-npx express-generate server
+npx express-generator server
 
 # Create react application
 npx create-react-app client
@@ -38,6 +38,6 @@ cd /home/mern/client/src && npm run build
 
 sudo npm install pm2@latest -g --no-optional
 
-su - nodejs -c "pm2 serve /home/mern/client/build 3000 --name \"sample_mern_app\" --spa"
-sudo env "PATH=$PATH:/usr/bin" /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u nodejs --hp /home/nodejs
-su - nodejs -c "pm2 save"
+su - mern -c "pm2 serve /home/mern/client/build 3000 --name \"sample_mern_app\" --spa"
+sudo env "PATH=$PATH:/usr/bin" /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u mern --hp /home/mern
+su - mern -c "pm2 save"
