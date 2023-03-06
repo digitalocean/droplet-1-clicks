@@ -28,8 +28,8 @@ On the server:
   * The passwords and keys are saved in /root/.digitalocean_passwords
   * Certbot is preinstalled. Run it to configure HTTPS. See
     https://do.co/2GOFe5J#enable-https for more detail.
-  * To manage sample application pm2 deployment, login as nodejs user:
-  $ su - nodejs
+  * To manage sample application pm2 deployment, login as mern user:
+  $ su - mern
 
 For help and more information, visit link to 1-click
 
