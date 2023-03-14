@@ -51,6 +51,9 @@ mysql -uroot -p${root_mysql_pass} \
       -e "GRANT ALL PRIVILEGES ON wordpress.* TO wordpress@localhost"
 
 mysql -uroot -p${root_mysql_pass} \
+      -e "GRANT RELOAD,PROCESS ON *.* TO wordpress@localhost"
+
+mysql -uroot -p${root_mysql_pass} \
       -e "ALTER USER 'debian-sys-maint'@'localhost' IDENTIFIED BY '${debian_sys_maint_mysql_pass}'"
 
 MYSQL_ROOT_PASSWORD=${wordpress_mysql_pass}
