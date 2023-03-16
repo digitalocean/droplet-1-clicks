@@ -36,6 +36,6 @@ cd /home/mean/client && npx ng build client
 
 sudo npm install pm2@latest -g --no-optional
 
-su - mean -c "pm2 serve /home/mean/client/dist/client 3000 --name \"sample_mean_app\" --spa"
+su - mean -c "pm2 serve /home/mean/client/dist/client 3000 --name \"sample_mean_app\" "
 sudo env "PATH=$PATH:/usr/bin" /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u mean --hp /home/mean
 su - mean -c "pm2 save"
