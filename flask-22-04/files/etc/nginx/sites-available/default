@@ -1,0 +1,32 @@
+upstream app_server {
+    server unix:/home/flask/gunicorn.socket fail_timeout=0;
+}
+
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server ipv6only=on;
+
+    root /usr/share/nginx/html;
+    index index.html index.htm;
+
+    client_max_body_size 4G;
+    server_name _;
+
+    keepalive_timeout 5;
+
+    # your Flask project's static files - amend as required
+    # location /static {
+    #     alias /home/flask/flask_project/flask_project/static;
+    # }
+
+
+    location / {
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header Host $host;
+            proxy_redirect off;
+            proxy_buffering off;
+
+            proxy_pass http://app_server;
+    }
+
+}

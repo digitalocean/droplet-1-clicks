@@ -1,0 +1,16 @@
+[Unit]
+Description=Gunicorn daemon for Flask Project
+Before=nginx.service
+After=network.target
+
+[Service]
+WorkingDirectory=/home/flask/flask_project
+ExecStart=/usr/bin/gunicorn3 --name=flask_project --pythonpath=/home/flask/flask_project --bind unix:/home/flask/gunicorn.socket --config /etc/gunicorn.d/gunicorn.py flask_project.wsgi:application
+Restart=always
+SyslogIdentifier=gunicorn
+User=flask
+Group=flask
+
+
+[Install]
+WantedBy=multi-user.target

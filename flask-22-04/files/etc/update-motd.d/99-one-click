@@ -1,0 +1,20 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+# Read in the passwords....
+. /root/.digitalocean_passwords
+
+********************************************************************************
+
+Welcome to DigitalOcean's 1-Click Flask Droplet.
+To keep this Droplet secure, the UFW firewall is enabled.
+All ports are BLOCKED except 22 (SSH), 80 (HTTP), and 443 (HTTPS).
+
+BIBUBIP
+
+For help and more information, visit https://do.co/3bY3b67
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
