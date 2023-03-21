@@ -3,6 +3,7 @@ exec > >(tee /var/log/one_click_setup.log) 2>&1
 
 # Create the example project
 (cd /home/flask &&
+    mkdir flask_project &&
     setuid flask flask_project)
 
 PROJECT_DIR=/home/flask/flask_project
