@@ -1,0 +1,38 @@
+#!/bin/bash -x
+exec > >(tee /var/log/one_click_setup.log) 2>&1
+
+# Create the example project
+(cd /home/flask &&
+    mkdir flask_project &&
+    setuid flask flask_project)
+
+PROJECT_DIR=/home/flask/flask_project
+
+FLASK_USER=flask
+FLASK_USER_PASSWORD=$(openssl rand -hex 16)
+
+# Generate some passwords
+cat > /root/.digitalocean_passwords <<EOM
+FLASK_USER="${FLASK_USER}"
+FLASK_USER_PASSWORD="${FLASK_USER_PASSWORD}"
+EOM
+
+# Set the django user password
+echo "${FLASK_USER}:${FLASK_USER_PASSWORD}" | chpasswd -
+
+# Copy sample project
+cp -R /etc/sample-project/* /home/flask/flask_project/
+
+chown -R flask: /home/flask/flask_project
+
+# Now start up gunicorn
+systemctl enable gunicorn
+systemctl start gunicorn
+systemctl restart nginx
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
