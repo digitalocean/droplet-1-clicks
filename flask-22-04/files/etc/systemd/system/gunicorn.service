@@ -11,6 +11,5 @@ SyslogIdentifier=gunicorn
 User=flask
 Group=flask
 
-
 [Install]
 WantedBy=multi-user.target
