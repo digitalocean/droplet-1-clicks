@@ -1,0 +1,25 @@
+body {
+    background-color: #2e3541;
+    overflow: hidden;
+}
+
+.Flask {
+    display: flex;
+    min-height: 100vh;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: calc(10px + 2vmin);
+    font-family: 'Roboto';
+    color: white;
+}
+
+.Sammy {
+    height: 40vmin;
+    pointer-events: none;
+}
+
+a.Flask-link {
+    color: #80a3cf;
+}
