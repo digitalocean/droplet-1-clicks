@@ -23,6 +23,8 @@ echo "${FLASK_USER}:${FLASK_USER_PASSWORD}" | chpasswd -
 # Copy sample project
 cp -R /etc/sample-project/* /home/flask/flask_project/
 
+chown -R flask: /home/flask/flask_project
+
 # Now start up gunicorn
 systemctl enable gunicorn
 systemctl start gunicorn
