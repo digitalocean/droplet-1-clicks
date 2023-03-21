@@ -11,9 +11,22 @@ Welcome to DigitalOcean's 1-Click Flask Droplet.
 To keep this Droplet secure, the UFW firewall is enabled.
 All ports are BLOCKED except 22 (SSH), 80 (HTTP), and 443 (HTTPS).
 
-BIBUBIP
+Use these SFTP credentials to upload files with FileZilla/WinSCP/rsync:
+    Host: ${myip}
+    User: ${FLASK_USER}
+    Pass: ${FLASK_USER_PASSWORD}
 
-For help and more information, visit https://do.co/3bY3b67
+In a web browser, you can view:
+ * The Flask 1-Click Quickstart guide: https://marketplace.digitalocean.com/apps/flask#getting-started
+ * The new Flask site: http://$myip
+
+On the server:
+  * The Flask application is served from /home/flask/flask_project
+  * The Flask user password is saved in /root/.digitalocean_passwords
+  * The Gunicorn service is saved in /etc/systemd/system/gunicorn.service
+  * Certbot is preinstalled. Run it to configure HTTPS.
+
+For help and more information, visit https://marketplace.digitalocean.com/apps/flask
 
 ********************************************************************************
 To delete this message of the day: rm -rf $(readlink -f ${0})
