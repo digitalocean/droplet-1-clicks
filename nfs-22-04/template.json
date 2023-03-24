@@ -23,13 +23,13 @@
     },
     {
       "type": "file",
-      "source": "nfs-22-04/files/etc/update-motd.d/99-one-click",
-      "destination": "/etc/update-motd.d/99-one-click"
+      "source": "nfs-22-04/files/etc/",
+      "destination": "/etc/"
     },
     {
       "type": "file",
-      "source": "nfs-22-04/files/var/lib/cloud/scripts/per-instance/001_onboot",
-      "destination": "/var/lib/cloud/scripts/per-instance/001_onboot"
+      "source": "nfs-22-04/files/var/",
+      "destination": "/var/"
     },
     {
       "type": "file",
