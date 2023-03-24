@@ -23,6 +23,11 @@
     },
     {
       "type": "file",
+      "source": "common/files/var/",
+      "destination": "/var/"
+    },
+    {
+      "type": "file",
       "source": "nfs-22-04/files/etc/",
       "destination": "/etc/"
     },
