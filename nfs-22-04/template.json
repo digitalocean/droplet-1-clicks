@@ -22,13 +22,6 @@
       ]
     },
     {
-      "type": "shell",
-      "inline": [
-        "apt-get -y update",
-        "DEBIAN_FRONTEND=noninteractive apt-get -y upgrade"
-      ]
-    },
-    {
       "type": "file",
       "source": "files/etc/update-motd.d/99-one-click",
       "destination": "/etc/update-motd.d/99-one-click"
@@ -47,6 +40,13 @@
       "type": "file",
       "source": "files/root/nfs-whitelist.sh",
       "destination": "/root/nfs-whitelist.sh"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "apt-get -y update",
+        "DEBIAN_FRONTEND=noninteractive apt-get -y upgrade"
+      ]
     },
     {
       "type": "shell",
