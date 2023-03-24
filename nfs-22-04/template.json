@@ -23,23 +23,18 @@
     },
     {
       "type": "file",
-      "source": "files/etc/update-motd.d/99-one-click",
+      "source": "nfs-22-04/files/etc/update-motd.d/99-one-click",
       "destination": "/etc/update-motd.d/99-one-click"
     },
     {
       "type": "file",
-      "source": "files/var/lib/cloud/scripts/per-instance/001_onboot",
+      "source": "nfs-22-04/files/var/lib/cloud/scripts/per-instance/001_onboot",
       "destination": "/var/lib/cloud/scripts/per-instance/001_onboot"
     },
     {
       "type": "file",
-      "source": "files/root/local-partition.sh",
-      "destination": "/root/local-partition.sh"
-    },
-    {
-      "type": "file",
-      "source": "files/root/nfs-whitelist.sh",
-      "destination": "/root/nfs-whitelist.sh"
+      "source": "nfs-22-04/files/root/",
+      "destination": "/root/"
     },
     {
       "type": "shell",
@@ -51,9 +46,9 @@
     {
       "type": "shell",
       "scripts": [
-        "scripts/01-packages.sh",
-        "scripts/90-cleanup.sh",
-        "scripts/99-img_check.sh"
+        "nfs-22-04/scripts/01-packages.sh",
+        "nfs-22-04/scripts/90-cleanup.sh",
+        "nfs-22-04/scripts/99-img_check.sh"
       ]
     }
   ]
