@@ -1,7 +1,7 @@
 {
   "variables": {
     "token": "{{env `DIGITALOCEAN_TOKEN`}}",
-    "image_name": "NFS-server-{{timestamp}}"
+    "image_name": "nfs-server-{{timestamp}}"
   },
   "builders": [
     {
