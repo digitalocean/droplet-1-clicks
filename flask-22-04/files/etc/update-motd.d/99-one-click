@@ -5,6 +5,9 @@
 # Read in the passwords....
 . /root/.digitalocean_passwords
 
+myip=$(hostname -I | awk '{print$1}')
+
+cat <<EOF
 ********************************************************************************
 
 Welcome to DigitalOcean's 1-Click Flask Droplet.
