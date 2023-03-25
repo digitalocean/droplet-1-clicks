@@ -1,0 +1,11 @@
+# Fastening light Python Framework for API build
+fastapi == 0.95.0
+
+# Fast ASGI server implementation which helps in the interaction between your application and the backend
+uvicorn == 0.21.1
+
+# Motor is a full-featured, non-blocking IO MongoDB driver for Python
+motor == 3.1.1
+
+# Pre-fork worker model, ported from Ruby's Unicorn project
+gunicorn == 20.1.0
