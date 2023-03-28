@@ -14,9 +14,6 @@ chown -R farm: /home/farm
 chown -R farm: /var/www/html
 
 usermod -aG sudo farm
-
-# Create farm folder
-mkdir /home/farm
 cd /home/farm
 
 # Create react application
@@ -29,7 +26,7 @@ cp /etc/sample-project/client/src/* /home/farm/client/src
 mkdir server
 cd server
 
-# Replace fastapi with the version you want to install: 2.2.3, etc...
+# Replace fastapi with the version you want to install: 0.95.0, etc...
 VERSION=${FASTAPI_VERSION}
 
 pip install fastapi=="$VERSION" uvicorn[standard] motor gunicorn pipenv
@@ -37,7 +34,6 @@ pip install fastapi=="$VERSION" uvicorn[standard] motor gunicorn pipenv
 # Copy sample server
 cp /etc/sample-project/server/* /home/farm/server
 
-pipenv install -r requirements.txt
 ufw allow 8000/tcp
 
 # Delete sample project
