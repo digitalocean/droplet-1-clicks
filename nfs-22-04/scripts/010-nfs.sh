@@ -9,7 +9,7 @@ chmod +x /root/setup-doctl.sh
 
 # add security
 echo "y" | ufw enable
-sleep 10
+
 systemctl start fail2ban
 systemctl enable fail2ban
 printf '[sshd]\nenabled = true\nport = 22\nfilter = sshd\nlogpath = /var/log/auth.log\nmaxretry = 5' | tee -a /etc/fail2ban/jail.local
