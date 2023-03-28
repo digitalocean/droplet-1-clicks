@@ -2,6 +2,7 @@
   "variables": {
     "token": "{{env `DIGITALOCEAN_TOKEN`}}",
     "image_name": "nfs-22-04-snapshot-{{timestamp}}",
+    "apt_packages": "fail2ban jq nfs-kernel-server",
     "application_name": "NFS",
     "application_version": ""
   },
