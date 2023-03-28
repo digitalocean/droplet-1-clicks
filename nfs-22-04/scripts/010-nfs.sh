@@ -15,8 +15,5 @@ systemctl enable fail2ban
 printf '[sshd]\nenabled = true\nport = 22\nfilter = sshd\nlogpath = /var/log/auth.log\nmaxretry = 5' | tee -a /etc/fail2ban/jail.local
 systemctl restart fail2ban
 
-# open ssh port
-sleep 10
 systemctl enable ufw
-ufw allow ssh
-#ufw allow 2049
+ufw limit ssh
