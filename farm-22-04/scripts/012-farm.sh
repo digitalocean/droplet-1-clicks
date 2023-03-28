@@ -23,13 +23,16 @@ cd /home/farm
 npx create-react-app client
 
 # Copy sample react project
-cp /etc/sample-project/src/* /home/farm/client/src
+cp /etc/sample-project/client/src/* /home/farm/client/src
 
 # Create server
 mkdir server
 cd server
 
-pip install fastapi uvicorn[standard] motor gunicorn pipenv
+# Replace fastapi with the version you want to install: 2.2.3, etc...
+VERSION=${FASTAPI_VERSION}
+
+pip install fastapi=="$VERSION" uvicorn[standard] motor gunicorn pipenv
 
 # Copy sample server
 cp /etc/sample-project/server/* /home/farm/server
@@ -45,7 +48,7 @@ cd /home/farm/client/src && npm run build
 
 sudo npm install pm2@latest -g --no-optional
 
-su - farm -c "cd /home/farm/server && pm2 start \"gunicorn -w 4 -k uvicorn.workers.UvicornWorker main:app\" --name \"sample_api\""
+su - farm -c "cd /home/farm/server && pm2 start \"gunicorn -k uvicorn.workers.UvicornWorker --config /etc/gunicorn.d/gunicorn.py main:app\"  --name \"sample_farm_api\""
 su - farm -c "pm2 serve /home/farm/client/build 3000 --name \"sample_farm_app\" --spa"
 sudo env "PATH=$PATH:/usr/bin" /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u farm --hp /home/farm
 su - farm -c "pm2 save"
