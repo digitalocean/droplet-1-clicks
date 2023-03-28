@@ -5,7 +5,6 @@ systemctl enable nfs-kernel-server
 
 chmod +x /root/local-partition.sh
 chmod +x /root/nfs-whitelist.sh	
-chmod +x /root/setup-doctl.sh
 
 # add security
 echo "y" | ufw enable
