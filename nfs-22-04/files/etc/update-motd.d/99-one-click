@@ -21,7 +21,6 @@ ufw allow in on eth1 from 10.124.0.0/20 to any port nfs
 
 Public network Access:
 - By default, ufw is enabled, SSH access is enabled, and NFS access is NOT enabled.
-- The script to automatically whitelist nfs port (2409) for droplets based on a tag is in ~/root. We recommend customizing nfs-whitelist.sh and running it as a cron job (or through an external system like DO functions) to manage whitelist.
 
 Checklist:
 - The volume to be exported as NFS share is available, and has ownership configured, eg. chown -R nobody:nogroup /mnt/volume_sfo3_01/
