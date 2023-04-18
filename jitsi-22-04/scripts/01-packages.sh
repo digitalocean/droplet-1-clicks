@@ -53,9 +53,6 @@ apt-get -qqy -o Dpkg::Options::=--force-confdef install ca-certificates-java cot
 # install let's encrypt
 apt-get -qqy -o Dpkg::Options::=--force-confdef install python3-certbot-nginx
 
-# install Digital Ocean agent
-curl -sSL https://repos.insights.digitalocean.com/install.sh | bash
-
 # add some security
 echo "y" | ufw enable
 apt-get -qqy -o Dpkg::Options::=--force-confdef install fail2ban
@@ -66,9 +63,6 @@ printf '\n\n[http-auth]\nenabled = true\nport = http,https\nlogpath = /var/log/a
 systemctl restart fail2ban
 
 # open ports
-ufw allow http
-ufw allow https
-ufw allow ssh
 ufw allow 4443/tcp
 ufw allow 10000/udp
 
