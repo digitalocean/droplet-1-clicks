@@ -1,9 +1,9 @@
-
 {
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "jitsi-22-04-snapshot-{{timestamp}}",
-    "application_name": "Jitsi"
+    "application_name": "Jitsi",
+    "application_version": "Latest"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
@@ -20,25 +20,24 @@
   "provisioners": [
     {
       "type": "shell",
-      "environment_vars": [
-        "DEBIAN_FRONTEND=noninteractive",
-        "LC_ALL=C",
-        "LANG=en_US.UTF-8",
-        "LC_CTYPE=en_US.UTF-8"
-      ],
       "inline": [
         "cloud-init status --wait"
       ]
     },
     {
       "type": "file",
-      "source": "files/etc/",
+      "source": "common/files/var/",
+      "destination": "/var/"
+    },
+    {
+      "type": "file",
+      "source": "jitsi-22-04/files/etc/",
       "destination": "/etc/"
     },
     {
       "type": "file",
-      "source": "files/root/",
-      "destination": "/root/"
+      "source": "jitsi-22-04/files/var/",
+      "destination": "/var/"
     },
     {
       "type": "shell",
@@ -50,9 +49,10 @@
         "LC_CTYPE=en_US.UTF-8"
       ],
       "scripts": [
-        "scripts/01-packages.sh",
-        "scripts/90-cleanup.sh",
-        "scripts/99-img_check.sh"
+        "jitsi-22-04/scripts/01-packages.sh",
+        "common/scripts/020-application-tag.sh",
+        "common/scripts/014-ufw-http.sh",
+        "common/scripts/900-cleanup.sh"
       ]
     }
   ]
