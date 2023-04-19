@@ -7,12 +7,12 @@ cat <<EOF
 ********************************************************************************
 
 Please read the instructions at
-https://github.com/digitalocean/droplet-1-clicks/tree/master/jitsi-20-04
+https://github.com/digitalocean/droplet-1-clicks/tree/master/jitsi-22-04
 
 I you want to use this image, you agree to the Apache License.
 See https://github.com/jitsi/jitsi/blob/master/LICENSE.
 
-Type 'bash complete-jitsi-setup.sh' to complete Jitsi setup if and only if you
+Type 'bash /var/complete-jitsi-setup.sh' to complete Jitsi setup if and only if you
 agree to the Jitsi License.
 
 ********************************************************************************
