@@ -2,7 +2,7 @@
 {
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
-    "image_name": "{{IMAGE_LABEL}}-snapshot-{{timestamp}}",
+    "image_name": "Makefile-20-04-snapshot-{{timestamp}}",
     "apt_packages": "{{TODO}}",
     "application_name": "{{TODO}}",
     "application_version": "{{TODO}}"
@@ -33,12 +33,12 @@
     },
     {
       "type": "file",
-      "source": "{{IMAGE_LABEL}}/files/etc/",
+      "source": "Makefile-20-04/files/etc/",
       "destination": "/etc/"
     },
     {
       "type": "file",
-      "source": "{{IMAGE_LABEL}}/files/var/",
+      "source": "Makefile-20-04/files/var/",
       "destination": "/var/"
     },
     {

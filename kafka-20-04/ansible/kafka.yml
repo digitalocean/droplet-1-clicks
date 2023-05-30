@@ -1,7 +1,0 @@
----
-- name: Provision Kafka Image
-  hosts: default
-  become: true
-  roles:
-    - role: openjdk
-    - role: kafka

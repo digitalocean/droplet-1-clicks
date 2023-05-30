@@ -145,6 +145,8 @@ echo -en "Now we will create your new admin user account for WordPress."
 #         * ) echo "Please answer y or n.";;
 #     esac
 
+certbot -n --test-cert --apache -d $dom,www.$dom --agree-tos -m $email
+
 echo "Finalizing installation..."
 wget https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -O /usr/bin/wp
 chmod +x /usr/bin/wp

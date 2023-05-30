@@ -1,5 +1,0 @@
-bootstrap.servers={{ .Env.droplet_public_ip }}:9093
-security.protocol=SASL_SSL
-sasl.mechanisms=SCRAM-SHA-256
-sasl.username={{ .Env.kafka_default_user }}
-sasl.password={{ .Env.kafka_default_password }}

@@ -1,9 +1,0 @@
-if ( $programname == 'kafka' ) then {
-  action(type="omfile" file="{{ log_dir }}/kafka.log")
-  stop
-}
-
-if ( $programname == 'zookeeper' ) then {
-  action(type="omfile" file="{{ log_dir }}/zookeeper.log")
-  stop
-}
