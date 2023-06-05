@@ -34,7 +34,7 @@
     },
     {
       "type": "file",
-      "source": "dokku-20-04/files/etc/",
+      "source": "dokku-22-04/files/etc/",
       "destination": "/etc/"
     },
     {
@@ -67,7 +67,7 @@
       "scripts": [
         "common/scripts/010-docker.sh",
         "common/scripts/011-docker-compose.sh",
-        "dokku-20-04/scripts/010-dokku.sh",
+        "dokku-22-04/scripts/010-dokku.sh",
         "common/scripts/012-grub-opts.sh",
         "common/scripts/013-docker-dns.sh",
         "common/scripts/014-ufw-docker.sh",
