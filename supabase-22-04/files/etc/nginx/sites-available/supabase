@@ -1,0 +1,54 @@
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    '' close;
+}
+upstream supabase {
+        server localhost:3000;
+}
+upstream kong {
+        server localhost:8000;
+}
+
+server {
+    listen       80;
+    listen              [::]:80;
+    server_name  _;
+    access_log  /var/log/nginx/supabase.access.log;
+    error_log   /var/log/nginx/supabase.error.log;
+    gzip on;
+
+    resolver 8.8.8.8;
+
+    client_max_body_size 100m;
+    # REST API
+        location ~ ^/rest/v1/(.*)$ {
+        proxy_set_header Host $host;
+            proxy_pass http://kong;
+            proxy_redirect off;
+        }
+
+        # Authentication
+        location ~ ^/auth/v1/(.*)$ {
+        proxy_set_header Host $host;
+            proxy_pass http://kong;
+            proxy_redirect off;
+        }
+
+        # Realtime
+        location ~ ^/realtime/v1/(.*)$ {
+        proxy_redirect off;
+            proxy_pass http://kong;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+            proxy_set_header Host $host;
+        }
+
+    # Studio
+        location / {
+        proxy_set_header Host $host;
+            proxy_pass http://supabase;
+            proxy_redirect off;
+            proxy_set_header Upgrade $http_upgrade;
+        }
+}

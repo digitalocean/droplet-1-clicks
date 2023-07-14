@@ -1,0 +1,77 @@
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    '' close;
+}
+upstream supabase {
+  	server localhost:3000;
+}
+upstream kong {
+  	server localhost:8000;
+}
+# enforce HTTPS
+server {
+    listen       80; 
+    listen 		[::]:80;
+    server_name  supabase.example.com;
+    return 301   https://$host$request_uri;
+}
+server {
+    listen       443 ssl http2;
+    listen 		[::]:443 ssl http2;
+    server_name  supabase.example.com;
+
+    access_log  /var/log/nginx/supabase.access.log;
+    error_log   /var/log/nginx/supabase.error.log;
+    
+    gzip on;
+    
+    # SSL
+    ssl_certificate      /etc/letsencrypt/live/supabase.example.com/fullchain.pem;
+    ssl_certificate_key  /etc/letsencrypt/live/supabase.example.com/privkey.pem;
+    ssl_trusted_certificate /etc/letsencrypt/live/supabase.example.com/chain.pem;
+    ssl_session_timeout  5m;
+    ssl_session_cache shared:MozSSL:10m;
+    ssl_session_tickets off;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
+    ssl_ecdh_curve X25519:prime256v1:secp384r1:secp521r1;
+    ssl_stapling on;
+    ssl_stapling_verify on;
+    ssl_dhparam /etc/ssl/certs/dhparam.pem;
+    resolver 8.8.8.8;
+    
+    client_max_body_size 100m;
+    
+    # REST API
+	location ~ ^/rest/v1/(.*)$ {
+    	proxy_set_header Host $host;
+	    proxy_pass http://kong;
+	    proxy_redirect off;
+  	}
+
+	# Authentication
+	location ~ ^/auth/v1/(.*)$ {
+    	proxy_set_header Host $host;
+	    proxy_pass http://kong;
+	    proxy_redirect off;
+  	}
+
+	# Realtime
+	location ~ ^/realtime/v1/(.*)$ {
+    	proxy_redirect off;
+	    proxy_pass http://kong;
+	    proxy_http_version 1.1;
+	    proxy_set_header Upgrade $http_upgrade;
+    	proxy_set_header Connection $connection_upgrade;
+	    proxy_set_header Host $host;
+	}
+    
+    # Studio
+	location / {
+    	proxy_set_header Host $host;
+	    proxy_pass http://supabase;
+	    proxy_redirect off;
+	    proxy_set_header Upgrade $http_upgrade;
+  	}
+}

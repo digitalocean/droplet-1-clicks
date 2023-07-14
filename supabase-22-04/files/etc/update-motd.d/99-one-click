@@ -1,0 +1,20 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+Welcome to the DigitalOcean Supabase 1-Click Application
+
+On your first login you will be prompted to configure your Supabase installation.
+
+All Supabase scripts and files may be found in /srv/supabase and the setup
+utility can be run again by launching supabase-setup in that directory.
+
+For help and more information, visit https://do.co/3dmapBw
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
