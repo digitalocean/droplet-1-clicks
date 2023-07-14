@@ -13,7 +13,7 @@ On your first login you will be prompted to configure your Supabase installation
 All Supabase scripts and files may be found in /srv/supabase and the setup
 utility can be run again by launching supabase-setup in that directory.
 
-For help and more information, visit https://do.co/3dmapBw
+For help and more information, visit https://marketplace.digitalocean.com/apps/supabase
 
 ********************************************************************************
 To delete this message of the day: rm -rf $(readlink -f ${0})
