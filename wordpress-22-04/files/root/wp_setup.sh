@@ -69,7 +69,7 @@ do
  if [ -z "$dom" ]
  then
   a=0
-  echo "Please provide a valid domain or subdomain name to continue to press Ctrl+C to cancel"
+  echo "Please provide a valid domain or subdomain name to continue or press Ctrl+C to cancel"
  else
   a=1
 fi
