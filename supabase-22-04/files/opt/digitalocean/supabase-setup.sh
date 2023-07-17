@@ -28,18 +28,36 @@ do
     read -p "Your Email Address: " email
 done
 
+service nginx stop
+
 sudo certbot certonly --standalone --agree-tos --no-eff-email --staple-ocsp --preferred-challenges http -m $email -d $dom
+if [ $? -eq 0 ]
+then
+    echo "certbot successfully created a certificate"
+else
+    echo "certbot failed"
+    exit 1
+fi
+
 sudo openssl dhparam -out /etc/ssl/certs/dhparam.pem 4096
+if [ $? -eq 0 ]
+then
+    echo "dhparam successed"
+else
+    echo "dhparam failed"
+    exit 1
+fi
+
 sudo mkdir -p /var/lib/letsencrypt
 
 cat > /etc/cron.daily/certbot-renew <<EOM
 #!/bin/sh
-certbot renew --cert-name supabase.example.com --webroot -w /var/lib/letsencrypt/ --post-hook "systemctl reload nginx" 
+certbot renew --cert-name $dom --webroot -w /var/lib/letsencrypt/ --post-hook "systemctl reload nginx" 
 EOM
 sudo chmod +x /etc/cron.daily/certbot-renew
 
 sed -i "s/supabase.example.com/$dom/g" /opt/digitalocean/supabase_ssl
 rm -rf /etc/nginx/sites-available/supabase
-cp -i /opt/digitalocean/supabase_ssl /etc/nginx/sites-available/supabase
+cp -rf /opt/digitalocean/supabase_ssl /etc/nginx/sites-available/supabase
 
-systemctl restart nginx
+service nginx start
