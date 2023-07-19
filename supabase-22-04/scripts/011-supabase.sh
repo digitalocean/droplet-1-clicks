@@ -19,8 +19,8 @@ snap install core && snap refresh core
 snap install --classic certbot
 ln -s /snap/bin/certbot /usr/bin/certbot
 
-chmod +x /opt/digitalocean/supabase-setup.sh
+chmod +x /var/supabase/supabase-setup.sh
 cat >> /root/.bashrc <<EOM
-/opt/digitalocean/supabase-setup.sh
+/var/supabase/supabase-setup.sh
 EOM
 

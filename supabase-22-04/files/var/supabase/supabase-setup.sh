@@ -56,8 +56,8 @@ certbot renew --cert-name $dom --webroot -w /var/lib/letsencrypt/ --post-hook "s
 EOM
 sudo chmod +x /etc/cron.daily/certbot-renew
 
-sed -i "s/supabase.example.com/$dom/g" /opt/digitalocean/supabase_ssl
+sed -i "s/supabase.example.com/$dom/g" /var/supabase/supabase_ssl
 rm -rf /etc/nginx/sites-available/supabase
-cp -rf /opt/digitalocean/supabase_ssl /etc/nginx/sites-available/supabase
+cp -rf /var/supabase/supabase_ssl /etc/nginx/sites-available/supabase
 
 service nginx start
