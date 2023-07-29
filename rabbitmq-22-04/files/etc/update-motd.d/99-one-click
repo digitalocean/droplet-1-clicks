@@ -1,0 +1,29 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+. /root/.digitalocean_password
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's 1-Click RabbitMQ Droplet.
+To keep this Droplet secure, the UFW firewall is enabled.
+All ports are BLOCKED except 5672 and 15672.
+
+In a web browser, you can view:
+ * UI for manage RabbitMQ
+    http://$myip:15672
+
+ * permissions:
+    Username: admin
+    Password: $admin_rabbitmq_pass
+
+The admin password is saved in /root/.digitalocean_password
+
+For help and more information, visit https://marketplace.digitalocean.com/apps/rabbitmq
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
