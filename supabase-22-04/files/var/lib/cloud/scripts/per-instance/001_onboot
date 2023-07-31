@@ -10,10 +10,6 @@ git pull
 
 docker compose up -d
 
-DEBIAN_FRONTEND=noninteractive
-apt-get update
-apt-get -qqy upgrade
-
 ln -s /etc/nginx/sites-available/supabase /etc/nginx/sites-enabled/supabase
 unlink /etc/nginx/sites-enabled/default
 
