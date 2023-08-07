@@ -16,7 +16,7 @@ All ports are BLOCKED except:
 * You can SSH to this Droplet in a terminal as root: ssh root@$myip
 
   [IMPORTANT]
-  To allow LinuxGSM to install all needed dependencies, the LinuxGSM user have sudo access.
+  To allow LinuxGSM to install all needed dependencies, the LinuxGSM user needs to have sudo access.
   Before you start using LinuxGSM, you need to set up a password for the user.
   Type the following command to set up the password for the "linuxgsm" user:
   $ sudo passwd linuxgsm
