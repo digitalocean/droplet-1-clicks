@@ -10,7 +10,12 @@ cat <<EOF
 
 Welcome to DigitalOcean's 1-Click RabbitMQ Droplet.
 To keep this Droplet secure, the UFW firewall is enabled.
-All ports are BLOCKED except 5672 and 15672.
+All ports are BLOCKED except:
+ - 22 (SSH)
+ - 80 (HTTP)
+ - 443 (HTTPS)
+ - 5672
+ - 15672
 
 In a web browser, you can view:
  * UI for manage RabbitMQ
