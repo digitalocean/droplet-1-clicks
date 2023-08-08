@@ -12,16 +12,16 @@ All ports are BLOCKED except:
  - 22 (SSH)
  - 80 (HTTP)
  - 443 (HTTPS)
- - 27015
- - 27020
- - 27005
 
 * You can SSH to this Droplet in a terminal as root: ssh root@$myip
 
-[IMPORTANT]
-Before creating a game server, run the command:
-sudo apt-get install steamcmd
-this command will install SteamCMD, during installation you can view the license.
+  [IMPORTANT]
+  To allow LinuxGSM to install all needed dependencies, the LinuxGSM user needs to have sudo access.
+  Before you start using LinuxGSM, you need to set up a password for the user.
+  Type the following command to set up the password for the "linuxgsm" user:
+  $ sudo passwd linuxgsm
+  You will be prompted to enter the password twice for confirmation.
+  Once you do that, the password will be set for the "linuxgsm" user.
 
   * To manage LinuxGSM, login as linuxgsm user:
   $ su - linuxgsm
@@ -31,6 +31,14 @@ Commands:
 install         | Select server to install.
 servername      | Enter name of game server to install. e.g ./linuxgsm.sh csgoserver
 list            | List all servers available for install.
+
+To enable the game server to function properly, you need to allow the necessary ports through the firewall.
+After the game server is installed, you can find a list of the required ports by using the following command:
+  $ ./servername details      | e.g ./csgoserver details
+To allow the required ports, you can use the ufw (Uncomplicated Firewall) command.
+For instance, if the game server requires port 25005 to be open for TCP traffic,
+you can allow it with the following command:
+  $ sudo ufw allow 25005/tcp
 
 For help and more information, visit https://marketplace.digitalocean.com/apps/linuxgsm
 
