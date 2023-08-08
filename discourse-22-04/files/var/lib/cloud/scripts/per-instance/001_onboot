@@ -10,7 +10,7 @@ git pull
 
 DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get -qqy upgrade
+UCF_FORCE_CONFFOLD=1 apt-get -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' -qqy upgrade
 
 # Remove the ssh force logout command
 sed -e '/Match User root/d' \
