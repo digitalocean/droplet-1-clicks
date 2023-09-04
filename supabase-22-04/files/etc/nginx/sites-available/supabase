@@ -2,9 +2,6 @@ map $http_upgrade $connection_upgrade {
     default upgrade;
     '' close;
 }
-upstream supabase {
-        server localhost:3000;
-}
 upstream kong {
         server localhost:8000;
 }
@@ -47,7 +44,7 @@ server {
     # Studio
         location / {
         proxy_set_header Host $host;
-            proxy_pass http://supabase;
+            proxy_pass http://kong;
             proxy_redirect off;
             proxy_set_header Upgrade $http_upgrade;
         }

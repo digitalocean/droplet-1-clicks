@@ -23,4 +23,3 @@ chmod +x /var/supabase/supabase-setup.sh
 cat >> /root/.bashrc <<EOM
 /var/supabase/supabase-setup.sh
 EOM
-

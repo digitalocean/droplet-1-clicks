@@ -6,7 +6,14 @@
 
 # Install latest updates on first boot
 cd /srv/supabase/supabase/docker
-git pull
+
+#git pull  ### it was broken two times because of updates, so this process should be manual
+
+export SUPABASE_PASSWORD=`openssl rand -base64 12`
+cat >> /srv/supabase/supabase/docker/.env <<EOM
+DASHBOARD_USERNAME=supabase
+DASHBOARD_PASSWORD=${SUPABASE_PASSWORD}
+EOM
 
 docker compose up -d
 
