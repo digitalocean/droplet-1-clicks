@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# Generate random password for elastic
+export elasticPass=$(echo "y" | /usr/share/elasticsearch/bin/elasticsearch-reset-password -u elastic --url https://localhost:9200 | awk '/^New/{print $3}')
+
+# Set env variable for elastic password
+cat > /root/.digitalocean_passwords <<EOM
+ELASTIC_PASSWORD=${elasticPass}
+EOM
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
