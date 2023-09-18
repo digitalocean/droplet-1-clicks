@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# Generate random password for elastic, kibana and logstash users
+export elasticPass=$(echo "y" | /usr/share/elasticsearch/bin/elasticsearch-reset-password -u elastic --url https://localhost:9200 | awk '/^New/{print $3}')
+export kibanaPass=$(echo "y" | /usr/share/elasticsearch/bin/elasticsearch-reset-password -u kibana --url https://localhost:9200 | awk '/^New/{print $3}')
+export logstashSystemPass=$(echo "y" | /usr/share/elasticsearch/bin/elasticsearch-reset-password -u logstash_system --url https://localhost:9200 | awk '/^New/{print $3}')
+
+# Set env variable for elastic, kibana and logstash passwords
+cat > /root/.digitalocean_passwords <<EOM
+ELASTIC_PASSWORD=${elasticPass}
+KIBANA_PASSWORD=${kibanaPass}
+LOGSTASH_SYSTEM_PASSWORD=${logstashSystemPass}
+EOM
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
