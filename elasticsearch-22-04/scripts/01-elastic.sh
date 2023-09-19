@@ -12,8 +12,9 @@ echo "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://arti
 
 sudo apt-get --assume-yes update && sudo NEEDRESTART_MODE=a apt-get --assume-yes install elasticsearch
 
-# Copy elasticsearch config
-sudo cp /var/lib/digitalocean/elasticsearch.yml /etc/elasticsearch/elasticsearch.yml
+cat > /etc/elasticsearch/elasticsearch.yml <<EOM
+network.host: 0.0.0.0
+EOM
 
 # Set permissions for ElasticSearch logs
 sudo chmod 755 -R /var/log/elasticsearch/
