@@ -31,11 +31,6 @@
     },
     {
       "type": "file",
-      "source": "kibana-22-04/files/var/",
-      "destination": "/var/"
-    },
-    {
-      "type": "file",
       "source": "common/files/var/",
       "destination": "/var/"
     },
@@ -51,7 +46,6 @@
       ],
       "scripts": [
         "kibana-22-04/scripts/012-kibana.sh",
-        "common/scripts/018-force-ssh-logout.sh",
         "common/scripts/020-application-tag.sh",
         "common/scripts/900-cleanup.sh"
       ]
