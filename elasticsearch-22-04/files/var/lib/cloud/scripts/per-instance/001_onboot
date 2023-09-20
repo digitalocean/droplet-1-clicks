@@ -1,15 +1,34 @@
 #!/bin/bash
 
+sudo apt-get --assume-yes update && sudo NEEDRESTART_MODE=a apt-get --assume-yes install elasticsearch
+
+# Set host for the ElasticSearch server
+cat >> /etc/elasticsearch/elasticsearch.yml <<EOM
+network.host: 0.0.0.0
+EOM
+
+# Set permissions for ElasticSearch logs
+sudo chmod 755 -R /var/log/elasticsearch/
+
+# Start elastic service
+sudo systemctl daemon-reload
+
+sudo systemctl enable elasticsearch.service
+
+sudo systemctl start elasticsearch.service
+
 # Generate random password for elastic, kibana and logstash users
 export elasticPass=$(echo "y" | /usr/share/elasticsearch/bin/elasticsearch-reset-password -u elastic --url https://localhost:9200 | awk '/^New/{print $3}')
 export kibanaPass=$(echo "y" | /usr/share/elasticsearch/bin/elasticsearch-reset-password -u kibana --url https://localhost:9200 | awk '/^New/{print $3}')
 export logstashSystemPass=$(echo "y" | /usr/share/elasticsearch/bin/elasticsearch-reset-password -u logstash_system --url https://localhost:9200 | awk '/^New/{print $3}')
+export kibanaEnrollmentToken=$(/usr/share/elasticsearch/bin/elasticsearch-create-enrollment-token -s kibana --url https://localhost:9200)
 
 # Set env variable for elastic, kibana and logstash passwords
 cat > /root/.digitalocean_passwords <<EOM
 ELASTIC_PASSWORD=${elasticPass}
 KIBANA_PASSWORD=${kibanaPass}
 LOGSTASH_SYSTEM_PASSWORD=${logstashSystemPass}
+KIBANA_ENROLLMENT_TOKEN=${kibanaEnrollmentToken}
 EOM
 
 # Remove the ssh force logout command

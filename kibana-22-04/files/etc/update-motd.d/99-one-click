@@ -1,0 +1,22 @@
+#!/bin/sh
+
+myip=$(hostname -I | awk '{print$1}')
+
+kibana_verification_code=$(/usr/share/kibana/bin/kibana-verification-code)
+
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's 1-Click Kibana Droplet.
+To keep this Droplet secure, the UFW firewall is enabled.
+All ports are BLOCKED except 22 (SSH), and 5601 (Kibana).
+
+Visit Kibana dashboard at http://${myip}:5601
+
+${kibana_verification_code}
+
+For help and more information, visit https://marketplace.digitalocean.com/apps/kibana
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF

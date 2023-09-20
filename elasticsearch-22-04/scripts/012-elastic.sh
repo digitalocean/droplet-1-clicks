@@ -10,21 +10,6 @@ sudo apt-get --assume-yes install apt-transport-https
 
 echo "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/8.x/apt stable main" | sudo tee /etc/apt/sources.list.d/elastic-8.x.list
 
-sudo apt-get --assume-yes update && sudo NEEDRESTART_MODE=a apt-get --assume-yes install elasticsearch
-
-# Copy elasticsearch config
-sudo cp /var/lib/digitalocean/elasticsearch.yml /etc/elasticsearch/elasticsearch.yml
-
-# Set permissions for ElasticSearch logs
-sudo chmod 755 -R /var/log/elasticsearch/
-
-# Start elastic service
-sudo systemctl daemon-reload
-
-sudo systemctl enable elasticsearch.service
-
-sudo systemctl start elasticsearch.service
-
 # Allow elasticsearch port
 ufw limit ssh
 ufw allow 9200
