@@ -35,7 +35,7 @@ Use these parameters to connect LogStash to your ElasticSearch
     Pass: ${LOGSTASH_SYSTEM_PASSWORD}
 
 To ping your ElasticSearch, run:
-    curl -k -u elastic:${ELASTIC_PASSWORD} https://${myip}:9200
+    curl -k -u "elastic:${ELASTIC_PASSWORD}" https://${myip}:9200
 
 ********************************************************************************
 To delete this message of the day: rm -rf $(readlink -f ${0})
