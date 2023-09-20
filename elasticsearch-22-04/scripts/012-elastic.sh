@@ -13,7 +13,7 @@ echo "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://arti
 sudo apt-get --assume-yes update && sudo NEEDRESTART_MODE=a apt-get --assume-yes install elasticsearch
 
 # Set host for the ElasticSearch server
-cat > /etc/elasticsearch/elasticsearch.yml <<EOM
+cat >> /etc/elasticsearch/elasticsearch.yml <<EOM
 network.host: 0.0.0.0
 EOM
 
