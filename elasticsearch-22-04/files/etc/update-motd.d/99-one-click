@@ -25,6 +25,10 @@ Use these parameters to connect Kibana to your ElasticSearch:
     User: kibana
     Pass: ${KIBANA_PASSWORD}
 
+    or
+
+    Kibana enrollment token: ${KIBANA_ENROLLMENT_TOKEN}
+
 Use these parameters to connect LogStash to your ElasticSearch
     Host: ${myip}
     User: logstash_system
