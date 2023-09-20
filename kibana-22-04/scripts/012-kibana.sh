@@ -1,18 +1,34 @@
-#!/bin/sh
+#!/bin/bash
 
-# Create the flask user
-useradd --home-dir /home/flask \
-        --shell /bin/bash \
-        --create-home \
-        --system \
-        flask
+# non-interactive install
+export DEBIAN_FRONTEND=noninteractive
 
-# Setup the home directory
-chown -R flask: /home/flask
-chmod 755 /home/flask
+# Install Kibana
+wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo gpg --dearmor -o /usr/share/keyrings/elasticsearch-keyring.gpg
 
-# Replace with the version of Flask you want to install: 2.2.3, etc...
-VERSION=${FLASK_VERSION}
+sudo apt-get --assume-yes install apt-transport-https
 
-# Install Flask
-python3 -m pip install flask=="$VERSION"
+echo "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/8.x/apt stable main" | sudo tee /etc/apt/sources.list.d/elastic-8.x.list
+
+sudo apt-get --assume-yes update && sudo NEEDRESTART_MODE=a apt-get --assume-yes install kibana
+
+# Set host for the Kibana server
+cat > /etc/elasticsearch/elasticsearch.yml <<EOM
+network.host: 0.0.0.0
+EOM
+
+# Set permissions for Kibana logs
+sudo chmod 755 -R /var/log/kibana/
+
+# Start elastic service
+sudo systemctl daemon-reload
+
+sudo systemctl enable kibana.service
+
+sudo systemctl start kibana.service
+
+# Allow elasticsearch port
+ufw limit ssh
+ufw allow 5601
+
+ufw --force enable
