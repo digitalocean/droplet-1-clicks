@@ -3,7 +3,7 @@
 # non-interactive install
 export DEBIAN_FRONTEND=noninteractive
 
-# Install Kibana
+# Install LogStash
 wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo gpg --dearmor -o /usr/share/keyrings/elasticsearch-keyring.gpg
 
 sudo apt-get --assume-yes install apt-transport-https
