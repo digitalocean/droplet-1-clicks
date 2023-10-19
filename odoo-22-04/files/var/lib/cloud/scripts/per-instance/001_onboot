@@ -1,0 +1,24 @@
+#!/bin/sh
+
+# Generate root passwords.
+admin_odoo_pass=$(openssl rand -hex 24)
+
+# Generate some passwords
+cat > /root/.digitalocean_passwords << EOM
+admin_odoo_password="${admin_odoo_pass}"
+EOM
+
+source /root/.digitalocean_passwords
+
+config_line="admin_passwd = $admin_odoo_pass"
+sudo bash -c "echo '$config_line' >> /etc/odoo16.conf"
+
+sudo systemctl daemon-reload
+sudo systemctl start odoo16
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
