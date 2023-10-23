@@ -1,0 +1,31 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+# Read in the passwords....
+. /root/.digitalocean_passwords
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's 1-Click ODOO Droplet.
+To keep this Droplet secure, the UFW firewall is enabled.
+All ports are BLOCKED except 22 (SSH) and 8069 (ODOO).
+
+To create an ODOO account use the following
+credential:
+    Master Password: ${admin_odoo_password}
+
+In a web browser, you can view:
+ * Your ODOO website: http://$myip:8069
+
+On the server:
+  * The passwords are saved in /root/.digitalocean_passwords
+  * The config for ODOO is saved in /etc/odoo16.conf
+
+For help and more information, visit https://marketplace.digitalocean.com/apps/erp-odoo
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
