@@ -11,4 +11,3 @@
 cat >> /root/.bashrc <<EOM
 /opt/digitalocean_clickhouse/setup_password.sh
 EOM
-
