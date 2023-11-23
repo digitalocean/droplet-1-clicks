@@ -12,6 +12,7 @@ echo "PASSWORD=\$(base64 < /dev/urandom | head -c8); echo \"\$PASSWORD\"; echo -
 echo "First line is the new password, second is the hashed password can be used in clickhouse conf file."
 echo "Update section 'password_sha256_hex' value with generated hash in the file '/etc/clickhouse-server/users.d/default-password.xml'"
 echo "----------------------------------------------------------------------------"
+echo "Clickhouse is starting, please wait about 2-3 minutes, console will be unblocked"
 
 cp -f /etc/skel/.bashrc /root/.bashrc
 
