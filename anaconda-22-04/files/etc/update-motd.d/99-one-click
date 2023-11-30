@@ -1,0 +1,25 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's 1-Click Anaconda Droplet.
+To keep this Droplet secure, the UFW firewall is enabled.
+All ports are BLOCKED except 22 (SSH).
+
+* You can SSH to this Droplet in a terminal as root: ssh root@$myip
+
+* Anaconda is installed and configured per recommendations:
+  hhttps://docs.anaconda.com/free/anaconda/install/linux/
+
+* Anaconda installation is available at: /home/anaconda/anaconda3/bin
+
+* Anaconda binaries have been added to the system PATH.
+
+********************************************************************************
+
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
