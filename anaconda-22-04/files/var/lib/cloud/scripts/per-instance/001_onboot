@@ -1,0 +1,12 @@
+#!/bin/sh
+
+echo "## Adding Anaconda binaries to the environment"
+/home/anaconda/anaconda3/bin/conda init
+
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
