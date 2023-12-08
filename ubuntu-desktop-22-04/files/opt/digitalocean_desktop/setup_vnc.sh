@@ -11,11 +11,11 @@ echo "Your VNC password is \"$VNCPASSWORD\". To update it you can run:"
 echo "x11vnc -storepasswd %NEW_PASSWORD% /home/$USER/.vnc/passwd"
 echo "Using XServer from root account is not recommended, so user \"$USER\" is created with password \"$USERPASSWORD\""
 echo "To change user's password execute 'passwd ${USER}'"
-echo "Raw generated authentication data is stored in '/root/.vnc_password'"
+echo "Raw generated authentication data is stored in '/root/.digitalocean_passwords'"
 echo "----------------------------------------------------------------------------"
 echo "Ubuntu-Desktop is starting, please wait about 2-3 minutes until console is unblocked"
 
-cat >> /root/.vnc_password <<EOM
+cat >> /root/.digitalocean_passwords <<EOM
 VNC_PASSWORD=$VNCPASSWORD
 USER=$USER
 USER_PASSWORD=$USERPASSWORD
@@ -27,11 +27,9 @@ chpasswd <<<"$USER:$USERPASSWORD"
 sudo -u $USER mkdir /home/user/.vnc
 x11vnc -storepasswd $VNCPASSWORD /home/$USER/.vnc/passwd
 
-systemctl stop x11vnc
-systemctl stop sddm
 systemctl enable x11vnc
 systemctl enable sddm
-systemctl start sddm
-systemctl start x11vnc
+systemctl restart sddm
+systemctl restart x11vnc
 
 cp -f /etc/skel/.bashrc /root/.bashrc

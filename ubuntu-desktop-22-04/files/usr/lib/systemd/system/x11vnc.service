@@ -4,7 +4,6 @@ Requires=graphical.target
 After=graphical.target
 
 [Service]
-ExecStart=
 ExecStart=/bin/bash -c "/usr/bin/x11vnc -auth /var/run/sddm/* -display :0 -forever -noxfixes -noxdamage -repeat -rfbauth '/home/user/.vnc/passwd' -rfbport 5900 -shared"
 RestartSec=5
 Restart=always
