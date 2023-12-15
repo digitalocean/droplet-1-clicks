@@ -1,0 +1,42 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+
+# Read in the passwords....
+. /root/.digitalocean_passwords
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's 1-Click Code Server Droplet.
+To keep this Droplet secure, the UFW firewall is enabled.
+All ports are BLOCKED except 22 (SSH), 80 (HTTP), and 443 (HTTPS).
+
+* You can SSH to this Droplet in a terminal as root: ssh root@$myip
+
+In a web browser, you can access code-server:
+  * http:://$myip
+  * Password: ${PASSWORD}
+
+Nginx is configured to forward http requests to a local port 8080
+  * Public IP: http://${myip}
+
+On the server:
+  * Code Server installation is available at: /usr/lib/code-server
+  * The Code Server UI password is saved in /root/.digitalocean_password
+  * Certbot is preinstalled. Run it to configure HTTPS.
+
+Code Server is managed via 'systemd'.
+  * Proccess management: systemctl {start|stop|restart} code-server.service
+  * Systemd Unit file: /etc/systemd/system/code-server.service
+
+To update the Code Server UI password:
+  * Update the default password saved in /root/.digitalocean_password
+  * Restart the code-server service
+
+********************************************************************************
+
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
