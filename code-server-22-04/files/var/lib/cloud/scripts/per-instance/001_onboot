@@ -1,0 +1,19 @@
+#!/bin/sh
+
+# Generate password
+CODE_SERVER_PASSWORD=$(openssl rand -hex 16)
+
+cat > /root/.digitalocean_passwords <<EOM
+PASSWORD="${CODE_SERVER_PASSWORD}"
+EOM
+
+systemctl enable code-server
+systemctl start code-server
+
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
