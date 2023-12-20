@@ -23,7 +23,31 @@ packer build {{image-name}}/template.json
 
 ### Usage
 
-To run the Packer build that this template uses by default, you'll need to [install Packer](https://www.packer.io/intro/getting-started/install.html) and [create a DigitalOcean personal access token](https://docs.digitalocean.com/reference/api/create-personal-access-token/) and set it to the `DIGITALOCEAN_API_TOKEN` environment variable. Running `packer build {{image-name}}/template.json` without any other modifications will create a build Droplet configured with that 1-Click, clean it, power it down, and snapshot it.
+To run the Packer build that this template uses by default, you'll need to [install Packer](https://www.packer.io/intro/getting-started/install.html) and [create a DigitalOcean personal access token](https://docs.digitalocean.com/reference/api/create-personal-access-token/) and set it to the `DIGITALOCEAN_API_TOKEN` environment variable.
+
+> ⚠️ Starting Packer version 1.7.0, the [DigitalOcean Builder](https://www.packer.io/docs/builders/digitalocean.html) needs to be installed as a plugin. To install the DigitalOcean Builder for Packer version 1.7.0 or later, follow these steps:
+
+1. Create a new Packer configuration file named `plugins.pkr.hcl`.
+2. Paste the following content into your Packer configuration file:
+    ```hcl
+    packer {
+      required_plugins {
+        digitalocean = {
+          version = ">= 1.0.4"
+          source  = "github.com/digitalocean/digitalocean"
+        }
+      }
+    }
+    ```
+3. Apply this configuration by running:
+    ```bash
+    packer init <path-to-your-config-file>/plugins.pkr.hcl
+    ```
+
+Make sure to adjust the path according to your specific configuration file location.
+
+
+Running `packer build {{image-name}}/template.json` without any other modifications will create a build Droplet configured with that 1-Click, clean it, power it down, and snapshot it.
 
 > ⚠️ The image validation script in `common/scripts/999-img_check.sh` is copied from the [marketplace-partners repo](https://github.com/digitalocean/marketplace-partners). The marketplace-partners repo is the script's canonical source, so make sure you're using the latest version from there. Update it by running `make update-scripts`.
 
