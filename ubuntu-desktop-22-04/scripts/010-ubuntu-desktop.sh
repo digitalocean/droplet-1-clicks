@@ -9,6 +9,8 @@
 
 # open default VNC port
 ufw allow 5900
+# open default RDP port
+ufw allow 3389
 # Add first-login task
 cat >> /root/.bashrc <<EOM
 /opt/digitalocean_desktop/setup_vnc.sh

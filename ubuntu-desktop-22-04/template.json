@@ -2,7 +2,7 @@
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "ubuntu-desktop-22-04-snapshot-{{timestamp}}",
-    "apt_packages": "x11vnc sddm",
+    "apt_packages": "x11vnc sddm xrdp",
     "application_name": "UbuntuDesktop",
     "application_version": "1.524"
   },
