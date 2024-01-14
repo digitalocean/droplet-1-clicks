@@ -1,0 +1,18 @@
+---
+# Ansible will proceed with remaining hosts if it fails to gather facts for some hosts.
+# We only want to continue if all hosts are reachable
+- name: stackstorm | main | assert
+  ansible.builtin.assert:
+    that: ansible_play_hosts == ansible_play_hosts_all
+
+- name: stackstorm | main | files
+  ansible.builtin.import_tasks:
+    file: files.yml
+
+- name: stackstorm | main | install
+  ansible.builtin.import_tasks:
+    file: install.yml
+
+- name: stackstorm | main | firewall
+  ansible.builtin.import_tasks:
+    file: firewall.yml
