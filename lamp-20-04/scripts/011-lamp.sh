@@ -25,5 +25,4 @@ if [ -f "/root/.digitalocean_dbaas_credentials" ] && [ "$(sed -n "s/^db_protocol
 
   # cleanup
   unset host port
-  rm -rf /etc/mysql
 fi
