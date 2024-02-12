@@ -52,8 +52,8 @@ services:
       - "TEMPORAL_TLS_FRONTEND_KEY=${TEMPORAL_TLS_CERTS_DIR}/cluster.key"
       - "TEMPORAL_TLS_CLIENT1_CA_CERT=${TEMPORAL_TLS_CERTS_DIR}/ca.cert"
       - "TEMPORAL_TLS_CLIENT2_CA_CERT=${TEMPORAL_TLS_CERTS_DIR}/ca.cert"
-      - "TEMPORAL_TLS_INTERNODE_SERVER_NAME=tls-sample"
-      - "TEMPORAL_TLS_FRONTEND_SERVER_NAME=tls-sample"
+      - "TEMPORAL_TLS_INTERNODE_SERVER_NAME=do-temporal"
+      - "TEMPORAL_TLS_FRONTEND_SERVER_NAME=do-temporal"
       - "TEMPORAL_TLS_FRONTEND_DISABLE_HOST_VERIFICATION=false"
       - "TEMPORAL_TLS_INTERNODE_DISABLE_HOST_VERIFICATION=false"
       - "TEMPORAL_CLI_ADDRESS=temporal:7233" # used by tctl. Will be deprecated
@@ -61,13 +61,13 @@ services:
       - "TEMPORAL_CLI_TLS_CERT=${TEMPORAL_TLS_CERTS_DIR}/cluster.pem"
       - "TEMPORAL_CLI_TLS_KEY=${TEMPORAL_TLS_CERTS_DIR}/cluster.key"
       - "TEMPORAL_CLI_TLS_ENABLE_HOST_VERIFICATION=true"
-      - "TEMPORAL_CLI_TLS_SERVER_NAME=tls-sample"
+      - "TEMPORAL_CLI_TLS_SERVER_NAME=do-temporal"
       - "TEMPORAL_ADDRESS=temporal:7233" # used by Temporal CLI
       - "TEMPORAL_TLS_CA=${TEMPORAL_TLS_CERTS_DIR}/ca.cert"
       - "TEMPORAL_TLS_CERT=${TEMPORAL_TLS_CERTS_DIR}/cluster.pem"
       - "TEMPORAL_TLS_KEY=${TEMPORAL_TLS_CERTS_DIR}/cluster.key"
       - "TEMPORAL_TLS_ENABLE_HOST_VERIFICATION=true"
-      - "TEMPORAL_TLS_SERVER_NAME=tls-sample"
+      - "TEMPORAL_TLS_SERVER_NAME=do-temporal"
     image: temporalio/auto-setup:${TEMPORAL_VERSION}
     networks:
       - temporal-network
@@ -91,12 +91,12 @@ services:
       - "TEMPORAL_CLI_TLS_CERT=${TEMPORAL_TLS_CERTS_DIR}/client.pem"
       - "TEMPORAL_CLI_TLS_KEY=${TEMPORAL_TLS_CERTS_DIR}/client.key"
       - "TEMPORAL_CLI_TLS_ENABLE_HOST_VERIFICATION=true"
-      - "TEMPORAL_CLI_TLS_SERVER_NAME=tls-sample"
+      - "TEMPORAL_CLI_TLS_SERVER_NAME=do-temporal"
       - "TEMPORAL_TLS_CA=${TEMPORAL_TLS_CERTS_DIR}/ca.cert"
       - "TEMPORAL_TLS_CERT=${TEMPORAL_TLS_CERTS_DIR}/client.pem"
       - "TEMPORAL_TLS_KEY=${TEMPORAL_TLS_CERTS_DIR}/client.key"
       - "TEMPORAL_TLS_ENABLE_HOST_VERIFICATION=true"
-      - "TEMPORAL_TLS_SERVER_NAME=tls-sample"
+      - "TEMPORAL_TLS_SERVER_NAME=do-temporal"
     image: temporalio/admin-tools:${TEMPORAL_VERSION}
     networks:
       - temporal-network
@@ -115,7 +115,7 @@ services:
       - "TEMPORAL_TLS_CERT=${TEMPORAL_TLS_CERTS_DIR}/cluster.pem"
       - "TEMPORAL_TLS_KEY=${TEMPORAL_TLS_CERTS_DIR}/cluster.key"
       - "TEMPORAL_TLS_ENABLE_HOST_VERIFICATION=true"
-      - "TEMPORAL_TLS_SERVER_NAME=tls-sample"
+      - "TEMPORAL_TLS_SERVER_NAME=do-temporal"
     image: temporalio/ui:${TEMPORAL_UI_VERSION}
     networks:
       - temporal-network
