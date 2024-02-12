@@ -1,0 +1,127 @@
+version: "3.5"
+services:
+  elasticsearch:
+    container_name: temporal-elasticsearch
+    environment:
+      - cluster.routing.allocation.disk.threshold_enabled=true
+      - cluster.routing.allocation.disk.watermark.low=512mb
+      - cluster.routing.allocation.disk.watermark.high=256mb
+      - cluster.routing.allocation.disk.watermark.flood_stage=128mb
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms256m -Xmx256m
+      - xpack.security.enabled=false
+    image: elasticsearch:${ELASTICSEARCH_VERSION}
+    networks:
+      - temporal-network
+    expose:
+      - 9200
+    volumes:
+      - /var/lib/elasticsearch/data
+  postgresql:
+    container_name: temporal-postgresql
+    environment:
+      POSTGRES_PASSWORD: temporal
+      POSTGRES_USER: temporal
+    image: postgres:${POSTGRESQL_VERSION}
+    networks:
+      - temporal-network
+    expose:
+      - 5432
+    volumes:
+      - /var/lib/postgresql/data
+  temporal:
+    container_name: temporal
+    depends_on:
+      - postgresql
+      - elasticsearch
+    environment:
+      - "DB=postgresql"
+      - "DB_PORT=5432"
+      - "POSTGRES_USER=temporal"
+      - "POSTGRES_PWD=temporal"
+      - "POSTGRES_SEEDS=postgresql"
+      - "DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml"
+      - "ENABLE_ES=true"
+      - "ES_SEEDS=elasticsearch"
+      - "ES_VERSION=v7"
+      - "TEMPORAL_TLS_SERVER_CA_CERT=${TEMPORAL_TLS_CERTS_DIR}/ca.cert"
+      - "TEMPORAL_TLS_SERVER_CERT=${TEMPORAL_TLS_CERTS_DIR}/cluster.pem"
+      - "TEMPORAL_TLS_SERVER_KEY=${TEMPORAL_TLS_CERTS_DIR}/cluster.key"
+      - "TEMPORAL_TLS_REQUIRE_CLIENT_AUTH=true"
+      - "TEMPORAL_TLS_FRONTEND_CERT=${TEMPORAL_TLS_CERTS_DIR}/cluster.pem"
+      - "TEMPORAL_TLS_FRONTEND_KEY=${TEMPORAL_TLS_CERTS_DIR}/cluster.key"
+      - "TEMPORAL_TLS_CLIENT1_CA_CERT=${TEMPORAL_TLS_CERTS_DIR}/ca.cert"
+      - "TEMPORAL_TLS_CLIENT2_CA_CERT=${TEMPORAL_TLS_CERTS_DIR}/ca.cert"
+      - "TEMPORAL_TLS_INTERNODE_SERVER_NAME=do-temporal"
+      - "TEMPORAL_TLS_FRONTEND_SERVER_NAME=do-temporal"
+      - "TEMPORAL_TLS_FRONTEND_DISABLE_HOST_VERIFICATION=false"
+      - "TEMPORAL_TLS_INTERNODE_DISABLE_HOST_VERIFICATION=false"
+      - "TEMPORAL_CLI_ADDRESS=temporal:7233" # used by tctl. Will be deprecated
+      - "TEMPORAL_CLI_TLS_CA=${TEMPORAL_TLS_CERTS_DIR}/ca.cert"
+      - "TEMPORAL_CLI_TLS_CERT=${TEMPORAL_TLS_CERTS_DIR}/cluster.pem"
+      - "TEMPORAL_CLI_TLS_KEY=${TEMPORAL_TLS_CERTS_DIR}/cluster.key"
+      - "TEMPORAL_CLI_TLS_ENABLE_HOST_VERIFICATION=true"
+      - "TEMPORAL_CLI_TLS_SERVER_NAME=do-temporal"
+      - "TEMPORAL_ADDRESS=temporal:7233" # used by Temporal CLI
+      - "TEMPORAL_TLS_CA=${TEMPORAL_TLS_CERTS_DIR}/ca.cert"
+      - "TEMPORAL_TLS_CERT=${TEMPORAL_TLS_CERTS_DIR}/cluster.pem"
+      - "TEMPORAL_TLS_KEY=${TEMPORAL_TLS_CERTS_DIR}/cluster.key"
+      - "TEMPORAL_TLS_ENABLE_HOST_VERIFICATION=true"
+      - "TEMPORAL_TLS_SERVER_NAME=do-temporal"
+    image: temporalio/auto-setup:${TEMPORAL_VERSION}
+    networks:
+      - temporal-network
+    ports:
+      - 7233:7233
+    labels:
+      kompose.volume.type: configMap
+    volumes:
+      - ./dynamicconfig:/etc/temporal/config/dynamicconfig
+      - ${TEMPORAL_LOCAL_CERT_DIR}:${TEMPORAL_TLS_CERTS_DIR}
+  temporal-admin-tools:
+    container_name: temporal-admin-tools
+    depends_on:
+      - temporal
+    volumes:
+      - ${TEMPORAL_LOCAL_CERT_DIR}:${TEMPORAL_TLS_CERTS_DIR}
+    environment:
+      - "TEMPORAL_ADDRESS=temporal:7233"
+      - "TEMPORAL_CLI_ADDRESS=temporal:7233"
+      - "TEMPORAL_CLI_TLS_CA=${TEMPORAL_TLS_CERTS_DIR}/ca.cert"
+      - "TEMPORAL_CLI_TLS_CERT=${TEMPORAL_TLS_CERTS_DIR}/client.pem"
+      - "TEMPORAL_CLI_TLS_KEY=${TEMPORAL_TLS_CERTS_DIR}/client.key"
+      - "TEMPORAL_CLI_TLS_ENABLE_HOST_VERIFICATION=true"
+      - "TEMPORAL_CLI_TLS_SERVER_NAME=do-temporal"
+      - "TEMPORAL_TLS_CA=${TEMPORAL_TLS_CERTS_DIR}/ca.cert"
+      - "TEMPORAL_TLS_CERT=${TEMPORAL_TLS_CERTS_DIR}/client.pem"
+      - "TEMPORAL_TLS_KEY=${TEMPORAL_TLS_CERTS_DIR}/client.key"
+      - "TEMPORAL_TLS_ENABLE_HOST_VERIFICATION=true"
+      - "TEMPORAL_TLS_SERVER_NAME=do-temporal"
+    image: temporalio/admin-tools:${TEMPORAL_VERSION}
+    networks:
+      - temporal-network
+    stdin_open: true
+    tty: true
+  temporal-ui:
+    container_name: temporal-ui
+    depends_on:
+      - temporal
+    volumes:
+      - ${TEMPORAL_LOCAL_CERT_DIR}:${TEMPORAL_TLS_CERTS_DIR}
+    environment:
+      - "TEMPORAL_ADDRESS=temporal:7233"
+      - "TEMPORAL_CORS_ORIGINS=http://localhost:8080"
+      - "TEMPORAL_TLS_CA=${TEMPORAL_TLS_CERTS_DIR}/ca.cert"
+      - "TEMPORAL_TLS_CERT=${TEMPORAL_TLS_CERTS_DIR}/cluster.pem"
+      - "TEMPORAL_TLS_KEY=${TEMPORAL_TLS_CERTS_DIR}/cluster.key"
+      - "TEMPORAL_TLS_ENABLE_HOST_VERIFICATION=true"
+      - "TEMPORAL_TLS_SERVER_NAME=do-temporal"
+    image: temporalio/ui:${TEMPORAL_UI_VERSION}
+    networks:
+      - temporal-network
+    ports:
+      - "127.0.0.1:8080:8080"
+networks:
+  temporal-network:
+    driver: bridge
+    name: temporal-network
