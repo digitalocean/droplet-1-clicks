@@ -5,7 +5,7 @@
     "image_name": "jenkins-22-04-snapshot-{{timestamp}}",
     "apt_packages": "openjdk-11-jdk net-tools",
     "application_name": "Jenkins",
-    "application_version": "6.4.1"
+    "application_version": "2.445"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
