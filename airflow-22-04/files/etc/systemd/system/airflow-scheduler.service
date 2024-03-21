@@ -1,0 +1,13 @@
+[Unit]
+Description=Airflow scheduler
+After=network.target
+
+[Service]
+WorkingDirectory=/home/airflow
+#EnvironmentFile=/root/.digitalocean_passwords
+ExecStart=sudo -s -u airflow /var/lib/digitalocean/scheduler.sh
+Restart=always
+SyslogIdentifier=airflow-scheduler
+
+[Install]
+WantedBy=multi-user.target

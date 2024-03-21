@@ -1,0 +1,49 @@
+#!/bin/bash -x
+
+PASSWORD=$(base64 < /dev/urandom | head -c16)
+
+cat > /root/.digitalocean_passwords <<EOM
+PASSWORD="${PASSWORD}"
+EOM
+
+if [ -f "/root/.digitalocean_dbaas_credentials" ] && [ "$(sed -n "s/^db_protocol=\"\([^:]*\):.*\"$/\1/p" /root/.digitalocean_dbaas_credentials)" = "postgresql" ]; then
+  # grab all the data from the dbaas credentials file
+  PG_HOST=$(sed -n "s/^db_host=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+  PG_PORT=$(sed -n "s/^db_port=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+  PG_USER=$(sed -n "s/^db_username=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+  PG_DB=$(sed -n "s/^db_database=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+  PG_PASS=$(sed -n "s/^db_password=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+
+  PG_URL="postgresql+psycopg2://$PG_USER:$PG_PASS@$PG_HOST:$PG_PORT/$PG_DB"
+
+  sed -e "s|sqlite:////home/airflow/airflow/airflow.db|${PG_URL}|" -i /home/airflow/airflow/airflow.cfg
+fi
+
+sed -e "s/my-password/${PASSWORD}/" \
+    -i /var/lib/digitalocean/finish-setup.sh
+
+chown airflow:airflow /var/lib/digitalocean/finish-setup.sh
+chmod +x /var/lib/digitalocean/finish-setup.sh
+
+sudo -s -u airflow /var/lib/digitalocean/finish-setup.sh
+
+chown airflow:airflow /var/lib/digitalocean/scheduler.sh
+chmod +x /var/lib/digitalocean/scheduler.sh
+chown airflow:airflow /var/lib/digitalocean/webserver.sh
+chmod +x /var/lib/digitalocean/webserver.sh
+
+systemctl start airflow-scheduler
+systemctl start airflow-webserver
+systemctl enable airflow-scheduler
+systemctl enable airflow-webserver
+
+ufw limit ssh
+ufw allow 8080/tcp
+ufw allow 443/tcp
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh

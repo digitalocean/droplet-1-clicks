@@ -1,0 +1,47 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+# Read in the passwords....
+. /root/.digitalocean_passwords
+
+dbaas_text=""
+if [ -f "/root/.digitalocean_dbaas_credentials" ]; then
+    . /root/.digitalocean_dbaas_credentials
+    dbaas_text="Airflow is configured to use managed Postgres as its database. Use the following credentials to manage the database:
+    Database: ${db_database}
+    Host:     ${db_host}
+    Port:     ${db_port}
+    User:     ${db_username}
+    Pass:     ${db_password}"
+else
+    dbaas_text="Aitflow is configured to use local SQLlite as its database. Database file is located in /home/airflow/airflow/airflow.db"
+fi
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+
+PASSWORD: ${PASSWORD}
+
+Welcome to DigitalOcean's 1-Click Airflow Droplet.
+To keep this Droplet secure, the UFW firewall is enabled.
+All ports are BLOCKED except 22 (SSH), 8080 (HTTP), and 443 (HTTPS).
+
+Access the Airflow site
+    URL: http://${myip}:8080
+    User: admin
+    Pass: ${PASSWORD}
+
+${dbaas_text}
+
+On the server:
+  * The Airflow home dir is /home/airflow/airflow
+  * The admin Airflow password is saved in /root/.digitalocean_passwords
+
+For help and more information, visit https://do.co/3bY3b67
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
