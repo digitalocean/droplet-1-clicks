@@ -29,3 +29,8 @@ chmod +x /tmp/install_airflow.sh
 chown airflow:airflow /tmp/install_airflow.sh
 
 sudo -s -u airflow /tmp/install_airflow.sh
+
+rm -rvf /etc/nginx/sites-enabled/default
+
+ln -s /etc/nginx/sites-available/airflow \
+      /etc/nginx/sites-enabled/airflow

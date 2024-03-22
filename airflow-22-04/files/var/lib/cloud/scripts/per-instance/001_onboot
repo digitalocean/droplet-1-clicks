@@ -37,10 +37,6 @@ systemctl start airflow-webserver
 systemctl enable airflow-scheduler
 systemctl enable airflow-webserver
 
-ufw limit ssh
-ufw allow 8080/tcp
-ufw allow 443/tcp
-
 # Remove the ssh force logout command
 sed -e '/Match User root/d' \
     -e '/.*ForceCommand.*droplet.*/d' \

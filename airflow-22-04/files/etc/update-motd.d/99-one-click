@@ -27,10 +27,10 @@ PASSWORD: ${PASSWORD}
 
 Welcome to DigitalOcean's 1-Click Airflow Droplet.
 To keep this Droplet secure, the UFW firewall is enabled.
-All ports are BLOCKED except 22 (SSH), 8080 (HTTP), and 443 (HTTPS).
+All ports are BLOCKED except 22 (SSH), 80 (HTTP), and 443 (HTTPS).
 
 Access the Airflow site
-    URL: http://${myip}:8080
+    URL: http://${myip}
     User: admin
     Pass: ${PASSWORD}
 
@@ -39,6 +39,7 @@ ${dbaas_text}
 On the server:
   * The Airflow home dir is /home/airflow/airflow
   * The admin Airflow password is saved in /root/.digitalocean_passwords
+  * Certbot is preinstalled. Run it to configure HTTPS.
 
 For help and more information, visit https://do.co/3bY3b67
 

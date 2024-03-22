@@ -3,7 +3,7 @@
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "airflow-22-04-snapshot-{{timestamp}}",
-    "apt_packages": "python3-pip python3-venv",
+    "apt_packages": "apt-transport-https ca-certificates curl nginx python3-certbot-nginx software-properties-common python3-pip python3-venv",
     "application_name": "Airflow",
     "application_version": "2.8.3"
   },
@@ -64,6 +64,7 @@
       ],
       "scripts": [
         "airflow-22-04/scripts/012-airflow.sh",
+        "common/scripts/014-ufw-nginx.sh",
         "common/scripts/018-force-ssh-logout.sh",
         "common/scripts/020-application-tag.sh",
         "common/scripts/900-cleanup.sh"
