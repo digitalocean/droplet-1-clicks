@@ -3,7 +3,7 @@
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "airflow-22-04-snapshot-{{timestamp}}",
-    "apt_packages": "apt-transport-https ca-certificates curl nginx python3-certbot-nginx software-properties-common python3-pip python3-venv",
+    "apt_packages": "apt-transport-https ca-certificates curl nginx python3-certbot-nginx software-properties-common python3-pip python3-venv postgresql-client",
     "application_name": "Airflow",
     "application_version": "2.8.3"
   },

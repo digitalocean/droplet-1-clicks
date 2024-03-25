@@ -15,7 +15,7 @@ if [ -f "/root/.digitalocean_dbaas_credentials" ]; then
     User:     ${db_username}
     Pass:     ${db_password}"
 else
-    dbaas_text="Aitflow is configured to use local SQLlite as its database. Database file is located in /home/airflow/airflow/airflow.db"
+    dbaas_text="Airflow is configured to use local SQLlite as its database. Database file is located in /home/airflow/airflow/airflow.db"
 fi
 
 myip=$(hostname -I | awk '{print$1}')
