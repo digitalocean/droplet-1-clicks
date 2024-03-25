@@ -1,10 +1,20 @@
 #!/bin/bash -x
 
-PASSWORD=$(base64 < /dev/urandom | head -c16)
+exec > >(tee /var/log/one_click_setup.log) 2>&1
+
+PASSWORD=$(openssl rand -base64 14 | head -c16)
 
 cat > /root/.digitalocean_passwords <<EOM
 PASSWORD="${PASSWORD}"
 EOM
+
+sed -e "s|my-password|${PASSWORD}|" \
+    -i /var/lib/digitalocean/finish-setup.sh
+
+chown airflow:airflow /var/lib/digitalocean/finish-setup.sh
+chmod +x /var/lib/digitalocean/finish-setup.sh
+
+sudo -s -u airflow /var/lib/digitalocean/finish-setup.sh
 
 if [ -f "/root/.digitalocean_dbaas_credentials" ] && [ "$(sed -n "s/^db_protocol=\"\([^:]*\):.*\"$/\1/p" /root/.digitalocean_dbaas_credentials)" = "postgresql" ]; then
   # grab all the data from the dbaas credentials file
@@ -16,16 +26,19 @@ if [ -f "/root/.digitalocean_dbaas_credentials" ] && [ "$(sed -n "s/^db_protocol
 
   PG_URL="postgresql+psycopg2://$PG_USER:$PG_PASS@$PG_HOST:$PG_PORT/$PG_DB"
 
+  # wait for db to become available
+  echo -e "\nWaiting for your database to become available (this may take a few minutes)"
+  while ! pg_isready -h "$PG_HOST" -p "$PG_PORT"; do
+     printf .
+     sleep 2
+  done
+
+  echo -e "\nDatabase available!\n"
+
   sed -e "s|sqlite:////home/airflow/airflow/airflow.db|${PG_URL}|" -i /home/airflow/airflow/airflow.cfg
+
+  sudo -s -u airflow /var/lib/digitalocean/finish-setup.sh #rerun airflow db migration to set new database
 fi
-
-sed -e "s/my-password/${PASSWORD}/" \
-    -i /var/lib/digitalocean/finish-setup.sh
-
-chown airflow:airflow /var/lib/digitalocean/finish-setup.sh
-chmod +x /var/lib/digitalocean/finish-setup.sh
-
-sudo -s -u airflow /var/lib/digitalocean/finish-setup.sh
 
 chown airflow:airflow /var/lib/digitalocean/scheduler.sh
 chmod +x /var/lib/digitalocean/scheduler.sh
