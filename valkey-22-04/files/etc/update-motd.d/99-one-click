@@ -23,6 +23,9 @@ All ports are BLOCKED except:
 A strong password has been set for your Valkey instance, and can be found in the file 
 /root/.digitalocean_passwords
 
+Valkey is bound to the droplet IP address and localhost.  To change this, edit the 
+configuration here /srv/valkey/6379.conf
+
 For help and more information, visit https://marketplace.digitalocean.com/apps/valkey
 
 ********************************************************************************
