@@ -1,11 +1,11 @@
 # BlueSky 1-Click Droplet Packer Build template
 
-*We don't recommend to change order of this flow to make your bluesky PDS working*
+*We recommend you don't change the order of this flow to make your BlueSky PDS work.*
 
 ## BlueSky configuration instructions:
 
 * First and foremost, a domain or subdomain is required. Ensure it's not too long; the handle (username + hostname) should be no longer than 30 characters, with the username being at least 3 characters long.
-* Select the BlueSky app in the [DigitalOcean marketplace](https://marketplace.digitalocean.com/), and create a droplet from it. It's ok to start with the smallest droplet size. But migration to biggest droplet will be a hard task (see the link is Useful links)
+* Select the BlueSky app in the [DigitalOcean marketplace](https://marketplace.digitalocean.com/), and create a droplet from it. It's ok to start with the smallest droplet size, but migrating to a bigger droplet will be a hard task (see the link in Useful links).
 * Wait for the droplet creation process to complete.
 * Once the droplet is created, copy its IP address from the droplet page.
 * Configure your DNS for wildcard usage by using the IP from the previous step. Refer to the [docs](https://docs.digitalocean.com/glossary/wildcard-record/). Without a wildcard, the BlueSky handle won't function correctly.
