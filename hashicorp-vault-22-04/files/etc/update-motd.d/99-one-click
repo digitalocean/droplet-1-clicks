@@ -1,0 +1,19 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's 1-Click HashiCorp Valult Droplet.
+To keep this Droplet secure, the UFW firewall is enabled.
+All ports are BLOCKED except 22 (SSH), and 8200.
+
+Certbot is preinstalled, generated root token and 5 keys are stored in file
+/.digitalocean_vault_tokens.txt
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
