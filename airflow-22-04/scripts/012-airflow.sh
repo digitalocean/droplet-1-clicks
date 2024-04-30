@@ -23,6 +23,8 @@ cat >> /tmp/install_airflow.sh << EOF
         source airflow-env/bin/activate
         pip install apache-airflow
         pip install apache-airflow-providers-postgres
+        pip install apache-airflow-providers-redis
+        pip install apache-airflow-providers-amazon
 EOF
 
 chmod +x /tmp/install_airflow.sh

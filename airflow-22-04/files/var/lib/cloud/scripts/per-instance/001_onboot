@@ -13,32 +13,19 @@ sed -e "s|my-password|${PASSWORD}|" \
 
 chown airflow:airflow /var/lib/digitalocean/finish-setup.sh
 chmod +x /var/lib/digitalocean/finish-setup.sh
+chown airflow:airflow /var/lib/digitalocean/setup-logging.sh
+chmod +x /var/lib/digitalocean/setup-logging.sh
+chown airflow:airflow /var/lib/digitalocean/setup-dbaas.sh
+chmod +x /var/lib/digitalocean/setup-dbaas.sh
 
 sudo -s -u airflow /var/lib/digitalocean/finish-setup.sh
 
-if [ -f "/root/.digitalocean_dbaas_credentials" ] && [ "$(sed -n "s/^db_protocol=\"\([^:]*\):.*\"$/\1/p" /root/.digitalocean_dbaas_credentials)" = "postgresql" ]; then
-  # grab all the data from the dbaas credentials file
-  PG_HOST=$(sed -n "s/^db_host=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
-  PG_PORT=$(sed -n "s/^db_port=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
-  PG_USER=$(sed -n "s/^db_username=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
-  PG_DB=$(sed -n "s/^db_database=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
-  PG_PASS=$(sed -n "s/^db_password=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+mkdir -p /home/airflow/airflow/dags
+chown airflow:airflow /home/airflow/dags
 
-  PG_URL="postgresql+psycopg2://$PG_USER:$PG_PASS@$PG_HOST:$PG_PORT/$PG_DB"
+source /var/lib/digitalocean/setup-dbaas.sh
 
-  # wait for db to become available
-  echo -e "\nWaiting for your database to become available (this may take a few minutes)"
-  while ! pg_isready -h "$PG_HOST" -p "$PG_PORT"; do
-     printf .
-     sleep 2
-  done
-
-  echo -e "\nDatabase available!\n"
-
-  sed -e "s|sqlite:////home/airflow/airflow/airflow.db|${PG_URL}|" -i /home/airflow/airflow/airflow.cfg
-
-  sudo -s -u airflow /var/lib/digitalocean/finish-setup.sh #rerun airflow db migration to set new database
-fi
+source /var/lib/digitalocean/setup-logging.sh
 
 chown airflow:airflow /var/lib/digitalocean/scheduler.sh
 chmod +x /var/lib/digitalocean/scheduler.sh
