@@ -1,6 +1,6 @@
 # HashiCorp Vault usage
 
-## After HashiCort Vault is intalled
+## After HashiCort Vault is installed
 
 Root token and 5 keys are generated and saved in file /.digitalocean_vault_tokens.txt. UI is accessible in a browser by URL `https://IP:8200`. 
 
