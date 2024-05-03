@@ -1,0 +1,14 @@
+#!/bin/bash
+
+RAM_AVAILABLE=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
+RAM_FOR_MINECRAFT=$((RAM_AVAILABLE/1365))
+
+systemctl enable minecraft@${RAM_FOR_MINECRAFT}
+systemctl start minecraft@${RAM_FOR_MINECRAFT}
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
