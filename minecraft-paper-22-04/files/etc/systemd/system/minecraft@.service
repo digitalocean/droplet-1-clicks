@@ -1,0 +1,66 @@
+[Unit]
+Description=PaperMC Droplet Server
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/minecraft
+
+Type=forking
+
+PrivateUsers=true
+
+User=minecraft
+Group=minecraft
+
+ProtectSystem=full
+
+ProtectHome=true
+
+ProtectKernelTunables=true
+
+ProtectKernelModules=true
+
+ProtectControlGroups=true
+
+Environment="SHUTDOWN_DELAY=5" "RAM=%i" "POST_SHUTDOWN_DELAY=10"
+
+ExecStart=/bin/sh -c \
+            '/usr/bin/screen -dmS minecraft \
+                /usr/bin/java \
+                   -server \
+                   -Xms$${RAM}M \
+                   -Xmx$${RAM}M \
+                   -XX:+AlwaysPreTouch \
+                   -XX:+DisableExplicitGC \
+                   -XX:+ParallelRefProcEnabled \
+                   -XX:+PerfDisableSharedMem \
+                   -XX:+UnlockExperimentalVMOptions \
+                   -XX:+UseG1GC \
+                   -XX:G1HeapRegionSize=8M \
+                   -XX:G1HeapWastePercent=5 \
+                   -XX:G1MaxNewSizePercent=40 \
+                   -XX:G1MixedGCCountTarget=4 \
+                   -XX:G1MixedGCLiveThresholdPercent=90 \
+                   -XX:G1NewSizePercent=30 \
+                   -XX:G1RSetUpdatingPauseTimePercent=5 \
+                   -XX:G1ReservePercent=20 \
+                   -XX:InitiatingHeapOccupancyPercent=15 \
+                   -XX:MaxGCPauseMillis=200 \
+                   -XX:MaxTenuringThreshold=1 \
+                   -XX:SurvivorRatio=32 \
+                   -jar paper-1.20.4-496.jar \
+                   --nogui'
+
+ExecReload=/usr/bin/screen -p 0 -S minecraft -X eval 'stuff "reload"\\015'
+
+ExecStop=/usr/bin/screen -p 0 -S minecraft -X eval 'stuff "say SERVER SHUTTING DOWN. Saving map..."\\015'
+ExecStop=/bin/sh -c '/bin/sleep ${SHUTDOWN_DELAY}'
+ExecStop=/usr/bin/screen -p 0 -S minecraft -X eval 'stuff "save-all"\\015'
+ExecStop=/usr/bin/screen -p 0 -S minecraft -X eval 'stuff "stop"\\015'
+ExecStop=/bin/sh -c '/bin/sleep ${POST_SHUTDOWN_DELAY}'
+
+Restart=on-failure
+RestartSec=15s
+
+[Install]
+WantedBy=multi-user.target

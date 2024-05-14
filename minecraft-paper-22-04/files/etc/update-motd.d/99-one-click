@@ -1,0 +1,28 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+RAM_AVAILABLE=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
+RAM_FOR_MINECRAFT=$((RAM_AVAILABLE/1365))
+
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's 1-Click PaperMC Droplet.
+
+
+* You can SSH to this Droplet in a terminal as root: ssh root@$myip
+
+* PaperMC files can be found in /opt/minecraft
+
+* Minecraft service status can be checked with: systemctl status minecraft@${RAM_FOR_MINECRAFT}
+
+* Minecraft service will save world data in case Minecraft service stops or the Droplet is powered off
+
+* NOTE: First launch will start world generation which can take up to 5 minutes depending on the size of this droplet!
+
+********************************************************************************
+
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
