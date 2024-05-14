@@ -5,7 +5,7 @@ export DEBIAN_FRONTEND=noninteractive
 
 sudo add-apt-repository -y ppa:openjdk-r/ppa
 sudo apt update
-sudo apt install -y openjdk-17-jre-headless
+sudo apt install -y openjdk-21-jre-headless
 
 groupadd minecraft
 useradd --system --shell /usr/sbin/nologin --home /opt/minecraft -g minecraft minecraft

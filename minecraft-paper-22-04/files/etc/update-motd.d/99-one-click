@@ -14,7 +14,7 @@ Welcome to DigitalOcean's 1-Click PaperMC Droplet.
 
 * You can SSH to this Droplet in a terminal as root: ssh root@$myip
 
-* Paper files can be found in /opt/minecraft
+* PaperMC files can be found in /opt/minecraft
 
 * Minecraft service status can be checked with: systemctl status minecraft@${RAM_FOR_MINECRAFT}
 
