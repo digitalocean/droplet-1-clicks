@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Generate root passwords.
-admin_valkey_pass=$(openssl rand -hex 24)
+admin_valkey_pass=$(openssl rand -hex 32)
 
 # Generate some passwords
 cat > /root/.digitalocean_passwords << EOM

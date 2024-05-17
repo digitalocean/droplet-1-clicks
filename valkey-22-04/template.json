@@ -3,7 +3,7 @@
     "variables": {
       "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
       "image_name": "valkey-22-04-snapshot-{{timestamp}}",
-      "apt_packages": "apt-transport-https ca-certificates curl software-properties-common git build-essential libsystemd-dev",
+      "apt_packages": "apt-transport-https ca-certificates curl software-properties-common git build-essential libsystemd-dev jq unzip",
       "application_name": "Valkey",
       "application_version": "latest"
     },
@@ -16,20 +16,7 @@
         "region": "nyc3",
         "size": "s-1vcpu-1gb",
         "ssh_username": "root",
-        "snapshot_name": "{{user `image_name`}}",
-        "snapshot_regions": [
-          "nyc1",
-          "nyc3",
-          "ams3",
-          "sfo2",
-          "sfo3",
-          "sgp1",
-          "lon1",
-          "fra1",
-          "tor1",
-          "blr1",
-          "syd1"
-        ]
+        "snapshot_name": "{{user `image_name`}}"
       }
     ],
     "provisioners": [

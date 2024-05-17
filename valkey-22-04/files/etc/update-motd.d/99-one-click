@@ -28,6 +28,8 @@ configuration here /srv/valkey/6379.conf
 
 For help and more information, visit https://marketplace.digitalocean.com/apps/valkey
 
+Additional security recommendations can be found here: https://valkey.io/docs/management/security/acl.html
+
 ********************************************************************************
 To delete this message of the day: rm -rf $(readlink -f ${0})
 EOF
