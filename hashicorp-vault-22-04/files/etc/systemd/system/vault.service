@@ -1,0 +1,13 @@
+[Unit]
+Description=Vault
+Documentation=https://www.vault.io/
+
+[Service]
+ExecStart=/usr/bin/vault server -config=/etc/vault/config.hcl
+ExecReload=/bin/kill -HUP $MAINPID
+LimitNOFILE=65536
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

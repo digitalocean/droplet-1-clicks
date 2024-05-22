@@ -1,23 +1,13 @@
 #!/bin/bash
 
-sudo apt -qqy install vault
-
-cp /etc/vault.d/vault.hcl /etc/vault.d/vault.hcl_save
-sed -e 's/tls_cert_file/tls_disable = 1\ntls_cert_file/' \
-    -i /etc/vault.d/vault.hcl
-
+sudo systemctl daemon-reload
+sudo systemctl enable consul
+sudo systemctl enable vault.service
+sudo systemctl start consul
 sudo systemctl start vault.service
-
-vault operator init -address=http://127.0.0.1:8200 > /.digitalocean_vault_tokens.txt
-sudo systemctl stop vault.service
-
-cp /etc/vault.d/vault.hcl_save /etc/vault.d/vault.hcl
-
-sudo systemctl start vault.service
-
 
 # Remove the ssh force logout command
-sed -e 's/address       = "0.0.0.0:8200"/address       = "0.0.0.0:8200"\ntls_disable = 1' \
+sed -e '/Match User root/d' \
     -e '/.*ForceCommand.*droplet.*/d' \
     -i /etc/ssh/sshd_config
 

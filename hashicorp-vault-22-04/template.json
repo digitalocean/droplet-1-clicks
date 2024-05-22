@@ -4,7 +4,7 @@
     "image_name": "hashicorp-vault-22-04-snapshot-{{timestamp}}",
     "apt_packages": "apt-transport-https gnupg2 nginx wget curl unzip git python3-certbot-nginx python3-pip",
     "application_name": "HashiCorp Vault",
-    "application_version": "Latest"
+    "application_version": "1.14.8"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
@@ -32,7 +32,7 @@
     },
     {
       "type": "file",
-      "source": "elasticsearch-22-04/files/etc/",
+      "source": "hashicorp-vault-22-04/files/etc/",
       "destination": "/etc/"
     },
     {
@@ -66,6 +66,7 @@
       ],
       "scripts": [
         "hashicorp-vault-22-04/scripts/012-vault.sh",
+        "common/scripts/018-force-ssh-logout.sh",
         "common/scripts/020-application-tag.sh",
         "common/scripts/900-cleanup.sh"      
       ]
