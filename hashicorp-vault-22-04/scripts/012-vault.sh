@@ -17,12 +17,12 @@ echo "HashiCorp Vault is being initialized"
 sleep 5
 vault operator init -address=http://127.0.0.1:8200 > /.digitalocean_vault_tokens.txt
 cp -f /etc/skel/.bashrc /root/.bashrc
+ufw allow 8200
+ufw --force enable
 echo "HashiCorp Vault is successfully initialized"
 EOM
 
 # Allow elasticsearch port
 ufw limit ssh
-ufw allow 8200
-
 ufw --force enable
 
