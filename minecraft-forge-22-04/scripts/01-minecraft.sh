@@ -3,11 +3,6 @@
 # non-interactive install
 export DEBIAN_FRONTEND=noninteractive
 
-sudo add-apt-repository -y ppa:openjdk-r/ppa
-sudo apt update
-sudo apt install -y openjdk-18-jre-headless
-sudo apt install -y openjdk-18-jdk-headless
-
 groupadd minecraft
 useradd --system --shell /usr/sbin/nologin --home /opt/minecraft -g minecraft minecraft
 
