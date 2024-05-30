@@ -1,6 +1,6 @@
-storage "consul" {
-  address = "127.0.0.1:8500"
-  path    = "vault/"
+storage "raft" {
+    path        = "/vault/data"
+    node_id     = "node1"
 }
 
 listener "tcp" {
@@ -8,4 +8,9 @@ listener "tcp" {
   tls_disable = 1
 }
 
-ui = true
+disable_mlock   = true
+# port 8200
+api_addr        = "http://0.0.0.0:8200"
+# port 8201
+cluster_addr    = "http://0.0.0.0:8201"
+ui              = true

@@ -3,13 +3,11 @@
 # non-interactive install
 export DEBIAN_FRONTEND=noninteractive
 
-wget https://releases.hashicorp.com/consul/1.17.3/consul_1.17.3_linux_amd64.zip
-unzip consul_1.17.3_linux_amd64.zip
-sudo mv consul /usr/bin
-
 wget https://releases.hashicorp.com/vault/1.14.8/vault_1.14.8_linux_amd64.zip
 unzip vault_1.14.8_linux_amd64.zip
 sudo mv vault /usr/bin
+mkdir /vault
+mkdir /vault/data
 
 cat >> /root/.bashrc <<EOM
 # generate token and keys

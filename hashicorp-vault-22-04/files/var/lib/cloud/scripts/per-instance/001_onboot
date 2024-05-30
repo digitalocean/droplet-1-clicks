@@ -1,9 +1,7 @@
 #!/bin/bash
 
 sudo systemctl daemon-reload
-sudo systemctl enable consul
 sudo systemctl enable vault.service
-sudo systemctl start consul
 sudo systemctl start vault.service
 
 # Remove the ssh force logout command
