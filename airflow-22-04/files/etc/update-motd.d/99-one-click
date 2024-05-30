@@ -13,9 +13,26 @@ if [ -f "/root/.digitalocean_dbaas_credentials" ]; then
     Host:     ${db_host}
     Port:     ${db_port}
     User:     ${db_username}
-    Pass:     ${db_password}"
-else
-    dbaas_text="Airflow is configured to use local SQLlite as its database. Database file is located in /home/airflow/airflow/airflow.db"
+    Pass:     ${db_password}
+
+    Redis is also configured to be used as a keystore. Use the following credentials to manage Redis:
+
+    Host:     ${redis_host}
+    Port:     ${redis_port}
+    User:     ${redis_username}
+    Pass:     ${redis_password}
+    SSL:      Enabled"
+fi
+
+spaces_text=""
+if [ -f "/root/.digitalocean_spaces_credentials" ]; then
+    . /root/.digitalocean_spaces_credentials
+    spaces_text="A Spaces bucket is also configured for remote loggign. Following are the bucket details:
+    Bucket:         ${bucket_name}
+    Host:           ${spaces_host}
+    Access_Key:     ${spaces_access_key_id}
+    Secret_Key:     ${spaces_secret_key}
+    Region:         ${spaces_region}"
 fi
 
 myip=$(hostname -I | awk '{print$1}')
@@ -36,8 +53,11 @@ Access the Airflow site
 
 ${dbaas_text}
 
+${spaces_text}
+
 On the server:
   * The Airflow home dir is /home/airflow/airflow
+  * Example DAGs are installed at /home/airflow/airflow/dags
   * The admin Airflow password is saved in /root/.digitalocean_passwords
   * Certbot is preinstalled. Run it to configure HTTPS.
 
