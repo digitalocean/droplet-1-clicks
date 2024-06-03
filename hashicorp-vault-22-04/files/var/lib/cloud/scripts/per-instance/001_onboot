@@ -1,0 +1,12 @@
+#!/bin/bash
+
+sudo systemctl daemon-reload
+sudo systemctl enable vault.service
+sudo systemctl start vault.service
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
