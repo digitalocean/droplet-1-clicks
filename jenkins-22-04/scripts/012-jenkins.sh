@@ -6,6 +6,8 @@ echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] \
 
 apt -qqy update
 
+DEBIAN_FRONTEND=noninteractive apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' install jenkins
+
 ufw allow http
 ufw allow https
 ufw limit ssh
