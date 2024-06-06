@@ -8,6 +8,14 @@ unzip vault_1.14.8_linux_amd64.zip
 sudo mv vault /usr/bin
 mkdir /vault
 mkdir /vault/data
+groupadd vault
+useradd --system --shell /usr/sbin/nologin --home /vault -g vault vault
+chown -R vault:vault /vault
+sudo swapoff -a # turn off swap
+
+sudo systemctl disable apport.service # turn off core dump
+echo "root            hard    core            0" >> /etc/security/limits.conf
+
 
 cat >> /root/.bashrc <<EOM
 # generate token and keys
