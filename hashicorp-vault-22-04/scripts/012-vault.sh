@@ -28,7 +28,6 @@ ufw --force enable
 echo "HashiCorp Vault is successfully initialized"
 EOM
 
-# Allow elasticsearch port
 ufw limit ssh
 ufw --force enable
 
