@@ -3,6 +3,8 @@ Description=Vault
 Documentation=https://www.vault.io/
 
 [Service]
+User=vault
+Group=vault
 ExecStart=/usr/bin/vault server -config=/etc/vault/config.hcl
 ExecReload=/bin/kill -HUP $MAINPID
 LimitNOFILE=65536
