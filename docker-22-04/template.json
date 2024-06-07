@@ -5,7 +5,7 @@
     "apt_packages": "apt-transport-https ca-certificates curl jq linux-image-extra-virtual software-properties-common ",
     "application_name": "Docker",
     "application_version": "23.0.6",
-    "docker_compose_version": "v2.17.2"
+    "docker_compose_version": ""
   },
   "sensitive-variables": [
     "do_api_token"
