@@ -4,7 +4,7 @@
     "image_name": "keycloak-22-04-snapshot-{{timestamp}}",
     "apt_packages": "postgresql docker.io docker-compose super nginx python3 python3-certbot python3-certbot-nginx",
     "application_name": "Keycloak",
-    "application_version": "TODO"
+    "application_version": "latest"
   },
   "sensitive-variables": [
     "do_api_token"
