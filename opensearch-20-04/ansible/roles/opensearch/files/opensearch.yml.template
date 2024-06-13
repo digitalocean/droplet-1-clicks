@@ -1,0 +1,31 @@
+cluster.name: {{ datasource "droplet_name" }}
+
+node.name: {{ datasource "droplet_name" }}
+
+network.host: {{ datasource "ip_address" }}
+
+http.port: 9200
+
+discovery.type: single-node
+
+bootstrap.memory_lock: true
+
+plugins.security.allow_default_init_securityindex: true
+plugins.security.audit.type: internal_opensearch
+plugins.security.enable_snapshot_restore_privilege: true
+plugins.security.check_snapshot_restore_write_privileges: true
+plugins.security.restapi.roles_enabled: ["all_access", "security_rest_api_access"]
+
+plugins.security.ssl.transport.pemcert_filepath: opensearch.pem
+plugins.security.ssl.transport.pemkey_filepath: opensearch.key
+plugins.security.ssl.transport.pemtrustedcas_filepath: root-ca.pem
+plugins.security.ssl.transport.enforce_hostname_verification: false
+plugins.security.ssl.transport.resolve_hostname: false
+plugins.security.ssl.http.enabled: true
+plugins.security.ssl.http.pemcert_filepath: opensearch_http.pem
+plugins.security.ssl.http.pemkey_filepath: opensearch_http.key
+plugins.security.ssl.http.pemtrustedcas_filepath: root-ca.pem
+plugins.security.nodes_dn:
+- CN=opensearch,OU=Ops,O=opensearch\, Inc.,DC=opensearch
+plugins.security.authcz.admin_dn:
+- CN=admin.opensearch,OU=Ops,O=opensearch\, Inc.,DC=opensearch
