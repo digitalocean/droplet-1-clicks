@@ -1,0 +1,48 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+# Read in the passwords....
+. /root/.digitalocean_passwords
+
+dbaas_text=""
+if [ -f "/root/.digitalocean_dbaas_credentials" ]; then
+    . /root/.digitalocean_dbaas_credentials
+    dbaas_text="Keycloak is configured to use managed database. Use the following credentials to manage the database:
+    Database: keycloak
+    Host:     ${db_host}
+    Port:     ${db_port}
+    User:     keycloak
+    Pass:     ${KEYCLOAK_DATABASE_PASSWORD}"
+else
+    dbaas_text="Keycloak is configured to use local Postgres as its database. Use the following credentials to manage the database:
+    Database: keycloak
+    User:     keycloak
+    Pass:     ${KEYCLOAK_DATABASE_PASSWORD}"
+fi
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's 1-Click Keycloak Droplet.
+To keep this Droplet secure, the UFW firewall is enabled.
+All ports are BLOCKED except 22 (SSH), 80 (HTTP), 443 (HTTPS), 8443 and 9000 (Keycloak ports).
+
+Access the Keycloak dashboard
+    URL: https://${myip}
+    User: admin
+    Pass: ${KEYCLOAK_ADMIN_PASSWORD}
+
+${dbaas_text}
+
+On the server:
+  * The Keycloak application is served as Docker container
+  * To check Keycloak logs use:
+    $ docker logs keycloak
+  * The Keycloak admin and database passwords are saved in /root/.digitalocean_passwords
+  * Certbot is preinstalled. Run it to configure HTTPS.
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
