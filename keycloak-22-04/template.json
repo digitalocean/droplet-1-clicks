@@ -2,7 +2,7 @@
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "keycloak-22-04-snapshot-{{timestamp}}",
-    "apt_packages": "postgresql docker.io docker-compose super nginx python3 python3-certbot python3-certbot-nginx",
+    "apt_packages": "postgresql-16 docker.io docker-compose super nginx python3 python3-certbot python3-certbot-nginx",
     "application_name": "Keycloak",
     "application_version": "latest"
   },
