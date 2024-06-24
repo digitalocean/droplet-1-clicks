@@ -37,7 +37,7 @@ if [ -f "/root/.digitalocean_dbaas_credentials" ]; then
   done
 
   PGPASSWORD=${DBAAS_DB_PASS} psql -h ${DB_HOST} -p ${DB_PORT} -U ${DBAAS_DB_USER} -d ${DBAAS_DB_NAME} -c "CREATE USER keycloak PASSWORD '${DB_PASS}';" --set=sslmode=require
-  PGPASSWORD=${DBAAS_DB_PASS} psql -h ${DB_HOST} -p ${DB_PORT} -U ${DBAAS_DB_USER} -d ${DBAAS_DB_NAME} -c "CREATE DATABASE keycloak;" --set=sslmode=require
+  PGPASSWORD=${DBAAS_DB_PASS} psql -h ${DB_HOST} -p ${DB_PORT} -U ${DBAAS_DB_USER} -d ${DBAAS_DB_NAME} -c "CREATE DATABASE keycloak WITH ENCODING 'UTF8';" --set=sslmode=require
   PGPASSWORD=${DBAAS_DB_PASS} psql -h ${DB_HOST} -p ${DB_PORT} -U ${DBAAS_DB_USER} -d ${DBAAS_DB_NAME} -c "GRANT ALL PRIVILEGES ON DATABASE keycloak TO keycloak;" --set=sslmode=require
   PGPASSWORD=${DBAAS_DB_PASS} psql -h ${DB_HOST} -p ${DB_PORT} -U ${DBAAS_DB_USER} -d keycloak -c "GRANT ALL ON SCHEMA public TO keycloak;" --set=sslmode=require
 
