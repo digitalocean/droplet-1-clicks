@@ -6,7 +6,7 @@ chown -R www-data: /var/www
 chown -R www-data: /var/www/html
 
 # if applicable, configure lamp to use & wait for a mysql dbaas instance.
-if [ -f "/root/.digitalocean_dbaas_credentials" ] && [ "$(sed -n "s/^db_protocol=\"\([^:]*\):.*\"$/\1/p" /root/.digitalocean_dbaas_credentials)" = "mysql" ]; then
+if [ -f "/root/.digitalocean_dbaas_credentials" ] && [ "$(sed -n "s/^db_protocol=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)" = "mysql" ]; then
   # grab host & port to block until database connection is ready
   host=$(sed -n "s/^db_host=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
   port=$(sed -n "s/^db_port=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
