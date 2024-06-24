@@ -20,13 +20,14 @@ DROPLET_IP=$(hostname -I | awk '{print$1}')
 if [ -f "/root/.digitalocean_dbaas_credentials" ]; then
   DB_HOST=$(sed -n "s/^db_host=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
   DB_PORT=$(sed -n "s/^db_port=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
-  DB_TYPE=$(sed -n "s/^db_protocol=\"\([^:]*\):.*\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+  DB_TYPE=$(sed -n "s/^db_protocol=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+
   DBAAS_DB_USER=$(sed -n "s/^db_username=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
   DBAAS_DB_NAME=$(sed -n "s/^db_database=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
   DBAAS_DB_PASS=$(sed -n "s/^db_password=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
 
   # Convert postgresql into postgres
-  if [ "$(sed -n "s/^db_protocol=\"\([^:]*\):.*\"$/\1/p" /root/.digitalocean_dbaas_credentials)" = "postgresql" ]; then
+  if [ "${DB_TYPE}" == "postgresql" ]; then
     DB_TYPE=postgres
   fi
 
