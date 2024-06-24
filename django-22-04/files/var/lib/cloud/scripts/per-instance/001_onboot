@@ -60,7 +60,7 @@ done
 echo "${DJANGO_USER}:${DJANGO_USER_PASSWORD}" | chpasswd -
 
 # Set up postgres user and database
-if [ -f "/root/.digitalocean_dbaas_credentials" ] && [ "$(sed -n "s/^db_protocol=\"\([^:]*\):.*\"$/\1/p" /root/.digitalocean_dbaas_credentials)" = "postgresql" ]; then
+if [ -f "/root/.digitalocean_dbaas_credentials" ] && [ "$(sed -n "s/^db_protocol=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)" = "postgresql" ]; then
   # grab all the data from the dbaas credentials file
   DJANGO_POSTGRESS_HOST=$(sed -n "s/^db_host=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
   DJANGO_POSTGRESS_PORT=$(sed -n "s/^db_port=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
