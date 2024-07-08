@@ -12,7 +12,7 @@ https://github.com/digitalocean/droplet-1-clicks/tree/master/jitsi-22-04
 I you want to use this image, you agree to the Apache License.
 See https://github.com/jitsi/jitsi/blob/master/LICENSE.
 
-Type 'bash /var/complete-jitsi-setup.sh' to complete Jitsi setup if and only if you
+Type 'sudo bash /var/complete-jitsi-setup.sh' to complete Jitsi setup if and only if you
 agree to the Jitsi License.
 
 ********************************************************************************
