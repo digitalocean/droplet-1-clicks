@@ -1,0 +1,77 @@
+{
+  "variables": {
+    "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
+    "image_name": "ghost-1click-{{timestamp}}",
+    "node_version": "node_18.x",
+    "ghost_version": "latest",
+    "application_name": "Ghost",
+    "apt_packages": "cloud-image-utils git jq libguestfs-tools make mysql-server make nginx postfix python3-certbot super unzip"
+  },
+  "sensitive-variables": ["do_api_token"],
+  "builders": [
+    {
+      "type": "digitalocean",
+      "api_token": "{{user `do_api_token`}}",
+      "image": "ubuntu-22-04-x64",
+      "region": "ams3",
+      "size": "s-1vcpu-1gb",
+      "ssh_username": "root",
+      "snapshot_name": "{{user `image_name`}}"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "file",
+      "source": "files/etc/",
+      "destination": "/etc/"
+    },
+    {
+      "type": "file",
+      "source": "files/opt/",
+      "destination": "/opt/"
+    },
+    {
+      "type": "file",
+      "source": "files/var/",
+      "destination": "/var/"
+    },
+    {
+      "type": "shell",
+      "environment_vars": [
+        "DEBIAN_FRONTEND=noninteractive",
+        "LC_ALL=C",
+        "LANG=en_US.UTF-8",
+        "LC_CTYPE=en_US.UTF-8"
+      ],
+      "inline": [
+        "cloud-init status --wait",
+        "apt -qqy update",
+        "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' full-upgrade",
+        "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' install {{user `apt_packages`}}",
+        "apt-get -qqy clean"
+      ]
+    },
+    {
+      "type": "shell",
+      "environment_vars": [
+        "GHOST_VERSION={{user `ghost_version`}}",
+        "application_name={{user `application_name`}}",
+        "application_version=$('ghost -v')",
+        "NODE_VERSION={{user `node_version`}}",
+        "DEBIAN_FRONTEND=noninteractive",
+        "LC_ALL=C",
+        "LANG=en_US.UTF-8",
+        "LC_CTYPE=en_US.UTF-8"
+      ],
+      "scripts": [
+        "common/scripts/010-nodejs.sh",
+        "ghost-22-04/scripts/014-configure_ghost.sh",
+        "ghost-22-04/scripts/012-configure_postfix.sh",
+        "common/scripts/014-ufw.sh",
+        "common/scripts/020-application_tag.sh",
+        "common/scripts/900-cleanup.sh",
+        "common/scripts/999-img_check.sh"
+      ]
+    }
+  ]
+}
