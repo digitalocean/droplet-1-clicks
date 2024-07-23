@@ -6,6 +6,10 @@ chown -R www-data: /etc/apache2
 chown -R www-data: /var/www
 
 # Manually update phpmyadmin to latest version
+if [ -z "${phpmyadmin_version}" ]; then
+  phpmyadmin_version=$(curl -sSL https://www.phpmyadmin.net/home_page/version.txt | head -1);
+fi
+
 wget -O /tmp/phpmyadmin.tar.gz "https://files.phpmyadmin.net/phpMyAdmin/${phpmyadmin_version}/phpMyAdmin-${phpmyadmin_version}-all-languages.tar.gz"
 mv /usr/share/phpmyadmin /usr/share/phpmyadmin.bak
 mkdir /usr/share/phpmyadmin
