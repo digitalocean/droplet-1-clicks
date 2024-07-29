@@ -1,6 +1,6 @@
 -  Start by checking if the conda command is working. If not, run the following command:
   /opt/conda/bin/conda init
-  
+
   This command will set up the necessary configuration in the ~/.bashrc file. You may need to source ~/.bashrc or exit and run su - ubuntu again.
 
 - Jupyter Notebook is installed under the jupyter environment. You can manually start it yourself or use the ~/notebook.sh script provided. The script is self-explanatory.
@@ -23,3 +23,36 @@ python -m ipykernel install --user --name <venv2> --display-name "<venv2>"
 - To inspect the source Packer files of this image, go to https://github.com/digitalocean/droplet-1-clicks and navigate to the jupyter-conda folder.
 
 - The examples and virtual environments are taking 9GB of space. They are not taking up compute, unless you are running things. To clean up, it is just 3 command. Review the file 'Save-9GB-by-deleting-examples.txt'
+
+
+Pure installation takes up the following space for the examples and virtual environments.
+
+(openvino_notebooks) ubuntu@jupyter-test:~$ du -sh examples/
+463M    examples/
+(openvino_notebooks) ubuntu@jupyter-test:~$
+(openvino_notebooks) ubuntu@jupyter-test:~$ du -sh ~/.conda/envs/openvino_notebooks/
+3.5G    /home/ubuntu/.conda/envs/openvino_notebooks/
+(openvino_notebooks) ubuntu@jupyter-test:~$ du -sh ~/.conda/envs/stable-diffusion-1.5/5.3G    /home/ubuntu/.conda/envs/stable-diffusion-1.5/
+
+That is 9GB+. As you work through examples, models will be downloaded and cached (under ~/.cache), and that will quickly increase the space usage.
+
+If you want to clean up the space and do not need the examples, just do the following.
+
+Step 1:
+\rm -rf ~/examples  # This will delete the entire example folder
+
+Step 2:
+(openvino_notebooks) ubuntu@jupyter-test:~$ conda env list
+# conda environments:
+#
+jupyter                  /home/ubuntu/.conda/envs/jupyter
+openvino_notebooks    *  /home/ubuntu/.conda/envs/openvino_notebooks
+stable-diffusion-1.5     /home/ubuntu/.conda/envs/stable-diffusion-1.5
+base                     /opt/conda
+
+(openvino_notebooks) ubuntu@jupyter-test:~$ conda env remove -y -n <env_name>
+
+This should clean up the entire environment, saving you ~9GB.
+
+Step 3:
+Time to time, you can clean up the ~/.cache. Look for those unused models taking GBs of space.

@@ -1,27 +1,31 @@
-#!/bin/bash
+#!/bin/sh
 
-set -e
+anaconda_version=${ANACONDA_VERSION}
+anaconda_installer_url="https://repo.anaconda.com/archive/Anaconda3-${anaconda_version}-Linux-x86_64.sh"
+anaconda_script=/tmp/anaconda.sh
+home_dir=/home/anaconda
 
-sudo adduser --disabled-password --gecos "" ubuntu
-sudo usermod -aG sudo ubuntu
-echo "ubuntu ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers
+curl $anaconda_installer_url --output $anaconda_script
 
-sudo -u ubuntu bash <<EOF
-echo "Now installing conda"
-cd ~
-curl -O https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-sudo bash Miniconda3-latest-Linux-x86_64.sh -b -p /opt/conda
+# Create the anaconda user
+useradd --home-dir $home_dir \
+        --shell /bin/bash \
+        --create-home \
+        --system \
+        anaconda
 
-/opt/conda/bin/conda init 
-sudo /opt/conda/bin/conda update -y -n base -c defaults conda
-sudo /opt/conda/bin/conda install -y -c conda-forge conda-bash-completion
+passwd -l anaconda
 
-/opt/conda/bin/conda init 
-\rm Miniconda3*
-EOF
+# Setup the home directory
+chown -R anaconda: $home_dir
+
+bash $anaconda_script -b -p $home_dir/anaconda3
+
+/home/anaconda/anaconda3/bin/conda init
+sudo /home/anaconda/anaconda3/bin/conda update -y -n base -c defaults conda
+sudo /home/anaconda/anaconda3/bin/conda install -y -c conda-forge conda-bash-completion
 
 # Change permissions of files copies by file module
-mv ~/* /home/ubuntu/
-sudo chown -R ubuntu:ubuntu /home/ubuntu/*
-sudo chmod +x /home/ubuntu/notebook.sh
+sudo chown -R anaconda: /etc/jupyter/*
+
 

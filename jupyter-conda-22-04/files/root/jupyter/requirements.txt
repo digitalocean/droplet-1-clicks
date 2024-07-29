@@ -1,5 +1,0 @@
-jupyterlab
-jupyterlab-lsp 
-ipywidgets 
-ipykernel 
-ipython
