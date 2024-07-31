@@ -2,10 +2,11 @@
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "ghost-1click-{{timestamp}}",
-    "node_version": "node_19.x",
-    "ghost_version": "latest",
+    "node_version": "18.x",
+    "ghost_version": "5.88.2",
+    "ghost_cli_version": "1.26.0",
     "application_name": "Ghost",
-    "apt_packages": "cloud-image-utils git jq libguestfs-tools make mysql-server make nginx postfix python3-certbot super unzip"
+    "apt_packages": "fail2ban cloud-image-utils git jq libguestfs-tools make mysql-server make nginx postfix python3-certbot super unzip gnupg2 curl"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
@@ -14,7 +15,7 @@
       "api_token": "{{user `do_api_token`}}",
       "image": "ubuntu-22-04-x64",
       "region": "ams3",
-      "size": "s-1vcpu-1gb",
+      "size": "s-1vcpu-2gb",
       "ssh_username": "root",
       "snapshot_name": "{{user `image_name`}}"
     }
@@ -61,7 +62,8 @@
       "environment_vars": [
         "GHOST_VERSION={{user `ghost_version`}}",
         "application_name={{user `application_name`}}",
-        "application_version=$('ghost -v')",
+        "application_version={{user `ghost_version`}}",
+        "ghost_cli_version={{user `ghost_cli_version`}}",
         "NODE_VERSION={{user `node_version`}}",
         "DEBIAN_FRONTEND=noninteractive",
         "LC_ALL=C",
@@ -69,7 +71,6 @@
         "LC_CTYPE=en_US.UTF-8"
       ],
       "scripts": [
-        "common/scripts/010-nodejs.sh",
         "ghost-22-04/scripts/014-configure_ghost.sh",
         "ghost-22-04/scripts/012-configure_postfix.sh",
         "common/scripts/014-ufw-nginx.sh",

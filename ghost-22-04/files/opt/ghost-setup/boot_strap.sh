@@ -60,13 +60,6 @@ fi
 
 # This is where the magic starts
 
-# Upgrade Ghost-CLI
-echo "Ensuring Ghost-CLI is up-to-date..."
-su ghost-mgr -c "bash -x <<EOM
-sudo npm i -g ghost-cli@latest
-EOM"
-
-
 echo "
 Ghost will prompt you for two details:
 
@@ -81,8 +74,9 @@ $(tput setaf 2)Press enter when you're ready to get started!$(tput sgr0)
 # Make sure the user is ready to install Ghost
 read wait
 
+source /var/lib/digitalocean/application.info
 # Install Ghost
-sudo -iu ghost-mgr ghost install --auto \
+sudo -iu ghost-mgr ghost install "$application_version" --auto \
   --db=mysql \
   --dbhost="$GHOST_HOST" \
   --dbport="$GHOST_PORT" \
