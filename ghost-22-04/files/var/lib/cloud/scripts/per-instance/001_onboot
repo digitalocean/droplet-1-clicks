@@ -1,0 +1,54 @@
+#!/bin/bash
+## vi: syntax=sh expandtab ts=4
+
+cat >> /root/.bashrc <<"EOM"
+
+export TERM=xterm-256color
+
+if [ ! -f "/var/www/ghost/config.production.json" ]; then
+
+# Run bootstrap during first login
+
+echo "
+-------------------------------------------------------------------------------
+
+Configuring DigitalOcean 1-Click Ghost installation.
+
+Please wait a minute while your 1-Click is configured. 
+
+Once complete, you are encouraged to run $(tput setaf 3)mysql_secure_installation$(tput sgr0) to ready
+your server for production. The root MySQL password has been saved to:
+
+    $(tput setaf 6)root/.digitalocean_password$(tput sgr0)
+
+-------------------------------------------------------------------------------
+
+"
+
+# Perform the actual execution
+bash --norc /opt/ghost-setup/boot_strap.sh
+cp /etc/skel/.bashrc /root/.bashrc
+
+echo "
+------------------------------------------------------------------------------
+
+For any further commands, please switch to the $(tput setaf 6)ghost-mgr$(tput sgr0) user to manage Ghost.
+
+    $(tput setaf 3)sudo -i -u ghost-mgr$(tput sgr0)
+
+------------------------------------------------------------------------------
+
+"
+
+fi
+
+EOM
+
+
+
+# Remove the force command
+sed -e '/Match user root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
