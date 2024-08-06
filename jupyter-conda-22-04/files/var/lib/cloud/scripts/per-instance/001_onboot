@@ -14,7 +14,7 @@ yes| pip install  -r /etc/jupyter/requirements.txt --upgrade
 conda deactivate
 EOF
 
-TOKEN=$(openssl rand -base64 30 | head -c32)
+TOKEN=$(openssl rand -base64 60 | head -c49)
 
 cat > /root/.digitalocean_passwords <<EOM
 JUPYTER_TOKEN="${TOKEN}"

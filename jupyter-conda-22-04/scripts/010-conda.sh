@@ -27,5 +27,3 @@ sudo /home/anaconda/anaconda3/bin/conda install -y -c conda-forge conda-bash-com
 
 # Change permissions of files copies by file module
 sudo chown -R anaconda: /etc/jupyter/*
-
-

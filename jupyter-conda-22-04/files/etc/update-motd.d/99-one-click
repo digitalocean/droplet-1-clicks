@@ -6,19 +6,26 @@ myip=$(hostname -I | awk '{print$1}')
 cat <<EOF
 ********************************************************************************
 
-Applications are installed under user 'ubuntu'!
+Applications are installed under user 'anaconda'!
 
-To review the Readme.txt, switch to the Ubuntu user. Conda is already installed, and JupyterLab is available in the Jupyter virtual environment. To conveniently start or stop a JupyterLab instance, we have provided a notebook.sh script in the current directory. Begin by executing the following command:
+To review the Readme.txt, switch to the Anaconda user. Conda is already installed, and JupyterLab is available in the Jupyter virtual environment.
+To access this virtual environment run the following commands:
 
-su - ubuntu
+source /home/anaconda/anaconda3/etc/profile.d/conda.sh
+conda activate jupyter
 
-============================
+================================================================================
 
-If you prefer to always SSH into the Ubuntu user, you can perform the following steps once. This will copy your .ssh folder from the root user to the Ubuntu user, allowing you to SSH using the same keys but with the 'ubuntu' username.
+If you prefer to always SSH into the Anaconda user, you can perform the following steps once. This will copy your .ssh folder from the root user to the Anaconda user, allowing you to SSH using the same keys but with the 'anaconda' username.
 
-rsync --archive --chown=ubuntu:ubuntu ~/.ssh /home/ubuntu
-chmod 700 /home/ubuntu/.ssh
-chmod 600 /home/ubuntu/.ssh/authorized_keys
+rsync --archive --chown=anaconda:anaconda ~/.ssh /home/anaconda
+chmod 700 /home/anaconda/.ssh
+chmod 600 /home/anaconda/.ssh/authorized_keys
+
+================================================================================
+
+For more information, please refer to the Getting Started Guide:
+https://marketplace.digitalocean.com/apps/jupyter-notebook
 
 ********************************************************************************
 To delete this message of the day: rm -rf $(readlink -f ${0})

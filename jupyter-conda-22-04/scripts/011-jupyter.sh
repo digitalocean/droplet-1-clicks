@@ -72,4 +72,3 @@ python -m ipykernel install --user --name openvino_notebooks --display-name “O
 conda deactivate
 
 EOF
-
