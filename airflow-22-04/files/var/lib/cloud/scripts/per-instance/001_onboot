@@ -2,7 +2,7 @@
 
 exec > >(tee /var/log/one_click_setup.log) 2>&1
 
-PASSWORD=$(openssl rand -base64 14 | head -c16)
+PASSWORD=$(openssl rand -base64 60 | head -c49)
 
 cat > /root/.digitalocean_passwords <<EOM
 PASSWORD="${PASSWORD}"
@@ -32,10 +32,12 @@ chmod +x /var/lib/digitalocean/scheduler.sh
 chown airflow:airflow /var/lib/digitalocean/webserver.sh
 chmod +x /var/lib/digitalocean/webserver.sh
 
-systemctl start airflow-scheduler
-systemctl start airflow-webserver
+
 systemctl enable airflow-scheduler
 systemctl enable airflow-webserver
+
+systemctl start airflow-scheduler
+systemctl start airflow-webserver
 
 # Remove the ssh force logout command
 sed -e '/Match User root/d' \
