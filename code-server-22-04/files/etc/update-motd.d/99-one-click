@@ -17,7 +17,7 @@ All ports are BLOCKED except 22 (SSH), 80 (HTTP), and 443 (HTTPS).
 * You can SSH to this Droplet in a terminal as root: ssh root@$myip
 
 In a web browser, you can access code-server:
-  * http:://$myip
+  * http://$myip
   * Password: ${PASSWORD}
 
 Nginx is configured to forward http requests to a local port 8080
