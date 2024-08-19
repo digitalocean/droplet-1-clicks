@@ -9,4 +9,4 @@ sudo mkdir -p /var/log/caddy
 sudo chown -R caddy:caddy /var/log/caddy
 
 mv /etc/caddy/Caddyfile /etc/caddy/Caddyfile.template
-mv /etc/caddy/Caddyfile-jupyter /etc/caddy/Caddyfile
+mv /etc/caddy/Caddyfile-openwebui /etc/caddy/Caddyfile

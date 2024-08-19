@@ -1,14 +1,13 @@
 [Unit]
-Description=Jupyter Notebook Service
+Description=Open Web UI Service
 After=network.target
 
 [Service]
-User=anaconda
-WorkingDirectory=/home/anaconda
-EnvironmentFile=/root/.digitalocean_passwords
-ExecStart=/home/anaconda/.conda/envs/jupyter/bin/jupyter lab --no-browser --IdentityProvider.token="${JUPYTER_TOKEN}" --ServerApp.allow_remote_access=true
+User=digitalocean
+WorkingDirectory=/home/digitalocean
+ExecStart=/home/digitalocean/.conda/envs/ui/bin/open-webui serve
 Restart=always
-SyslogIdentifier=jupyter-notebook
+SyslogIdentifier=open-webui
 
 [Install]
 WantedBy=multi-user.target
