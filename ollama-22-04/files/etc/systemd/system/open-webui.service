@@ -8,6 +8,8 @@ WorkingDirectory=/home/digitalocean
 ExecStart=/home/digitalocean/.conda/envs/ui/bin/open-webui serve
 Restart=always
 SyslogIdentifier=open-webui
+StandardOutput=append:/var/log/open-webui.log
+StandardError=append:/var/log/open-webui.log
 
 [Install]
 WantedBy=multi-user.target
