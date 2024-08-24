@@ -13,3 +13,6 @@ sed -e '/Match User root/d' \
     -i /etc/ssh/sshd_config
 
 systemctl restart ssh
+
+systemctl enable fail2ban
+systemctl start fail2ban
