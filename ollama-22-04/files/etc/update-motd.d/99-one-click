@@ -1,0 +1,44 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's Ollama Droplet 1-Click.
+To keep this Droplet secure, the UFW firewall is enabled.
+All ports are BLOCKED except 22 (SSH), 80 (HTTP), and 443 (HTTPS).
+
+- Access Open WebUI:
+  * http://$myip
+
+- Ollama and Open Web UI are running as systemd services.
+  To view service status run the following commands:
+
+  systemctl status open-webui
+  systemctl status ollama
+
+
+- Applications are installed under the user 'digitalocean'!
+
+- Conda is already installed, and Open WebUI is available in the 'ui' virtual environment.
+  To access this virtual environment run the following commands:
+
+  source /home/digitalocean/anaconda3/etc/profile.d/conda.sh
+  conda activate ui
+
+================================================================================
+
+- To download models from the Ollama repository, run the following command:
+
+  ollama pull <model_name>
+
+================================================================================
+
+For more information, please refer to the Getting Started Guide:
+https://marketplace.digitalocean.com/apps/ollama
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF

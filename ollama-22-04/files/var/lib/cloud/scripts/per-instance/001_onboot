@@ -1,0 +1,18 @@
+#!/bin/bash -x
+exec > >(tee /var/log/one_click_setup.log) 2>&1
+
+systemctl enable open-webui
+systemctl start open-webui
+
+systemctl stop apache2
+systemctl start caddy
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
+
+systemctl enable fail2ban
+systemctl start fail2ban

@@ -1,0 +1,7 @@
+:80 {
+    reverse_proxy localhost:8080
+
+    log {
+        output file /var/log/caddy/access.log
+    }
+}
