@@ -1,0 +1,35 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+Welcome to the DigitalOcean Valkey 1-Click Application
+
+Valkey is a high-performance data structure server that primarily serves key/value 
+workloads. It supports a wide range of native structures and an extensible plugin 
+system for adding new data structures and access patterns.ion.
+
+All Valkey scripts and files may be found in /srv/valkey and the setup
+utility can be run again by executing 'make install' in that directory.
+
+To keep this Droplet secure, the UFW firewall is enabled.
+All ports are BLOCKED except:
+ - 22 (SSH)
+ - 6379
+
+A strong password has been set for your Valkey instance, and can be found in the file 
+/root/.digitalocean_passwords
+
+Valkey is bound to the droplet IP address and localhost.  To change this, edit the 
+configuration here /srv/valkey/6379.conf
+
+For help and more information, visit https://marketplace.digitalocean.com/apps/valkey
+
+Additional security recommendations can be found here: https://valkey.io/docs/management/security/acl.html
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
