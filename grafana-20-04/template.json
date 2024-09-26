@@ -54,8 +54,7 @@
         "systemctl enable grafana-server.service",
         "systemctl start grafana-server.service",
         "sleep 5",
-        "apt-get -qqy clean",
-        "sudo apt-get purge -y droplet-agent"
+        "apt-get -qqy clean"
       ]
     },
     {
@@ -70,9 +69,7 @@
       ],
       "scripts": [
         "grafana-20-04/files/ufw.sh",
-        "common/scripts/900-cleanup.sh",
-        "common/scripts/999-img_check.sh"
-
+        "common/scripts/900-cleanup.sh"
       ]
     }
   ]
