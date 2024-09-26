@@ -29,9 +29,9 @@
     },
     {
       "type": "file",
-      "source": "grafana-20-04/files/grafana-motd",
+      "source": "grafana-24-04/files/grafana-motd",
       "destination": "/etc/update-motd.d/99-one-click-grafana"
-    }, 
+    },
     {
       "type": "shell",
       "environment_vars": [
@@ -68,7 +68,7 @@
         "LC_CTYPE=en_US.UTF-8"
       ],
       "scripts": [
-        "grafana-20-04/files/ufw.sh",
+        "grafana-24-04/files/ufw.sh",
         "common/scripts/900-cleanup.sh"
       ]
     }
