@@ -1,0 +1,65 @@
+
+{
+  "variables": {
+    "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
+    "image_name": "promethues-24-04-snapshot-{{timestamp}}",
+    "application_name": "Promethues",
+    "application_version": "2.54.1"
+  },
+  "sensitive-variables": ["do_api_token"],
+  "builders": [
+    {
+      "type": "digitalocean",
+      "api_token": "{{user `do_api_token`}}",
+      "image": "ubuntu-24-04-x64",
+      "region": "nyc3",
+      "size": "s-1vcpu-1gb",
+      "ssh_username": "root",
+      "snapshot_name": "{{user `image_name`}}"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "inline": [
+        "cloud-init status --wait"
+      ],
+      "valid_exit_codes": [0, 2]
+    },
+    {
+      "type": "file",
+      "source": "promethues-24-04/files/prom-motd",
+      "destination": "/etc/update-motd.d/99-one-click-prom"
+    },
+    {
+      "type": "file",
+      "source": "promethues-24-04/files/service",
+      "destination": "/etc/systemd/system/prometheus.service"
+    },
+    {
+      "type": "shell",
+      "environment_vars": [
+        "DEBIAN_FRONTEND=noninteractive",
+        "LC_ALL=C",
+        "LANG=en_US.UTF-8",
+        "LC_CTYPE=en_US.UTF-8"
+      ],
+      "script": "promethues-24-04/files/provision.sh"
+    },
+    {
+      "type": "shell",
+      "environment_vars": [
+        "application_name={{user `application_name`}}",
+        "application_version={{user `application_version`}}",
+        "DEBIAN_FRONTEND=noninteractive",
+        "LC_ALL=C",
+        "LANG=en_US.UTF-8",
+        "LC_CTYPE=en_US.UTF-8"
+      ],
+      "scripts": [
+        "common/scripts/900-cleanup.sh",
+        "promethues-24-04/files/ufw.sh"
+      ]
+    }
+  ]
+}

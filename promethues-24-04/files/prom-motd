@@ -1,0 +1,20 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+Welcome to the Prometheus Droplet!
+
+In the browser, you can visit Prometheus at http://$myip:9090/
+
+For documentation visit: https://prometheus.io/docs/introduction/overview/
+For help and more info visit: https://prometheus.io/community/
+
+The configuration file for prometheus is located at /etc/prometheus/prometheus.yml
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
