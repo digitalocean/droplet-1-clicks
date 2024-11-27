@@ -1,0 +1,22 @@
+#!/bin/sh
+
+# Generate root passwords.
+admin_valkey_pass=$(openssl rand -hex 32)
+
+# Generate some passwords
+cat > /root/.digitalocean_passwords << EOM
+admin_valkey_password="${admin_valkey_pass}"
+EOM
+
+source /root/.digitalocean_passwords
+
+# Use sed to update redis.conf password_required
+echo "requirepass ${admin_valkey_pass}" >> /srv/valkey/6379.conf
+
+# bind valkey to the droplet IP
+droplet_ip=$(hostname -I | awk '{print$1}') 
+echo "bind ${droplet_ip}" >> /srv/valkey/6379.conf
+
+# restart valkey
+/etc/init.d/redis_6379 stop
+/etc/init.d/redis_6379 start
