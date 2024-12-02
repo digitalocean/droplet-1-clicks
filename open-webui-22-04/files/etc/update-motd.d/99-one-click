@@ -1,0 +1,20 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+Welcome to the DigitalOcean Open WebUI 1-Click Application
+
+Open WebUI is an extensible, feature-rich, and user-friendly self-hosted AI interface 
+designed to operate entirely offline. It supports various LLM runners, including 
+Ollama and OpenAI-compatible APIs.
+
+To complete installation, access the Open WebUI interface in your web browser, and
+provide the IP address and token to your inference endpoint.
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
