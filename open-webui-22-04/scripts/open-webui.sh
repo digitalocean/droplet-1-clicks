@@ -4,7 +4,6 @@
 # open port for clients
 ufw allow 3000
 ufw limit ssh/tcp
-ufw allow ssh
 ufw --force enable
 
 # Get the latest version of open-webui
