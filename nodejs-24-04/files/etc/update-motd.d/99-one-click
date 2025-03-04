@@ -1,0 +1,40 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+# Read in the passwords....
+. /root/.digitalocean_passwords
+
+dbaas_text=""
+if [ -f "/root/.digitalocean_dbaas_credentials" ]; then
+    dbaas_text="* The MongoDB credentials are saved in /root/.digitalocean_dbaas_credentials
+
+When using a managed MongoDB cluster, the database may take up to 5 minutes
+after creation before it's ready for use.
+"
+fi
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's 1-Click Node.js Droplet.
+To keep this Droplet secure, the UFW firewall is enabled.
+All ports are BLOCKED except 22 (SSH), 80 (HTTP), and 443 (HTTPS).
+
+Use these SFTP credentials to upload files with FileZilla/WinSCP/rsync:
+    Host: ${myip}
+    User: ${NODE_USER}
+    Pass: ${NODE_USER_PASSWORD}
+
+In a web browser, you can view the Node site at: http://$myip
+
+On the server:
+  * The Node.js application is served from /var/www/html
+  * The Node.js passwords and keys are saved in /root/.digitalocean_passwords
+  ${dbaas_text}
+For help and more information, visit https://do.co/313ycRT
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f "${0}")
+EOF
