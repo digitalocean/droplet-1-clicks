@@ -1,0 +1,27 @@
+#!/bin/bash
+
+#Generate rabbitmq password.
+admin_rabbitmq_pass=$(openssl rand -hex 24)
+
+# Save the passwords
+cat > /root/.digitalocean_password <<EOM
+admin_rabbitmq_pass="${admin_rabbitmq_pass}"
+EOM
+
+rabbitmqctl enable_feature_flag all
+echo "${admin_rabbitmq_pass}" | rabbitmqctl add_user 'admin'
+rabbitmqctl set_user_tags 'admin' administrator
+
+# First ".*" for configure permission on every entity
+# Second ".*" for write permission on every entity
+# Third ".*" for read permission on every entity
+rabbitmqctl set_permissions -p / 'admin' ".*" ".*" ".*"
+
+sudo systemctl restart rabbitmq-server
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
