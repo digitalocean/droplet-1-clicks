@@ -8,6 +8,7 @@ cat > /root/.digitalocean_password <<EOM
 admin_rabbitmq_pass="${admin_rabbitmq_pass}"
 EOM
 
+rabbitmqctl enable_feature_flag all
 echo "${admin_rabbitmq_pass}" | rabbitmqctl add_user 'admin'
 rabbitmqctl set_user_tags 'admin' administrator
 
