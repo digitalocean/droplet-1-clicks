@@ -1,0 +1,10 @@
+<svg width="24" height="24" xmlns="http://www.w3.org/2000/svg" class="lucide lucide-git-branch-plus" stroke-linejoin="round" stroke-linecap="round" stroke-width="2" stroke="currentColor" fill="none">
+ <g>
+  <path stroke="#4F56E0" id="svg_1" d="m6,3l0,12" />
+  <path stroke="#4F56E0" id="svg_2" d="m18,9a3,3 0 1 0 0,-6a3,3 0 0 0 0,6z"/>
+  <path stroke="#4F56E0" id="svg_3" d="m6,21a3,3 0 1 0 0,-6a3,3 0 0 0 0,6z"/>
+  <path stroke="#4F56E0" id="svg_5" d="m18,15l0,6"/>
+  <path stroke="#4F56E0" id="svg_6" d="m21,18l-6,0"/>
+  <line stroke="#4F56E0" fill="none" id="svg_7" y2="15.83512" x2="8.73523" y1="8.44231" x1="15.99038"/>
+ </g>
+</svg>
