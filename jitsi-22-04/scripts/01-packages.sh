@@ -19,16 +19,16 @@ sudo apt-add-repository universe
 sudo apt update
 
 # Add the Prosody package repository
-echo deb http://packages.prosody.im/debian $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list
-wget https://prosody.im/files/prosody-debian-packages.key -O- | sudo apt-key add -
-apt install lua5.2
+sudo curl -sL https://prosody.im/files/prosody-debian-packages.key -o /etc/apt/keyrings/prosody-debian-packages.key
+echo "deb [signed-by=/etc/apt/keyrings/prosody-debian-packages.key] http://packages.prosody.im/debian $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/prosody-debian-packages.list
+sudo apt install lua5.2
 
 
 # First install the Jitsi repository key onto your system:
-curl https://download.jitsi.org/jitsi-key.gpg.key | sudo sh -c 'gpg --dearmor > /usr/share/keyrings/jitsi-keyring.gpg'
+curl -sL https://download.jitsi.org/jitsi-key.gpg.key | sudo sh -c 'gpg --dearmor > /usr/share/keyrings/jitsi-keyring.gpg'
 
 # Create a sources.list.d file with the repository:
-echo 'deb [signed-by=/usr/share/keyrings/jitsi-keyring.gpg] https://download.jitsi.org stable/' | sudo tee /etc/apt/sources.list.d/jitsi-stable.list > /dev/null
+echo "deb [signed-by=/usr/share/keyrings/jitsi-keyring.gpg] https://download.jitsi.org stable/" | sudo tee /etc/apt/sources.list.d/jitsi-stable.list
 
 # update apt
 apt-get -qqy -o Dpkg::Options::=--force-confdef update
@@ -41,9 +41,10 @@ apt-get -qqy -o Dpkg::Options::=--force-confdef install ca-certificates-java cot
  libharfbuzz0b libhiredis0.14 libidn11 libjbig0 libjpeg-turbo8 libjpeg8 libjs-jquery liblcms2-2\
  libmysqlclient21 libnginx-mod-http-image-filter libnginx-mod-http-xslt-filter libnginx-mod-mail\
  libnginx-mod-stream libnspr4 libnss3 libpcsclite1 libpq5 libruby2.7 libtiff5 libwebp6 libxpm4 lua-bitop\
- lua-event lua-expat lua-filesystem lua-sec lua-socket lua5.2 mysql-common nginx nginx-common nginx-core\
+ lua-event lua-expat lua-filesystem lua-sec lua-socket lua5.2 mysql-common nginx nginx-full nginx-core\
  openjdk-16-jre-headless prosody rake ruby ruby-hocon ruby-minitest ruby-net-telnet ruby-power-assert\
- ruby-test-unit ruby-xmlrpc ruby2.7 rubygems-integration sqlite3 ssl-cert unzip zip
+ ruby-test-unit ruby-xmlrpc ruby2.7 rubygems-integration sqlite3 ssl-cert unzip zip\
+ gnupg2 
 
 # apt-get -y install debconf-utils
 
