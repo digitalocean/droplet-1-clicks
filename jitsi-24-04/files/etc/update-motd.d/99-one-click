@@ -1,0 +1,20 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+Please read the instructions at
+https://github.com/digitalocean/droplet-1-clicks/tree/master/jitsi-24-04
+
+I you want to use this image, you agree to the Apache License.
+See https://github.com/jitsi/jitsi/blob/master/LICENSE.
+
+Type 'bash /var/complete-jitsi-setup.sh' to complete Jitsi setup if and only if you
+agree to the Jitsi License.
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
