@@ -141,8 +141,12 @@ chmod +x /usr/bin/wp
 
 echo -en "Completing the configuration of WordPress."
 wp core install --allow-root --path="/var/www/html" --title="$title" --url="$dom" --admin_email="$email"  --admin_password="$pass" --admin_user="$username"
-
+#looks like ams3 region is a little slow and wp-cli times out, so we will add the timeout
+sleep 1
+echo -en "Installing fail2ban plugin."
 wp plugin install wp-fail2ban --allow-root --path="/var/www/html"
+sleep 1
+echo -en "Activating fail2ban plugin."
 wp plugin activate wp-fail2ban --allow-root --path="/var/www/html"
 chown -Rf www-data.www-data /var/www/
 cp /etc/skel/.bashrc /root
