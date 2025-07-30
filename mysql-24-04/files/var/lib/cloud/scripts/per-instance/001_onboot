@@ -1,0 +1,129 @@
+#!/bin/bash
+
+export DEBIAN_FRONTEND=noninteractive
+export LC_ALL=C
+export LANG=en_US.UTF-8
+export LC_CTYPE=en_US.UTF-8
+
+#Generate Mysql root password.
+root_mysql_pass=$(openssl rand -hex 24)
+admin_mysql_pass=$(openssl rand -hex 24)
+app_mysql_pass=$(openssl rand -hex 24)
+debian_sys_maint_mysql_pass=$(openssl rand -hex 24)
+blowfish_secret=$(openssl rand -hex 48)
+
+# Save the passwords
+cat > /root/.digitalocean_password <<EOM
+root_mysql_pass="${root_mysql_pass}"
+admin_mysql_pass="${admin_mysql_pass}"
+app_mysql_pass="${app_mysql_pass}"
+EOM
+
+# Set the password
+mysqladmin -u root -h localhost create phpmyadmin
+mysqladmin -u root -h localhost password ${root_mysql_pass}
+
+mysql -uroot -p${root_mysql_pass} \
+      -e "CREATE USER 'admin'@'localhost' IDENTIFIED BY '${admin_mysql_pass}'"
+
+mysql -uroot -p${root_mysql_pass} \
+      -e "GRANT ALL PRIVILEGES ON *.* TO 'admin'@'localhost' WITH GRANT OPTION"
+
+mysql -uroot -p${root_mysql_pass} \
+      -e "CREATE USER 'phpmyadminapp'@'localhost' IDENTIFIED BY '${app_mysql_pass}'"
+
+mysql -uroot -p${root_mysql_pass} \
+      -e "GRANT ALL PRIVILEGES ON phymyadmin.* TO phpmyadminapp@localhost"
+
+mysql -uroot -p${root_mysql_pass} \
+      -e "ALTER USER 'debian-sys-maint'@'localhost' IDENTIFIED BY '${debian_sys_maint_mysql_pass}'"
+
+cat >> /etc/mysql/mysql.conf.d/mysqld.cnf <<EOM
+bind-address = 0.0.0.0
+EOM
+
+
+MYSQL_ROOT_PASSWORD=${root_mysql_pass}
+
+SECURE_MYSQL=$(expect -c "
+set timeout 10
+spawn mysql_secure_installation
+expect \"Enter current password for root (enter for none):\"
+send \"$MYSQL_ROOT_PASSWORD\r\"
+expect \"Change the root password?\"
+send \"n\r\"
+expect \"Remove anonymous users?\"
+send \"y\r\"
+expect \"Disallow root login remotely?\"
+send \"y\r\"
+expect \"Remove test database and access to it?\"
+send \"y\r\"
+expect \"Reload privilege tables now?\"
+send \"y\r\"
+expect eof
+")
+
+cat > /etc/mysql/debian.cnf <<EOM
+# Automatically generated for Debian scripts. DO NOT TOUCH!
+[client]
+host     = localhost
+user     = debian-sys-maint
+password = ${debian_sys_maint_mysql_pass}
+socket   = /var/run/mysqld/mysqld.sock
+[mysql_upgrade]
+host     = localhost
+user     = debian-sys-maint
+password = ${debian_sys_maint_mysql_pass}
+socket   = /var/run/mysqld/mysqld.sock
+EOM
+
+
+systemctl restart mysql
+
+# reconfigure phpMyAdmin
+printf "%s\t%s\t%s\t%s\n" \
+    phpmyadmin phpmyadmin/db/app-user string phpmyadminapp \
+    | debconf-set-selections
+
+printf "%s\t%s\t%s\t%s\n" \
+    phpmyadmin phpmyadmin/mysql/admin-user string admin \
+    | debconf-set-selections
+
+printf "%s\t%s\t%s\t%s\n" \
+    phpmyadmin phpmyadmin/mysql/admin-user string admin \
+    | debconf-set-selections
+
+
+printf "%s\t%s\t%s\t%s\n" \
+    phpmyadmin phpmyadmin/mysql/app-pass password "${app_mysql_pass}" \
+    | debconf-set-selections
+
+printf "%s\t%s\t%s\t%s\n" \
+    phpmyadmin phpmyadmin/mysql/admin-pass password "${admin_mysql_pass}" \
+    | debconf-set-selections
+
+printf "%s\t%s\t%s\t%s\n" \
+    phpmyadmin phpmyadmin/reconfigure-webserver string apache2 \
+    | debconf-set-selections
+
+printf "%s\t%s\t%s\t%s\n" \
+    phpmyadmin phpmyadmin/dbconfig-reinstall boolean true \
+    | debconf-set-selections
+
+dpkg-reconfigure --force  phpmyadmin
+
+ln -sf /etc/phpmyadmin/apache.conf /etc/apache2/conf-enabled/phpmyadmin.conf
+
+echo "\$cfg['blowfish_secret'] = '${blowfish_secret}' ;" >> /etc/phpmyadmin/config.inc.php
+mkdir /usr/share/phpmyadmin/tmp
+chown www-data.www-data /usr/share/phpmyadmin/tmp
+echo "\$cfg['TempDir'] = '/usr/share/phpmyadmin/tmp'" >> /etc/phpmyadmin/config.inc.php
+
+systemctl restart apache2
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
