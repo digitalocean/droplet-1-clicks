@@ -16,3 +16,9 @@ chmod -Rf 755 /usr/share/phpmyadmin
 
 # Remove auto.cnf so a unique UUID is generated at first boot
 rm -f /var/lib/mysql/auto.cnf
+
+mkdir /usr/share/phpmyadmin/tmp/
+chown -R www-data /usr/share/phpmyadmin/tmp/
+
+cp /usr/share/phpmyadmin/config.sample.inc.php /usr/share/phpmyadmin/config.inc.php
+sed -i "s|\(\$cfg\['blowfish_secret'\] = '\)[^']*';|\1$(openssl rand -hex 16)';|" /usr/share/phpmyadmin/config.inc.php
