@@ -6,7 +6,7 @@
     "apt_packages": "apache2 apache2-utils mysql-server php php-gd php-mysql phpmyadmin python3-certbot-apache libapache2-mod-php lamp-server^ ",
     "application_name": "MySQL",
     "application_version": "8.0.21",
-    "phpmyadmin_version": "5.0.3"
+    "phpmyadmin_version": "5.2.2"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
