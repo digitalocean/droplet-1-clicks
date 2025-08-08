@@ -43,7 +43,7 @@ docker-compose up -d
 
 echo ""
 echo "✅ Plausible Analytics is running!"
-echo "📍 Access URL: http://$droplet_ip:8000"
+echo "📍 Access URL: http://$droplet_ip"
 echo "📧 Admin email: $admin_email"
 echo ""
 echo "Note: Configure your domain and SSL certificate for production use."
