@@ -1,5 +1,5 @@
 #!/bin/bash
-# filepath: /Users/sbhadra/droplet-1-clicks/plausible-24-04/files/root/plausible-setup.sh
+
 
 set -e  # Exit on any error
 
