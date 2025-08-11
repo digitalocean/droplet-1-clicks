@@ -128,10 +128,10 @@ else
     echo "🚀 Starting Plausible Analytics..."
     docker-compose up -d
     
-    access_url="http://$droplet_ip:8000"
+    access_url="http://$droplet_ip"
 fi
 
-sleep 15
+sleep 30
 
 echo ""
 echo "🎉 Plausible Analytics is ready!"
