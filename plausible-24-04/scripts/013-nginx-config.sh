@@ -28,4 +28,4 @@ sudo ln -s /etc/nginx/sites-available/plausible.conf /etc/nginx/sites-enabled/
 # Test the Nginx configuration for syntax errors and restart the service
 sudo nginx -t && sudo systemctl restart nginx
 
-echo "Nginx configured and Plausible is accessible at http://$droplet_ip."
+# echo "Nginx configured and Plausible is accessible at http://$droplet_ip."
