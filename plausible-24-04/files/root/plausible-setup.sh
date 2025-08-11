@@ -1,5 +1,5 @@
 #!/bin/bash
-# filepath: /Users/sbhadra/droplet-1-clicks/plausible-24-04/files/root/plausible-setup.sh
+
 
 set -e
 
@@ -21,21 +21,21 @@ read -p "Enter your choice (1 or 2): " setup_choice
 
 if [ "$setup_choice" = "2" ]; then
     echo ""
-    read -p "Enter your domain name (e.g., analytics.yourdomain.com): " user_domain
+    echo "📋 DNS Configuration Required:"
+    echo "   Create an A record pointing your domain to: $droplet_ip"
+    echo ""
+    
+    read -p "Enter your domain name: " user_domain
     
     if [[ ! "$user_domain" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]+[a-zA-Z0-9]$ ]]; then
-        echo "❌ Invalid domain format. Please use a valid domain name."
+        echo "❌ Invalid domain format."
         exit 1
     fi
     
-    echo ""
-    echo "📋 DNS Configuration Required:"
-    echo "   Create an A record pointing '$user_domain' to $droplet_ip"
-    echo ""
-    read -p "Have you configured the DNS record? (y/n): " dns_ready
+    read -p "Have you configured the DNS A record? (y/n): " dns_ready
     
     if [ "$dns_ready" != "y" ]; then
-        echo "⚠️  Please configure your DNS first, then run this script again."
+        echo "⚠️  Please configure DNS first, then run this script again."
         exit 1
     fi
     
@@ -74,9 +74,9 @@ sed -i "/# required:.*$/a \ \ \ \ \ \ - ADMIN_USER_EMAIL=\${ADMIN_USER_EMAIL}\n\
 
 # Configure Nginx based on user choice
 if [ "$use_domain" = true ]; then
-    echo "🔧 Setting up domain configuration..."
+    echo "🔧 Configuring domain setup..."
     
-    # Disable the default IP configuration
+    # Remove the default IP configuration
     rm -f /etc/nginx/sites-enabled/plausible.conf
     
     # Create domain-specific configuration
@@ -123,7 +123,6 @@ EOF
     
 else
     echo "🔧 Using IP configuration..."
-    # Keep the existing IP configuration from 013 script
     
     echo "🚀 Starting Plausible Analytics..."
     docker-compose up -d
@@ -131,7 +130,7 @@ else
     access_url="http://$droplet_ip"
 fi
 
-sleep 30
+sleep 15
 
 echo ""
 echo "🎉 Plausible Analytics is ready!"
@@ -141,10 +140,9 @@ echo ""
 
 if [ "$use_domain" = true ]; then
     echo "🔒 SSL: Enabled"
-    echo "🌐 Domain: $user_domain"
     echo "✅ Production ready!"
 else
-    echo "📝 For production: re-run with option 2 for domain setup"
+    echo "📝 For production: re-run with option 2"
 fi
 
 echo ""
