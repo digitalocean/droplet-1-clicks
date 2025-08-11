@@ -4,66 +4,10 @@
 set -e
 
 INSTALL_DIR="/docker/plausible"
-SETUP_FLAG="/root/.plausible_setup_complete"
-
-# Check if setup was already completed
-if [ -f "$SETUP_FLAG" ]; then
-    echo "=== Plausible Analytics - Already Configured ==="
-    echo ""
-    echo "Plausible Analytics is already set up on this server."
-    echo ""
-    echo "Current configuration:"
-    if [ -f "$INSTALL_DIR/.env" ]; then
-        base_url=$(grep "^BASE_URL=" "$INSTALL_DIR/.env" | cut -d'=' -f2)
-        admin_email=$(grep "^ADMIN_USER_EMAIL=" "$INSTALL_DIR/.env" | cut -d'=' -f2)
-        echo "📍 Access URL: $base_url"
-        echo "📧 Admin Email: $admin_email"
-    fi
-    echo ""
-    echo "Options:"
-    echo "1. Access current installation"
-    echo "2. Reconfigure (start over)"
-    echo "3. Exit"
-    echo ""
-    read -p "Choose option (1-3): " rerun_choice
-    
-    case $rerun_choice in
-        1)
-            echo "✅ Current installation is ready!"
-            if [ -f "$INSTALL_DIR/.env" ]; then
-                base_url=$(grep "^BASE_URL=" "$INSTALL_DIR/.env" | cut -d'=' -f2)
-                echo "🚀 Visit: $base_url"
-            fi
-            exit 0
-            ;;
-        2)
-            echo "🔄 Starting reconfiguration..."
-            rm -f "$SETUP_FLAG"
-            cd "$INSTALL_DIR" 2>/dev/null && docker-compose down 2>/dev/null || true
-            ;;
-        3)
-            echo "👋 Goodbye!"
-            exit 0
-            ;;
-        *)
-            echo "❌ Invalid option. Exiting."
-            exit 1
-            ;;
-    esac
-fi
-
-# Main setup starts here
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR" || exit 1
 
-# Clone or update repository
-if [ -d ".git" ]; then
-    echo "📦 Updating Plausible hosting repository..."
-    git pull
-else
-    echo "📦 Cloning Plausible hosting repository..."
-    git clone https://github.com/plausible/hosting .
-fi
+git clone https://github.com/plausible/hosting .
 
 droplet_ip=$(hostname -I | awk '{print$1}')
 
@@ -82,11 +26,16 @@ if [ "$setup_choice" = "2" ]; then
     echo ""
     
     read -p "Enter your domain name: " user_domain
+    
+    if [[ ! "$user_domain" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]+[a-zA-Z0-9]$ ]]; then
+        echo "❌ Invalid domain format."
+        exit 1
+    fi
+    
     read -p "Have you configured the DNS A record? (y/n): " dns_ready
     
     if [ "$dns_ready" != "y" ]; then
-        echo "⚠️  Setup cancelled. Configure DNS first, then run:"
-        echo "   ./plausible-setup.sh"
+        echo "⚠️  Please configure DNS first, then run this script again."
         exit 1
     fi
     
@@ -127,8 +76,10 @@ sed -i "/# required:.*$/a \ \ \ \ \ \ - ADMIN_USER_EMAIL=\${ADMIN_USER_EMAIL}\n\
 if [ "$use_domain" = true ]; then
     echo "🔧 Configuring domain setup..."
     
+    # Remove the default IP configuration
     rm -f /etc/nginx/sites-enabled/plausible.conf
     
+    # Create domain-specific configuration
     cat > /etc/nginx/sites-available/plausible-domain <<EOF
 server {
     listen 80;
@@ -167,7 +118,7 @@ EOF
         echo "✅ SSL certificate installed!"
     else
         access_url="http://$user_domain"
-        echo "⚠️  SSL setup failed. You can access via HTTP."
+        echo "⚠️  SSL setup failed."
     fi
     
 else
@@ -181,29 +132,18 @@ fi
 
 sleep 15
 
-# Mark setup as complete
-touch "$SETUP_FLAG"
-
 echo ""
 echo "🎉 Plausible Analytics is ready!"
 echo "📍 Access URL: $access_url"
 echo "📧 Admin Email: $admin_email"
-echo "👤 Admin Name: $admin_name"
 echo ""
 
 if [ "$use_domain" = true ]; then
-    if [[ "$access_url" == https* ]]; then
-        echo "🔒 SSL: Enabled"
-        echo "✅ Production ready!"
-    else
-        echo "🔒 SSL: Not configured"
-        echo "📝 Manual SSL: certbot --nginx -d $user_domain"
-    fi
+    echo "🔒 SSL: Enabled"
+    echo "✅ Production ready!"
 else
-    echo "📝 For production: run ./plausible-setup.sh again (option 2)"
+    echo "📝 For production: re-run with option 2"
 fi
 
 echo ""
 echo "🚀 Visit $access_url to start using Plausible!"
-echo ""
-echo "💡 To reconfigure later: run ./plausible-setup.sh"
