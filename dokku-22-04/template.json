@@ -5,8 +5,8 @@
     "image_name": "dokku-22-04-snapshot-{{timestamp}}",
     "apt_packages": "apt-transport-https nginx python3 python3-apt python3-pycurl software-properties-common",
     "application_name": "Dokku",
-    "application_version": "0.30.6",
-    "docker_compose_version": "2.18.1"
+    "application_version": "0.35.16",
+    "docker_compose_version": "v2.33.1"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
