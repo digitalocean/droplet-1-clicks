@@ -6,9 +6,14 @@ chown -R www-data: /etc/apache2
 chown -R www-data: /var/www
 
 # Manually update phpmyadmin to latest version
-wget -O /tmp/phpmyadmin.tar.gz "https://www.phpmyadmin.net/downloads/phpMyAdmin-latest-all-languages.tar.gz"
-mv /usr/share/phpmyadmin /usr/share/phpmyadmin.bak
-mkdir /usr/share/phpmyadmin
+wget https://www.phpmyadmin.net/downloads/phpMyAdmin-latest-all-languages.tar.gz
+tar xvf phpMyAdmin-latest-all-languages.tar.gz
+sudo mkdir -p /usr/share/phpmyadmin
+sudo mv phpMyAdmin-*-all-languages/* /usr/share/phpmyadmin/
+
+# Set up Apache/Nginx alias (Apache example)
+echo 'Include /etc/phpmyadmin/apache.conf' | sudo tee /etc/apache2/conf-enabled/phpmyadmin.conf
+sudo systemctl reload apache2
 
 tar xzf /tmp/phpmyadmin.tar.gz -C /tmp
 mv /tmp/phpMyAdmin-${phpmyadmin_version}-all-languages/* /usr/share/phpmyadmin
