@@ -72,6 +72,27 @@ For a professional setup with automatic SSL/TLS certificates:
 
 **Note**: The initial SSL certificate generation may take a few minutes. If you encounter any SSL errors, wait a moment and refresh the page.
 
+## Updating Campfire
+
+Your Campfire installation automatically updates to the latest version on first boot. To manually update to the latest version at any time:
+
+1. **SSH into your Droplet**
+   ```bash
+   ssh root@your-droplet-ip
+   ```
+
+2. **Run the update script**
+   ```bash
+   /opt/update-campfire.sh
+   ```
+
+The update script will:
+- Pull the latest code from GitHub
+- Rebuild the Docker image
+- Restart Campfire with the updated code
+- Preserve all your configuration and data
+
+**Note**: Updates may take a few minutes to complete. Your chat history and configuration will be preserved during updates.
 
 ## Post-Deployment
 

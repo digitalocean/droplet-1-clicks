@@ -18,6 +18,10 @@ After making changes, restart Campfire with:
 
   /opt/restart-campfire.sh
 
+To update Campfire to the latest version:
+
+  /opt/update-campfire.sh
+
 Note: Use the restart script instead of 'docker restart' to ensure 
 environment variable changes take effect.
 
