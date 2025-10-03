@@ -1,0 +1,16 @@
+#!/bin/sh
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
+
+# Update Campfire to latest version on first boot
+if [ -x "/opt/update-campfire.sh" ]; then
+    echo "Running Campfire update on first boot..."
+    /opt/update-campfire.sh
+else
+    echo "Update script not found. Skipping Campfire update."
+fi
