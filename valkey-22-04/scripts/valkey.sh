@@ -24,8 +24,55 @@ make distclean
 # install valkey
 make install
 
-REDIS_PORT=6379 \
-REDIS_CONFIG_FILE=/srv/valkey/6379.conf \
-REDIS_LOG_FILE=/var/log/valkey_6379.log \
-REDIS_DATA_DIR=/var/lib/valkey/6379 \
-REDIS_EXECUTABLE=`command -v valkey_server` ./utils/install_server.sh
+# Create valkey user
+useradd --system --home /var/lib/valkey --shell /bin/false valkey
+
+# Create necessary directories
+mkdir -p /var/lib/valkey
+mkdir -p /var/log/valkey
+mkdir -p /etc/valkey
+
+# Set ownership
+chown valkey:valkey /var/lib/valkey
+chown valkey:valkey /var/log/valkey
+
+# Create valkey configuration file (password will be set by onboot script)
+cat > /etc/valkey/valkey.conf << EOF
+bind 127.0.0.1
+port 6379
+timeout 0
+requirepass PLACEHOLDER_PASSWORD
+save 900 1
+save 300 10
+save 60 10000
+rdbcompression yes
+dbfilename dump.rdb
+dir /var/lib/valkey
+logfile /var/log/valkey/valkey.log
+loglevel notice
+daemonize no
+supervised systemd
+EOF
+
+# Create systemd service file
+cat > /etc/systemd/system/valkey.service << EOF
+[Unit]
+Description=Valkey In-Memory Data Store
+After=network.target
+
+[Service]
+User=valkey
+Group=valkey
+ExecStart=/usr/local/bin/valkey-server /etc/valkey/valkey.conf
+ExecStop=/bin/sh -c '/usr/local/bin/valkey-cli -a \$(grep valkey_password /root/.digitalocean_passwords | cut -d"=" -f2 | tr -d "\"") shutdown'
+TimeoutStopSec=0
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Enable and start valkey service
+systemctl daemon-reload
+systemctl enable valkey
+systemctl start valkey

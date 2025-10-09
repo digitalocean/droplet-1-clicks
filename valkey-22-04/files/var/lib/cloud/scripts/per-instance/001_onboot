@@ -1,22 +1,29 @@
 #!/bin/sh
 
-# Generate root passwords.
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
+
+# Generate root password for Valkey
 admin_valkey_pass=$(openssl rand -hex 32)
 
-# Generate some passwords
+# Generate password file
 cat > /root/.digitalocean_passwords << EOM
-admin_valkey_password="${admin_valkey_pass}"
+valkey_password="${admin_valkey_pass}"
 EOM
 
-source /root/.digitalocean_passwords
+chmod 600 /root/.digitalocean_passwords
 
-# Use sed to update redis.conf password_required
-echo "requirepass ${admin_valkey_pass}" >> /srv/valkey/6379.conf
+# Update valkey configuration with the generated password
+sed -i "s/requirepass .*/requirepass ${admin_valkey_pass}/" /etc/valkey/valkey.conf
 
-# bind valkey to the droplet IP
+# Get droplet IP and add binding (optional - for external access)
 droplet_ip=$(hostname -I | awk '{print$1}') 
-echo "bind ${droplet_ip}" >> /srv/valkey/6379.conf
+# Uncomment the next line if you want to bind to droplet IP for external access
+# sed -i "s/bind 127.0.0.1/bind 127.0.0.1 ${droplet_ip}/" /etc/valkey/valkey.conf
 
-# restart valkey
-/etc/init.d/redis_6379 stop
-/etc/init.d/redis_6379 start
+# Restart valkey service
+systemctl restart valkey

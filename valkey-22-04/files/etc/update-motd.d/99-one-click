@@ -10,21 +10,28 @@ Welcome to the DigitalOcean Valkey 1-Click Application
 
 Valkey is a high-performance data structure server that primarily serves key/value 
 workloads. It supports a wide range of native structures and an extensible plugin 
-system for adding new data structures and access patterns.ion.
+system for adding new data structures and access patterns.
 
-All Valkey scripts and files may be found in /srv/valkey and the setup
-utility can be run again by executing 'make install' in that directory.
+Valkey is running as a systemd service and can be managed with:
+ - systemctl start valkey
+ - systemctl stop valkey
+ - systemctl restart valkey
+ - systemctl status valkey
+
+Configuration file: /etc/valkey/valkey.conf
+Log file: /var/log/valkey/valkey.log
+Data directory: /var/lib/valkey
 
 To keep this Droplet secure, the UFW firewall is enabled.
 All ports are BLOCKED except:
  - 22 (SSH)
  - 6379
 
-A strong password has been set for your Valkey instance, and can be found in the file 
+A strong password has been set for your Valkey instance, and can be found in the file:
 /root/.digitalocean_passwords
 
-Valkey is bound to the droplet IP address and localhost.  To change this, edit the 
-configuration here /srv/valkey/6379.conf
+Valkey is bound to localhost by default for security. To change this, edit the 
+configuration file at /etc/valkey/valkey.conf and restart the service.
 
 For help and more information, visit https://marketplace.digitalocean.com/apps/valkey
 
