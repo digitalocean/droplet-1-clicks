@@ -4,7 +4,7 @@
 exec > >(tee /var/log/rails_first_boot.log) 2>&1
 
 echo "==================================="
-echo "Rails 8.0.3 First Boot Setup Starting..."
+echo "Rails {{RAILS_VERSION}} First Boot Setup Starting..."
 echo "Timestamp: $(date)"
 echo "==================================="
 
@@ -53,7 +53,7 @@ fi
 
 # Verify port 80 is available
 echo "Checking port 80 availability..."
-netstat -tlnp | grep :80 || echo "Port 80 is available"
+ss -tlnp | grep :80 || echo "Port 80 is available"
 
 # Build the application (this was skipped during Packer build)
 echo "Building Rails application containers..."
@@ -64,9 +64,6 @@ fi
 
 # Start the application services (without nginx initially)
 echo "Starting Rails application services..."
-
-# Clean up any conflicting networks
-docker network rm rails-app_default 2>/dev/null || true
 
 # Start only the web and db services first
 if ! docker-compose up -d web db; then
@@ -90,7 +87,17 @@ done
 
 # Switch from loading page to Rails application
 echo "Rails application is ready! Switching from loading page..."
+echo "Current port 80 usage before switch:"
+ss -tlnp | grep :80 || echo "Port 80 is not in use"
+echo "Running containers before switch:"
+docker ps --format "table {{.Names}}\t{{.Ports}}\t{{.Status}}"
+
 /opt/rails-app/switch-to-rails.sh
+
+echo "Port 80 usage after switch:"
+ss -tlnp | grep :80 || echo "Port 80 is not in use"
+echo "Running containers after switch:"
+docker ps --format "table {{.Names}}\t{{.Ports}}\t{{.Status}}"
 
 # Remove the ssh force logout command (if present)
 if grep -q "Match User root\|ForceCommand.*droplet" /etc/ssh/sshd_config 2>/dev/null; then
@@ -105,7 +112,7 @@ else
 fi
 
 echo "==================================="
-echo "Rails 8.0.3 First Boot Setup Complete!"
+echo "Rails {{RAILS_VERSION}} First Boot Setup Complete!"
 echo "Timestamp: $(date)"
 echo "Application should be available at http://$(curl -s ifconfig.me 2>/dev/null || echo 'your-droplet-ip')"
 echo "==================================="

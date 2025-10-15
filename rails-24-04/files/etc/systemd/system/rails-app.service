@@ -1,5 +1,5 @@
 [Unit]
-Description=Rails 8.0.3 Application
+Description=Rails Application
 Requires=docker.service
 After=docker.service
 

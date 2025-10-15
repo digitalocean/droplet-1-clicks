@@ -6,10 +6,10 @@
 myip=$(hostname -I | awk '{print$1}')
 cat <<EOF
 -------------------------------------------------------------------------------
-Thank you for using DigitalOcean's Rails 8.0.3 Application on Ubuntu 24.04.
+Thank you for using DigitalOcean's Rails {{RAILS_VERSION}} Application on Ubuntu 24.04.
 
 This Droplet includes:
-  * Rails 8.0.3 with Ruby 3.4.7
+  * Rails {{RAILS_VERSION}} with Ruby {{RUBY_VERSION}}
   * PostgreSQL 15 database with multi-database support
   * Docker & Docker Compose for containerized deployment
   * Nginx reverse proxy with SSL-ready configuration

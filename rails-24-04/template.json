@@ -4,7 +4,8 @@
         "image_name": "rails-24-04-snapshot-{{timestamp}}",
         "apt_packages": "apt-transport-https ca-certificates curl software-properties-common git build-essential libsystemd-dev jq unzip docker.io",
         "application_name": "Rails",
-        "application_version": "8.0.3"
+        "rails_version": "8.0.3",
+        "ruby_version": "3.4.7"
     },
     "sensitive-variables": [
         "do_api_token"
@@ -66,7 +67,8 @@
             "type": "shell",
             "environment_vars": [
                 "application_name={{user `application_name`}}",
-                "application_version={{user `application_version`}}",
+                "rails_version={{user `rails_version`}}",
+                "ruby_version={{user `ruby_version`}}",
                 "DEBIAN_FRONTEND=noninteractive",
                 "LC_ALL=C",
                 "LANG=en_US.UTF-8",

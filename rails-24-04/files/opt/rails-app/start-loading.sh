@@ -16,9 +16,9 @@ docker stop nginx-loading 2>/dev/null || true
 docker rm nginx-loading 2>/dev/null || true
 
 # Check if port 80 is already in use
-if netstat -tlnp | grep :80; then
+if ss -tlnp | grep :80; then
     echo "⚠️  Port 80 is already in use:"
-    netstat -tlnp | grep :80
+    ss -tlnp | grep :80
 fi
 
 # Start nginx with loading configuration on port 80
