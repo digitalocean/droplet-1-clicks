@@ -1,0 +1,46 @@
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+
+development:
+  primary:
+    <<: *default
+    url: <%= ENV['DATABASE_URL'] || 'postgresql://rails:password@db:5432/rails_development' %>
+  cache:
+    <<: *default
+    url: <%= ENV['CACHE_DATABASE_URL'] || ENV['DATABASE_URL'] || 'postgresql://rails:password@db:5432/rails_development' %>
+  queue:
+    <<: *default
+    url: <%= ENV['QUEUE_DATABASE_URL'] || ENV['DATABASE_URL'] || 'postgresql://rails:password@db:5432/rails_development' %>
+  cable:
+    <<: *default
+    url: <%= ENV['CABLE_DATABASE_URL'] || ENV['DATABASE_URL'] || 'postgresql://rails:password@db:5432/rails_development' %>
+
+test:
+  primary:
+    <<: *default
+    url: <%= ENV['DATABASE_URL']&.sub('rails_production', 'rails_test') || 'postgresql://rails:password@db:5432/rails_test' %>
+  cache:
+    <<: *default
+    url: <%= ENV['CACHE_DATABASE_URL']&.sub('rails_production', 'rails_test') || ENV['DATABASE_URL']&.sub('rails_production', 'rails_test') || 'postgresql://rails:password@db:5432/rails_test' %>
+  queue:
+    <<: *default
+    url: <%= ENV['QUEUE_DATABASE_URL']&.sub('rails_production', 'rails_test') || ENV['DATABASE_URL']&.sub('rails_production', 'rails_test') || 'postgresql://rails:password@db:5432/rails_test' %>
+  cable:
+    <<: *default
+    url: <%= ENV['CABLE_DATABASE_URL']&.sub('rails_production', 'rails_test') || ENV['DATABASE_URL']&.sub('rails_production', 'rails_test') || 'postgresql://rails:password@db:5432/rails_test' %>
+
+production:
+  primary:
+    <<: *default
+    url: <%= ENV['DATABASE_URL'] || 'postgresql://rails:password@db:5432/rails_production' %>
+  cache:
+    <<: *default
+    url: <%= ENV['CACHE_DATABASE_URL'] || ENV['DATABASE_URL'] || 'postgresql://rails:password@db:5432/rails_production' %>
+  queue:
+    <<: *default
+    url: <%= ENV['QUEUE_DATABASE_URL'] || ENV['DATABASE_URL'] || 'postgresql://rails:password@db:5432/rails_production' %>
+  cable:
+    <<: *default
+    url: <%= ENV['CABLE_DATABASE_URL'] || ENV['DATABASE_URL'] || 'postgresql://rails:password@db:5432/rails_production' %>

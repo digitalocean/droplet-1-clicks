@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rails Application Starting - DigitalOcean</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0080ff 0%, #0052cc 100%);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .container {
+            text-align: center;
+            max-width: 600px;
+            padding: 2rem;
+        }
+        
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 2rem;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: #0080ff;
+            font-weight: bold;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            font-weight: 300;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-bottom: 2rem;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .status {
+            font-size: 1rem;
+            opacity: 0.8;
+            margin-bottom: 1rem;
+        }
+        
+        .details {
+            font-size: 0.9rem;
+            opacity: 0.7;
+            line-height: 1.6;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 2px;
+            margin: 2rem 0;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: white;
+            border-radius: 2px;
+            animation: progress 120s linear forwards;
+        }
+        
+        @keyframes progress {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+        
+        .footer {
+            margin-top: 3rem;
+            font-size: 0.8rem;
+            opacity: 0.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">R</div>
+        <h1>Rails Application Starting</h1>
+        <p class="subtitle">Your Ruby on Rails {{RAILS_VERSION}} application is being prepared</p>
+        
+        <div class="loading"></div>
+        
+        <div class="status" id="status">Initializing containers...</div>
+        
+        <div class="progress-bar">
+            <div class="progress-fill"></div>
+        </div>
+        
+        <div class="details">
+            <p>🐳 Building Docker containers<br>
+            🚀 Starting Rails application<br>
+            🗄️ Initializing PostgreSQL database<br>
+            🌐 Configuring services</p>
+            
+            <p style="margin-top: 2rem; font-size: 1rem;">
+                <strong>Once setup is complete:</strong><br>
+                Your Rails application will be available on this page
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p>Powered by DigitalOcean • This usually takes 1-3 minutes</p>
+        </div>
+    </div>
+
+    <script>
+        // Auto-refresh to check if Rails app is ready and provide manual link
+        let attempts = 0;
+        const maxAttempts = 90; // 3 minutes
+        
+        function checkStatus() {
+            attempts++;
+            
+            // Update status message based on time elapsed
+            const statusEl = document.getElementById('status');
+            if (attempts < 30) {
+                statusEl.textContent = 'Building Docker containers...';
+            } else if (attempts < 60) {
+                statusEl.textContent = 'Starting services...';
+            } else if (attempts < 80) {
+                statusEl.textContent = 'Initializing database...';
+            } else {
+                statusEl.textContent = 'Almost ready...';
+            }
+            
+            if (attempts < maxAttempts) {
+                setTimeout(checkStatus, 2000);
+            } else {
+                statusEl.textContent = 'Setup should be complete!';
+                // Add manual link
+                const container = document.querySelector('.container');
+                const readyMessage = document.createElement('div');
+                readyMessage.innerHTML = `
+                    <div style="margin-top: 2rem; padding: 1rem; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                        <h3 style="margin: 0 0 1rem 0;">Setup Complete!</h3>
+                        <p>Your Rails application should now be ready.</p>
+                        <a href="/?t=${Date.now()}" style="display: inline-block; background: white; color: #0080ff; padding: 0.75rem 1.5rem; border-radius: 4px; text-decoration: none; font-weight: bold; margin-top: 1rem;">
+                            Access Your Rails App
+                        </a>
+                    </div>
+                `;
+                container.appendChild(readyMessage);
+            }
+        }
+        
+        // Start checking after 10 seconds
+        setTimeout(checkStatus, 10000);
+    </script>
+</body>
+</html>

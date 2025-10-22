@@ -1,0 +1,16 @@
+[Unit]
+Description=Rails Application
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/rails-app
+ExecStart=/opt/rails-app/start.sh
+ExecStop=/opt/rails-app/stop.sh
+TimeoutStartSec=300
+
+[Install]
+# Don't auto-start - first boot script will handle initial startup
+# WantedBy=multi-user.target

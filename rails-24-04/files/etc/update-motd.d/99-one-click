@@ -1,0 +1,65 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+. /root/.digitalocean_passwords
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+-------------------------------------------------------------------------------
+Thank you for using DigitalOcean's Rails {{RAILS_VERSION}} Application on Ubuntu 24.04.
+
+This Droplet includes:
+  * Rails {{RAILS_VERSION}} with Ruby {{RUBY_VERSION}}
+  * PostgreSQL 15 database with multi-database support
+  * Docker & Docker Compose for containerized deployment
+  * Nginx reverse proxy with SSL-ready configuration
+  * Automatic application startup via systemd
+
+The "ufw" firewall is enabled. All ports except for 22, 80, 443, and 3000 are BLOCKED.
+
+Your Rails application is running and accessible at:
+    Public URL: http://${myip}
+    Direct Access: http://${myip}:3000
+
+Application Management:
+    Start:   /opt/rails-app/start.sh
+    Stop:    /opt/rails-app/stop.sh
+    Restart: /opt/rails-app/restart.sh
+    Logs:    /opt/rails-app/logs.sh
+    Update:  /opt/rails-app/update.sh
+
+Database Configuration:
+    PostgreSQL User: rails
+    PostgreSQL Password: ${POSTGRES_PASSWORD}
+    Database URL: Available in /opt/rails-app/.env
+    Multi-database support: primary, cache, queue, cable
+
+Application Details:
+    Rails Environment: production
+    Application Path: /opt/rails-app
+    Environment File: /opt/rails-app/.env
+    Secret Key Base: ${RAILS_SECRET_KEY_BASE}
+
+Nginx Configuration:
+    Config File: /opt/rails-app/nginx.conf
+    Access Logs: /var/log/nginx/access.log
+    Error Logs: /var/log/nginx/error.log
+
+Docker Services:
+    View Status: docker-compose ps -a (from /opt/rails-app)
+    View Logs: docker-compose logs -f (from /opt/rails-app)
+
+System Service:
+    Service Status: systemctl status rails-app.service
+    Auto-start: Enabled via systemd
+
+Credentials and configuration saved in:
+    /root/.digitalocean_passwords
+    /opt/rails-app/.env
+
+For SSL/TLS setup with your domain, visit: https://do.co/2GOFe5J
+Documentation: https://docs.digitalocean.com/products/marketplace/
+
+-------------------------------------------------------------------------------------
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF

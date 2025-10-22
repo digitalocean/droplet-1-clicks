@@ -1,0 +1,101 @@
+#!/bin/bash
+
+# Log all output to file and console for debugging
+exec > >(tee /var/log/rails_first_boot.log) 2>&1
+
+echo "==================================="
+echo "Rails {{RAILS_VERSION}} First Boot Setup Starting..."
+echo "Timestamp: $(date)"
+echo "==================================="
+
+# Enable firewall now that we're in the actual droplet (not Packer build)
+echo "Enabling UFW firewall..."
+ufw --force enable
+
+# Start Docker service
+echo "Starting Docker service..."
+systemctl start docker
+systemctl enable docker
+
+# Wait for Docker to be ready
+echo "Waiting for Docker to be ready..."
+timeout=30
+counter=0
+while ! docker info > /dev/null 2>&1; do
+    if [ $counter -ge $timeout ]; then
+        echo "ERROR: Docker failed to start within $timeout seconds"
+        exit 1
+    fi
+    echo "Waiting for Docker... ($counter/$timeout)"
+    sleep 1
+    ((counter++))
+done
+
+echo "Docker is ready"
+
+# Change to application directory
+cd /opt/rails-app
+
+# Start loading page immediately
+# Run the loading script
+echo "Starting loading page..."
+if /opt/rails-app/start-loading.sh; then
+    echo "✅ Loading page started successfully"
+else
+    echo "❌ Loading page failed to start"
+fi
+
+# Build the application (this was skipped during Packer build)
+echo "Building Rails application containers..."
+if ! docker-compose build; then
+    echo "ERROR: Failed to build Docker containers"
+    exit 1
+fi
+
+# Start the application services (without nginx initially)
+echo "Starting Rails application services..."
+
+# Start only the web and db services first
+if ! docker-compose up -d web db; then
+    echo "ERROR: Failed to start Rails application services"
+    exit 1
+fi
+
+# Wait for services to be healthy
+echo "Waiting for Rails application to be ready..."
+timeout=120
+counter=0
+while ! docker-compose exec -T web curl -f http://localhost:3000/ >/dev/null 2>&1; do
+    if [ $counter -ge $timeout ]; then
+        echo "WARNING: Rails application may not be fully ready, but switching anyway..."
+        break
+    fi
+    echo "Waiting for Rails to be ready... ($counter/$timeout)"
+    sleep 2
+    ((counter+=2))
+done
+
+# Switch from loading page to Rails application
+echo "Rails application is ready! Switching from loading page..."
+/opt/rails-app/switch-to-rails.sh
+
+# Remove the ssh force logout command (if present)
+if grep -q "Match User root\|ForceCommand.*droplet" /etc/ssh/sshd_config 2>/dev/null; then
+    echo "Removing SSH force logout commands..."
+    sed -e '/Match User root/d' \
+        -e '/.*ForceCommand.*droplet.*/d' \
+        -i /etc/ssh/sshd_config
+    systemctl restart ssh
+    echo "SSH configuration cleaned up."
+else
+    echo "No SSH force logout commands found to remove."
+fi
+
+echo "==================================="
+echo "Rails {{RAILS_VERSION}} First Boot Setup Complete!"
+echo "Timestamp: $(date)"
+echo "Application should be available at http://$(curl -s ifconfig.me 2>/dev/null || echo 'your-droplet-ip')"
+echo "==================================="
+
+# Create a completion marker for easy verification
+echo "First boot completed successfully at $(date)" > /var/log/rails_first_boot_complete.marker
