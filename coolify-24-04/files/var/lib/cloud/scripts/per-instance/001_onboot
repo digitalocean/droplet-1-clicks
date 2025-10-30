@@ -1,0 +1,90 @@
+#!/bin/bash
+
+set -e
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
+
+# Get the server's IP address
+myip=$(hostname -I | awk '{print$1}')
+
+# Start Coolify for the first time
+echo "Starting Coolify for the first time..."
+
+cd /data/coolify/source
+
+# Pull and start Coolify containers
+docker compose --env-file /data/coolify/source/.env \
+  -f /data/coolify/source/docker-compose.yml \
+  -f /data/coolify/source/docker-compose.prod.yml \
+  up -d --pull always --remove-orphans --force-recreate
+
+# Wait for Coolify to be ready
+echo "Waiting for Coolify to initialize..."
+sleep 30
+
+# Check if Coolify is running
+if docker compose --env-file /data/coolify/source/.env \
+  -f /data/coolify/source/docker-compose.yml \
+  -f /data/coolify/source/docker-compose.prod.yml \
+  ps | grep -q "coolify"; then
+    echo "Coolify started successfully!"
+else
+    echo "Warning: Coolify may not have started correctly. Check logs with: /opt/coolify-logs.sh"
+fi
+
+# Create a file with access information
+cat > /root/coolify_info.txt << EOF
+================================================================================
+Coolify Installation Complete
+================================================================================
+
+Access your Coolify instance at:
+  http://${myip}:8000
+
+IMPORTANT: 
+- Create your admin account immediately after accessing the URL above
+- If someone else accesses the registration page first, they could gain control
+- The first user to register will have full administrative access
+
+Management Commands:
+  Start Coolify:    /opt/start-coolify.sh
+  Stop Coolify:     /opt/stop-coolify.sh
+  Restart Coolify:  /opt/restart-coolify.sh
+  Update Coolify:   /opt/update-coolify.sh
+  View logs:        /opt/coolify-logs.sh
+  Check status:     /opt/coolify-status.sh
+
+Using systemctl:
+  Start:   systemctl start coolify
+  Stop:    systemctl stop coolify
+  Restart: systemctl restart coolify
+  Status:  systemctl status coolify
+
+Configuration:
+  Main directory:    /data/coolify
+  Configuration:     /data/coolify/source/.env
+  Applications:      /data/coolify/applications
+  Databases:         /data/coolify/databases
+  Backups:           /data/coolify/backups
+
+Firewall Ports:
+  8000 - Coolify Web Interface
+  80   - HTTP
+  443  - HTTPS
+  6001 - Coolify Realtime
+  6002 - Coolify Soketi
+
+For more information, visit: https://coolify.io/docs
+
+================================================================================
+EOF
+
+chmod 600 /root/coolify_info.txt
+
+echo "Coolify first-boot initialization complete!"
+echo "Access information saved to /root/coolify_info.txt"

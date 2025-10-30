@@ -1,0 +1,63 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's One-Click Coolify Droplet.
+
+Coolify is an open-source, self-hostable platform that simplifies deploying and
+managing applications, databases, and services on your own server. It's an
+alternative to Heroku, Netlify, and Vercel that you control completely.
+
+To access Coolify:
+  Web Interface: http://$myip:8000
+
+IMPORTANT FIRST STEPS:
+  1. Visit http://$myip:8000 in your browser
+  2. Create your admin account IMMEDIATELY
+  3. The first user to register gets full admin access
+
+Management Commands:
+  Start Coolify:    /opt/start-coolify.sh
+  Stop Coolify:     /opt/stop-coolify.sh
+  Restart Coolify:  /opt/restart-coolify.sh
+  Update Coolify:   /opt/update-coolify.sh
+  View logs:        /opt/coolify-logs.sh
+  Check status:     /opt/coolify-status.sh
+
+Using systemctl:
+  Start:   systemctl start coolify
+  Stop:    systemctl stop coolify
+  Restart: systemctl restart coolify
+  Status:  systemctl status coolify
+
+On the server:
+  Configuration:    /data/coolify/source/.env
+  Main directory:   /data/coolify
+  Applications:     /data/coolify/applications
+  Databases:        /data/coolify/databases
+  SSH keys:         /data/coolify/ssh/keys
+
+Security & Firewall:
+  UFW firewall is enabled with these open ports:
+    - 22 (SSH)
+    - 80 (HTTP)
+    - 443 (HTTPS)
+    - 8000 (Coolify Web Interface)
+    - 6001 (Coolify Realtime)
+    - 6002 (Coolify Soketi)
+
+Next Steps:
+  1. Set up your admin account at http://$myip:8000
+  2. (Optional) Configure a custom domain for HTTPS
+  3. Start deploying your applications!
+
+For detailed documentation, visit: https://coolify.io/docs
+For support, join the community: https://coolify.io/discord
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
