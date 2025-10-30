@@ -38,6 +38,11 @@
     },
     {
       "type": "file",
+      "source": "coolify-24-04/files/opt/",
+      "destination": "/opt/"
+    },
+    {
+      "type": "file",
       "source": "coolify-24-04/files/var/",
       "destination": "/var/"
     },

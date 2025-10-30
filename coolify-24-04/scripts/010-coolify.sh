@@ -101,140 +101,21 @@ docker network create --attachable coolify 2>/dev/null || true
 
 echo "Docker network created."
 
-# Create helper scripts
-cat > /opt/restart-coolify.sh << 'RESTART_EOF'
-#!/bin/bash
-
-echo "Restarting Coolify..."
-
-cd /data/coolify/source
-
-docker compose --env-file /data/coolify/source/.env \
-  -f /data/coolify/source/docker-compose.yml \
-  -f /data/coolify/source/docker-compose.prod.yml \
-  restart
-
-echo "Coolify restarted successfully!"
-RESTART_EOF
-
+# Make helper scripts executable (scripts were copied by Packer)
 chmod +x /opt/restart-coolify.sh
-
-cat > /opt/stop-coolify.sh << 'STOP_EOF'
-#!/bin/bash
-
-echo "Stopping Coolify..."
-
-cd /data/coolify/source
-
-docker compose --env-file /data/coolify/source/.env \
-  -f /data/coolify/source/docker-compose.yml \
-  -f /data/coolify/source/docker-compose.prod.yml \
-  down
-
-echo "Coolify stopped successfully!"
-STOP_EOF
-
 chmod +x /opt/stop-coolify.sh
-
-cat > /opt/start-coolify.sh << 'START_EOF'
-#!/bin/bash
-
-echo "Starting Coolify..."
-
-cd /data/coolify/source
-
-docker compose --env-file /data/coolify/source/.env \
-  -f /data/coolify/source/docker-compose.yml \
-  -f /data/coolify/source/docker-compose.prod.yml \
-  up -d --pull always --remove-orphans --force-recreate
-
-echo "Coolify started successfully!"
-START_EOF
-
 chmod +x /opt/start-coolify.sh
-
-cat > /opt/update-coolify.sh << 'UPDATE_EOF'
-#!/bin/bash
-
-# Coolify Update Script
-# This script updates Coolify to the latest version
-
-echo "Updating Coolify to the latest version..."
-
-# Navigate to Coolify source directory
-cd /data/coolify/source
-
-# Download the latest upgrade script
-curl -fsSL https://cdn.coollabs.io/coolify/upgrade.sh -o /data/coolify/source/upgrade.sh
-chmod +x /data/coolify/source/upgrade.sh
-
-# Run the upgrade script
-bash /data/coolify/source/upgrade.sh
-
-echo "Coolify updated successfully!"
-UPDATE_EOF
-
 chmod +x /opt/update-coolify.sh
-
-cat > /opt/coolify-logs.sh << 'LOGS_EOF'
-#!/bin/bash
-
-# View Coolify logs
-echo "Viewing Coolify logs (press Ctrl+C to exit)..."
-
-cd /data/coolify/source
-
-docker compose --env-file /data/coolify/source/.env \
-  -f /data/coolify/source/docker-compose.yml \
-  -f /data/coolify/source/docker-compose.prod.yml \
-  logs -f
-LOGS_EOF
-
 chmod +x /opt/coolify-logs.sh
-
-cat > /opt/coolify-status.sh << 'STATUS_EOF'
-#!/bin/bash
-
-# Check Coolify status
-echo "Checking Coolify status..."
-
-cd /data/coolify/source
-
-docker compose --env-file /data/coolify/source/.env \
-  -f /data/coolify/source/docker-compose.yml \
-  -f /data/coolify/source/docker-compose.prod.yml \
-  ps
-STATUS_EOF
-
 chmod +x /opt/coolify-status.sh
 
-echo "Helper scripts created."
+echo "Helper scripts made executable."
 
-# Create systemd service for Coolify
-cat > /etc/systemd/system/coolify.service << 'SERVICE_EOF'
-[Unit]
-Description=Coolify - Self-hostable Heroku/Netlify alternative
-After=docker.service
-Requires=docker.service
-
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-WorkingDirectory=/data/coolify/source
-ExecStart=/usr/bin/docker compose --env-file /data/coolify/source/.env -f /data/coolify/source/docker-compose.yml -f /data/coolify/source/docker-compose.prod.yml up -d --pull always --remove-orphans
-ExecStop=/usr/bin/docker compose --env-file /data/coolify/source/.env -f /data/coolify/source/docker-compose.yml -f /data/coolify/source/docker-compose.prod.yml down
-Restart=on-failure
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-SERVICE_EOF
-
-# Enable the systemd service (but don't start it yet - will be done on first boot)
+# Enable the systemd service (service file was copied by Packer)
 systemctl daemon-reload
 systemctl enable coolify.service
 
-echo "Coolify systemd service created and enabled."
+echo "Coolify systemd service enabled."
 
 echo "Coolify installation preparation complete."
 echo "Coolify will be started on first boot via the onboot script."
