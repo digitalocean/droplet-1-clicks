@@ -62,16 +62,7 @@ mkdir -p /data/coolify/proxy/dynamic
 
 echo "Coolify directories created."
 
-# Generate SSH key for Coolify server management
-ssh-keygen -f /data/coolify/ssh/keys/id.root@host.docker.internal -t ed25519 -N '' -C root@coolify
-
-# Add the public key to authorized_keys
-cat /data/coolify/ssh/keys/id.root@host.docker.internal.pub >> /root/.ssh/authorized_keys
-chmod 600 /root/.ssh/authorized_keys
-
-echo "SSH keys configured."
-
-# Download Coolify configuration files
+# Download Coolify configuration files (template only, will be configured on first boot)
 curl -fsSL https://cdn.coollabs.io/coolify/docker-compose.yml -o /data/coolify/source/docker-compose.yml
 curl -fsSL https://cdn.coollabs.io/coolify/docker-compose.prod.yml -o /data/coolify/source/docker-compose.prod.yml
 curl -fsSL https://cdn.coollabs.io/coolify/.env.production -o /data/coolify/source/.env
@@ -79,22 +70,11 @@ curl -fsSL https://cdn.coollabs.io/coolify/upgrade.sh -o /data/coolify/source/up
 
 echo "Coolify configuration files downloaded."
 
-# Set proper permissions
+# Set proper permissions (will be reapplied after key generation on first boot)
 chown -R 9999:root /data/coolify
 chmod -R 700 /data/coolify
 
 echo "Permissions set."
-
-# Generate secure random values for .env file
-sed -i "s|APP_ID=.*|APP_ID=$(openssl rand -hex 16)|g" /data/coolify/source/.env
-sed -i "s|APP_KEY=.*|APP_KEY=base64:$(openssl rand -base64 32)|g" /data/coolify/source/.env
-sed -i "s|DB_PASSWORD=.*|DB_PASSWORD=$(openssl rand -base64 32)|g" /data/coolify/source/.env
-sed -i "s|REDIS_PASSWORD=.*|REDIS_PASSWORD=$(openssl rand -base64 32)|g" /data/coolify/source/.env
-sed -i "s|PUSHER_APP_ID=.*|PUSHER_APP_ID=$(openssl rand -hex 32)|g" /data/coolify/source/.env
-sed -i "s|PUSHER_APP_KEY=.*|PUSHER_APP_KEY=$(openssl rand -hex 32)|g" /data/coolify/source/.env
-sed -i "s|PUSHER_APP_SECRET=.*|PUSHER_APP_SECRET=$(openssl rand -hex 32)|g" /data/coolify/source/.env
-
-echo "Environment variables generated."
 
 # Create Docker network for Coolify
 docker network create --attachable coolify 2>/dev/null || true
