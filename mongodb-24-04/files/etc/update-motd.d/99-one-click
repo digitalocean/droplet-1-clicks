@@ -1,0 +1,43 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+# Read in the passwords....
+. /root/.digitalocean_passwords
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's 1-Click MongoDB Droplet.
+To keep this Droplet secure, the UFW firewall is enabled.
+All ports are BLOCKED except 22 (SSH), 80 (HTTP), 443 (HTTPS) and 27017 (MongoDB).
+
+Use the following credentials to manage the database:
+    Username: admin
+    Password: ${admin_mongodb_password}
+
+Connection string for your MongoDB:
+  mongodb://admin:${admin_mongodb_password}@${myip}
+
+In a web browser, you can view:
+ * The MongoDB 1-Click Quickstart guide: https://do.co/2IdNb4T#start
+
+On the server:
+  * The default web root is located at /var/www/html
+  * MongoDB is running on port 27017
+  * The passwords and keys are saved in /root/.digitalocean_passwords
+
+For help and more information, visit https://do.co/2IdNb4T
+
+********************************************************************************
+NOTE:  This image includes version 7.0.0 of MongoDB.
+To upgrade to a newer release run the following commands:
+
+sudo mv /etc/apt/sources.list.d/mongodb.list.disabled /etc/apt/sources.list.d/mongodb.list
+sudo apt-get update
+sudo apt-get upgrade
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
