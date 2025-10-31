@@ -15,7 +15,13 @@ echo "## Install  Ruby"
 su - rails -c "rvm install ruby-${ruby_version} --default"
 
 echo "## Install Rails"
+# Ensure logger gem is available before installing Rails
+su - rails -c "gem install logger"
 su - rails -c "gem install rails -v ${rails_version}"
+
+# Ensure we have compatible gem versions for Ruby 3.2
+echo "## Update bundler and ensure compatibility"
+su - rails -c "gem update bundler"
 
 echo "## Install Puma"
 su - rails -c "gem install puma -v ${puma_version}"

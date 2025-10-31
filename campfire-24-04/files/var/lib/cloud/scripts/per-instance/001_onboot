@@ -1,5 +1,13 @@
 #!/bin/sh
 
+# Generate unique SECRET_KEY_BASE for this droplet
+if grep -q "PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT" /opt/campfire.env 2>/dev/null; then
+    echo "Generating unique SECRET_KEY_BASE for this droplet..."
+    NEW_SECRET_KEY_BASE=$(openssl rand -hex 64)
+    sed -i "s/SECRET_KEY_BASE=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT/SECRET_KEY_BASE=$NEW_SECRET_KEY_BASE/" /opt/campfire.env
+    echo "SECRET_KEY_BASE generated successfully."
+fi
+
 # Remove the ssh force logout command
 sed -e '/Match User root/d' \
     -e '/.*ForceCommand.*droplet.*/d' \

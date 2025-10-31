@@ -10,10 +10,7 @@ ufw --force enable
 # git clone the repo
 cd /opt && git clone https://github.com/basecamp/once-campfire.git
 
-# Generate secret key base
-YOUR_SECRET_KEY_BASE=$(openssl rand -hex 64)
-
-# Create environment file
+# Create environment file (SECRET_KEY_BASE will be generated on first boot)
 cat > /opt/campfire.env << EOF
 # Campfire Environment Configuration
 # 
@@ -21,7 +18,8 @@ cat > /opt/campfire.env << EOF
 #   /opt/restart-campfire.sh
 
 # Rails application secret key for session encryption and security
-SECRET_KEY_BASE=$YOUR_SECRET_KEY_BASE
+# This will be automatically generated on first boot for security
+SECRET_KEY_BASE=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT
 
 # Disable SSL/TLS termination in the container (useful when using a reverse proxy)
 DISABLE_SSL=true
