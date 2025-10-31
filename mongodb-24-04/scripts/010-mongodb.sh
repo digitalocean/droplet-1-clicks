@@ -1,6 +1,8 @@
 #!/bin/sh
 
-distro="$(lsb_release -s -c)"
+#MongoDB doesn’t yet publish a “noble” repo, but the jammy (22.04) packages work fine on 24.04.
+#distro="$(lsb_release -s -c)"
+distro="jammy"
 
 wget -qO - "https://www.mongodb.org/static/pgp/server-${repo_version}.asc" | sudo apt-key add -
 
