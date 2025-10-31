@@ -5,12 +5,12 @@
     "image_name": "rails-22-04-snapshot-{{timestamp}}",
     "apt_packages": "autoconf automake bison build-essential g++ gawk gcc git jq libffi-dev libgdbm-dev libgmp-dev libncurses5-dev libpq-dev libreadline6-dev libsqlite3-dev libssl-dev libtool libyaml-dev make nginx pkg-config postgresql python3-certbot python3-certbot-nginx software-properties-common sqlite3 super zlib1g-dev",
     "application_name": "Ruby on Rails",
-    "application_version": "7.0.4.2",
+    "application_version": "7.1.0",
     "ruby_version": "3.2.0",
     "puma_version": "6.0.2",
     "pg_version": "1.4.5",
     "sassc_version": "2.4.0",
-    "node_version": "node_19.x"
+    "node_version": "setup_22.x"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
