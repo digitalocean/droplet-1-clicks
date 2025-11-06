@@ -79,6 +79,11 @@ conduktor-console-24-04/
    packer build conduktor-console-24-04/template.json
    ```
 
+   **To build with a specific Conduktor version:**
+   ```bash
+   packer build -var 'application_version=1.40.0' conduktor-console-24-04/template.json
+   ```
+
 The build process will:
 - Create a temporary Ubuntu 24.04 droplet
 - Install Docker, Docker Compose, PostgreSQL client, and dependencies
@@ -135,9 +140,19 @@ The `001_onboot` script runs automatically when a droplet is created from the sn
 ### template.json
 
 The Packer template defines:
-- **Variables**: API token, image name, packages, application version
+- **Variables**: 
+  - `do_api_token`: DigitalOcean API token
+  - `image_name`: Snapshot name with timestamp
+  - `apt_packages`: List of packages to install
+  - `application_name`: "Conduktor Console"
+  - `application_version`: Conduktor version (default: "1.39.0")
 - **Builder**: DigitalOcean droplet specs (Ubuntu 24.04, 2 CPU, 4GB RAM)
 - **Provisioners**: File copying and shell script execution
+
+To use a different Conduktor version, override the `application_version` variable:
+```bash
+packer build -var 'application_version=1.40.0' conduktor-console-24-04/template.json
+```
 
 ### docker-compose.yml
 

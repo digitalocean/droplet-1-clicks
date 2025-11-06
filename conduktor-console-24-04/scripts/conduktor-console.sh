@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# Get the application version from environment variable (set by Packer)
+CONDUKTOR_VERSION="${application_version:-1.39.0}"
+
 # Configure firewall
 ufw allow 8080
 ufw allow 80
@@ -14,6 +17,10 @@ systemctl start docker
 # Create Conduktor directory structure
 mkdir -p /opt/conduktor
 cd /opt/conduktor
+
+# Update docker-compose.yml with the correct version
+sed -i "s/conduktor\/conduktor-console:[0-9.]\+/conduktor\/conduktor-console:${CONDUKTOR_VERSION}/g" /opt/conduktor/docker-compose.yml
+sed -i "s/conduktor\/conduktor-console-cortex:[0-9.]\+/conduktor\/conduktor-console-cortex:${CONDUKTOR_VERSION}/g" /opt/conduktor/docker-compose.yml
 
 # Set proper permissions for docker-compose.yml and helper scripts
 chmod 644 /opt/conduktor/docker-compose.yml
