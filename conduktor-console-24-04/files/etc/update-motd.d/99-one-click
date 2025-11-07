@@ -1,0 +1,48 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+Welcome to Conduktor Console!
+
+Conduktor Console is a powerful web-based UI for Apache Kafka that provides 
+comprehensive visibility into your Kafka ecosystem. It consolidates all Kafka 
+APIs into a single interface for monitoring, troubleshooting, and managing 
+your streaming applications.
+
+Conduktor Console is now running and accessible at:
+
+  http://$myip:8080
+
+Login Credentials:
+  Email: admin@conduktor.local
+  Password: (stored in /opt/conduktor/conduktor.env)
+
+IMPORTANT: Change the default admin password after your first login!
+
+Configuration:
+  Configuration file: /opt/conduktor/conduktor.env
+  Docker Compose file: /opt/conduktor/docker-compose.yml
+
+After making changes to the configuration, restart Conduktor Console with:
+  /opt/conduktor/restart-conduktor.sh
+
+Useful Commands:
+  Start Conduktor:   /opt/conduktor/start-conduktor.sh
+  Stop Conduktor:    /opt/conduktor/stop-conduktor.sh
+  Restart Conduktor: /opt/conduktor/restart-conduktor.sh
+  Update Conduktor:  /opt/conduktor/update-conduktor.sh
+  View Logs:         /opt/conduktor/logs-conduktor.sh
+
+Documentation:
+  https://docs.conduktor.io/
+
+For support and community:
+  https://conduktor.io/slack
+
+********************************************************************************
+To delete this message of the day: rm -rf \$(readlink -f \${0})
+EOF
