@@ -1,7 +1,6 @@
 #!/bin/sh
 
 # open port for clients
-ufw allow 3000
 ufw allow 80
 ufw allow 443
 ufw limit ssh/tcp
