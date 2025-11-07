@@ -3,7 +3,7 @@
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "jenkins-22-04-snapshot-{{timestamp}}",
-    "apt_packages": "openjdk-11-jdk net-tools",
+    "apt_packages": "openjdk-11-jdk net-tools nginx",
     "application_name": "Jenkins",
     "application_version": "2.445"
   },
@@ -37,6 +37,11 @@
       "destination": "/var/"
     },
     {
+      "type": "file",
+      "source": "jenkins-22-04/files/etc/",
+      "destination": "/etc/"
+    },
+    {
       "type": "shell",
       "environment_vars": [
         "DEBIAN_FRONTEND=noninteractive",
@@ -64,6 +69,7 @@
       ],
       "scripts": [
         "common/scripts/018-force-ssh-logout.sh",
+        "jenkins-22-04/scripts/012-jenkins.sh",
         "common/scripts/020-application-tag.sh",
         "common/scripts/900-cleanup.sh"
       ]
