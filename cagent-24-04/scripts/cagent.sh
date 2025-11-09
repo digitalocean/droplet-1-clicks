@@ -4,9 +4,7 @@ ufw limit ssh/tcp
 ufw --force enable
 
 CAGENT_VERSION=${cagent_version:-$(curl -s "https://api.github.com/repos/docker/cagent/releases/latest" | jq -r '.tag_name')}
-echo "DEBUG: Initial CAGENT_VERSION=$CAGENT_VERSION"
 [ "${CAGENT_VERSION#v}" = "$CAGENT_VERSION" ] && CAGENT_VERSION="v${CAGENT_VERSION}"
-echo "DEBUG: Final CAGENT_VERSION=$CAGENT_VERSION"
 CAGENT_ARCH="amd64"
 
 

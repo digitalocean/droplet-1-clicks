@@ -41,11 +41,6 @@
       "destination": "/opt/"
     },
     {
-      "type": "file",
-      "source": "cagent-24-04/files/var/",
-      "destination": "/var/"
-    },
-    {
       "type": "shell",
       "environment_vars": [
         "DEBIAN_FRONTEND=noninteractive",
@@ -78,7 +73,6 @@
         "common/scripts/013-docker-dns.sh",
         "common/scripts/014-ufw-docker.sh",
         "cagent-24-04/scripts/cagent.sh",
-        "common/scripts/018-force-ssh-logout.sh",
         "common/scripts/020-application-tag.sh",
         "common/scripts/900-cleanup.sh"
       ]
