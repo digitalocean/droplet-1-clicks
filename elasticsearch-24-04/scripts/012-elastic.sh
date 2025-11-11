@@ -10,8 +10,6 @@ sudo apt-get --assume-yes install apt-transport-https
 
 echo "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/9.x/apt stable main" | sudo tee /etc/apt/sources.list.d/elastic-9.x.list
 
-sudo apt-get update && sudo apt-get install elasticsearch
-
 # Allow elasticsearch port
 ufw limit ssh
 ufw allow 9200
