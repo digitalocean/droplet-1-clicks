@@ -1,0 +1,50 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+Welcome to cagent by Docker!
+
+cagent is a powerful multi-agent AI runtime that orchestrates AI agents with 
+specialized capabilities and tools.
+
+QUICK START
+===========
+
+1. Set your API keys (choose based on your needs):
+
+   export OPENAI_API_KEY=your_key_here      # For OpenAI models
+   export ANTHROPIC_API_KEY=your_key_here   # For Anthropic models  
+   export GOOGLE_API_KEY=your_key_here      # For Google Gemini models
+
+2. Run example agents:
+
+   cagent run /opt/cagent/examples/basic_agent.yaml     # Requires API key
+   cagent run /opt/cagent/examples/dmr.yaml             # Uses Docker Model Runner
+   cagent run /opt/cagent/examples/pirate.yaml          # Fun pirate assistant
+
+3. Create new agents:
+
+   cagent new                                            # Interactive mode
+   cagent new --model openai/gpt-4o-mini                # With specific model
+
+4. Pull and run agents from Docker Hub:
+
+   cagent run creek/pirate
+
+USEFUL RESOURCES
+================
+
+Documentation:       /opt/cagent/README.txt
+Example agents:      /opt/cagent/examples/
+GitHub repository:   https://github.com/docker/cagent
+Usage guide:         https://github.com/docker/cagent/blob/main/docs/USAGE.md
+
+Run 'cagent --help' for all available commands.
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
