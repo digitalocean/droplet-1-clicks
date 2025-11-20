@@ -1,0 +1,71 @@
+#!/bin/bash
+
+# Per-instance script to configure Strapi on first boot
+# This script generates unique secrets and starts services
+
+echo "Configuring Strapi on first boot..."
+
+# Create .env file from template if it doesn't exist
+if [ ! -f /opt/strapi/.env ]; then
+    echo "Creating environment configuration..."
+    cp /opt/strapi-env-template /opt/strapi/.env
+fi
+
+# Generate unique secrets for this droplet
+if grep -q "PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT" /opt/strapi/.env 2>/dev/null; then
+    echo "Generating unique security keys for this droplet..."
+    
+    # Generate strong random secrets
+    DATABASE_PASSWORD=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-32)
+    JWT_SECRET=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-32)
+    ADMIN_JWT_SECRET=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-32)
+    API_TOKEN_SALT=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-32)
+    TRANSFER_TOKEN_SALT=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-32)
+    
+    # APP_KEYS requires 4 comma-separated keys
+    APP_KEY_1=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-32)
+    APP_KEY_2=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-32)
+    APP_KEY_3=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-32)
+    APP_KEY_4=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-32)
+    APP_KEYS="${APP_KEY_1},${APP_KEY_2},${APP_KEY_3},${APP_KEY_4}"
+    
+    # Replace placeholders in .env file
+    sed -i "s|DATABASE_PASSWORD=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT|DATABASE_PASSWORD=${DATABASE_PASSWORD}|" /opt/strapi/.env
+    sed -i "s|JWT_SECRET=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT|JWT_SECRET=${JWT_SECRET}|" /opt/strapi/.env
+    sed -i "s|ADMIN_JWT_SECRET=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT|ADMIN_JWT_SECRET=${ADMIN_JWT_SECRET}|" /opt/strapi/.env
+    sed -i "s|APP_KEYS=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT|APP_KEYS=${APP_KEYS}|" /opt/strapi/.env
+    sed -i "s|API_TOKEN_SALT=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT|API_TOKEN_SALT=${API_TOKEN_SALT}|" /opt/strapi/.env
+    sed -i "s|TRANSFER_TOKEN_SALT=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT|TRANSFER_TOKEN_SALT=${TRANSFER_TOKEN_SALT}|" /opt/strapi/.env
+    
+    echo "Security keys generated successfully."
+fi
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
+
+# Enable and start Strapi service
+echo "Enabling Strapi service..."
+systemctl enable strapi
+systemctl start strapi
+
+# Wait for services to be ready
+echo "Waiting for Strapi to initialize..."
+sleep 10
+
+# Check if Strapi is running
+if systemctl is-active --quiet strapi; then
+    echo "✅ Strapi service started successfully!"
+    echo ""
+    echo "Access Strapi at: http://$(hostname -I | awk '{print $1}')"
+    echo "Admin panel: http://$(hostname -I | awk '{print $1}')/admin"
+else
+    echo "⚠️  Strapi service may need more time to start."
+    echo "Check status with: systemctl status strapi"
+    echo "View logs with: docker compose -f /opt/strapi/docker-compose.yml logs -f"
+fi
+
+echo "First boot configuration completed."

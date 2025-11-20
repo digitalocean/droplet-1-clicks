@@ -1,0 +1,60 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+Welcome to Strapi CMS - The Leading Open-Source Headless CMS
+
+Strapi is running and can be accessed at:
+
+  http://$myip
+  
+Admin Panel (first-time setup required):
+
+  http://$myip/admin
+
+Configuration:
+  
+  To modify the environment configuration:
+    /opt/strapi/.env
+  
+  After making changes, restart Strapi:
+    systemctl restart strapi
+  
+  Or use the convenience script:
+    /opt/restart-strapi.sh
+
+Management Commands:
+  
+  Start Strapi:     /opt/start-strapi.sh  (or: systemctl start strapi)
+  Stop Strapi:      /opt/stop-strapi.sh   (or: systemctl stop strapi)
+  Restart Strapi:   /opt/restart-strapi.sh (or: systemctl restart strapi)
+  Update Strapi:    /opt/update-strapi.sh
+  
+  View logs:        docker compose -f /opt/strapi/docker-compose.yml logs -f
+  View status:      systemctl status strapi
+
+Database Information:
+  
+  Database: PostgreSQL 16
+  Container: strapiDB
+  Access via Docker: docker exec -it strapiDB psql -U strapi -d strapi
+
+Important Notes:
+  
+  • Create your admin account on first visit to /admin
+  • All secrets were randomly generated on first boot
+  • Database credentials are stored in /opt/strapi/.env
+  • Data persists in Docker volumes even after container restarts
+
+Documentation:
+  
+  Strapi Docs: https://docs.strapi.io/
+  API Documentation: http://$myip/documentation (if enabled)
+
+********************************************************************************
+To delete this message of the day: rm -rf \$(readlink -f \${0})
+EOF
