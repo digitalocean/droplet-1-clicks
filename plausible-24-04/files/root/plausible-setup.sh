@@ -7,7 +7,13 @@ INSTALL_DIR="/docker/plausible"
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR" || exit 1
 
-git clone https://github.com/plausible/hosting .
+if [ -d ".git" ]; then
+    echo "Repository already exists. Pulling latest changes..."
+    git pull --rebase --autostash
+else
+    echo "Cloning Plausible hosting repo..."
+    git clone https://github.com/plausible/hosting .
+fi
 
 droplet_ip=$(hostname -I | awk '{print$1}')
 
