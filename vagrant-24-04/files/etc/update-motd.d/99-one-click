@@ -1,0 +1,99 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+================================================================================
+                          Vagrant 1-Click Deployment
+================================================================================
+
+Welcome to your Vagrant droplet!
+
+Vagrant is a tool for building and managing virtual machine environments in a 
+single workflow. It uses infrastructure as code to configure, provision, and 
+manage virtual machines across multiple platforms.
+
+VERSION: 2.4.9
+
+================================================================================
+QUICK START
+================================================================================
+
+1. Verify Vagrant is installed and working:
+   $ vagrant --version
+
+2. Create a Vagrant project directory:
+   $ mkdir my-vagrant-project
+   $ cd my-vagrant-project
+
+3. Initialize a Vagrantfile (example with Ubuntu):
+   $ vagrant init ubuntu/jammy64
+
+4. Start the virtual machine:
+   $ vagrant up
+
+5. SSH into the virtual machine:
+   $ vagrant ssh
+
+6. Stop or suspend the virtual machine:
+   $ vagrant halt          # Stop the VM
+   $ vagrant suspend       # Suspend the VM
+
+7. Destroy the virtual machine when done:
+   $ vagrant destroy
+
+================================================================================
+COMMON COMMANDS
+================================================================================
+
+vagrant init          - Initialize a new Vagrant environment
+vagrant up            - Create and start the virtual machine
+vagrant ssh           - Connect to the virtual machine via SSH
+vagrant suspend       - Suspend the virtual machine
+vagrant resume        - Resume a suspended virtual machine
+vagrant halt          - Stop the virtual machine
+vagrant destroy       - Remove the virtual machine
+vagrant status        - Check the status of the virtual machine
+vagrant reload        - Restart the virtual machine
+vagrant provision     - Run provisioners on the virtual machine
+vagrant global-status - Show the status of all Vagrant machines
+vagrant box list      - List installed Vagrant boxes
+vagrant box add       - Add a new Vagrant box
+
+================================================================================
+PROVIDERS
+================================================================================
+
+By default, Vagrant uses VirtualBox as the hypervisor. To use another provider:
+
+  $ vagrant up --provider=vmware_desktop
+  $ vagrant up --provider=libvirt
+  $ vagrant up --provider=hyperv
+
+Note: You may need to install additional software or plugins for other providers.
+
+================================================================================
+USEFUL LINKS
+================================================================================
+
+Official Documentation: https://developer.hashicorp.com/vagrant/docs
+Vagrant Cloud (Public Boxes): https://app.vagrantup.com/boxes/search
+Getting Started Guide: https://developer.hashicorp.com/vagrant/tutorials
+
+================================================================================
+SYSTEM INFORMATION
+================================================================================
+
+Your Droplet IP: ${myip}
+
+Vagrant enables you to create reproducible development environments. It 
+automatically manages all the configuration details, so you can focus on 
+your application development.
+
+To get started, check out the Getting Started section above or visit
+the official documentation.
+
+================================================================================
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
