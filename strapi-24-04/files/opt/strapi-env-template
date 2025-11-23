@@ -1,0 +1,31 @@
+# Strapi Environment Configuration
+# 
+# After making changes to this file, restart Strapi with:
+#   systemctl restart strapi
+
+# Database Configuration (PostgreSQL)
+DATABASE_CLIENT=postgres
+DATABASE_HOST=strapiDB
+DATABASE_PORT=5432
+DATABASE_NAME=strapi
+DATABASE_USERNAME=strapi
+DATABASE_PASSWORD=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT
+
+# Strapi Security Keys (will be automatically generated on first boot)
+JWT_SECRET=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT
+ADMIN_JWT_SECRET=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT
+APP_KEYS=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT
+API_TOKEN_SALT=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT
+TRANSFER_TOKEN_SALT=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT
+
+# Node Environment
+NODE_ENV=production
+
+# Strapi Server Configuration
+HOST=0.0.0.0
+PORT=1337
+
+# Admin Panel Configuration
+# Uncomment and set your domain for production use
+# ADMIN_URL=/admin
+# PUBLIC_URL=https://your-domain.com
