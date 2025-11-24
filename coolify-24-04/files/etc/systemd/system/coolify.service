@@ -7,6 +7,7 @@ Requires=docker.service
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=/data/coolify/source
+ExecStartPre=/opt/coolify-init.sh
 ExecStart=/usr/bin/docker compose --env-file /data/coolify/source/.env -f /data/coolify/source/docker-compose.yml -f /data/coolify/source/docker-compose.prod.yml up -d --pull always --remove-orphans
 ExecStop=/usr/bin/docker compose --env-file /data/coolify/source/.env -f /data/coolify/source/docker-compose.yml -f /data/coolify/source/docker-compose.prod.yml down
 Restart=on-failure

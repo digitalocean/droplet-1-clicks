@@ -12,17 +12,6 @@ systemctl restart ssh
 # Get the server's IP address
 myip=$(hostname -I | awk '{print$1}')
 
-echo "Generating unique SSH keys for Coolify server management..."
-
-# Generate SSH key for Coolify server management (unique per droplet)
-ssh-keygen -f /data/coolify/ssh/keys/id.root@host.docker.internal -t ed25519 -N '' -C root@coolify
-
-# Add the public key to authorized_keys
-cat /data/coolify/ssh/keys/id.root@host.docker.internal.pub >> /root/.ssh/authorized_keys
-chmod 600 /root/.ssh/authorized_keys
-
-echo "SSH keys configured."
-
 echo "Generating secure random values for Coolify environment..."
 
 # Generate secure random values for .env file (unique per droplet)
