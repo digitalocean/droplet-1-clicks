@@ -82,10 +82,10 @@ The build process takes approximately 10-15 minutes and includes:
 
 3. **Coolify Preparation** (2-3 minutes)
    - Directory structure creation
-   - SSH key generation for server management
    - Configuration file downloads
    - Security value generation
    - Helper script creation
+   - First-login setup script preparation
 
 4. **Systemd Service Setup** (1 minute)
    - Service file creation
@@ -160,10 +160,26 @@ Located in `/opt/`:
 When a droplet is created from this image:
 
 1. **SSH Configuration**: Removes forced logout for root user
-2. **Coolify Installation**: Pulls and starts all Coolify containers
-3. **Service Startup**: Waits for containers to be ready
-4. **Information File**: Creates `/root/coolify_info.txt` with access details
-5. **MOTD Display**: Shows access information on SSH login
+2. **SSH Key Generation**: Generates unique SSH keys for Coolify localhost (not added to authorized_keys)
+3. **First-Login Setup**: Configures interactive localhost activation script
+4. **Coolify Installation**: Pulls and starts all Coolify containers
+5. **Service Startup**: Waits for containers to be ready
+6. **Information File**: Creates `/root/coolify_info.txt` with access details
+7. **MOTD Display**: Shows access information on SSH login
+
+## First Login Experience
+
+On first SSH login, users are greeted with an interactive setup:
+
+- **Localhost Activation Prompt**: Asks if user wants to activate localhost server
+- **Automatic Configuration**: If accepted, activates SSH keys and restarts Coolify
+- **Skip Option**: Users can skip and activate later with `/opt/configure-coolify-localhost.sh`
+- **One-Time Only**: Setup runs once and removes itself from future logins
+
+This ensures:
+- Image passes marketplace validation (no SSH keys in authorized_keys during build)
+- Users can start deploying immediately after first login
+- Clear, guided setup experience similar to WordPress 1-Click
 
 ## Network Configuration
 

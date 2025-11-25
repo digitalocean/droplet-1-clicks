@@ -13,7 +13,7 @@
       "type": "digitalocean",
       "api_token": "{{user `do_api_token`}}",
       "image": "ubuntu-24-04-x64",
-      "region": "nyc3",
+      "region": "sfo3",
       "size": "s-2vcpu-2gb",
       "ssh_username": "root",
       "snapshot_name": "{{user `image_name`}}"
