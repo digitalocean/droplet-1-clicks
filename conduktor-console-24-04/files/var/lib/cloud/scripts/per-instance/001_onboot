@@ -5,11 +5,11 @@ if grep -q "PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT" /opt/conduktor/conduktor
     echo "Generating unique passwords for this droplet..."
     
     # Generate secure random passwords
-    NEW_POSTGRES_PASSWORD=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-25)
+    NEW_POSTGRES_PASSWORD=$(pwgen -s 32 1)
     
     # Generate admin password that meets Conduktor requirements:
     # At least 8 characters with 1 uppercase, 1 lowercase, 1 number, 1 special character
-    NEW_ADMIN_PASSWORD=$(openssl rand -base64 12 | head -c 10)$(echo '!@#$%^&*' | fold -w1 | shuf | head -c1)$(echo 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' | fold -w1 | shuf | head -c1)$(echo 'abcdefghijklmnopqrstuvwxyz' | fold -w1 | shuf | head -c1)$(shuf -i 0-9 -n 1)
+    NEW_ADMIN_PASSWORD=$(pwgen -s -y 16 1)
     
     # Update the environment file with new passwords
     sed -i "s|POSTGRES_PASSWORD=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT|POSTGRES_PASSWORD=$NEW_POSTGRES_PASSWORD|g" /opt/conduktor/conduktor.env

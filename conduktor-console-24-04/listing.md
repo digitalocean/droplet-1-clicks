@@ -291,7 +291,7 @@ If the console container is restarting with password validation errors:
 3. Generate a new compliant password and update the config:
    ```bash
    # Generate a compliant password (example: use a password manager or this command)
-   NEW_PASS="Admin$(openssl rand -base64 6)#1"
+   NEW_PASS=$(pwgen -s -1 16)
    
    # Update the environment file
    sudo sed -i "s/CDK_ADMIN_PASSWORD=.*/CDK_ADMIN_PASSWORD=$NEW_PASS/" /opt/conduktor/conduktor.env
