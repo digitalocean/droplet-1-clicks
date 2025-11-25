@@ -82,7 +82,8 @@ docker network create --attachable coolify 2>/dev/null || true
 echo "Docker network created."
 
 # Make helper scripts executable (scripts were copied by Packer)
-chmod +x /opt/coolify-init.sh
+chmod +x /opt/coolify_localhost_setup.sh
+chmod +x /opt/configure-coolify-localhost.sh
 chmod +x /opt/restart-coolify.sh
 chmod +x /opt/stop-coolify.sh
 chmod +x /opt/start-coolify.sh

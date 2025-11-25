@@ -27,6 +27,7 @@ Management Commands:
   Update Coolify:   /opt/update-coolify.sh
   View logs:        /opt/coolify-logs.sh
   Check status:     /opt/coolify-status.sh
+  Setup localhost:  /opt/configure-coolify-localhost.sh
 
 Using systemctl:
   Start:   systemctl start coolify
@@ -52,8 +53,11 @@ Security & Firewall:
 
 Next Steps:
   1. Set up your admin account at http://$myip:8000
-  2. (Optional) Configure a custom domain for HTTPS
-  3. Start deploying your applications!
+  2. Activate localhost server:
+     Run: /opt/configure-coolify-localhost.sh
+     (This enables Coolify to deploy on this server)
+  3. (Optional) Configure a custom domain for HTTPS
+  4. Start deploying your applications!
 
 For detailed documentation, visit: https://coolify.io/docs
 For support, join the community: https://coolify.io/discord

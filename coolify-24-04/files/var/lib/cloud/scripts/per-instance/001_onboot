@@ -12,6 +12,25 @@ systemctl restart ssh
 # Get the server's IP address
 myip=$(hostname -I | awk '{print$1}')
 
+# Set up first-login interactive localhost activation
+cat >> /root/.bashrc <<EOM
+chmod +x /opt/coolify_localhost_setup.sh
+/opt/coolify_localhost_setup.sh
+EOM
+
+echo "Generating SSH keys for Coolify localhost management..."
+
+# Generate SSH key for Coolify server management (unique per droplet)
+# Note: Key is generated but NOT added to authorized_keys yet
+# User must run /opt/configure-coolify-localhost.sh to enable localhost access
+SSH_KEY_PATH="/data/coolify/ssh/keys/id.root@host.docker.internal"
+if [ ! -f "${SSH_KEY_PATH}" ]; then
+    ssh-keygen -f "${SSH_KEY_PATH}" -t ed25519 -N '' -C root@coolify
+    echo "SSH keys generated at ${SSH_KEY_PATH}"
+else
+    echo "SSH keys already exist, skipping generation"
+fi
+
 echo "Generating secure random values for Coolify environment..."
 
 # Generate secure random values for .env file (unique per droplet)
@@ -69,6 +88,7 @@ IMPORTANT:
 - Create your admin account immediately after accessing the URL above
 - If someone else accesses the registration page first, they could gain control
 - The first user to register will have full administrative access
+- Run /opt/configure-coolify-localhost.sh to enable localhost deployments
 
 Management Commands:
   Start Coolify:    /opt/start-coolify.sh
@@ -77,6 +97,7 @@ Management Commands:
   Update Coolify:   /opt/update-coolify.sh
   View logs:        /opt/coolify-logs.sh
   Check status:     /opt/coolify-status.sh
+  Setup localhost:  /opt/configure-coolify-localhost.sh
 
 Using systemctl:
   Start:   systemctl start coolify

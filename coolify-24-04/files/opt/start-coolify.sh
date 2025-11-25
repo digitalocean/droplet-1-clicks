@@ -2,9 +2,6 @@
 
 echo "Starting Coolify..."
 
-# Run initialization if needed
-/opt/coolify-init.sh
-
 cd /data/coolify/source
 
 docker compose --env-file /data/coolify/source/.env \

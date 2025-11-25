@@ -71,20 +71,33 @@ This 1-Click installs and configures the following components:
    - Add your SSH key for secure access
    - Create the Droplet
 
-2. **Access Coolify**
-   - Wait 2-3 minutes for the installation to complete
+2. **First SSH Login**
+   - SSH into your droplet: `ssh root@your-droplet-ip`
+   - An interactive setup wizard will appear automatically
+   - You'll be prompted: "Would you like to activate localhost now?"
+   - Choose **Yes (recommended)** to enable deployments immediately
+   - The setup activates SSH keys and restarts Coolify
+   - This only runs once on first login
+
+3. **Access Coolify Web Interface**
    - Navigate to `http://your-droplet-ip:8000` in your web browser
    - You'll be redirected to the registration page
 
-3. **Create Admin Account**
+4. **Create Admin Account**
    - **CRITICAL**: Create your admin account immediately
    - The first user to register gets full administrative access
    - Use a strong password and save your credentials securely
+   - The localhost server should now show as connected
 
-4. **Initial Configuration**
-   - Complete the onboarding wizard in Coolify
-   - Configure your localhost server settings
-   - Set up your first project
+5. **Start Deploying**
+   - Create your first project
+   - Deploy applications, databases, or services
+   - Configure domains and SSL certificates
+
+**Note**: If you skipped localhost activation during first login, you can activate it anytime by running:
+```bash
+/opt/configure-coolify-localhost.sh
+```
 
 ### Setting Up a Custom Domain (Recommended)
 
