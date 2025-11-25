@@ -169,6 +169,90 @@ Vagrant.configure("2") do |config|
 end
 ```
 
+## Multi-OS Environments with Vagrant
+
+Create and manage multiple operating systems simultaneously in a single Vagrantfile:
+
+```ruby
+Vagrant.configure("2") do |config|
+
+  # Ubuntu VM
+  config.vm.define "ubuntu_vm" do |vm|
+    vm.vm.box = "ubuntu/jammy64"
+    vm.vm.provider "virtualbox" do |vb|
+      vb.gui = false
+      vb.memory = 2048
+      vb.cpus = 2
+    end
+  end
+
+  # Debian VM
+  config.vm.define "debian_vm" do |vm|
+    vm.vm.box = "debian/bookworm64"
+    vm.vm.provider "virtualbox" do |vb|
+      vb.gui = false
+      vb.memory = 2048
+      vb.cpus = 2
+    end
+  end
+
+  # CentOS VM
+  config.vm.define "centos_vm" do |vm|
+    vm.vm.box = "centos/7"
+    vm.vm.provider "virtualbox" do |vb|
+      vb.gui = false
+      vb.memory = 2048
+      vb.cpus = 2
+    end
+  end
+
+  # Windows 10 VM
+  config.vm.define "windows_vm" do |vm|
+    vm.vm.box = "gusztavvargadr/windows-10"
+    vm.vm.provider "virtualbox" do |vb|
+      vb.gui = true        # Windows needs GUI
+      vb.memory = 4096
+      vb.cpus = 2
+    end
+    vm.vm.communicator = "winrm"
+  end
+
+end
+```
+
+### Running Multi-OS Environments
+
+```bash
+# Start Ubuntu VM
+vagrant up ubuntu_vm
+
+# Start Debian VM
+vagrant up debian_vm
+
+# Start CentOS VM
+vagrant up centos_vm
+
+# Start Windows VM
+vagrant up windows_vm
+
+# Check status of all VMs
+vagrant status
+
+# SSH into Linux VMs
+vagrant ssh ubuntu_vm
+vagrant ssh debian_vm
+vagrant ssh centos_vm
+
+# RDP into Windows VM (username: vagrant, password: vagrant)
+vagrant rdp windows_vm
+
+# Stop all VMs
+vagrant halt
+
+# Destroy all VMs
+vagrant destroy
+```
+
 ## VirtualBox Provider (Default)
 
 VirtualBox is the default provider on this droplet and offers full VM capabilities:

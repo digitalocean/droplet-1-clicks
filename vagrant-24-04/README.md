@@ -117,6 +117,82 @@ After a successful build, Packer will display:
 
 You can then use this snapshot to create new 1-Click Droplets in the DigitalOcean Marketplace.
 
+## Multi-OS Vagrant Examples
+
+### Quick Reference: Multi-OS Vagrantfile
+
+This Vagrantfile demonstrates how to define and manage multiple operating systems:
+
+```ruby
+Vagrant.configure("2") do |config|
+
+  # Ubuntu VM
+  config.vm.define "ubuntu_vm" do |vm|
+    vm.vm.box = "ubuntu/jammy64"
+    vm.vm.provider "virtualbox" do |vb|
+      vb.gui = false
+      vb.memory = 2048
+      vb.cpus = 2
+    end
+  end
+
+  # Debian VM
+  config.vm.define "debian_vm" do |vm|
+    vm.vm.box = "debian/bookworm64"
+    vm.vm.provider "virtualbox" do |vb|
+      vb.gui = false
+      vb.memory = 2048
+      vb.cpus = 2
+    end
+  end
+
+  # CentOS VM
+  config.vm.define "centos_vm" do |vm|
+    vm.vm.box = "centos/7"
+    vm.vm.provider "virtualbox" do |vb|
+      vb.gui = false
+      vb.memory = 2048
+      vb.cpus = 2
+    end
+  end
+
+  # Windows 10 VM
+  config.vm.define "windows_vm" do |vm|
+    vm.vm.box = "gusztavvargadr/windows-10"
+    vm.vm.provider "virtualbox" do |vb|
+      vb.gui = true        # Windows needs GUI
+      vb.memory = 4096
+      vb.cpus = 2
+    end
+    vm.vm.communicator = "winrm"
+  end
+
+end
+```
+
+### Common Commands for Multi-OS Setup
+
+```bash
+# Start specific VM
+vagrant up ubuntu_vm
+vagrant up debian_vm
+vagrant up centos_vm
+vagrant up windows_vm
+
+# Check status
+vagrant status
+
+# Connect to VMs
+vagrant ssh ubuntu_vm
+vagrant ssh debian_vm
+vagrant ssh centos_vm
+vagrant rdp windows_vm
+
+# Stop and destroy
+vagrant halt
+vagrant destroy
+```
+
 ## Configuration
 
 ### System Components
