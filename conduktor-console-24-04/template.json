@@ -4,7 +4,7 @@
     "image_name": "conduktor-console-24-04-snapshot-{{timestamp}}",
     "apt_packages": "apt-transport-https ca-certificates curl software-properties-common git build-essential libsystemd-dev jq unzip docker.io docker-compose-v2 postgresql-client pwgen",
     "application_name": "Conduktor Console",
-    "application_version": "1.39.0"
+    "application_version": "1.40.0"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
