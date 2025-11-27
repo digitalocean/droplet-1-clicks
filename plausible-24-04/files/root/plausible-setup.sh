@@ -7,8 +7,28 @@ INSTALL_DIR="/docker/plausible"
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR" || exit 1
 
+# Function to clean up existing containers and images
+cleanup_docker() {
+    echo "🧹 Cleaning up existing Docker containers and images..."
+    
+    # Stop and remove containers
+    if docker-compose ps 2>/dev/null | grep -q "plausible"; then
+        docker-compose down -v --remove-orphans 2>/dev/null || true
+    fi
+    
+    # Remove dangling images and containers
+    docker container prune -f --filter "until=0h" 2>/dev/null || true
+    docker image prune -af --filter "until=0h" 2>/dev/null || true
+    
+    # Specifically remove plausible-related containers if they exist
+    docker ps -a --filter "name=plausible" --format '{{.ID}}' | xargs -r docker rm -f 2>/dev/null || true
+    
+    echo "✅ Docker cleanup completed."
+}
+
 if [ -d ".git" ]; then
-    echo "Repository already exists. Pulling latest changes..."
+    echo "Repository already exists. Cleaning up and pulling latest changes..."
+    cleanup_docker
     git pull --rebase --autostash
 else
     echo "Cloning Plausible hosting repo..."
@@ -60,6 +80,9 @@ echo
 
 secret_key_base=$(openssl rand -base64 64)
 
+# Remove old .env file to clear previous values
+rm -f .env
+
 cat > .env <<EOF
 BASE_URL=$base_url
 SECRET_KEY_BASE=$secret_key_base
@@ -70,12 +93,24 @@ DATABASE_URL=postgresql://postgres:postgres@plausible_db:5432/plausible
 CLICKHOUSE_DATABASE_URL=http://plausible_events_db:8123/plausible
 EOF
 
-# Configure Docker Compose
-sed -i '/plausible:/a \ \ \ \ ports:\n\ \ \ \ \ \ - 127.0.0.1:8000:8000' compose.yml
+# Reset compose.yml to clean state by checking it out from git
+git checkout compose.yml 2>/dev/null || true
+
+# Configure Docker Compose - add ports if not already present
+if ! grep -q "127.0.0.1:8000:8000" compose.yml; then
+    sed -i '/plausible:/a \ \ \ \ ports:\n\ \ \ \ \ \ - 127.0.0.1:8000:8000' compose.yml
+fi
+
+# Update environment variables (these patterns will match and replace existing ones)
 sed -i "s|- BASE_URL.*|- BASE_URL=\${BASE_URL}|" compose.yml
 sed -i "s|- SECRET_KEY_BASE.*|- SECRET_KEY_BASE=\${SECRET_KEY_BASE}|" compose.yml
 sed -i "s|- DATABASE_URL.*|- DATABASE_URL=\${DATABASE_URL}|" compose.yml
 sed -i "s|- CLICKHOUSE_DATABASE_URL.*|- CLICKHOUSE_DATABASE_URL=\${CLICKHOUSE_DATABASE_URL}|" compose.yml
+
+# Remove any existing duplicate admin user variables and add them once
+sed -i "/- ADMIN_USER_EMAIL=/d" compose.yml
+sed -i "/- ADMIN_USER_NAME=/d" compose.yml
+sed -i "/- ADMIN_USER_PWD=/d" compose.yml
 sed -i "/# required:.*$/a \ \ \ \ \ \ - ADMIN_USER_EMAIL=\${ADMIN_USER_EMAIL}\n\ \ \ \ \ \ - ADMIN_USER_NAME=\${ADMIN_USER_NAME}\n\ \ \ \ \ \ - ADMIN_USER_PWD=\${ADMIN_USER_PWD}" compose.yml
 
 # Configure Nginx based on user choice
@@ -111,6 +146,9 @@ EOF
     nginx -t && systemctl reload nginx
     
     echo "🚀 Starting Plausible Analytics..."
+    # Clean up before starting
+    docker-compose down -v --remove-orphans 2>/dev/null || true
+    sleep 2
     docker-compose up -d
     
     echo "⏳ Waiting for Plausible to start..."
@@ -131,6 +169,9 @@ else
     echo "🔧 Using IP configuration..."
     
     echo "🚀 Starting Plausible Analytics..."
+    # Clean up before starting
+    docker-compose down -v --remove-orphans 2>/dev/null || true
+    sleep 2
     docker-compose up -d
     
     access_url="http://$droplet_ip"
