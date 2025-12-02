@@ -1,0 +1,61 @@
+#!/bin/sh
+
+# Generate unique PostgreSQL password for this droplet
+if grep -q "PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT" /opt/conduktor/conduktor.env 2>/dev/null; then
+    echo "Generating unique passwords for this droplet..."
+    
+    # Generate secure random passwords
+    NEW_POSTGRES_PASSWORD=$(pwgen -s 32 1)
+    
+    # Generate admin password that meets Conduktor requirements:
+    # At least 8 characters with 1 uppercase, 1 lowercase, 1 number, 1 special character
+    NEW_ADMIN_PASSWORD=$(pwgen -s -y 16 1)
+    
+    # Update the environment file with new passwords
+    sed -i "s|POSTGRES_PASSWORD=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT|POSTGRES_PASSWORD=$NEW_POSTGRES_PASSWORD|g" /opt/conduktor/conduktor.env
+    sed -i "s|CDK_ADMIN_PASSWORD=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT|CDK_ADMIN_PASSWORD=$NEW_ADMIN_PASSWORD|g" /opt/conduktor/conduktor.env
+    sed -i "s|:PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT@|:$NEW_POSTGRES_PASSWORD@|g" /opt/conduktor/conduktor.env
+    
+    echo "Passwords generated successfully."
+    echo ""
+    echo "Admin credentials saved to /opt/conduktor/conduktor.env"
+    echo "Admin Email: admin@conduktor.local"
+    echo "Admin Password: $NEW_ADMIN_PASSWORD"
+    echo ""
+    echo "Please change the admin password after your first login!"
+fi
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
+
+# Start Conduktor Console services
+echo "Starting Conduktor Console services..."
+cd /opt/conduktor
+
+# Start services using docker compose with env file
+docker compose --env-file conduktor.env up -d
+
+# Wait for services to be ready
+echo "Waiting for Conduktor Console to start..."
+sleep 30
+
+# Check if services are running
+if docker compose --env-file conduktor.env ps | grep -q "Up"; then
+    echo "✅ Conduktor Console started successfully!"
+    echo ""
+    echo "Access Conduktor Console at:"
+    echo "  http://$(hostname -I | awk '{print$1}'):8080"
+    echo ""
+    echo "Login with:"
+    echo "  Email: admin@conduktor.local"
+    echo "  Password: (check /opt/conduktor/conduktor.env)"
+    echo ""
+    echo "Logs available at: /opt/conduktor/logs-conduktor.sh"
+else
+    echo "⚠️  Warning: Some services may not have started correctly."
+    echo "Check logs with: /opt/conduktor/logs-conduktor.sh"
+fi
