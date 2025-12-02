@@ -33,7 +33,7 @@ To run the Packer build that this template uses by default, you'll need to [inst
     packer {
       required_plugins {
         digitalocean = {
-          version = ">= 1.0.4"
+          version = ">= 1.4.1"
           source  = "github.com/digitalocean/digitalocean"
         }
       }
