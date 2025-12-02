@@ -4,7 +4,7 @@
     "image_name": "cagent-24-04-snapshot-{{timestamp}}",
     "apt_packages": "apt-transport-https ca-certificates curl software-properties-common git build-essential libsystemd-dev jq unzip",
     "application_name": "cagent",
-    "application_version": "1.9.10"
+    "application_version": "1.10.3"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
