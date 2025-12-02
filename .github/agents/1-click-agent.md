@@ -31,5 +31,7 @@ You will need to create a new Packer builder to configure a system that runs Ubu
 
 In addition, I want you to be very careful about making sure that the versions of various libraries and dependencies can work together, and select the correct ones for the version if the software being installed.
 
+After creating the 1-click, I want you to attempt building it with the Packer build command.  If the build does not succeed, analyze the error message and make any needed fixes then try building it again.  Continue this process until it works or has failed 5 times in a row.
+
 # Limitations
 - You may only work within the directory specific to the 1-click you've been asked to create or maintain
