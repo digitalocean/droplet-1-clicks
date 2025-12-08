@@ -5,16 +5,16 @@
 ##
 ## vi: syntax=sh expandtab ts=4
 
-# Replace with the branch of Node.js or io.js you want to install: node_6.x, node_8.x, etc...
+# Replace with the branch of Node.js you want to install: 18.x, 20.x, 22.x, lts.x, etc...
 VERSION=${NODE_VERSION}
 
-curl -fsSL "https://deb.nodesource.com/setup_$VERSION" -o nodesource_setup.sh
-sudo -E bash nodesource_setup.sh
+# Use the new NodeSource installation method
+curl -fsSL "https://deb.nodesource.com/setup_$VERSION" | sudo -E bash -
 
 sudo apt -qqy update
-sudo apt -qqy install nodejs 
-sudo apt -qqy npm
+sudo apt -qqy install nodejs
 
+# npm comes with nodejs, no separate install needed
 npm install --global yarn
 
 node -v
