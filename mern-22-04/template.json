@@ -7,7 +7,7 @@
     "application_name": "MERN",
     "mongo_version": "6.0.4",
     "mongo_repo_version": "6.0",
-    "node_version": "node_19.x",
+    "node_version": "20.x",
     "application_version": ""
   },
   "sensitive-variables": ["do_api_token"],
