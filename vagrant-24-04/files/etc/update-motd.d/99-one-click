@@ -14,8 +14,6 @@ Vagrant is a tool for building and managing virtual machine environments in a
 single workflow. It uses infrastructure as code to configure, provision, and 
 manage virtual machines across multiple platforms.
 
-VERSION: 2.4.9
-
 ================================================================================
 QUICK START
 ================================================================================

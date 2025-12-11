@@ -365,7 +365,7 @@ vagrant up
 
 After deploying this droplet, you can immediately start using Vagrant to define and manage virtual machines. The installation includes:
 
-- **Vagrant 2.4.9** - Latest stable release
+- **Vagrant** - Latest stable release
 - **Essential Tools** - Git, build tools, and required dependencies
 - **Pre-configured UFW** - Basic firewall rules for security
 

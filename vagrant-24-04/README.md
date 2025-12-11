@@ -14,7 +14,7 @@ For more information, visit: https://developer.hashicorp.com/vagrant
 
 ## Included Components
 
-- **Vagrant 2.4.9** - Latest stable version
+- **Vagrant** - Latest stable version
 - **VirtualBox** - Primary hypervisor for Linux (full VM virtualization)
 - **Libvirt** - Native Linux virtualization (KVM/QEMU) with vagrant-libvirt plugin
 - **Git** - Version control system
@@ -198,7 +198,7 @@ vagrant destroy
 ### System Components
 
 The builder installs:
-- **Vagrant 2.4.9** - Latest stable version
+- **Vagrant** - Latest stable version
 - **VirtualBox** - Full VM hypervisor for Linux
 - **Libvirt/KVM** - Native Linux virtualization with vagrant-libvirt plugin
 - **Git** - Version control system
@@ -208,10 +208,7 @@ The builder installs:
 
 ### Vagrant Version
 
-The application version is set in `template.json`:
-```json
-"application_version": "2.4.9"
-```
+The application version is set in `template.json` using the `application_version` variable.
 
 To use a different version, modify this value in the template before building.
 
