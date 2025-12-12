@@ -76,7 +76,7 @@ Message of the Day file that displays:
 
 ### Prerequisites
 
-1. **Packer** - Install from https://www.hashicorp.com/products/terraform
+1. **Packer** - Install from https://www.hashicorp.com/en/products/packer
 2. **DigitalOcean API Token** - Get from https://cloud.digitalocean.com/account/api/tokens
 
 ### Build Steps
@@ -250,7 +250,7 @@ Edit `files/var/motd` to customize the welcome message shown when users SSH into
 ## Troubleshooting
 
 ### Build Fails During APT Update
-Ensure your DigitalOcean API token is valid and that you have sufficient quota in your account.
+Ensure your DigitalOcean API token is valid and that you have sufficient capacity in your account.
 
 ### Vagrant Installation Fails
 The installation relies on the HashiCorp APT repository. Check that:
