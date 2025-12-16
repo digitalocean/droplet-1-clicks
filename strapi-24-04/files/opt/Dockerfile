@@ -26,7 +26,7 @@ RUN npx create-strapi-app@5.0.0 app \
 WORKDIR /opt/app
 
 # Install PostgreSQL driver
-RUN npm install pg --save
+RUN npm install pg --save --ignore-scripts
 
 # Build the admin panel
 RUN npm run build
