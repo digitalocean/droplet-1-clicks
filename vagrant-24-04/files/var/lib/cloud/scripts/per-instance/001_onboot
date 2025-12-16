@@ -1,0 +1,29 @@
+#!/bin/bash
+#
+# Per-instance/onboot script for Vagrant 1-Click
+# This script runs on first boot to complete final configuration
+
+echo "=== Vagrant Droplet Initialization Starting ===" >> /var/log/vagrant-init.log
+
+# Remove the ssh force logout command that was added during build
+# This allows users to actually log in to the droplet
+echo "Removing SSH ForceCommand restriction..." >> /var/log/vagrant-init.log
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config 2>/dev/null || true
+
+# Restart SSH to apply the changes
+echo "Restarting SSH service..." >> /var/log/vagrant-init.log
+systemctl restart ssh 2>/dev/null || true
+
+# Start Libvirt service if available
+echo "Starting Libvirt service..." >> /var/log/vagrant-init.log
+systemctl start libvirtd 2>/dev/null || true
+
+echo "=== Vagrant Droplet Initialization Complete ===" >> /var/log/vagrant-init.log
+echo "System is ready. Vagrant providers available:" >> /var/log/vagrant-init.log
+echo "  - VirtualBox (primary for Linux)" >> /var/log/vagrant-init.log
+echo "  - Libvirt (KVM/QEMU)" >> /var/log/vagrant-init.log
+echo "  - VMware (requires plugin)" >> /var/log/vagrant-init.log
+echo "  - Hyper-V (Windows hosts)" >> /var/log/vagrant-init.log
+
