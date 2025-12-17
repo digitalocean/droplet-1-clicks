@@ -4,7 +4,7 @@
         "image_name": "rails-24-04-snapshot-{{timestamp}}",
         "apt_packages": "apt-transport-https ca-certificates curl software-properties-common git build-essential libsystemd-dev jq unzip docker.io",
         "application_name": "Rails",
-        "rails_version": "8.0.3",
+        "rails_version": "8.1.1",
         "ruby_version": "3.4.7"
     },
     "sensitive-variables": [
