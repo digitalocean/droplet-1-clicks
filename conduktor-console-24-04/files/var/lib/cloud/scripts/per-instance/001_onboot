@@ -11,10 +11,15 @@ if grep -q "PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT" /opt/conduktor/conduktor
     # At least 8 characters with 1 uppercase, 1 lowercase, 1 number, 1 special character
     NEW_ADMIN_PASSWORD=$(pwgen -s -y 16 1)
     
-    # Update the environment file with new passwords
-    sed -i "s|POSTGRES_PASSWORD=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT|POSTGRES_PASSWORD=$NEW_POSTGRES_PASSWORD|g" /opt/conduktor/conduktor.env
-    sed -i "s|CDK_ADMIN_PASSWORD=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT|CDK_ADMIN_PASSWORD=$NEW_ADMIN_PASSWORD|g" /opt/conduktor/conduktor.env
-    sed -i "s|:PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT@|:$NEW_POSTGRES_PASSWORD@|g" /opt/conduktor/conduktor.env
+    # Escape special characters for sed by replacing the passwords directly with printf
+    # Use a safe approach that handles all special characters
+    ESCAPED_POSTGRES_PASSWORD=$(printf '%s\n' "$NEW_POSTGRES_PASSWORD" | sed 's/[&/\]/\\&/g')
+    ESCAPED_ADMIN_PASSWORD=$(printf '%s\n' "$NEW_ADMIN_PASSWORD" | sed 's/[&/\]/\\&/g')
+    
+    # Update the environment file with new passwords using escaped values
+    sed -i "s|POSTGRES_PASSWORD=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT|POSTGRES_PASSWORD=$ESCAPED_POSTGRES_PASSWORD|g" /opt/conduktor/conduktor.env
+    sed -i "s|CDK_ADMIN_PASSWORD=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT|CDK_ADMIN_PASSWORD=$ESCAPED_ADMIN_PASSWORD|g" /opt/conduktor/conduktor.env
+    sed -i "s|:PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT@|:$ESCAPED_POSTGRES_PASSWORD@|g" /opt/conduktor/conduktor.env
     
     echo "Passwords generated successfully."
     echo ""
