@@ -5,8 +5,8 @@
     "image_name": "mongodb-24-04-snapshot-{{timestamp}}",
     "apt_packages": "wget curl gnupg2 software-properties-common apt-transport-https ca-certificates lsb-release",
     "application_name": "MongoDB",
-    "application_version": "7.0.0",
-    "repo_version": "7.0"
+    "application_version": "8.0.17",
+    "repo_version": "8.0"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
