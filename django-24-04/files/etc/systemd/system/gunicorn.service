@@ -1,0 +1,16 @@
+[Unit]
+Description=Gunicorn daemon for Django Project
+Before=nginx.service
+After=network.target
+
+[Service]
+WorkingDirectory=/home/django/django_project
+ExecStart=/usr/bin/gunicorn3 --name=django_project --pythonpath=/home/django/django_project --bind unix:/home/django/gunicorn.socket --config /etc/gunicorn.d/gunicorn.py django_project.wsgi:application
+Restart=always
+SyslogIdentifier=gunicorn
+User=django
+Group=django
+
+
+[Install]
+WantedBy=multi-user.target
