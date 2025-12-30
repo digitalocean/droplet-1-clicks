@@ -4,7 +4,7 @@ PASSWORD=$(base64 < /dev/urandom | head -c8)
 HASHED=$(echo -n "$PASSWORD" | sha256sum | tr -d '-')
 HASHED=$(echo -n "$HASHED" | xargs)
 
-echo "ClickHouse is now installed and configure. Enjoy it!"
+echo "ClickHouse is now installed and configured. Enjoy it!"
 echo ""
 echo "----------------------------------------------------------------------------"
 echo "Your default password is \"$PASSWORD\". To update it you can run:"
