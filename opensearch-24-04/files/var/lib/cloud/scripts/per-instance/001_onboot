@@ -1,0 +1,147 @@
+#!/bin/bash
+generate_password() {
+  local upper=$(< /dev/urandom tr -dc 'A-Z' | head -c 1)
+  local lower=$(< /dev/urandom tr -dc 'a-z' | head -c 1)
+  local digit=$(< /dev/urandom tr -dc '0-9' | head -c 1)
+  local special=$(< /dev/urandom tr -dc '!@#%^&*_+-=' | head -c 1)
+  local rest=$(< /dev/urandom tr -dc 'A-Za-z0-9!@#%^&*_+-=' | head -c 12)
+  echo "${upper}${lower}${digit}${special}${rest}" | fold -w1 | shuf | tr -d '\n'
+}
+source /root/packer_vars.sh
+application_version=$APPLICATION_VERSION
+export DEBIAN_FRONTEND=noninteractive
+
+# Generate password for OpenSearch admin user
+admin_opensearch_pass=$(generate_password)
+
+# Store the passwords securely
+cat > /root/.digitalocean_passwords << EOM
+admin_opensearch_password="${admin_opensearch_pass}"
+EOM
+chmod 600 /root/.digitalocean_passwords
+
+# Update and install OpenSearch and OpenSearch Dashboards
+sudo env OPENSEARCH_INITIAL_ADMIN_PASSWORD=${admin_opensearch_pass} apt-get install -y opensearch=${application_version} opensearch-dashboards=${application_version}
+
+export JAVA_HOME=/usr/share/opensearch/jdk
+
+# Disable the OpenSearch repository to prevent automatic updates
+sudo mv /etc/apt/sources.list.d/opensearch-${repo_version}.list /etc/apt/sources.list.d/opensearch-${repo_version}.list.disabled
+sudo mv /etc/apt/sources.list.d/opensearch-dashboards-${repo_version}.list /etc/apt/sources.list.d/opensearch-dashboards-${repo_version}.list.disabled
+
+# Generate certificates (root CA, node, and admin)
+mkdir -p /etc/opensearch/certs
+cd /etc/opensearch/certs
+
+openssl genrsa -out root-ca.key 2048
+openssl req -x509 -new -nodes -key root-ca.key -sha256 -days 365 -out root-ca.pem -subj "/C=US/ST=State/L=City/O=Organization/OU=Unit/CN=example.com"
+
+openssl genrsa -out opensearch.key 2048
+openssl req -new -key opensearch.key -out opensearch.csr -subj "/C=US/ST=State/L=City/O=Organization/OU=Unit/CN=opensearch-node"
+openssl x509 -req -in opensearch.csr -CA root-ca.pem -CAkey root-ca.key -CAcreateserial -out opensearch.pem -days 365 -sha256
+
+openssl genrsa -out admin.key 2048
+openssl req -new -key admin.key -out admin.csr -subj "/C=US/ST=State/L=City/O=Organization/OU=SSL/CN=admin"
+openssl x509 -req -in admin.csr -CA root-ca.pem -CAkey root-ca.key -CAcreateserial -out admin.pem -days 365 -sha256
+
+sudo chown -R opensearch:opensearch /etc/opensearch/certs
+sudo chmod 600 /etc/opensearch/certs/*
+
+# Create the OpenSearch configuration file
+cat <<EOF | sudo tee /etc/opensearch/opensearch.yml > /dev/null
+cluster.name: opensearch-cluster
+node.name: \${HOSTNAME}
+path.data: /var/lib/opensearch
+path.logs: /var/log/opensearch
+network.host: 0.0.0.0
+http.port: 9200
+discovery.seed_hosts: ["127.0.0.1"]
+cluster.initial_master_nodes: ["\${HOSTNAME}"]
+
+# SSL/TLS configuration for REST API
+plugins.security.ssl.http.enabled: true
+plugins.security.ssl.http.pemcert_filepath: certs/opensearch.pem
+plugins.security.ssl.http.pemkey_filepath: certs/opensearch.key
+plugins.security.ssl.http.pemtrustedcas_filepath: certs/root-ca.pem
+
+# SSL/TLS configuration for transport layer (node-to-node communication)
+plugins.security.ssl.transport.pemcert_filepath: certs/opensearch.pem
+plugins.security.ssl.transport.pemkey_filepath: certs/opensearch.key
+plugins.security.ssl.transport.pemtrustedcas_filepath: certs/root-ca.pem
+plugins.security.ssl.transport.enforce_hostname_verification: false
+
+# Security settings
+plugins.security.authcz.admin_dn:
+  - "CN=admin,OU=SSL,O=Organization,L=City,ST=State,C=US"
+EOF
+
+# Set proper permissions for the OpenSearch configuration file
+sudo chmod 600 /etc/opensearch/opensearch.yml
+sudo chown opensearch:opensearch /etc/opensearch/opensearch.yml
+
+# Create the OpenSearch Dashboards configuration file
+cat <<EOF | sudo tee /etc/opensearch-dashboards/opensearch_dashboards.yml > /dev/null
+server.host: "0.0.0.0"
+server.port: 5601
+server.ssl.enabled: true
+server.ssl.certificate: /etc/opensearch/certs/opensearch.pem
+server.ssl.key: /etc/opensearch/certs/opensearch.key
+opensearch.hosts: ["https://localhost:9200"]
+opensearch.ssl.verificationMode: none
+opensearch.username: "admin"
+opensearch.password: "${admin_opensearch_pass}"
+EOF
+
+# Set proper permissions for the OpenSearch Dashboards configuration file
+sudo chmod 640 /etc/opensearch-dashboards/opensearch_dashboards.yml
+sudo chown opensearch-dashboards:opensearch-dashboards /etc/opensearch-dashboards/opensearch_dashboards.yml
+
+# Add opensearch-dashboards user to opensearch group to access certificates
+sudo usermod -a -G opensearch opensearch-dashboards
+sudo chown opensearch:opensearch /etc/opensearch/certs/opensearch.pem
+sudo chown opensearch:opensearch /etc/opensearch/certs/opensearch.key
+sudo chmod 640 /etc/opensearch/certs/opensearch.pem
+sudo chmod 640 /etc/opensearch/certs/opensearch.key
+
+# Remove demo certificates
+sudo rm -rf /etc/opensearch/*.pem
+sudo rm -rf /etc/opensearch/*.key
+sudo rm -rf /etc/opensearch/*.crt
+
+# Start OpenSearch
+sudo systemctl enable opensearch
+sudo systemctl start opensearch
+
+# Wait for OpenSearch to start
+sleep 10
+
+# Run securityadmin.sh on the running cluster
+/usr/share/opensearch/plugins/opensearch-security/tools/securityadmin.sh \
+    -cd /etc/opensearch/opensearch-security/ \
+    -icl -nhnv \
+    -cacert /etc/opensearch/certs/root-ca.pem \
+    -cert /etc/opensearch/certs/admin.pem \
+    -key /etc/opensearch/certs/admin.key
+
+# Set permissions for security files
+sudo chown -R opensearch:opensearch /etc/opensearch/opensearch-security
+sudo chmod 600 /etc/opensearch/opensearch-security/*
+
+# Restart OpenSearch to apply changes
+sudo systemctl restart opensearch
+
+# Start OpenSearch Dashboards
+sudo systemctl enable opensearch-dashboards
+sudo systemctl start opensearch-dashboards
+
+# Allow OpenSearch and Dashboards ports in the firewall
+sudo ufw allow 9200/tcp
+sudo ufw allow 5601/tcp
+
+# Remove the SSH force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+# Restart SSH service
+systemctl restart ssh

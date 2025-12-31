@@ -1,0 +1,45 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+# Read in the passwords....
+. /root/.digitalocean_passwords
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's 1-Click OpenSearch Droplet.
+To keep this Droplet secure, the UFW firewall is enabled.
+All ports are BLOCKED except 22 (SSH), 80 (HTTP), 443 (HTTPS), 9200 (OpenSearch) and 5601 (OpenSearch Dashboard).
+
+Use the following credentials to manage OpenSearch:
+    Username: admin
+    Password: ${admin_opensearch_password}
+
+Connection string for your OpenSearch:
+  https://admin:${admin_opensearch_password}@${myip}:9200
+
+In a web browser, you can view:
+ * OpenSearch API: https://${myip}:9200
+ * OpenSearch Dashoards: https://${myip}:5601
+
+On the server:
+  * OpenSearch configuration is located at /etc/opensearch/opensearch.yml
+  * OpenSearch data is stored in /var/lib/opensearch
+  * Logs are stored in /var/log/opensearch
+  * The passwords and keys are saved in /root/.digitalocean_passwords
+
+For help and more information, visit https://opensearch.org/docs/
+
+********************************************************************************
+NOTE:  This image includes version 7.0.0 of OpenSearch.
+To upgrade to a newer release, run the following commands:
+
+sudo mv /etc/apt/sources.list.d/opensearch.list.disabled /etc/apt/sources.list.d/opensearch.list
+sudo apt-get update
+sudo apt-get upgrade
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
