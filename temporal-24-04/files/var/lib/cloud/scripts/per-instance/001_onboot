@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# Add first-login task
+cat >> /root/.bashrc <<EOM
+cd /srv/temporal
+bash gen-ca.sh
+bash start-temporal.sh
+cp -f /etc/skel/.bashrc /root/.bashrc
+EOM
+
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
