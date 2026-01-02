@@ -36,8 +36,8 @@ For help and more information, visit https://opensearch.org/docs/
 NOTE:  This image includes version 3.4.0 of OpenSearch.
 To upgrade to a newer release, run the following commands:
 
-sudo mv /etc/apt/sources.list.d/opensearch-%repo_version%.list.disabled /etc/apt/sources.list.d/opensearch-%repo_version%.list
-sudo mv /etc/apt/sources.list.d/opensearch-dashboards-%repo_version%.list.disabled /etc/apt/sources.list.d/opensearch-dashboards-%repo_version%.list
+sudo mv /etc/apt/sources.list.d/opensearch-3.x.list.disabled /etc/apt/sources.list.d/opensearch-3.x.list
+sudo mv /etc/apt/sources.list.d/opensearch-dashboards-3.x.list.disabled /etc/apt/sources.list.d/opensearch-dashboards-3.x.list
 sudo apt-get update
 sudo apt-get upgrade
 
