@@ -18,42 +18,9 @@ sed -e '/Match User root/d' \
     -e '/.*ForceCommand.*droplet.*/d' \
     -i /etc/ssh/sshd_config
 
+cat >> /root/.bashrc <<EOM
+chmod +x /etc/clawdbot_setup.sh
+/etc/clawdbot_setup.sh
+EOM
+
 systemctl restart ssh
-
-# Create minimal Clawdbot config if it doesn't exist
-if [ ! -f "/home/clawdbot/.clawdbot/clawdbot.json" ]; then
-    echo "Creating minimal Clawdbot configuration..."
-    mkdir -p /home/clawdbot/.clawdbot
-    cat > /home/clawdbot/.clawdbot/clawdbot.json << 'CONFIGEOF'
-{
-  "gateway": {
-    "mode": "local",
-    "bind": "loopback",
-    "trustedProxies": ["127.0.0.1"],
-  },
-  "agents": {
-    "defaults": {
-      "sandbox": {
-        "mode": "all"
-      }
-    }
-  }
-}
-CONFIGEOF
-    chown clawdbot:clawdbot /home/clawdbot/.clawdbot/clawdbot.json
-    chmod 644 /home/clawdbot/.clawdbot/clawdbot.json
-fi
-
-# Start the Clawdbot service
-echo "Starting Clawdbot Gateway service..."
-systemctl start clawdbot
-
-# Wait for service to start
-sleep 3
-
-# Display status
-if systemctl is-active --quiet clawdbot; then
-    echo "✅ Clawdbot Gateway started successfully!"
-else
-    echo "⚠️  Clawdbot service may need configuration. Check with: systemctl status clawdbot"
-fi
