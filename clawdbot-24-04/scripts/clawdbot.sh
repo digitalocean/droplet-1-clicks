@@ -108,7 +108,7 @@ Environment="NODE_ENV=production"
 Environment="PATH=/usr/local/bin:/usr/bin:/bin"
 
 # Start command - uses the gateway executable with allow-unconfigured for initial setup
-ExecStart=/usr/bin/node /opt/clawdbot/dist/index.js gateway --port ${CLAWDBOT_GATEWAY_PORT} --bind ${CLAWDBOT_GATEWAY_BIND} --allow-unconfigured
+ExecStart=/usr/bin/node /opt/clawdbot/dist/index.js gateway --port ${CLAWDBOT_GATEWAY_PORT} --allow-unconfigured
 
 # Restart policy
 Restart=always
