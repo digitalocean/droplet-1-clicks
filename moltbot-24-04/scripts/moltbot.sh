@@ -14,6 +14,25 @@ curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /
 apt-get update
 apt-get install -y caddy
 
+# Create Caddy log directory and configure JSON access logging
+mkdir -p /var/log/caddy
+chown caddy:caddy /var/log/caddy
+
+# Create Caddyfile with JSON logging
+cat > /etc/caddy/Caddyfile << 'CADDY_EOF'
+{
+  log {
+    output file /var/log/caddy/access.json
+    format json
+  }
+}
+
+# Placeholder for domain-specific config (will be replaced by enable-https script)
+:18789 {
+  respond "Gateway not configured. Run /opt/enable-https-moltbot.sh to set up HTTPS."
+}
+CADDY_EOF
+
 # Install Node.js 22 (required for Moltbot)
 curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
 apt-get install -y nodejs
@@ -318,6 +337,26 @@ su - moltbot -c "cd /opt/moltbot && pnpm ui:build"
 cd /opt/moltbot
 bash scripts/sandbox-setup.sh || echo "Warning: Sandbox image build failed, will be built on first use"
 
-# Enable but don't start the services yet (will start after onboot configuration)
+# Configure Fail2ban for Caddy 403 responses
+cat > /etc/fail2ban/filter.d/caddy-403.conf << 'F2B_FILTER_EOF'
+[Definition]
+failregex = ^.*"remote_ip"\s*:\s*"<HOST>".*"status"\s*:\s*403\b.*$
+ignoreregex =
+F2B_FILTER_EOF
+
+cat > /etc/fail2ban/jail.d/caddy-403.local << 'F2B_JAIL_EOF'
+[caddy-403]
+enabled  = true
+filter   = caddy-403
+logpath  = /var/log/caddy/access.json
+backend  = auto
+maxretry = 5
+findtime = 60
+bantime  = 3600
+ignoreip = 127.0.0.1/8 ::1
+F2B_JAIL_EOF
+
+# Enable services (will start after onboot configuration)
 systemctl enable moltbot
 systemctl enable caddy
+systemctl enable fail2ban

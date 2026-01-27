@@ -2,7 +2,7 @@
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "moltbot-24-04-snapshot-{{timestamp}}",
-    "apt_packages": "apt-transport-https ca-certificates curl software-properties-common git build-essential libsystemd-dev jq unzip docker.io",
+    "apt_packages": "apt-transport-https ca-certificates curl software-properties-common git build-essential libsystemd-dev jq unzip docker.io fail2ban",
     "application_name": "Moltbot",
     "application_version": "Latest"
   },
