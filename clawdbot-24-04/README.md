@@ -146,13 +146,33 @@ Wrapper to run CLI commands as the clawdbot user:
 - Service runs as unprivileged `clawdbot` user
 - Docker sandboxing available for tool execution
 - DM pairing enabled by default
+- Fail2ban is preconfigured to ban IPs emitting repeated HTTP 403s in the Caddy access log
 
 ## Network Ports
 
 - **22** - SSH (limited by UFW)
-- **80** - HTTP (for future reverse proxy)
-- **443** - HTTPS (for future reverse proxy)
+- **80** - HTTP (Caddy/HTTP challenge)
+- **443** - HTTPS (Caddy reverse proxy)
 - **18789** - Clawdbot Gateway
+
+## HTTPS and Custom Domains
+
+Caddy is preinstalled to handle TLS. After pointing a domain at the droplet, run:
+
+```bash
+sudo /opt/setup-clawdbot-domain.sh
+```
+
+The script will prompt for your domain (and optional email for Let's Encrypt), set the gateway bind to `127.0.0.1`, write the Caddyfile, and restart Caddy and Clawdbot. Caddy will obtain and renew certificates automatically.
+
+## Abuse Protection
+
+Fail2ban watches `/var/log/caddy/access.json` for repeated 403 responses and bans offenders.
+
+```bash
+sudo fail2ban-client status caddy-403
+sudo fail2ban-regex /var/log/caddy/access.json /etc/fail2ban/filter.d/caddy-403.conf
+```
 
 ## Testing
 

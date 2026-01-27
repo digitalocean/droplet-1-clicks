@@ -27,7 +27,16 @@ if [ ! -f "/home/clawdbot/.clawdbot/clawdbot.json" ]; then
     cat > /home/clawdbot/.clawdbot/clawdbot.json << 'CONFIGEOF'
 {
   "gateway": {
-    "mode": "local"
+    "mode": "local",
+    "bind": "loopback",
+    "trustedProxies": ["127.0.0.1"],
+  },
+  "agents": {
+    "defaults": {
+      "sandbox": {
+        "mode": "all"
+      }
+    }
   }
 }
 CONFIGEOF

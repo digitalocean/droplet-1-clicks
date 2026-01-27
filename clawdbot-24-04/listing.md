@@ -193,13 +193,14 @@ This script will:
 
 ### Custom Domain with HTTPS
 
-For production use, we recommend setting up a reverse proxy with Nginx or Caddy:
+For production use, we recommend setting up a reverse proxy with Caddy (preinstalled) or Nginx:
 
 1. Point your domain to the Droplet's IP
-2. Install and configure a reverse proxy
-3. Enable SSL/TLS with Let's Encrypt
-4. Update `CLAWDBOT_GATEWAY_BIND` in `/opt/clawdbot.env` to `127.0.0.1`
-5. Configure the proxy to forward to `localhost:18789`
+2. Run `sudo /opt/setup-clawdbot-domain.sh` to supply the domain (and optional email)
+3. The script sets `CLAWDBOT_GATEWAY_BIND=127.0.0.1`, writes `/etc/caddy/Caddyfile`, enables HTTPS with Let's Encrypt, and reloads services
+4. If you prefer Nginx, configure it to proxy `localhost:18789` and bind the gateway to `127.0.0.1`
+
+Fail2ban is preconfigured to watch `/var/log/caddy/access.json` and ban IPs that trigger repeated HTTP 403 responses. Check status with `fail2ban-client status caddy-403`.
 
 ### Sandbox Configuration
 

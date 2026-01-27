@@ -2,7 +2,7 @@
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "clawdbot-24-04-snapshot-{{timestamp}}",
-    "apt_packages": "apt-transport-https ca-certificates curl software-properties-common git build-essential libsystemd-dev jq unzip docker.io",
+    "apt_packages": "apt-transport-https ca-certificates curl software-properties-common git build-essential libsystemd-dev jq unzip docker.io gnupg fail2ban",
     "application_name": "Clawdbot",
     "application_version": "v2026.1.24-1"
   },
@@ -68,8 +68,7 @@
       "scripts": [
         "clawdbot-24-04/scripts/clawdbot.sh",
         "common/scripts/018-force-ssh-logout.sh",
-        "common/scripts/020-application-tag.sh",
-        "common/scripts/900-cleanup.sh"
+        "common/scripts/020-application-tag.sh"
       ]
     }
   ]

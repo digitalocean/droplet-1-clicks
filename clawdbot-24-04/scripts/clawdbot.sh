@@ -19,6 +19,16 @@ apt-get install -y nodejs
 corepack enable
 corepack prepare pnpm@latest --activate
 
+# Install Caddy (reverse proxy with automatic TLS)
+curl -1sLf "https://dl.cloudsmith.io/public/caddy/stable/gpg.key" | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+echo "deb [signed-by=/usr/share/keyrings/caddy-stable-archive-keyring.gpg] https://dl.cloudsmith.io/public/caddy/stable/deb/debian any-version main" > /etc/apt/sources.list.d/caddy-stable.list
+apt-get update -y
+apt-get install -y caddy
+mkdir -p /var/log/caddy
+chown -R caddy:caddy /var/log/caddy
+touch /var/log/caddy/access.json
+chown caddy:caddy /var/log/caddy/access.json
+
 # Create clawdbot user
 useradd -m -s /bin/bash clawdbot || true
 
@@ -241,11 +251,81 @@ cat > /opt/clawdbot-cli.sh << 'EOF'
 su - clawdbot -c "cd /opt/clawdbot && node dist/index.js $*"
 EOF
 
+# Create domain setup script
+cat > /opt/setup-clawdbot-domain.sh << 'EOF'
+#!/bin/bash
+set -euo pipefail
+
+PORT=18789
+BIND_IP=127.0.0.1
+
+read -rp "Enter the domain you pointed at this droplet (e.g. bot.example.com): " DOMAIN
+if [ -z "${DOMAIN}" ]; then
+    echo "Domain cannot be empty."
+    exit 1
+fi
+
+read -rp "Enter an email for Let's Encrypt notifications (optional): " EMAIL
+
+if grep -q '^CLAWDBOT_GATEWAY_BIND=' /opt/clawdbot.env; then
+    sed -i "s/^CLAWDBOT_GATEWAY_BIND=.*/CLAWDBOT_GATEWAY_BIND=${BIND_IP}/" /opt/clawdbot.env
+else
+    echo "CLAWDBOT_GATEWAY_BIND=${BIND_IP}" >> /opt/clawdbot.env
+fi
+
+{
+    cat > /etc/caddy/Caddyfile << CADDYEOC
+${DOMAIN} {
+    encode gzip
+    reverse_proxy ${BIND_IP}:${PORT}
+    log {
+        output file /var/log/caddy/access.json
+        format json
+    }
+}
+CADDYEOC
+    if [ -n "$EMAIL" ]; then
+        # Prepend email directive for Let's Encrypt account binding
+        sed -i "1iemail ${EMAIL}" /etc/caddy/Caddyfile
+    fi
+}
+
+systemctl enable caddy
+systemctl restart caddy
+systemctl restart clawdbot
+
+echo "Caddy is now proxying https://${DOMAIN} to ${BIND_IP}:${PORT}."
+echo "Gateway bind set to ${BIND_IP}. You can adjust /opt/clawdbot.env and rerun this script if needed."
+EOF
+
+# Configure fail2ban to block repeated 403s from Caddy
+cat > /etc/fail2ban/filter.d/caddy-403.conf << 'EOF'
+[Definition]
+failregex = ^.*"remote_ip"\s*:\s*"<HOST>".*"status"\s*:\s*403\b.*$
+ignoreregex =
+EOF
+
+cat > /etc/fail2ban/jail.d/caddy-403.local << 'EOF'
+[caddy-403]
+enabled  = true
+filter   = caddy-403
+logpath  = /var/log/caddy/access.json
+backend  = auto
+maxretry = 5
+findtime = 60
+bantime  = 3600
+ignoreip = 127.0.0.1/8 ::1 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
+EOF
+
+systemctl enable fail2ban
+systemctl restart fail2ban
+
 # Make all scripts executable
 chmod +x /opt/restart-clawdbot.sh
 chmod +x /opt/status-clawdbot.sh
 chmod +x /opt/update-clawdbot.sh
 chmod +x /opt/clawdbot-cli.sh
+chmod +x /opt/setup-clawdbot-domain.sh
 
 # Build Clawdbot as clawdbot user
 cd /opt/clawdbot
