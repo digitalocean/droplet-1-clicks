@@ -1,5 +1,9 @@
 #!/bin/sh
 
+APP_VERSION="${application_version:-Latest}"
+REPO_URL="https://github.com/clawdbot/clawdbot.git"
+REPO_DIR="/opt/clawdbot"
+
 # Open required ports
 ufw allow 80
 ufw allow 443
@@ -19,10 +23,15 @@ corepack prepare pnpm@latest --activate
 useradd -m -s /bin/bash clawdbot || true
 
 # Clone the Clawdbot repository
-cd /opt && git clone https://github.com/clawdbot/clawdbot.git
+cd /opt && git clone "$REPO_URL" "$REPO_DIR"
+cd "$REPO_DIR"
+git fetch --tags
+if [ "$APP_VERSION" != "Latest" ]; then
+    git checkout "$APP_VERSION"
+fi
 
 # Set ownership
-chown -R clawdbot:clawdbot /opt/clawdbot
+chown -R clawdbot:clawdbot "$REPO_DIR"
 
 # Create clawdbot home directory and config directory
 mkdir -p /home/clawdbot/.clawdbot
@@ -31,11 +40,14 @@ chown -R clawdbot:clawdbot /home/clawdbot/.clawdbot
 chown -R clawdbot:clawdbot /home/clawdbot/clawd
 
 # Create environment file (will be configured on first boot)
-cat > /opt/clawdbot.env << 'EOF'
+cat > /opt/clawdbot.env << EOF
 # Clawdbot Environment Configuration
 # 
 # After making changes to this file, restart Clawdbot with:
 #   systemctl restart clawdbot
+
+# Installed Clawdbot version
+CLAWDBOT_VERSION=${APP_VERSION}
 
 # Gateway Configuration
 CLAWDBOT_GATEWAY_PORT=18789
@@ -147,9 +159,17 @@ cat > /opt/update-clawdbot.sh << 'EOF'
 #!/bin/bash
 
 # Clawdbot Update Script
-# This script pulls the latest Clawdbot code from GitHub and restarts the service
+# This script pulls the desired Clawdbot version from GitHub and restarts the service
 
-echo "Updating Clawdbot to latest version..."
+APP_VERSION="Latest"
+if [ -f "/opt/clawdbot.env" ]; then
+    APP_VERSION_VALUE=$(grep -E '^CLAWDBOT_VERSION=' /opt/clawdbot.env | tail -n 1 | cut -d'=' -f2-)
+    if [ -n "$APP_VERSION_VALUE" ]; then
+        APP_VERSION="$APP_VERSION_VALUE"
+    fi
+fi
+
+echo "Updating Clawdbot (target version: ${APP_VERSION})..."
 
 # Check if Clawdbot installation exists
 if [ ! -d "/opt/clawdbot" ]; then
@@ -161,17 +181,27 @@ fi
 echo "Stopping Clawdbot service..."
 systemctl stop clawdbot
 
-# Navigate to Clawdbot directory
 cd /opt/clawdbot
 
 # Stash any local changes
 git stash
 
-# Pull latest code from GitHub
-echo "Pulling latest code from GitHub..."
-git pull origin main
+echo "Fetching updates from GitHub..."
+git fetch --tags --all
 
-# Check if there were any updates
+if [ "$APP_VERSION" = "Latest" ]; then
+    TARGET_REF="main"
+    echo "Checking out branch ${TARGET_REF}..."
+    git checkout "${TARGET_REF}"
+    echo "Pulling latest code from ${TARGET_REF}..."
+    git pull origin "${TARGET_REF}"
+else
+    TARGET_REF="$APP_VERSION"
+    echo "Checking out tagged release ${TARGET_REF}..."
+    git checkout "${TARGET_REF}"
+    git reset --hard "${TARGET_REF}"
+fi
+
 if [ $? -eq 0 ]; then
     echo "Code updated successfully. Rebuilding..."
     

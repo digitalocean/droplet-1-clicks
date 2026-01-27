@@ -4,7 +4,7 @@
     "image_name": "clawdbot-24-04-snapshot-{{timestamp}}",
     "apt_packages": "apt-transport-https ca-certificates curl software-properties-common git build-essential libsystemd-dev jq unzip docker.io",
     "application_name": "Clawdbot",
-    "application_version": "Latest"
+    "application_version": "v2026.1.24-1"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
