@@ -1,9 +1,9 @@
 {
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
-    "image_name": "clawdbot-24-04-snapshot-{{timestamp}}",
+    "image_name": "moltbot-24-04-snapshot-{{timestamp}}",
     "apt_packages": "apt-transport-https ca-certificates curl software-properties-common git build-essential libsystemd-dev jq unzip docker.io",
-    "application_name": "Clawdbot",
+    "application_name": "Moltbot",
     "application_version": "Latest"
   },
   "sensitive-variables": ["do_api_token"],
@@ -32,12 +32,12 @@
     },
     {
       "type": "file",
-      "source": "clawdbot-24-04/files/etc/",
+      "source": "moltbot-24-04/files/etc/",
       "destination": "/etc/"
     },
     {
       "type": "file",
-      "source": "clawdbot-24-04/files/var/",
+      "source": "moltbot-24-04/files/var/",
       "destination": "/var/"
     },
     {
@@ -66,7 +66,7 @@
         "LC_CTYPE=en_US.UTF-8"
       ],
       "scripts": [
-        "clawdbot-24-04/scripts/clawdbot.sh",
+        "moltbot-24-04/scripts/moltbot.sh",
         "common/scripts/018-force-ssh-logout.sh",
         "common/scripts/020-application-tag.sh",
         "common/scripts/900-cleanup.sh"

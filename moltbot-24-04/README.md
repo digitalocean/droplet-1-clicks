@@ -1,21 +1,22 @@
-# Clawdbot 1-Click Droplet
+# Moltbot 1-Click Droplet
 
-This Packer configuration creates a DigitalOcean Marketplace 1-Click Droplet for Clawdbot, a personal AI assistant platform.
+This Packer configuration creates a DigitalOcean Marketplace 1-Click Droplet for Moltbot, a personal AI assistant platform.
 
 ## Overview
 
-Clawdbot is a personal AI assistant you run on your own infrastructure. This 1-Click installs and configures Clawdbot on Ubuntu 24.04 with:
+Moltbot is a personal AI assistant you run on your own infrastructure. This 1-Click installs and configures Moltbot on Ubuntu 24.04 with:
 
 - Node.js 22 runtime
 - Docker for sandboxed execution
-- Clawdbot Gateway service
+- Moltbot Gateway service
 - Web-based control UI
 - Helper scripts for management
 
 ## What Gets Installed
 
-- **Clawdbot** - Latest version from GitHub
+- **Moltbot** - Latest version from GitHub
 - **Node.js 22** - Required runtime
+- **Caddy 2** - Web server with automatic HTTPS
 - **Docker** - For sandboxed tool execution
 - **pnpm** - Package manager
 - **Systemd service** - Auto-starting gateway service
@@ -25,18 +26,20 @@ Clawdbot is a personal AI assistant you run on your own infrastructure. This 1-C
 ## Directory Structure
 
 ```
-/opt/clawdbot/              - Clawdbot installation
-/opt/clawdbot.env           - Environment configuration
-/opt/restart-clawdbot.sh    - Restart helper script
-/opt/status-clawdbot.sh     - Status check script
-/opt/update-clawdbot.sh     - Update helper script
-/opt/clawdbot-cli.sh        - CLI wrapper script
+/opt/moltbot/              - Moltbot installation
+/opt/moltbot.env           - Environment configuration
+/opt/restart-moltbot.sh    - Restart helper script
+/opt/status-moltbot.sh     - Status check script
+/opt/update-moltbot.sh     - Update helper script
+/opt/moltbot-cli.sh        - CLI wrapper script
+/opt/enable-https-moltbot.sh - HTTPS setup script
 
-/home/clawdbot/             - Clawdbot user home
-/home/clawdbot/.clawdbot/   - Configuration directory
-/home/clawdbot/clawd/       - Agent workspace
+/home/moltbot/             - Moltbot user home
+/home/moltbot/.moltbot/   - Configuration directory
+/home/moltbot/molt/       - Agent workspace
 
-/etc/systemd/system/clawdbot.service - Service definition
+/etc/caddy/Caddyfile        - Caddy reverse proxy config
+/etc/systemd/system/moltbot.service - Service definition
 /etc/update-motd.d/99-one-click      - Login message
 ```
 
@@ -53,13 +56,13 @@ Clawdbot is a personal AI assistant you run on your own infrastructure. This 1-C
 From the repository root:
 
 ```bash
-packer build clawdbot-24-04/template.json
+packer build moltbot-24-04/template.json
 ```
 
 Or using the Makefile (if available):
 
 ```bash
-make build-clawdbot-24-04
+make build-moltbot-24-04
 ```
 
 ## Configuration
@@ -71,79 +74,102 @@ The installation creates a default configuration that needs to be customized:
 After deployment, users must configure at least one AI model provider:
 
 1. SSH into the Droplet
-2. Edit `/opt/clawdbot.env`
+2. Edit `/opt/moltbot.env`
 3. Add API key for Anthropic or OpenAI:
    ```bash
    ANTHROPIC_API_KEY=your_key_here
    # OR
    OPENAI_API_KEY=your_key_here
    ```
-4. Restart the service: `systemctl restart clawdbot`
+4. Restart the service: `systemctl restart moltbot`
 
 ### Optional Configuration
 
-- **Messaging channels** - Configure tokens in `/opt/clawdbot.env`
-- **Detailed settings** - Edit `/home/clawdbot/.clawdbot/clawdbot.json`
-- **Gateway settings** - Port, bind address, etc. in `/opt/clawdbot.env`
+- **Messaging channels** - Configure tokens in `/opt/moltbot.env`
+- **Detailed settings** - Edit `/home/moltbot/.moltbot/moltbot.json`
+- **Gateway settings** - Port, bind address, etc. in `/opt/moltbot.env`
 
 ## First Boot
 
 On first boot, the `001_onboot` script:
 
 1. Generates a unique gateway token
-2. Saves token to `/home/clawdbot/.clawdbot/gateway-token.txt`
-3. Runs initial onboarding (non-interactive)
-4. Starts the Clawdbot service
+2. Saves token to `/home/moltbot/.moltbot/gateway-token.txt`
+3. Creates minimal configuration with gateway.mode=local
+4. Starts the Moltbot service
+5. Starts Caddy web server (ready for HTTPS setup)
 
-Users can access the gateway at `http://droplet-ip:18789` with the generated token.
+Users can access the gateway at `http://droplet-ip:18789` with the generated token, or set up HTTPS with `/opt/enable-https-moltbot.sh`.
+
+## HTTPS Setup
+
+To enable HTTPS with automatic Let's Encrypt certificates:
+
+1. Point a domain to the Droplet's IP address
+2. Wait for DNS propagation
+3. Run: `/opt/enable-https-moltbot.sh`
+4. Enter your domain when prompted
+
+The script will:
+- Configure Caddy as a reverse proxy
+- Obtain SSL certificates automatically
+- Update Gateway to bind to localhost
+- Enable secure WebSocket connections
 
 ## Service Management
 
-The Clawdbot Gateway runs as a systemd service:
+The Moltbot Gateway runs as a systemd service:
 
 ```bash
 # Status
-systemctl status clawdbot
+systemctl status moltbot
 
 # Start
-systemctl start clawdbot
+systemctl start moltbot
 
 # Stop
-systemctl stop clawdbot
+systemctl stop moltbot
 
 # Restart
-systemctl restart clawdbot
+systemctl restart moltbot
 
 # Logs
-journalctl -u clawdbot -f
+journalctl -u moltbot -f
 ```
 
 ## Helper Scripts
 
-### restart-clawdbot.sh
+### restart-moltbot.sh
 Restarts the service and checks status
 
-### status-clawdbot.sh
+### status-moltbot.sh
 Shows service status, gateway token, and URL
 
-### update-clawdbot.sh
+### update-moltbot.sh
 Updates to latest version from GitHub:
 - Stops service
 - Pulls latest code
 - Rebuilds application
 - Restarts service
 
-### clawdbot-cli.sh
-Wrapper to run CLI commands as the clawdbot user:
+### moltbot-cli.sh
+Wrapper to run CLI commands as the moltbot user:
 ```bash
-/opt/clawdbot-cli.sh <command>
+/opt/moltbot-cli.sh <command>
 ```
+
+### enable-https-moltbot.sh
+Configures Caddy reverse proxy with automatic Let's Encrypt SSL:
+- Prompts for domain name
+- Configures Caddyfile
+- Updates Gateway to bind to localhost
+- Obtains SSL certificates automatically
 
 ## Security
 
 - Gateway token auto-generated per instance
 - Firewall configured with UFW
-- Service runs as unprivileged `clawdbot` user
+- Service runs as unprivileged `moltbot` user
 - Docker sandboxing available for tool execution
 - DM pairing enabled by default
 
@@ -152,7 +178,7 @@ Wrapper to run CLI commands as the clawdbot user:
 - **22** - SSH (limited by UFW)
 - **80** - HTTP (for future reverse proxy)
 - **443** - HTTPS (for future reverse proxy)
-- **18789** - Clawdbot Gateway
+- **18789** - Moltbot Gateway
 
 ## Testing
 
@@ -160,8 +186,8 @@ After building, test the image by:
 
 1. Creating a Droplet from the snapshot
 2. SSH in and verify MOTD displays
-3. Check service status: `systemctl status clawdbot`
-4. Retrieve gateway token: `/opt/status-clawdbot.sh`
+3. Check service status: `systemctl status moltbot`
+4. Retrieve gateway token: `/opt/status-moltbot.sh`
 5. Access UI: `http://droplet-ip:18789`
 6. Configure an API key and test functionality
 
@@ -194,10 +220,10 @@ The sandbox image build may fail if Docker isn't fully initialized. This is hand
 
 ### Service Won't Start
 Check:
-- `/opt/clawdbot/dist/index.js` exists (build completed)
-- Dependencies installed in `/opt/clawdbot/node_modules`
-- Permissions on `/home/clawdbot` directories
-- Logs: `journalctl -u clawdbot -xe`
+- `/opt/moltbot/dist/index.js` exists (build completed)
+- Dependencies installed in `/opt/moltbot/node_modules`
+- Permissions on `/home/moltbot` directories
+- Logs: `journalctl -u moltbot -xe`
 
 ## Marketplace Requirements
 
@@ -214,8 +240,8 @@ This 1-Click meets DigitalOcean Marketplace requirements:
 
 ## Resources
 
-- **Clawdbot GitHub**: https://github.com/clawdbot/clawdbot
-- **Documentation**: https://docs.clawd.bot/
+- **Moltbot GitHub**: https://github.com/moltbot/moltbot
+- **Documentation**: https://docs.molt.bot/
 - **Marketplace Guidelines**: https://www.digitalocean.com/community/tutorials/how-to-create-a-digitalocean-marketplace-1-click-app
 
 ## Notes
@@ -224,8 +250,8 @@ This 1-Click meets DigitalOcean Marketplace requirements:
 - First build includes full dependency installation and compilation
 - Sandbox image is built during provisioning
 - Gateway token is unique per Droplet instance
-- All data persists in `/home/clawdbot/` directories
+- All data persists in `/home/moltbot/` directories
 
 ## License
 
-This 1-Click configuration follows the same MIT License as Clawdbot itself.
+This 1-Click configuration follows the same MIT License as Moltbot itself.

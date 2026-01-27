@@ -1,0 +1,60 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+gateway_token=$(grep "^MOLTBOT_GATEWAY_TOKEN=" /opt/moltbot.env 2>/dev/null | cut -d'=' -f2)
+
+cat <<EOF
+********************************************************************************
+
+Welcome to Moltbot - Your Personal AI Assistant
+
+Moltbot is a personal AI assistant you run on your own devices. It answers you 
+on the channels you already use (WhatsApp, Telegram, Slack, Discord, and more).
+
+🌐 Control UI & Gateway Access:
+  Gateway URL (with token): http://$myip:18789?token=$gateway_token
+  
+  Copy and paste the full URL above into your browser to access the Control UI.
+  
+🔒 Enable HTTPS (Recommended):
+  Point your domain to this IP, then run:
+  /opt/enable-https-moltbot.sh
+  
+  Caddy will automatically obtain Let's Encrypt SSL certificates.
+
+📝 Configuration:
+  Edit settings: /opt/moltbot.env
+  User config: /home/moltbot/.moltbot/moltbot.json
+  
+🔧 Management Commands:
+  Restart service: systemctl restart moltbot
+  Check status: systemctl status moltbot
+  View logs: journalctl -u moltbot -f
+  
+  Or use helper scripts:
+  - /opt/restart-moltbot.sh       (restart with status check)
+  - /opt/status-moltbot.sh        (show status and token)
+  - /opt/update-moltbot.sh        (update to latest version)
+  - /opt/moltbot-cli.sh           (run CLI commands)
+  - /opt/enable-https-moltbot.sh  (setup HTTPS with your domain)
+
+🔑 Add AI Model Provider:
+  Edit /opt/moltbot.env and add your API key:
+  - ANTHROPIC_API_KEY=your_key_here (recommended)
+  - OPENAI_API_KEY=your_key_here
+  
+  Then restart: systemctl restart moltbot
+
+📱 Configure Messaging Channels:
+  1. Edit /opt/moltbot.env with your channel tokens
+  2. Or use CLI: /opt/moltbot-cli.sh channels add
+  3. Restart: systemctl restart moltbot
+
+📚 Documentation: https://docs.molt.bot/
+🔗 GitHub: https://github.com/moltbot/moltbot
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF

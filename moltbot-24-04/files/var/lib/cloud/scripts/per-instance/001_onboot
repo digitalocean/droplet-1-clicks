@@ -1,0 +1,64 @@
+#!/bin/sh
+
+# Generate unique gateway token for this droplet
+if grep -q "PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT" /opt/moltbot.env 2>/dev/null; then
+    echo "Generating unique gateway token for this droplet..."
+    NEW_GATEWAY_TOKEN=$(openssl rand -hex 32)
+    sed -i "s/MOLTBOT_GATEWAY_TOKEN=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT/MOLTBOT_GATEWAY_TOKEN=$NEW_GATEWAY_TOKEN/" /opt/moltbot.env
+    echo "Gateway token generated successfully."
+    
+    # Save token to a file for easy access
+    echo "$NEW_GATEWAY_TOKEN" > /home/moltbot/.moltbot/gateway-token.txt
+    chown moltbot:moltbot /home/moltbot/.moltbot/gateway-token.txt
+    chmod 600 /home/moltbot/.moltbot/gateway-token.txt
+fi
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
+
+# Create minimal Moltbot config if it doesn't exist
+if [ ! -f "/home/moltbot/.moltbot/moltbot.json" ]; then
+    echo "Creating minimal Moltbot configuration..."
+    mkdir -p /home/moltbot/.moltbot
+    cat > /home/moltbot/.moltbot/moltbot.json << 'CONFIGEOF'
+{
+  "gateway": {
+    "mode": "local",
+    "pairing": {
+      "enabled": false
+    }
+  }
+}
+CONFIGEOF
+    chown moltbot:moltbot /home/moltbot/.moltbot/moltbot.json
+    chmod 644 /home/moltbot/.moltbot/moltbot.json
+fi
+
+# Start the Moltbot service
+echo "Starting Moltbot Gateway service..."
+systemctl start moltbot
+
+# Start Caddy service (ready for HTTPS setup)
+echo "Starting Caddy web server..."
+systemctl start caddy
+
+# Wait for services to start
+sleep 3
+
+# Display status
+if systemctl is-active --quiet moltbot; then
+    echo "✅ Moltbot Gateway started successfully!"
+else
+    echo "⚠️  Moltbot service may need configuration. Check with: systemctl status moltbot"
+fi
+
+if systemctl is-active --quiet caddy; then
+    echo "✅ Caddy web server started successfully!"
+    echo "ℹ️  Run /opt/enable-https-moltbot.sh to enable HTTPS with your domain"
+else
+    echo "⚠️  Caddy service may need configuration. Check with: systemctl status caddy"
+fi
