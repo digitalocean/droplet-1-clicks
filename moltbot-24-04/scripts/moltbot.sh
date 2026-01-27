@@ -50,6 +50,8 @@ MOLTBOT_GATEWAY_BIND=lan
 
 # Gateway token will be auto-generated on first boot
 MOLTBOT_GATEWAY_TOKEN=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT
+# Keep legacy var for upstream binary compatibility
+CLAWDBOT_GATEWAY_TOKEN=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT
 
 # Model Configuration
 # Uncomment and configure your preferred AI model provider

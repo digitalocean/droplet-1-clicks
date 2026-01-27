@@ -5,6 +5,12 @@ if grep -q "PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT" /opt/moltbot.env 2>/dev/
     echo "Generating unique gateway token for this droplet..."
     NEW_GATEWAY_TOKEN=$(openssl rand -hex 32)
     sed -i "s/MOLTBOT_GATEWAY_TOKEN=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT/MOLTBOT_GATEWAY_TOKEN=$NEW_GATEWAY_TOKEN/" /opt/moltbot.env
+    # Keep legacy var for upstream binary compatibility
+    if grep -q "CLAWDBOT_GATEWAY_TOKEN=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT" /opt/moltbot.env 2>/dev/null; then
+        sed -i "s/CLAWDBOT_GATEWAY_TOKEN=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT/CLAWDBOT_GATEWAY_TOKEN=$NEW_GATEWAY_TOKEN/" /opt/moltbot.env
+    elif ! grep -q "^CLAWDBOT_GATEWAY_TOKEN=" /opt/moltbot.env 2>/dev/null; then
+        echo "CLAWDBOT_GATEWAY_TOKEN=$NEW_GATEWAY_TOKEN" >> /opt/moltbot.env
+    fi
     echo "Gateway token generated successfully."
     
     # Save token to a file for easy access
