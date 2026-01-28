@@ -108,7 +108,7 @@ WorkingDirectory=/opt/clawdbot
 EnvironmentFile=/opt/clawdbot.env
 Environment="HOME=/home/clawdbot"
 Environment="NODE_ENV=production"
-Environment="PATH=home/clawdbot/.npm/bin:/home/clawdbot/homebrew/bin:/usr/local/bin:/usr/bin:/bin:"
+Environment="PATH=/home/clawdbot/.npm/bin:/home/clawdbot/homebrew/bin:/usr/local/bin:/usr/bin:/bin:"
 
 # Start command - uses the gateway executable with allow-unconfigured for initial setup
 ExecStart=/usr/bin/node /opt/clawdbot/dist/index.js gateway --port ${CLAWDBOT_GATEWAY_PORT} --allow-unconfigured
