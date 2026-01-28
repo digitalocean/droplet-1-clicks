@@ -108,7 +108,7 @@ WorkingDirectory=/opt/clawdbot
 EnvironmentFile=/opt/clawdbot.env
 Environment="HOME=/home/clawdbot"
 Environment="NODE_ENV=production"
-Environment="PATH=/usr/local/bin:/usr/bin:/bin"
+Environment="PATH=/home/clawdbot/homebrew/bin:/usr/local/bin:/usr/bin:/bin:"
 
 # Start command - uses the gateway executable with allow-unconfigured for initial setup
 ExecStart=/usr/bin/node /opt/clawdbot/dist/index.js gateway --port ${CLAWDBOT_GATEWAY_PORT} --allow-unconfigured
@@ -254,6 +254,12 @@ cat > /opt/clawdbot-cli.sh << 'EOF'
 su - clawdbot -c "cd /opt/clawdbot && node dist/index.js $*"
 EOF
 
+cat > /opt/clawdbot-tui.sh << 'EOF'
+gateway_token=$(grep "^CLAWDBOT_GATEWAY_TOKEN=" /opt/clawdbot.env 2>/dev/null | cut -d'=' -f2)
+
+/opt/clawdbot-cli.sh tui --token=${gateway_token}
+EOF
+
 # Create domain setup script
 cat > /opt/setup-clawdbot-domain.sh << 'EOF'
 #!/bin/bash
@@ -313,6 +319,7 @@ PLACEHOLDER_DOMAIN {
         }
     }
     reverse_proxy localhost:18789
+    header X-DO-MARKETPLACE "clawdbot"
 }
 EOF
 
@@ -327,6 +334,7 @@ chmod +x /opt/update-clawdbot.sh
 chmod +x /opt/clawdbot-cli.sh
 chmod +x /opt/setup-clawdbot-domain.sh
 chmod +x /etc/gradient_token_setup.sh
+chmod +x /opt/clawdbot-tui.sh
 
 # Build Clawdbot as clawdbot user
 cd /opt/clawdbot
@@ -341,3 +349,7 @@ bash scripts/sandbox-setup.sh || echo "Warning: Sandbox image build failed, will
 
 # Enable but don't start the service yet (will start after onboot configuration)
 systemctl enable clawdbot
+
+su - clawdbot
+
+mkdir homebrew && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C homebrew

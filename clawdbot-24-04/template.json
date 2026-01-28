@@ -2,7 +2,7 @@
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "clawdbot-24-04-snapshot-{{timestamp}}",
-    "apt_packages": "apt-transport-https ca-certificates curl software-properties-common git build-essential libsystemd-dev jq unzip docker.io gnupg fail2ban",
+    "apt_packages": "procps file apt-transport-https ca-certificates curl software-properties-common git build-essential libsystemd-dev jq unzip docker.io gnupg fail2ban",
     "application_name": "Clawdbot",
     "application_version": "v2026.1.24-1"
   },
