@@ -48,6 +48,7 @@ chown -R clawdbot:clawdbot "$REPO_DIR"
 mkdir -p /home/clawdbot/.clawdbot
 mkdir -p /home/clawdbot/clawd
 chown -R clawdbot:clawdbot /home/clawdbot/.clawdbot
+chmod 0700 /home/clawdbot/.clawdbot
 chown -R clawdbot:clawdbot /home/clawdbot/clawd
 
 # Create environment file (will be configured on first boot)
@@ -318,6 +319,7 @@ EOF
 
 mkdir -p /home/clawdbot/.clawdbot
 cp /etc/config/clawdbot.json  /home/clawdbot/.clawdbot/clawdbot.json
+chmod 0600 /home/clawdbot/.clawdbot/clawdbot.json
 
 # Make all scripts executable
 chmod +x /opt/restart-clawdbot.sh
