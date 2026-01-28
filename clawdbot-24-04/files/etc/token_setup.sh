@@ -4,7 +4,7 @@
 # Run this script to configure Clawdbot with a AI API key
 
 PS3="Select a provider (1-3): "
-options=("GradientAI" "OpenAI" "Anthropic")
+options=("GradientAI" "OpenAI (Coming soon!)" "Anthropic")
 
 selected_provider="n/a"
 target_config="n/a"

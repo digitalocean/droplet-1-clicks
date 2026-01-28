@@ -9,7 +9,14 @@
         "maxConcurrent": 8
       },
       "sandbox": {
-        "mode": "all"
+        "workspaceAccess":"ro",
+        "mode": "all",
+        "docker": {
+          "network": "bridge",
+          "binds": [
+            "/home/clawdbot/homebrew:/home/clawdbot/homebrew:ro"
+          ]
+        }
       }
     }
   },
