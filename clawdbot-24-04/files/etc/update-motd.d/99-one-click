@@ -37,7 +37,15 @@ on the channels you already use (WhatsApp, Telegram, Slack, Discord, and more).
   - ANTHROPIC_API_KEY=your_key_here (recommended)
   - OPENAI_API_KEY=your_key_here
   
+  For GradientAI: sudo /etc/clawdbot_setup.sh
+  
   Then restart: systemctl restart clawdbot
+
+🔒 Enable HTTPS (TLS):
+  Point your domain to this droplet, then run:
+  sudo /opt/setup-clawdbot-domain.sh
+  
+  This configures Caddy with Let's Encrypt SSL certificates.
 
 📱 Configure Messaging Channels:
   1. Edit /opt/clawdbot.env with your channel tokens

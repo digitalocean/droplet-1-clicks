@@ -18,9 +18,4 @@ sed -e '/Match User root/d' \
     -e '/.*ForceCommand.*droplet.*/d' \
     -i /etc/ssh/sshd_config
 
-cat >> /root/.bashrc <<EOM
-chmod +x /etc/clawdbot_setup.sh
-/etc/clawdbot_setup.sh
-EOM
-
 systemctl restart ssh

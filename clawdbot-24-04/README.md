@@ -78,7 +78,11 @@ After deployment, users must configure at least one AI model provider:
    # OR
    OPENAI_API_KEY=your_key_here
    ```
-4. Restart the service: `systemctl restart clawdbot`
+4. For GradientAI, run the setup script instead:
+   ```bash
+   sudo /etc/clawdbot_setup.sh
+   ```
+5. Restart the service: `systemctl restart clawdbot`
 
 ### Optional Configuration
 

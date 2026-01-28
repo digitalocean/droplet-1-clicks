@@ -74,6 +74,8 @@ CLAWDBOT_GATEWAY_TOKEN=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT
 # For OpenAI:
 # OPENAI_API_KEY=your_api_key_here
 
+# For GradientAI: Run /etc/clawdbot_setup.sh to configure
+
 # Channel Configuration
 # Uncomment and configure messaging channels as needed
 
@@ -276,12 +278,13 @@ fi
 {
     cat > /etc/caddy/Caddyfile << CADDYEOC
 ${DOMAIN} {
-    encode gzip
-    reverse_proxy ${BIND_IP}:${PORT}
-    log {
-        output file /var/log/caddy/access.json
-        format json
+    tls {
+        issuer acme {
+            dir https://acme-v02.api.letsencrypt.org/directory
+            profile shortlived
+        }
     }
+    reverse_proxy ${BIND_IP}:${PORT}
 }
 CADDYEOC
     if [ -n "$EMAIL" ]; then

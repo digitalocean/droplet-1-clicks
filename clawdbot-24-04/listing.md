@@ -69,6 +69,13 @@ Clawdbot runs directly on Ubuntu 24.04 with Node.js 22 and Docker. Choose the ap
    OPENAI_API_KEY=your_api_key_here
    ```
    
+   For GradientAI, run the setup script:
+   ```bash
+   sudo /etc/clawdbot_setup.sh
+   ```
+   
+   This script will prompt you for your GradientAI API key and configure it in the Clawdbot configuration file.
+   
    Save the file and restart:
    ```bash
    systemctl restart clawdbot
@@ -199,6 +206,13 @@ For production use, we recommend setting up a reverse proxy with Caddy (preinsta
 2. Run `sudo /opt/setup-clawdbot-domain.sh` to supply the domain (and optional email)
 3. The script sets `CLAWDBOT_GATEWAY_BIND=127.0.0.1`, writes `/etc/caddy/Caddyfile`, enables HTTPS with Let's Encrypt, and reloads services
 4. If you prefer Nginx, configure it to proxy `localhost:18789` and bind the gateway to `127.0.0.1`
+
+**What this does:**
+- Configures Caddy to handle TLS/SSL termination
+- Obtains free Let's Encrypt certificates automatically
+- Renews certificates automatically before expiration
+- Proxies HTTPS traffic to the Clawdbot gateway
+- Makes your gateway accessible via `https://your-domain.com` instead of `http://ip:18789`
 
 Fail2ban is preconfigured to watch `/var/log/caddy/access.json` and ban IPs that trigger repeated HTTP 403 responses. Check status with `fail2ban-client status caddy-403`.
 
