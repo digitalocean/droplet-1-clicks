@@ -350,6 +350,4 @@ bash scripts/sandbox-setup.sh || echo "Warning: Sandbox image build failed, will
 # Enable but don't start the service yet (will start after onboot configuration)
 systemctl enable clawdbot
 
-su - clawdbot
-
-mkdir homebrew && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C homebrew
+sudo -u clawdbot bash -c "mkdir -p ~/homebrew && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C ~/homebrew"
