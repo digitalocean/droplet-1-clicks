@@ -1,0 +1,21 @@
+{
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "anthropic/claude-opus-4-5"
+      },
+      "maxConcurrent": 4,
+      "subagents": {
+        "maxConcurrent": 8
+      },
+      "sandbox": {
+        "mode": "all"
+      }
+    }
+  },
+  "gateway": {
+    "mode": "local",
+    "bind": "loopback",
+    "trustedProxies": ["127.0.0.1"]
+  }
+}
