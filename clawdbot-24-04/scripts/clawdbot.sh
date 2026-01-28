@@ -351,7 +351,8 @@ bash scripts/sandbox-setup.sh || echo "Warning: Sandbox image build failed, will
 systemctl enable clawdbot
 
 su - clawdbot -c "mkdir -p ~/homebrew && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C ~/homebrew"
-su - clawdbot -c "~/homebrew/bin/brew install wacli"
+su - clawdbot -c "~/homebrew/bin/brew install steipete/tap/wacli"
+su - clawdbot -c "~/homebrew/bin/brew link wacli"
 
 chown -R clawdbot /home/clawdbot/.npm
 su - clawdbot -c "npm config set prefix /home/clawdbot/.npm"
