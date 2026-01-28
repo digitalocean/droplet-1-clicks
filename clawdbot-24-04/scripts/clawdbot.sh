@@ -7,7 +7,6 @@ REPO_DIR="/opt/clawdbot"
 # Open required ports
 ufw allow 80
 ufw allow 443
-ufw allow 18789
 ufw limit ssh/tcp
 ufw --force enable
 
