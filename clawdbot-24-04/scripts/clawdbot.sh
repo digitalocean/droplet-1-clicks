@@ -294,7 +294,6 @@ CADDYEOC
 }
 
 systemctl enable caddy
-systemctl restart caddy
 systemctl restart clawdbot
 
 echo "Caddy is now proxying https://${DOMAIN} to ${BIND_IP}:${PORT}."
@@ -322,6 +321,19 @@ EOF
 
 systemctl enable fail2ban
 systemctl restart fail2ban
+
+cat > /etc/caddy/Caddyfile << 'EOF'
+PLACEHOLDER_DOMAIN {
+    tls {
+        issuer acme {
+            dir https://acme-v02.api.letsencrypt.org/directory
+            profile shortlived
+        }
+    }
+    reverse_proxy localhost:18789
+}
+EOF
+
 
 # Make all scripts executable
 chmod +x /opt/restart-clawdbot.sh

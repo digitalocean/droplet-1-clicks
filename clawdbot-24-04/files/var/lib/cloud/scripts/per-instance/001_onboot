@@ -21,8 +21,8 @@ if grep -q "PLACEHOLDER_DOMAIN" /etc/caddy/Caddyfile 2>/dev/null; then
     echo "Configuring Caddy with droplet IP address..."
     sed -i "s/PLACEHOLDER_DOMAIN/$DROPLET_IP/" /etc/caddy/Caddyfile
     systemctl enable caddy
-    systemctl restart caddy
 fi
+
 
 # Remove the ssh force logout command
 sed -e '/Match User root/d' \
@@ -30,3 +30,4 @@ sed -e '/Match User root/d' \
     -i /etc/ssh/sshd_config
 
 systemctl restart ssh
+systemctl restart caddy
