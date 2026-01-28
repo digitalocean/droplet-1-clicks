@@ -14,7 +14,7 @@ Clawdbot is a personal AI assistant you run on your own devices. It answers you
 on the channels you already use (WhatsApp, Telegram, Slack, Discord, and more).
 
 🌐 Control UI & Gateway Access:
-  Gateway URL: http://$myip:18789
+  Dashboard URL: https://$myip?token=$gateway_token
   Gateway Token: $gateway_token
 
 📝 Configuration:

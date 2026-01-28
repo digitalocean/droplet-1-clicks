@@ -31,6 +31,7 @@ chown caddy:caddy /var/log/caddy/access.json
 
 # Create clawdbot user
 useradd -m -s /bin/bash clawdbot || true
+usermod -aG docker clawdbot || true
 
 # Clone the Clawdbot repository
 cd /opt && git clone "$REPO_URL" "$REPO_DIR"
@@ -300,25 +301,6 @@ echo "Caddy is now proxying https://${DOMAIN} to ${BIND_IP}:${PORT}."
 echo "Gateway bind set to ${BIND_IP}. You can adjust /opt/clawdbot.env and rerun this script if needed."
 EOF
 
-# Configure fail2ban to block repeated 403s from Caddy
-cat > /etc/fail2ban/filter.d/caddy-403.conf << 'EOF'
-[Definition]
-failregex = ^.*"remote_ip"\s*:\s*"<HOST>".*"status"\s*:\s*403\b.*$
-ignoreregex =
-EOF
-
-cat > /etc/fail2ban/jail.d/caddy-403.local << 'EOF'
-[caddy-403]
-enabled  = true
-filter   = caddy-403
-logpath  = /var/log/caddy/access.json
-backend  = auto
-maxretry = 5
-findtime = 60
-bantime  = 3600
-ignoreip = 127.0.0.1/8 ::1 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
-EOF
-
 systemctl enable fail2ban
 systemctl restart fail2ban
 
@@ -334,6 +316,8 @@ PLACEHOLDER_DOMAIN {
 }
 EOF
 
+mkdir -p /home/clawdbot/.clawdbot
+cp /etc/config/clawdbot.json  /home/clawdbot/.clawdbot/clawdbot.json
 
 # Make all scripts executable
 chmod +x /opt/restart-clawdbot.sh
