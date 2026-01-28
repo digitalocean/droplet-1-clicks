@@ -108,7 +108,7 @@ WorkingDirectory=/opt/clawdbot
 EnvironmentFile=/opt/clawdbot.env
 Environment="HOME=/home/clawdbot"
 Environment="NODE_ENV=production"
-Environment="PATH=/home/clawdbot/homebrew/bin:/usr/local/bin:/usr/bin:/bin:"
+Environment="PATH=home/clawdbot/.npm/bin:/home/clawdbot/homebrew/bin:/usr/local/bin:/usr/bin:/bin:"
 
 # Start command - uses the gateway executable with allow-unconfigured for initial setup
 ExecStart=/usr/bin/node /opt/clawdbot/dist/index.js gateway --port ${CLAWDBOT_GATEWAY_PORT} --allow-unconfigured
@@ -350,4 +350,8 @@ bash scripts/sandbox-setup.sh || echo "Warning: Sandbox image build failed, will
 # Enable but don't start the service yet (will start after onboot configuration)
 systemctl enable clawdbot
 
-sudo -u clawdbot bash -c "mkdir -p ~/homebrew && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C ~/homebrew"
+su - clawdbot -c "mkdir -p ~/homebrew && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C ~/homebrew"
+su - clawdbot -c "~/homebrew/bin/brew install wacli"
+
+chown -R clawdbot /home/clawdbot/.npm
+su - clawdbot -c "npm config set prefix /home/clawdbot/.npm"
