@@ -72,3 +72,5 @@ if systemctl is-active --quiet clawdbot; then
 else
     echo "⚠️ Service may need attention. Check with: systemctl status clawdbot"
 fi
+
+cp /etc/skel/.bashrc /root

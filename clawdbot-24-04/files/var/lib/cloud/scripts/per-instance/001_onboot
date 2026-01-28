@@ -23,11 +23,15 @@ if grep -q "PLACEHOLDER_DOMAIN" /etc/caddy/Caddyfile 2>/dev/null; then
     systemctl enable caddy
 fi
 
-
 # Remove the ssh force logout command
 sed -e '/Match User root/d' \
     -e '/.*ForceCommand.*droplet.*/d' \
     -i /etc/ssh/sshd_config
+
+cat >> /root/.bashrc <<EOM
+chmod +x /etc/token_setup.sh
+/etc/token_setup.sh
+EOM
 
 systemctl restart ssh
 systemctl restart clawdbot
