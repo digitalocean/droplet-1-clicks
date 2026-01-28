@@ -13,6 +13,17 @@ if grep -q "PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT" /opt/clawdbot.env 2>/dev
     chmod 600 /home/clawdbot/.clawdbot/gateway-token.txt
 fi
 
+# Replace PLACEHOLDER_DOMAIN in Caddyfile with actual IP address
+meta() { curl -fsS --retry 10 --retry-connrefused --max-time 2 "$1"; }
+DROPLET_IP="$(meta http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)"
+
+if grep -q "PLACEHOLDER_DOMAIN" /etc/caddy/Caddyfile 2>/dev/null; then
+    echo "Configuring Caddy with droplet IP address..."
+    sed -i "s/PLACEHOLDER_DOMAIN/$DROPLET_IP/" /etc/caddy/Caddyfile
+    systemctl enable caddy
+    systemctl restart caddy
+fi
+
 # Remove the ssh force logout command
 sed -e '/Match User root/d' \
     -e '/.*ForceCommand.*droplet.*/d' \

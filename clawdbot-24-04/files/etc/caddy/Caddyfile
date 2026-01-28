@@ -1,0 +1,9 @@
+PLACEHOLDER_DOMAIN {
+    tls {
+        issuer acme {
+            dir https://acme-v02.api.letsencrypt.org/directory
+            profile shortlived
+        }
+    }
+    reverse_proxy localhost:18789
+}

@@ -71,7 +71,7 @@ Clawdbot runs directly on Ubuntu 24.04 with Node.js 22 and Docker. Choose the ap
    
    For GradientAI, run the setup script:
    ```bash
-   sudo /etc/clawdbot_setup.sh
+   sudo /etc/gradient_token_setup.sh
    ```
    
    This script will prompt you for your GradientAI API key and configure it in the Clawdbot configuration file.

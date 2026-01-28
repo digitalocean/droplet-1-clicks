@@ -37,7 +37,7 @@ on the channels you already use (WhatsApp, Telegram, Slack, Discord, and more).
   - ANTHROPIC_API_KEY=your_key_here (recommended)
   - OPENAI_API_KEY=your_key_here
   
-  For GradientAI: sudo /etc/clawdbot_setup.sh
+  For GradientAI: sudo /etc/gradient_token_setup.sh
   
   Then restart: systemctl restart clawdbot
 

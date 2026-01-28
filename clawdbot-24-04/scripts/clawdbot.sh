@@ -74,7 +74,7 @@ CLAWDBOT_GATEWAY_TOKEN=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT
 # For OpenAI:
 # OPENAI_API_KEY=your_api_key_here
 
-# For GradientAI: Run /etc/clawdbot_setup.sh to configure
+# For GradientAI: Run /etc/gradient_token_setup.sh to configure
 
 # Channel Configuration
 # Uncomment and configure messaging channels as needed
@@ -329,6 +329,7 @@ chmod +x /opt/status-clawdbot.sh
 chmod +x /opt/update-clawdbot.sh
 chmod +x /opt/clawdbot-cli.sh
 chmod +x /opt/setup-clawdbot-domain.sh
+chmod +x /etc/gradient_token_setup.sh
 
 # Build Clawdbot as clawdbot user
 cd /opt/clawdbot
