@@ -1,0 +1,61 @@
+{
+  "models": {
+    "mode": "merge",
+    "providers": {
+      "digitalocean": {
+        "baseUrl": "https://inference.do-ai.run/v1",
+        "apiKey": "PLACEHOLDER",
+        "api": "openai-completions",
+        "models": [
+          {
+            "id": "openai-gpt-oss-120b",
+            "name": "openai-gpt-oss-120b",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "headers": { "User-Agent": "ClawdBot" },
+            "contextWindow": 200000,
+            "maxTokens": 8192
+          }
+        ]
+      }
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "digitalocean/openai-gpt-oss-120b"
+      },
+      "models": {
+        "digitalocean/openai-gpt-oss-120b": {}
+      },
+      "maxConcurrent": 4,
+      "subagents": {
+        "maxConcurrent": 8
+      },
+      "sandbox": {
+        "workspaceAccess":"rw",
+        "mode": "all",
+        "docker": {
+          "network": "bridge",
+          "binds": [
+            "/home/clawdbot/homebrew:/home/clawdbot/homebrew:ro",
+            "/opt/clawdbot:/opt/clawdbot:ro"
+          ]
+        }
+      }
+    }
+  },
+  "gateway": {
+    "mode": "local",
+    "bind": "loopback",
+    "trustedProxies": ["127.0.0.1"]
+  }
+}

@@ -1,0 +1,63 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+gateway_token=$(grep "^CLAWDBOT_GATEWAY_TOKEN=" /opt/clawdbot.env 2>/dev/null | cut -d'=' -f2)
+
+cat <<EOF
+********************************************************************************
+
+Welcome to Clawdbot - Your Personal AI Assistant
+
+Clawdbot is a personal AI assistant you run on your own devices. It answers you 
+on the channels you already use (WhatsApp, Telegram, Slack, Discord, and more).
+
+🌐 Control UI & Gateway Access:
+  Dashboard URL: https://$myip?token=$gateway_token
+  Gateway Token: $gateway_token
+
+📝 Configuration:
+  Edit settings: /opt/clawdbot.env
+  User config: /home/clawdbot/.clawdbot/clawdbot.json
+  
+🔧 Management Commands:
+  Restart service: systemctl restart clawdbot
+  Check status: systemctl status clawdbot
+  View logs: journalctl -u clawdbot -f
+  
+  Or use helper scripts:
+  - /opt/restart-clawdbot.sh   (restart with status check)
+  - /opt/status-clawdbot.sh    (show status and token)
+  - /opt/update-clawdbot.sh    (update to latest version)
+  - /opt/clawdbot-cli.sh       (run CLI commands)
+
+🔑 Add AI Model Provider:
+  Edit /opt/clawdbot.env and add your API key:
+  - ANTHROPIC_API_KEY=your_key_here (recommended)
+  - OPENAI_API_KEY=your_key_here
+  
+  For GradientAI: sudo /etc/gradient_token_setup.sh
+  
+  Then restart: systemctl restart clawdbot
+
+🔒 Enable HTTPS (TLS):
+  Point your domain to this droplet, then run:
+  sudo /opt/setup-clawdbot-domain.sh
+  
+  This configures Caddy with Let's Encrypt SSL certificates.
+
+📱 Configure Messaging Channels:
+  1. Edit /opt/clawdbot.env with your channel tokens
+  2. Or use CLI: /opt/clawdbot-cli.sh channels add
+  3. Restart: systemctl restart clawdbot
+
+📚 Documentation: https://docs.clawd.bot/
+🔗 GitHub: https://github.com/clawdbot/clawdbot
+
+🔧 You can launch Clawdbot TUI using:
+  $ /opt/clawdbot-tui.sh
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
