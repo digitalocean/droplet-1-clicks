@@ -9,7 +9,7 @@
         "maxConcurrent": 8
       },
       "sandbox": {
-        "workspaceAccess":"ro",
+        "workspaceAccess":"rw",
         "mode": "all",
         "docker": {
           "network": "bridge",
