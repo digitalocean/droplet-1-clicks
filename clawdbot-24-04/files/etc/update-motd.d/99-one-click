@@ -33,11 +33,14 @@ on the channels you already use (WhatsApp, Telegram, Slack, Discord, and more).
   - /opt/clawdbot-cli.sh       (run CLI commands)
 
 🔑 Add AI Model Provider:
-  Edit /opt/clawdbot.env and add your API key:
+  Run the interactive setup script (recommended):
+  sudo /etc/token_setup.sh
+  
+  This lets you choose between Anthropic, OpenAI, or GradientAI.
+  
+  Or manually edit /opt/clawdbot.env and add your API key:
   - ANTHROPIC_API_KEY=your_key_here (recommended)
   - OPENAI_API_KEY=your_key_here
-  
-  For GradientAI: sudo /etc/gradient_token_setup.sh
   
   Then restart: systemctl restart clawdbot
 

@@ -68,14 +68,16 @@ CLAWDBOT_GATEWAY_BIND=lan
 CLAWDBOT_GATEWAY_TOKEN=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT
 
 # Model Configuration
-# Uncomment and configure your preferred AI model provider
+# Run the interactive setup script to configure a provider:
+#   sudo /etc/token_setup.sh
+# This lets you choose between Anthropic, OpenAI, or GradientAI.
+#
+# Or uncomment and configure your preferred AI model provider:
 # For Anthropic Claude (recommended):
 # ANTHROPIC_API_KEY=your_api_key_here
 
 # For OpenAI:
 # OPENAI_API_KEY=your_api_key_here
-
-# For GradientAI: Run /etc/gradient_token_setup.sh to configure
 
 # Channel Configuration
 # Uncomment and configure messaging channels as needed
@@ -333,7 +335,7 @@ chmod +x /opt/status-clawdbot.sh
 chmod +x /opt/update-clawdbot.sh
 chmod +x /opt/clawdbot-cli.sh
 chmod +x /opt/setup-clawdbot-domain.sh
-chmod +x /etc/gradient_token_setup.sh
+chmod +x /etc/token_setup.sh
 chmod +x /opt/clawdbot-tui.sh
 
 # Build Clawdbot as clawdbot user

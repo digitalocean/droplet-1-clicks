@@ -71,18 +71,19 @@ The installation creates a default configuration that needs to be customized:
 After deployment, users must configure at least one AI model provider:
 
 1. SSH into the Droplet
-2. Edit `/opt/clawdbot.env`
-3. Add API key for Anthropic or OpenAI:
+2. Run the interactive setup script (recommended):
+   ```bash
+   sudo /etc/token_setup.sh
+   ```
+   This script lets you choose between Anthropic, OpenAI, or GradientAI and will prompt for your API key.
+
+   Alternatively, manually edit `/opt/clawdbot.env` and add your API key:
    ```bash
    ANTHROPIC_API_KEY=your_key_here
    # OR
    OPENAI_API_KEY=your_key_here
    ```
-4. For GradientAI, run the setup script instead:
-   ```bash
-   sudo /etc/gradient_token_setup.sh
-   ```
-5. Restart the service: `systemctl restart clawdbot`
+3. Restart the service: `systemctl restart clawdbot`
 
 ### Optional Configuration
 

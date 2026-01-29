@@ -55,7 +55,14 @@ Clawdbot runs directly on Ubuntu 24.04 with Node.js 22 and Docker. Choose the ap
 
 4. **Configure an AI Model Provider**
    
-   Edit the configuration file:
+   Run the interactive setup script (recommended):
+   ```bash
+   sudo /etc/token_setup.sh
+   ```
+   
+   This script will guide you through selecting a provider (Anthropic, OpenAI, or GradientAI) and configuring your API key.
+   
+   Alternatively, you can manually edit the configuration file:
    ```bash
    nano /opt/clawdbot.env
    ```
@@ -68,13 +75,6 @@ Clawdbot runs directly on Ubuntu 24.04 with Node.js 22 and Docker. Choose the ap
    # OR for OpenAI
    OPENAI_API_KEY=your_api_key_here
    ```
-   
-   For GradientAI, run the setup script:
-   ```bash
-   sudo /etc/gradient_token_setup.sh
-   ```
-   
-   This script will prompt you for your GradientAI API key and configure it in the Clawdbot configuration file.
    
    Save the file and restart:
    ```bash
