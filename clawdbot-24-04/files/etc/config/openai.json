@@ -14,7 +14,8 @@
         "docker": {
           "network": "bridge",
           "binds": [
-            "/home/clawdbot/homebrew:/home/clawdbot/homebrew:ro"
+            "/home/clawdbot/homebrew:/home/clawdbot/homebrew:ro",
+            "/opt/clawdbot:/opt/clawdbot:ro"
           ]
         }
       }
