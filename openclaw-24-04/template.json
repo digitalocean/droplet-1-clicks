@@ -37,6 +37,11 @@
     },
     {
       "type": "file",
+      "source": "openclaw-24-04/files/opt/",
+      "destination": "/opt/"
+    },
+    {
+      "type": "file",
       "source": "openclaw-24-04/files/var/",
       "destination": "/var/"
     },
@@ -67,9 +72,7 @@
       ],
       "scripts": [
         "openclaw-24-04/scripts/openclaw.sh",
-        "common/scripts/018-force-ssh-logout.sh",
-        "common/scripts/020-application-tag.sh",
-        "common/scripts/900-cleanup.sh"
+        "common/scripts/020-application-tag.sh"
       ]
     }
   ]

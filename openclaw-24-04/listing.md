@@ -192,8 +192,7 @@ To update to the latest version:
 ```
 
 This script will:
-- Pull the latest code from GitHub
-- Rebuild the application
+- Update OpenClaw from npm
 - Restart the service
 - Preserve all your configuration and data
 
@@ -252,8 +251,7 @@ This 1-Click includes:
 
 - **Ubuntu 24.04 LTS** - Long-term support base OS
 - **Node.js 22** - JavaScript runtime
-- **OpenClaw v2026.1.30** - Latest release
-- **pnpm** - Fast, disk space efficient package manager
+- **OpenClaw v2026.1.30** - Latest release from npm
 - **Docker** - Container runtime for sandboxed execution
 - **Caddy** - Modern web server with automatic HTTPS
 - **UFW** - Uncomplicated Firewall (pre-configured)
@@ -293,13 +291,11 @@ Or regenerate by editing `/opt/openclaw.env` and restarting.
 
 If the update script fails:
 1. Check internet connectivity
-2. Verify GitHub is accessible
+2. Verify npm is working: `npm --version`
 3. Manually update:
    ```bash
-   cd /opt/openclaw
-   sudo -u openclaw git pull
-   sudo -u openclaw pnpm install
-   sudo -u openclaw pnpm build
+   systemctl stop openclaw
+   npm update -g openclaw
    systemctl restart openclaw
    ```
 

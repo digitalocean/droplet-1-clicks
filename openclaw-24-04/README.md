@@ -14,10 +14,9 @@ OpenClaw is a personal AI assistant you run on your own infrastructure. This 1-C
 
 ## What Gets Installed
 
-- **OpenClaw** - Latest version (v2026.1.30) from GitHub
+- **OpenClaw** - Latest version (v2026.1.30) from npm
 - **Node.js 22** - Required runtime
 - **Docker** - For sandboxed tool execution
-- **pnpm** - Package manager
 - **Caddy** - Reverse proxy with automatic TLS
 - **Systemd service** - Auto-starting gateway service
 - **Helper scripts** - Management utilities
@@ -26,7 +25,7 @@ OpenClaw is a personal AI assistant you run on your own infrastructure. This 1-C
 ## Directory Structure
 
 ```
-/opt/openclaw/              - OpenClaw installation
+/usr/local/lib/node_modules/openclaw/ - OpenClaw npm installation
 /opt/openclaw.env           - Environment configuration
 /opt/restart-openclaw.sh    - Restart helper script
 /opt/status-openclaw.sh     - Status check script
@@ -135,10 +134,9 @@ Restarts the service and checks status
 Shows service status, gateway token, and URL
 
 ### update-openclaw.sh
-Updates to latest version from GitHub:
+Updates to latest version from npm:
 - Stops service
-- Pulls latest code
-- Rebuilds application
+- Updates OpenClaw package
 - Restarts service
 
 ### openclaw-cli.sh
@@ -208,30 +206,19 @@ Ensure the NodeSource repository is accessible. The script uses Node.js 22.
 The build includes:
 - System updates
 - Node.js installation
-- Repository cloning
-- pnpm install (large dependency tree)
-- Building the application (TypeScript compilation)
-- Building the UI (React application)
-- Building the sandbox image
+- OpenClaw npm package installation
+- Docker setup
 
-Expect 15-30 minutes for a full build.
-
-### pnpm Install Fails
-Check that corepack is properly enabled. The script runs:
-```bash
-corepack enable
-corepack prepare pnpm@latest --activate
-```
+Expect 10-15 minutes for a full build.
 
 ### Docker Build Fails
 The sandbox image build may fail if Docker isn't fully initialized. This is handled gracefully with a warning.
 
 ### Service Won't Start
 Check:
-- `/opt/openclaw/dist/index.js` exists (build completed)
-- Dependencies installed in `/opt/openclaw/node_modules`
+- OpenClaw is installed: `which openclaw`
+- Service logs: `journalctl -u openclaw -xe`
 - Permissions on `/home/openclaw` directories
-- Logs: `journalctl -u openclaw -xe`
 
 ## Marketplace Requirements
 
@@ -255,8 +242,8 @@ This 1-Click meets DigitalOcean Marketplace requirements:
 ## Notes
 
 - The service will not be fully functional until an AI model API key is configured
-- First build includes full dependency installation and compilation
-- Sandbox image is built during provisioning
+- OpenClaw is installed globally via npm
+- Docker sandbox will be built on first use if initial build fails
 - Gateway token is unique per Droplet instance
 - All data persists in `/home/openclaw/` directories
 
