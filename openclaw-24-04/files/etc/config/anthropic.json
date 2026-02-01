@@ -1,0 +1,29 @@
+{
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "anthropic/claude-opus-4-5"
+      },
+      "maxConcurrent": 4,
+      "subagents": {
+        "maxConcurrent": 8
+      },
+      "sandbox": {
+        "workspaceAccess":"rw",
+        "mode": "all",
+        "docker": {
+          "network": "bridge",
+          "binds": [
+            "/home/openclaw/homebrew:/home/openclaw/homebrew:ro",
+            "/opt/openclaw:/opt/openclaw:ro"
+          ]
+        }
+      }
+    }
+  },
+  "gateway": {
+    "mode": "local",
+    "bind": "loopback",
+    "trustedProxies": ["127.0.0.1"]
+  }
+}

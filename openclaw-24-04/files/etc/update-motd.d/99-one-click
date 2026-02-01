@@ -1,0 +1,66 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+gateway_token=$(grep "^OPENCLAW_GATEWAY_TOKEN=" /opt/openclaw.env 2>/dev/null | cut -d'=' -f2)
+
+cat <<EOF
+********************************************************************************
+
+Welcome to OpenClaw - Your Personal AI Assistant
+
+OpenClaw is a personal AI assistant you run on your own devices. It answers you 
+on the channels you already use (WhatsApp, Telegram, Slack, Discord, and more).
+
+🌐 Control UI & Gateway Access:
+  Dashboard URL: https://$myip?token=$gateway_token
+  Gateway Token: $gateway_token
+
+📝 Configuration:
+  Edit settings: /opt/openclaw.env
+  User config: /home/openclaw/.openclaw/openclaw.json
+  
+🔧 Management Commands:
+  Restart service: systemctl restart openclaw
+  Check status: systemctl status openclaw
+  View logs: journalctl -u openclaw -f
+  
+  Or use helper scripts:
+  - /opt/restart-openclaw.sh   (restart with status check)
+  - /opt/status-openclaw.sh    (show status and token)
+  - /opt/update-openclaw.sh    (update to latest version)
+  - /opt/openclaw-cli.sh       (run CLI commands)
+
+🔑 Add AI Model Provider:
+  Run the interactive setup script (recommended):
+  sudo /etc/token_setup.sh
+  
+  This lets you choose between Anthropic, OpenAI, or GradientAI.
+  
+  Or manually edit /opt/openclaw.env and add your API key:
+  - ANTHROPIC_API_KEY=your_key_here (recommended)
+  - OPENAI_API_KEY=your_key_here
+  
+  Then restart: systemctl restart openclaw
+
+🔒 Enable HTTPS (TLS):
+  Point your domain to this droplet, then run:
+  sudo /opt/setup-openclaw-domain.sh
+  
+  This configures Caddy with Let's Encrypt SSL certificates.
+
+📱 Configure Messaging Channels:
+  1. Edit /opt/openclaw.env with your channel tokens
+  2. Or use CLI: /opt/openclaw-cli.sh channels add
+  3. Restart: systemctl restart openclaw
+
+📚 Documentation: https://docs.openclaw.ai/
+🔗 GitHub: https://github.com/openclaw/openclaw
+
+🔧 You can launch OpenClaw TUI using:
+  $ /opt/openclaw-tui.sh
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
