@@ -147,6 +147,7 @@ chmod +x /opt/setup-openclaw-domain.sh
 chmod +x /opt/openclaw-tui.sh
 chmod +x /etc/token_setup.sh
 chmod +x /etc/update-motd.d/99-one-click
+chmod +x /var/lib/cloud/scripts/per-instance/001_onboot
 
 # Build the sandbox Docker image if docker-setup script exists
 if which openclaw > /dev/null 2>&1; then
@@ -161,3 +162,4 @@ systemctl enable openclaw
 su - openclaw -c "mkdir -p ~/homebrew && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C ~/homebrew" || true
 su - openclaw -c "~/homebrew/bin/brew install steipete/tap/wacli" 2>/dev/null || echo "Warning: wacli installation skipped"
 su - openclaw -c "~/homebrew/bin/brew link wacli" 2>/dev/null || true
+ 
