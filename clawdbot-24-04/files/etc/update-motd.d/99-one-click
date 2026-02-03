@@ -32,18 +32,6 @@ on the channels you already use (WhatsApp, Telegram, Slack, Discord, and more).
   - /opt/update-openclaw.sh    (update to latest version)
   - /opt/openclaw-cli.sh       (run CLI commands)
 
-🔑 Add AI Model Provider:
-  Run the interactive setup script (recommended):
-  sudo /etc/setup_wizard.sh
-  
-  This lets you choose between Anthropic, OpenAI, or GradientAI.
-  
-  Or manually edit /opt/openclaw.env and add your API key:
-  - ANTHROPIC_API_KEY=your_key_here (recommended)
-  - OPENAI_API_KEY=your_key_here
-  
-  Then restart: systemctl restart openclaw
-
 🔒 Enable HTTPS (TLS):
   Point your domain to this droplet, then run:
   sudo /opt/setup-openclaw-domain.sh
