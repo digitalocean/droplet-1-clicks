@@ -47,7 +47,7 @@
           "network": "bridge",
           "binds": [
             "/home/openclaw/homebrew:/home/openclaw/homebrew:ro",
-            "/opt/openclaw:/home/openclaw:ro"
+            "/opt/openclaw:/opt/openclaw:ro"
           ]
         }
       }
