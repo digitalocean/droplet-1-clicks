@@ -1,16 +1,16 @@
 #!/bin/sh
 
 # Generate unique gateway token for this droplet
-if grep -q "PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT" /opt/clawdbot.env 2>/dev/null; then
+if grep -q "PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT" /opt/openclaw.env 2>/dev/null; then
     echo "Generating unique gateway token for this droplet..."
     NEW_GATEWAY_TOKEN=$(openssl rand -hex 32)
-    sed -i "s/CLAWDBOT_GATEWAY_TOKEN=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT/CLAWDBOT_GATEWAY_TOKEN=$NEW_GATEWAY_TOKEN/" /opt/clawdbot.env
+    sed -i "s/OPENCLAW_GATEWAY_TOKEN=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT/OPENCLAW_GATEWAY_TOKEN=$NEW_GATEWAY_TOKEN/" /opt/openclaw.env
     echo "Gateway token generated successfully."
     
     # Save token to a file for easy access
-    echo "$NEW_GATEWAY_TOKEN" > /home/clawdbot/.clawdbot/gateway-token.txt
-    chown clawdbot:clawdbot /home/clawdbot/.clawdbot/gateway-token.txt
-    chmod 600 /home/clawdbot/.clawdbot/gateway-token.txt
+    echo "$NEW_GATEWAY_TOKEN" > /home/openclaw/.openclaw/gateway-token.txt
+    chown openclaw:openclaw /home/openclaw/.openclaw/gateway-token.txt
+    chmod 600 /home/openclaw/.openclaw/gateway-token.txt
 fi
 
 # Replace PLACEHOLDER_DOMAIN in Caddyfile with actual IP address
@@ -29,10 +29,10 @@ sed -e '/Match User root/d' \
     -i /etc/ssh/sshd_config
 
 cat >> /root/.bashrc <<EOM
-chmod +x /etc/token_setup.sh
-/etc/token_setup.sh
+chmod +x /etc/setup_wizard.sh
+/etc/setup_wizard.sh
 EOM
 
 systemctl restart ssh
-systemctl restart clawdbot
+systemctl restart openclaw
 systemctl restart caddy

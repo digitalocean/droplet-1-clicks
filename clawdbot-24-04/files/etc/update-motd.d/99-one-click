@@ -3,14 +3,14 @@
 # Configured as part of the DigitalOcean 1-Click Image build process
 
 myip=$(hostname -I | awk '{print$1}')
-gateway_token=$(grep "^CLAWDBOT_GATEWAY_TOKEN=" /opt/clawdbot.env 2>/dev/null | cut -d'=' -f2)
+gateway_token=$(grep "^OPENCLAW_GATEWAY_TOKEN=" /opt/openclaw.env 2>/dev/null | cut -d'=' -f2)
 
 cat <<EOF
 ********************************************************************************
 
-Welcome to Clawdbot - Your Personal AI Assistant
+Welcome to OpenClaw - Your Personal AI Assistant
 
-Clawdbot is a personal AI assistant you run on your own devices. It answers you 
+OpenClaw is a personal AI assistant you run on your own devices. It answers you
 on the channels you already use (WhatsApp, Telegram, Slack, Discord, and more).
 
 🌐 Control UI & Gateway Access:
@@ -18,48 +18,48 @@ on the channels you already use (WhatsApp, Telegram, Slack, Discord, and more).
   Gateway Token: $gateway_token
 
 📝 Configuration:
-  Edit settings: /opt/clawdbot.env
-  User config: /home/clawdbot/.clawdbot/clawdbot.json
+  Edit settings: /opt/openclaw.env
+  User config: /home/openclaw/.openclaw/openclaw.json
   
 🔧 Management Commands:
-  Restart service: systemctl restart clawdbot
-  Check status: systemctl status clawdbot
-  View logs: journalctl -u clawdbot -f
+  Restart service: systemctl restart openclaw
+  Check status: systemctl status openclaw
+  View logs: journalctl -u openclaw -f
   
   Or use helper scripts:
-  - /opt/restart-clawdbot.sh   (restart with status check)
-  - /opt/status-clawdbot.sh    (show status and token)
-  - /opt/update-clawdbot.sh    (update to latest version)
-  - /opt/clawdbot-cli.sh       (run CLI commands)
+  - /opt/restart-openclaw.sh   (restart with status check)
+  - /opt/status-openclaw.sh    (show status and token)
+  - /opt/update-openclaw.sh    (update to latest version)
+  - /opt/openclaw-cli.sh       (run CLI commands)
 
 🔑 Add AI Model Provider:
   Run the interactive setup script (recommended):
-  sudo /etc/token_setup.sh
+  sudo /etc/setup_wizard.sh
   
   This lets you choose between Anthropic, OpenAI, or GradientAI.
   
-  Or manually edit /opt/clawdbot.env and add your API key:
+  Or manually edit /opt/openclaw.env and add your API key:
   - ANTHROPIC_API_KEY=your_key_here (recommended)
   - OPENAI_API_KEY=your_key_here
   
-  Then restart: systemctl restart clawdbot
+  Then restart: systemctl restart openclaw
 
 🔒 Enable HTTPS (TLS):
   Point your domain to this droplet, then run:
-  sudo /opt/setup-clawdbot-domain.sh
+  sudo /opt/setup-openclaw-domain.sh
   
   This configures Caddy with Let's Encrypt SSL certificates.
 
 📱 Configure Messaging Channels:
-  1. Edit /opt/clawdbot.env with your channel tokens
-  2. Or use CLI: /opt/clawdbot-cli.sh channels add
-  3. Restart: systemctl restart clawdbot
+  1. Edit /opt/openclaw.env with your channel tokens
+  2. Or use CLI: /opt/openclaw-cli.sh channels add
+  3. Restart: systemctl restart openclaw
 
 📚 Documentation: https://docs.clawd.bot/
-🔗 GitHub: https://github.com/clawdbot/clawdbot
+🔗 GitHub: https://github.com/openclaw/openclaw
 
-🔧 You can launch Clawdbot TUI using:
-  $ /opt/clawdbot-tui.sh
+🔧 You can launch OpenClaw TUI using:
+  $ /opt/openclaw-tui.sh
 
 ********************************************************************************
 To delete this message of the day: rm -rf $(readlink -f ${0})

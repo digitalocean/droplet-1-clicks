@@ -20,7 +20,7 @@
               "cacheRead": 0,
               "cacheWrite": 0
             },
-            "headers": { "User-Agent": "ClawdBot" },
+            "headers": { "User-Agent": "OpenClaw" },
             "contextWindow": 200000,
             "maxTokens": 8192
           }
@@ -46,8 +46,8 @@
         "docker": {
           "network": "bridge",
           "binds": [
-            "/home/clawdbot/homebrew:/home/clawdbot/homebrew:ro",
-            "/opt/clawdbot:/opt/clawdbot:ro"
+            "/home/openclaw/homebrew:/home/openclaw/homebrew:ro",
+            "/opt/openclaw:/home/openclaw:ro"
           ]
         }
       }
@@ -56,6 +56,9 @@
   "gateway": {
     "mode": "local",
     "bind": "loopback",
+    "auth": {
+      "token": "${OPENCLAW_GATEWAY_TOKEN}"
+    },
     "trustedProxies": ["127.0.0.1"]
   }
 }

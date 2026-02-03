@@ -1,8 +1,8 @@
 #!/bin/sh
 
 APP_VERSION="${application_version:-Latest}"
-REPO_URL="https://github.com/clawdbot/clawdbot.git"
-REPO_DIR="/opt/clawdbot"
+REPO_URL="https://github.com/openclaw/openclaw.git"
+REPO_DIR="/opt/openclaw"
 
 # Open required ports
 ufw allow 80
@@ -10,7 +10,7 @@ ufw allow 443
 ufw limit ssh/tcp
 ufw --force enable
 
-# Install Node.js 22 (required for Clawdbot)
+# Install Node.js 22 (required for Openclaw)
 curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
 apt-get install -y nodejs
 
@@ -28,11 +28,11 @@ chown -R caddy:caddy /var/log/caddy
 touch /var/log/caddy/access.json
 chown caddy:caddy /var/log/caddy/access.json
 
-# Create clawdbot user
-useradd -m -s /bin/bash clawdbot || true
-usermod -aG docker clawdbot || true
+# Create openclaw user
+useradd -m -s /bin/bash openclaw || true
+usermod -aG docker openclaw || true
 
-# Clone the Clawdbot repository
+# Clone the Openclaw repository
 cd /opt && git clone "$REPO_URL" "$REPO_DIR"
 cd "$REPO_DIR"
 git fetch --tags
@@ -41,35 +41,35 @@ if [ "$APP_VERSION" != "Latest" ]; then
 fi
 
 # Set ownership
-chown -R clawdbot:clawdbot "$REPO_DIR"
+chown -R openclaw:openclaw "$REPO_DIR"
 
-# Create clawdbot home directory and config directory
-mkdir -p /home/clawdbot/.clawdbot
-mkdir -p /home/clawdbot/clawd
-chown -R clawdbot:clawdbot /home/clawdbot/.clawdbot
-chmod 0700 /home/clawdbot/.clawdbot
-chown -R clawdbot:clawdbot /home/clawdbot/clawd
+# Create openclaw home directory and config directory
+mkdir -p /home/openclaw/.openclaw
+mkdir -p /home/openclaw/clawd
+chown -R openclaw:openclaw /home/openclaw/.openclaw
+chmod 0700 /home/openclaw/.openclaw
+chown -R openclaw:openclaw /home/openclaw/clawd
 
 # Create environment file (will be configured on first boot)
-cat > /opt/clawdbot.env << EOF
-# Clawdbot Environment Configuration
+cat > /opt/openclaw.env << EOF
+# Openclaw Environment Configuration
 # 
-# After making changes to this file, restart Clawdbot with:
-#   systemctl restart clawdbot
+# After making changes to this file, restart Openclaw with:
+#   systemctl restart openclaw
 
-# Installed Clawdbot version
-CLAWDBOT_VERSION=${APP_VERSION}
+# Installed Openclaw version
+OPENCLAW_VERSION=${APP_VERSION}
 
 # Gateway Configuration
-CLAWDBOT_GATEWAY_PORT=18789
-CLAWDBOT_GATEWAY_BIND=lan
+OPENCLAW_GATEWAY_PORT=18789
+OPENCLAW_GATEWAY_BIND=lan
 
 # Gateway token will be auto-generated on first boot
-CLAWDBOT_GATEWAY_TOKEN=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT
+OPENCLAW_GATEWAY_TOKEN=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT
 
 # Model Configuration
 # Run the interactive setup script to configure a provider:
-#   sudo /etc/token_setup.sh
+#   sudo /etc/setup_wizard.sh
 # This lets you choose between Anthropic, OpenAI, or GradientAI.
 #
 # Or uncomment and configure your preferred AI model provider:
@@ -95,25 +95,25 @@ CLAWDBOT_GATEWAY_TOKEN=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT
 EOF
 
 # Create systemd service file
-cat > /etc/systemd/system/clawdbot.service << 'EOF'
+cat > /etc/systemd/system/openclaw.service << 'EOF'
 [Unit]
-Description=Clawdbot Gateway Service
+Description=Openclaw Gateway Service
 After=network-online.target docker.service
 Wants=network-online.target
 Requires=docker.service
 
 [Service]
 Type=simple
-User=clawdbot
-Group=clawdbot
-WorkingDirectory=/opt/clawdbot
-EnvironmentFile=/opt/clawdbot.env
-Environment="HOME=/home/clawdbot"
+User=openclaw
+Group=openclaw
+WorkingDirectory=/opt/openclaw
+EnvironmentFile=/opt/openclaw.env
+Environment="HOME=/home/openclaw"
 Environment="NODE_ENV=production"
-Environment="PATH=/home/clawdbot/.npm/bin:/home/clawdbot/homebrew/bin:/usr/local/bin:/usr/bin:/bin:"
+Environment="PATH=/home/openclaw/.npm/bin:/home/openclaw/homebrew/bin:/usr/local/bin:/usr/bin:/bin:"
 
 # Start command - uses the gateway executable with allow-unconfigured for initial setup
-ExecStart=/usr/bin/node /opt/clawdbot/dist/index.js gateway --port ${CLAWDBOT_GATEWAY_PORT} --allow-unconfigured
+ExecStart=/usr/bin/node /opt/openclaw/dist/index.js gateway --port ${OPENCLAW_GATEWAY_PORT} --allow-unconfigured
 
 # Restart policy
 Restart=always
@@ -129,36 +129,36 @@ WantedBy=multi-user.target
 EOF
 
 # Create restart helper script
-cat > /opt/restart-clawdbot.sh << 'EOF'
+cat > /opt/restart-openclaw.sh << 'EOF'
 #!/bin/bash
-echo "Restarting Clawdbot Gateway..."
-systemctl restart clawdbot
+echo "Restarting Openclaw Gateway..."
+systemctl restart openclaw
 
 # Wait a moment for the service to start
 sleep 2
 
 # Check status
-if systemctl is-active --quiet clawdbot; then
-    echo "✅ Clawdbot restarted successfully!"
+if systemctl is-active --quiet openclaw; then
+    echo "✅ Openclaw restarted successfully!"
     echo "Gateway is running on port 18789"
-    echo "View logs with: journalctl -u clawdbot -f"
+    echo "View logs with: journalctl -u openclaw -f"
 else
-    echo "❌ Error: Failed to restart Clawdbot"
-    echo "Check logs with: journalctl -u clawdbot -xe"
+    echo "❌ Error: Failed to restart Openclaw"
+    echo "Check logs with: journalctl -u openclaw -xe"
     exit 1
 fi
 EOF
 
 # Create status check script
-cat > /opt/status-clawdbot.sh << 'EOF'
+cat > /opt/status-openclaw.sh << 'EOF'
 #!/bin/bash
-echo "=== Clawdbot Gateway Status ==="
-systemctl status clawdbot --no-pager
+echo "=== Openclaw Gateway Status ==="
+systemctl status openclaw --no-pager
 
 echo ""
 echo "=== Gateway Token ==="
-if [ -f "/opt/clawdbot.env" ]; then
-    grep "^CLAWDBOT_GATEWAY_TOKEN=" /opt/clawdbot.env | cut -d'=' -f2
+if [ -f "/opt/openclaw.env" ]; then
+    grep "^OPENCLAW_GATEWAY_TOKEN=" /opt/openclaw.env | cut -d'=' -f2
 else
     echo "Token not yet generated. Run the onboot script."
 fi
@@ -170,33 +170,33 @@ echo "http://$myip:18789"
 EOF
 
 # Create update script
-cat > /opt/update-clawdbot.sh << 'EOF'
+cat > /opt/update-openclaw.sh << 'EOF'
 #!/bin/bash
 
-# Clawdbot Update Script
-# This script pulls the desired Clawdbot version from GitHub and restarts the service
+# Openclaw Update Script
+# This script pulls the desired Openclaw version from GitHub and restarts the service
 
 APP_VERSION="Latest"
-if [ -f "/opt/clawdbot.env" ]; then
-    APP_VERSION_VALUE=$(grep -E '^CLAWDBOT_VERSION=' /opt/clawdbot.env | tail -n 1 | cut -d'=' -f2-)
+if [ -f "/opt/openclaw.env" ]; then
+    APP_VERSION_VALUE=$(grep -E '^OPENCLAW_VERSION=' /opt/openclaw.env | tail -n 1 | cut -d'=' -f2-)
     if [ -n "$APP_VERSION_VALUE" ]; then
         APP_VERSION="$APP_VERSION_VALUE"
     fi
 fi
 
-echo "Updating Clawdbot (target version: ${APP_VERSION})..."
+echo "Updating Openclaw (target version: ${APP_VERSION})..."
 
-# Check if Clawdbot installation exists
-if [ ! -d "/opt/clawdbot" ]; then
-    echo "Error: Clawdbot installation directory not found at /opt/clawdbot"
+# Check if Openclaw installation exists
+if [ ! -d "/opt/openclaw" ]; then
+    echo "Error: Openclaw installation directory not found at /opt/openclaw"
     exit 1
 fi
 
 # Stop the service
-echo "Stopping Clawdbot service..."
-systemctl stop clawdbot
+echo "Stopping Openclaw service..."
+systemctl stop openclaw
 
-cd /opt/clawdbot
+cd /opt/openclaw
 
 # Stash any local changes
 git stash
@@ -220,26 +220,26 @@ fi
 if [ $? -eq 0 ]; then
     echo "Code updated successfully. Rebuilding..."
     
-    # Install dependencies and rebuild as clawdbot user
-    su - clawdbot -c "cd /opt/clawdbot && pnpm install --frozen-lockfile"
-    su - clawdbot -c "cd /opt/clawdbot && pnpm build"
-    su - clawdbot -c "cd /opt/clawdbot && pnpm ui:install"
-    su - clawdbot -c "cd /opt/clawdbot && pnpm ui:build"
+    # Install dependencies and rebuild as openclaw user
+    su - openclaw -c "cd /opt/openclaw && pnpm install --frozen-lockfile"
+    su - openclaw -c "cd /opt/openclaw && pnpm build"
+    su - openclaw -c "cd /opt/openclaw && pnpm ui:install"
+    su - openclaw -c "cd /opt/openclaw && pnpm ui:build"
     
     # Check if build was successful
     if [ $? -eq 0 ]; then
-        # Restart Clawdbot
-        echo "Starting Clawdbot with updated code..."
-        systemctl start clawdbot
+        # Restart Openclaw
+        echo "Starting Openclaw with updated code..."
+        systemctl start openclaw
         
         if [ $? -eq 0 ]; then
-            echo "✅ Clawdbot updated and restarted successfully!"
+            echo "✅ Openclaw updated and restarted successfully!"
         else
-            echo "❌ Error: Failed to restart Clawdbot"
+            echo "❌ Error: Failed to restart Openclaw"
             exit 1
         fi
     else
-        echo "❌ Error: Failed to rebuild Clawdbot"
+        echo "❌ Error: Failed to rebuild Openclaw"
         exit 1
     fi
 else
@@ -250,20 +250,20 @@ echo "Update process completed."
 EOF
 
 # Create CLI helper script
-cat > /opt/clawdbot-cli.sh << 'EOF'
+cat > /opt/openclaw-cli.sh << 'EOF'
 #!/bin/bash
-# Helper script to run Clawdbot CLI commands as the clawdbot user
-su - clawdbot -c "cd /opt/clawdbot && node dist/index.js $*"
+# Helper script to run Openclaw CLI commands as the openclaw user
+su - openclaw -c "cd /opt/openclaw && node dist/index.js $*"
 EOF
 
-cat > /opt/clawdbot-tui.sh << 'EOF'
-gateway_token=$(grep "^CLAWDBOT_GATEWAY_TOKEN=" /opt/clawdbot.env 2>/dev/null | cut -d'=' -f2)
+cat > /opt/openclaw-tui.sh << 'EOF'
+gateway_token=$(grep "^OPENCLAW_GATEWAY_TOKEN=" /opt/openclaw.env 2>/dev/null | cut -d'=' -f2)
 
-/opt/clawdbot-cli.sh tui --token=${gateway_token}
+/opt/openclaw-cli.sh tui --token=${gateway_token}
 EOF
 
 # Create domain setup script
-cat > /opt/setup-clawdbot-domain.sh << 'EOF'
+cat > /opt/setup-openclaw-domain.sh << 'EOF'
 #!/bin/bash
 set -euo pipefail
 
@@ -278,10 +278,10 @@ fi
 
 read -rp "Enter an email for Let's Encrypt notifications (optional): " EMAIL
 
-if grep -q '^CLAWDBOT_GATEWAY_BIND=' /opt/clawdbot.env; then
-    sed -i "s/^CLAWDBOT_GATEWAY_BIND=.*/CLAWDBOT_GATEWAY_BIND=${BIND_IP}/" /opt/clawdbot.env
+if grep -q '^OPENCLAW_GATEWAY_BIND=' /opt/openclaw.env; then
+    sed -i "s/^OPENCLAW_GATEWAY_BIND=.*/OPENCLAW_GATEWAY_BIND=${BIND_IP}/" /opt/openclaw.env
 else
-    echo "CLAWDBOT_GATEWAY_BIND=${BIND_IP}" >> /opt/clawdbot.env
+    echo "OPENCLAW_GATEWAY_BIND=${BIND_IP}" >> /opt/openclaw.env
 fi
 
 {
@@ -303,10 +303,10 @@ CADDYEOC
 }
 
 systemctl enable caddy
-systemctl restart clawdbot
+systemctl restart openclaw
 
 echo "Caddy is now proxying https://${DOMAIN} to ${BIND_IP}:${PORT}."
-echo "Gateway bind set to ${BIND_IP}. You can adjust /opt/clawdbot.env and rerun this script if needed."
+echo "Gateway bind set to ${BIND_IP}. You can adjust /opt/openclaw.env and rerun this script if needed."
 EOF
 
 systemctl enable fail2ban
@@ -321,40 +321,40 @@ PLACEHOLDER_DOMAIN {
         }
     }
     reverse_proxy localhost:18789
-    header X-DO-MARKETPLACE "clawdbot"
+    header X-DO-MARKETPLACE "openclaw"
 }
 EOF
 
-mkdir -p /home/clawdbot/.clawdbot
-cp /etc/config/clawdbot.json  /home/clawdbot/.clawdbot/clawdbot.json
-chmod 0600 /home/clawdbot/.clawdbot/clawdbot.json
+mkdir -p /home/openclaw/.openclaw
+cp /etc/config/openclaw.json  /home/openclaw/.openclaw/openclaw.json
+chmod 0600 /home/openclaw/.openclaw/openclaw.json
 
 # Make all scripts executable
-chmod +x /opt/restart-clawdbot.sh
-chmod +x /opt/status-clawdbot.sh
-chmod +x /opt/update-clawdbot.sh
-chmod +x /opt/clawdbot-cli.sh
-chmod +x /opt/setup-clawdbot-domain.sh
-chmod +x /etc/token_setup.sh
-chmod +x /opt/clawdbot-tui.sh
+chmod +x /opt/restart-openclaw.sh
+chmod +x /opt/status-openclaw.sh
+chmod +x /opt/update-openclaw.sh
+chmod +x /opt/openclaw-cli.sh
+chmod +x /opt/setup-openclaw-domain.sh
+chmod +x /etc/setup_wizard.sh
+chmod +x /opt/openclaw-tui.sh
 
-# Build Clawdbot as clawdbot user
-cd /opt/clawdbot
-su - clawdbot -c "cd /opt/clawdbot && pnpm install --frozen-lockfile"
-su - clawdbot -c "cd /opt/clawdbot && pnpm build"
-su - clawdbot -c "cd /opt/clawdbot && pnpm ui:install"
-su - clawdbot -c "cd /opt/clawdbot && pnpm ui:build"
+# Build Openclaw as openclaw user
+cd /opt/openclaw
+su - openclaw -c "cd /opt/openclaw && pnpm install --frozen-lockfile"
+su - openclaw -c "cd /opt/openclaw && pnpm build"
+su - openclaw -c "cd /opt/openclaw && pnpm ui:install"
+su - openclaw -c "cd /opt/openclaw && pnpm ui:build"
 
 # Build the sandbox image
-cd /opt/clawdbot
+cd /opt/openclaw
 bash scripts/sandbox-setup.sh || echo "Warning: Sandbox image build failed, will be built on first use"
 
 # Enable but don't start the service yet (will start after onboot configuration)
-systemctl enable clawdbot
+systemctl enable openclaw
 
-su - clawdbot -c "mkdir -p ~/homebrew && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C ~/homebrew"
-su - clawdbot -c "~/homebrew/bin/brew install steipete/tap/wacli"
-su - clawdbot -c "~/homebrew/bin/brew link wacli"
+su - openclaw -c "mkdir -p ~/homebrew && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C ~/homebrew"
+su - openclaw -c "~/homebrew/bin/brew install steipete/tap/wacli"
+su - openclaw -c "~/homebrew/bin/brew link wacli"
 
-chown -R clawdbot /home/clawdbot/.npm
-su - clawdbot -c "npm config set prefix /home/clawdbot/.npm"
+chown -R openclaw /home/openclaw/.npm
+su - openclaw -c "npm config set prefix /home/openclaw/.npm"
