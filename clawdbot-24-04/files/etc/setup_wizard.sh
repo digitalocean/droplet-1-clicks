@@ -57,6 +57,12 @@ else
     echo -e "\n${env_key_name}=${model_access_key}" >> /opt/openclaw.env
 fi
 
+GATEWAY_TOKEN=$(grep "^OPENCLAW_GATEWAY_TOKEN=" /opt/openclaw.env 2>/dev/null | cut -d'=' -f2)
+
+jq --arg key "${GATEWAY_TOKEN}" '.gateway.auth.token = $key' /home/openclaw/.openclaw/openclaw.json > /home/openclaw/.openclaw/openclaw.json.tmp
+
+mv /home/openclaw/.openclaw/openclaw.json.tmp /home/openclaw/.openclaw/openclaw.json
+
 chown openclaw:openclaw /home/openclaw/.openclaw/openclaw.json
 chmod 644 /home/openclaw/.openclaw/openclaw.json
 
@@ -92,7 +98,6 @@ while true; do
     esac
 done
 
-GATEWAY_TOKEN=$(grep "^OPENCLAW_GATEWAY_TOKEN=" /opt/openclaw.env 2>/dev/null | cut -d'=' -f2)
 DROPL_IP=$(hostname -I | awk '{print$1}')
 
 printf "\nPlease open UI dashboard in your browser to trigger pairing process.\nYou will see a pairing error, but don't worry, it is expected:\n\t> https://${DROPL_IP}?token=${GATEWAY_TOKEN}\n\n"
