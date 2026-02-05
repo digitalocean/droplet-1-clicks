@@ -64,7 +64,7 @@ jq --arg key "${GATEWAY_TOKEN}" '.gateway.auth.token = $key' /home/openclaw/.ope
 mv /home/openclaw/.openclaw/openclaw.json.tmp /home/openclaw/.openclaw/openclaw.json
 
 chown openclaw:openclaw /home/openclaw/.openclaw/openclaw.json
-chmod 644 /home/openclaw/.openclaw/openclaw.json
+chmod 0600 /home/openclaw/.openclaw/openclaw.json
 
 echo ""
 echo "${selected_provider} key configured successfully."
@@ -90,6 +90,8 @@ while true; do
             ;;
         no|n )
             echo "OpenClaw setup complete! Happy clawing!"
+
+            cp /etc/skel/.bashrc /root
             exit 0
             ;;
         * )
@@ -131,6 +133,8 @@ if [ "$COUNT" -eq 1 ]; then
     printf "Pairing request found!...\n"
     /opt/openclaw-cli.sh devices approve "${REQUEST_IDS[0]}" --token=${GATEWAY_TOKEN}
     printf "Pairing request approved!\n\nSetup complete. You should now be able to refresh dashboard UI and start using your OpenClaw 1-Click!\n"
+
+    cp /etc/skel/.bashrc /root
     exit 0
 elif [ "$COUNT" -eq 0 ]; then
     echo "Error: No pending requests found. Please proceed with manual pairing." >&2
