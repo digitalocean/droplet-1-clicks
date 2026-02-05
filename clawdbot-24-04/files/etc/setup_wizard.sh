@@ -4,7 +4,7 @@
 # Run this script to configure OpenClaw with a AI API key
 
 PS3="Select a provider (1-3): "
-options=("GradientAI" "OpenAI (Coming soon!)" "Anthropic")
+options=("GradientAI" "OpenAI" "Anthropic")
 
 selected_provider="n/a"
 target_config="n/a"
@@ -51,7 +51,7 @@ while [ -z "$model_access_key" ]
 mkdir -p /home/openclaw/.openclaw
 
 if [[ "$selected_provider" == "GradientAI" ]]; then
-    jq --arg key "$model_access_key" '.models.providers.digitalocean.apiKey = $key' "$target_config" > /home/openclaw/.openclaw/openclaw.json
+    jq --arg key "$model_access_key" '.models.providers.gradient.apiKey = $key' "$target_config" > /home/openclaw/.openclaw/openclaw.json
 else
     cp ${target_config} /home/openclaw/.openclaw/openclaw.json
     echo -e "\n${env_key_name}=${model_access_key}" >> /opt/openclaw.env
