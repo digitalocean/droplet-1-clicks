@@ -4,7 +4,7 @@
     "image_name": "openclaw-snap-{{timestamp}}",
     "apt_packages": "procps file apt-transport-https ca-certificates curl software-properties-common git build-essential libsystemd-dev jq unzip docker.io gnupg fail2ban",
     "application_name": "OpenClaw",
-    "application_version": "v2026.2.3"
+    "application_version": "v2026.2.9"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
@@ -13,7 +13,7 @@
       "api_token": "{{user `do_api_token`}}",
       "image": "ubuntu-24-04-x64",
       "region": "nyc3",
-      "size": "s-1vcpu-2gb",
+      "size": "s-2vcpu-4gb",
       "ssh_username": "root",
       "snapshot_name": "{{user `image_name`}}"
     }

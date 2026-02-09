@@ -102,10 +102,16 @@ done
 
 DROPL_IP=$(hostname -I | awk '{print$1}')
 
-printf "\nPlease open UI dashboard in your browser to trigger pairing process.\nYou will see a pairing error, but don't worry, it is expected:\n\t> https://${DROPL_IP}?token=${GATEWAY_TOKEN}\n\n"
+printf "\nPlease open UI dashboard in your browser to trigger pairing process.\n\n"
+printf "Dashboard URL:\n\t> https://${DROPL_IP}\n\n"
+printf "When the dashboard prompts for authentication:\n"
+printf "  1. Open the settings panel in the dashboard\n"
+printf "  2. Paste your gateway token: ${GATEWAY_TOKEN}\n"
+printf "  3. Connect to the gateway\n\n"
+printf "You will see a pairing request dialog - this is expected.\n\n"
 
 while true; do
-    read -p "Type continue once you see a pairing error on dashboard UI. (continue/exit): " yn
+    read -p "Type continue once you've connected and see the pairing request. (continue/exit): " yn
     case "${yn,,}" in
         continue|c )
             printf "\nSearching pairing request..."
