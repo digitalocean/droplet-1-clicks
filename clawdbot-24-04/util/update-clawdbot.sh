@@ -166,6 +166,56 @@ fi
 chown openclaw:openclaw /home/openclaw/.openclaw/openclaw.json
 chmod 0600 /home/openclaw/.openclaw/openclaw.json
 
+# Create restart helper script
+cat > /opt/restart-openclaw.sh << 'EOF'
+#!/bin/bash
+echo "Restarting Openclaw Gateway..."
+systemctl restart openclaw
+
+# Wait a moment for the service to start
+sleep 2
+
+# Check status
+if systemctl is-active --quiet openclaw; then
+    echo "✅ Openclaw restarted successfully!"
+    echo "Gateway is running on port 18789"
+    echo "View logs with: journalctl -u openclaw -f"
+else
+    echo "❌ Error: Failed to restart Openclaw"
+    echo "Check logs with: journalctl -u openclaw -xe"
+    exit 1
+fi
+EOF
+
+# Create update script
+cat > /opt/update-openclaw.sh << 'EOF'
+#!/bin/bash
+echo "Updating Openclaw..."
+cd /opt/openclaw
+git fetch --tags
+git checkout main
+git pull origin main
+EOF
+
+# Create status check script
+cat > /opt/status-openclaw.sh << 'EOF'
+#!/bin/bash
+echo "=== Openclaw Gateway Status ==="
+systemctl status openclaw --no-pager
+
+echo ""
+echo "=== Gateway Token ==="
+if [ -f "/opt/openclaw.env" ]; then
+    grep "^OPENCLAW_GATEWAY_TOKEN=" /opt/openclaw.env | cut -d'=' -f2
+else
+    echo "Token not yet generated. Run the onboot script."
+fi
+
+echo ""
+echo "=== Gateway URL ==="
+myip=$(hostname -I | awk '{print$1}')
+echo "http://$myip:18789"
+EOF
 
 # Create CLI helper script
 cat > /opt/openclaw-cli.sh << 'EOF'
@@ -174,6 +224,7 @@ cat > /opt/openclaw-cli.sh << 'EOF'
 su - openclaw -c "cd /opt/openclaw && node dist/index.js $*"
 EOF
 
+# Create TUI helper script
 cat > /opt/openclaw-tui.sh << 'EOF'
 gateway_token=$(grep "^OPENCLAW_GATEWAY_TOKEN=" /opt/openclaw.env 2>/dev/null | cut -d'=' -f2)
 
