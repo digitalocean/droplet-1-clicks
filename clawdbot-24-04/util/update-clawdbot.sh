@@ -115,15 +115,31 @@ chown openclaw:openclaw /opt/openclaw.env
 chmod 0600 /opt/openclaw.env
 
 # Migrate config and data from clawdbot to openclaw
-echo "Migrating clawdbot configuration and data..."
+echo "Migrating clawdbot home directory to openclaw..."
 
-# Step 1: Bulk copy entire clawdbot directory if it exists
-if [ -d /home/clawdbot/.clawdbot ]; then
-    mkdir -p /home/openclaw/.openclaw
-    # Copy contents of .clawdbot to .openclaw (not the directory itself)
-    cp -r /home/clawdbot/.clawdbot/* /home/openclaw/.openclaw/ 2>/dev/null || true
-    cp -r /home/clawdbot/.clawdbot/.* /home/openclaw/.openclaw/ 2>/dev/null || true
-    echo "Copied clawdbot data directory to openclaw"
+# Step 1: Bulk copy entire clawdbot home directory if it exists
+if [ -d /home/clawdbot ]; then
+    # Copy all files and directories from clawdbot home to openclaw home
+    cp -r /home/clawdbot/* /home/openclaw/ 2>/dev/null || true
+    # Copy hidden files and directories separately
+    cp -r /home/clawdbot/.* /home/openclaw/ 2>/dev/null || true
+    echo "Copied clawdbot home directory to openclaw"
+    
+    # Rename .clawdbot directory to .openclaw if it exists
+    if [ -d /home/openclaw/.clawdbot ] && [ ! -d /home/openclaw/.openclaw ]; then
+        mv /home/openclaw/.clawdbot /home/openclaw/.openclaw
+        echo "Renamed .clawdbot directory to .openclaw"
+    elif [ -d /home/openclaw/.clawdbot ] && [ -d /home/openclaw/.openclaw ]; then
+        # Both exist, merge .clawdbot into .openclaw
+        cp -r /home/openclaw/.clawdbot/* /home/openclaw/.openclaw/ 2>/dev/null || true
+        cp -r /home/openclaw/.clawdbot/.* /home/openclaw/.openclaw/ 2>/dev/null || true
+        rm -rf /home/openclaw/.clawdbot
+        echo "Merged .clawdbot into .openclaw"
+    fi
+    
+    # Set ownership of entire home directory to openclaw user
+    chown -R openclaw:openclaw /home/openclaw
+    echo "Set ownership of /home/openclaw to openclaw:openclaw"
 fi
 
 # Step 2: Ensure openclaw.json exists with proper naming
@@ -158,10 +174,14 @@ else
     printf '%s\n' '{"gateway":{"mode":"local","bind":"loopback","auth":{"token":"${OPENCLAW_GATEWAY_TOKEN}"},"trustedProxies":["127.0.0.1"]}}' > /home/openclaw/.openclaw/openclaw.json
 fi
 
-# Step 3: Set proper ownership and permissions
-chown -R openclaw:openclaw /home/openclaw/.openclaw
-chmod 0700 /home/openclaw/.openclaw
+# Step 3: Ensure proper permissions on config directory and files
+chown -R openclaw:openclaw /home/openclaw/.openclaw 2>/dev/null || true
+chmod 0700 /home/openclaw/.openclaw 2>/dev/null || true
 chmod 0600 /home/openclaw/.openclaw/openclaw.json 2>/dev/null || true
+# Ensure SSH directory has correct permissions if it exists
+chmod 0700 /home/openclaw/.ssh 2>/dev/null || true
+chmod 0600 /home/openclaw/.ssh/* 2>/dev/null || true
+chmod 0644 /home/openclaw/.ssh/*.pub 2>/dev/null || true
 
 # Create restart helper script
 cat > /opt/restart-openclaw.sh << 'EOF'
