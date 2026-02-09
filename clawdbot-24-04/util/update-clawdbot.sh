@@ -114,57 +114,54 @@ fi
 chown openclaw:openclaw /opt/openclaw.env
 chmod 0600 /opt/openclaw.env
 
-# Migrate config: check source location first, then copy directory, then migrate config file
-CONFIG_MIGRATED=false
+# Migrate config and data from clawdbot to openclaw
+echo "Migrating clawdbot configuration and data..."
 
-# Check if clawdbot config exists in source location before copying
-if [ -f /home/clawdbot/.clawdbot/clawdbot.json ]; then
+# Step 1: Bulk copy entire clawdbot directory if it exists
+if [ -d /home/clawdbot/.clawdbot ]; then
     mkdir -p /home/openclaw/.openclaw
-    cp /home/clawdbot/.clawdbot/clawdbot.json /home/openclaw/.openclaw/openclaw.json
-    echo "Migrated /home/clawdbot/.clawdbot/clawdbot.json to /home/openclaw/.openclaw/openclaw.json"
-    CONFIG_MIGRATED=true
-elif [ -f /home/clawdbot/.clawdbot/config.json ]; then
-    mkdir -p /home/openclaw/.openclaw
-    cp /home/clawdbot/.clawdbot/config.json /home/openclaw/.openclaw/openclaw.json
-    echo "Migrated /home/clawdbot/.clawdbot/config.json to /home/openclaw/.openclaw/openclaw.json"
-    CONFIG_MIGRATED=true
-elif [ -f /home/clawdbot/.clawdbot/openclaw.json ]; then
-    mkdir -p /home/openclaw/.openclaw
-    cp /home/clawdbot/.clawdbot/openclaw.json /home/openclaw/.openclaw/openclaw.json
-    echo "Using existing /home/clawdbot/.clawdbot/openclaw.json"
-    CONFIG_MIGRATED=true
+    # Copy contents of .clawdbot to .openclaw (not the directory itself)
+    cp -r /home/clawdbot/.clawdbot/* /home/openclaw/.openclaw/ 2>/dev/null || true
+    cp -r /home/clawdbot/.clawdbot/.* /home/openclaw/.openclaw/ 2>/dev/null || true
+    echo "Copied clawdbot data directory to openclaw"
 fi
 
-# copy the /home/clawdbot/.clawdbot directory to /home/openclaw/.openclaw
-cp -r /home/clawdbot/.clawdbot /home/openclaw/.openclaw 2>/dev/null || true
-chown -R openclaw:openclaw /home/openclaw/.openclaw
-chmod 0700 /home/openclaw/.openclaw
-
-# Migrate config: prefer existing config from clawdbot copy, then image configs, then default
-if [ "$CONFIG_MIGRATED" = "true" ]; then
-    echo "Config already migrated from source"
-elif [ -f /home/openclaw/.openclaw/openclaw.json ]; then
-    echo "Using existing openclaw.json from clawdbot migration"
+# Step 2: Ensure openclaw.json exists with proper naming
+# Priority: openclaw.json > clawdbot.json > config.json > /etc/config files > default
+if [ -f /home/openclaw/.openclaw/openclaw.json ]; then
+    echo "Using existing openclaw.json"
 elif [ -f /home/openclaw/.openclaw/clawdbot.json ]; then
     cp /home/openclaw/.openclaw/clawdbot.json /home/openclaw/.openclaw/openclaw.json
-    echo "Migrated clawdbot.json to openclaw.json"
+    echo "Renamed clawdbot.json to openclaw.json"
 elif [ -f /home/openclaw/.openclaw/config.json ]; then
     cp /home/openclaw/.openclaw/config.json /home/openclaw/.openclaw/openclaw.json
-    echo "Migrated config.json to openclaw.json"
+    echo "Renamed config.json to openclaw.json"
 elif [ -f /etc/config/openclaw.json ]; then
+    mkdir -p /home/openclaw/.openclaw
     cp /etc/config/openclaw.json /home/openclaw/.openclaw/openclaw.json
+    echo "Using openclaw.json from image config"
 elif [ -f /etc/config/anthropic.json ]; then
+    mkdir -p /home/openclaw/.openclaw
     cp /etc/config/anthropic.json /home/openclaw/.openclaw/openclaw.json
+    echo "Using anthropic.json from image config"
 elif [ -f /etc/config/openai.json ]; then
+    mkdir -p /home/openclaw/.openclaw
     cp /etc/config/openai.json /home/openclaw/.openclaw/openclaw.json
+    echo "Using openai.json from image config"
 elif [ -f /etc/config/gradientai.json ]; then
+    mkdir -p /home/openclaw/.openclaw
     cp /etc/config/gradientai.json /home/openclaw/.openclaw/openclaw.json
+    echo "Using gradientai.json from image config"
 else
-    echo "Warning: No config found. Run /etc/setup_wizard.sh after deploy to configure."
+    mkdir -p /home/openclaw/.openclaw
+    echo "Warning: No config found. Creating default config."
     printf '%s\n' '{"gateway":{"mode":"local","bind":"loopback","auth":{"token":"${OPENCLAW_GATEWAY_TOKEN}"},"trustedProxies":["127.0.0.1"]}}' > /home/openclaw/.openclaw/openclaw.json
 fi
-chown openclaw:openclaw /home/openclaw/.openclaw/openclaw.json
-chmod 0600 /home/openclaw/.openclaw/openclaw.json
+
+# Step 3: Set proper ownership and permissions
+chown -R openclaw:openclaw /home/openclaw/.openclaw
+chmod 0700 /home/openclaw/.openclaw
+chmod 0600 /home/openclaw/.openclaw/openclaw.json 2>/dev/null || true
 
 # Create restart helper script
 cat > /opt/restart-openclaw.sh << 'EOF'
