@@ -129,7 +129,8 @@
           "network": "bridge",
           "binds": [
             "/home/openclaw/homebrew:/home/openclaw/homebrew:ro",
-            "/opt/openclaw:/opt/openclaw:ro"
+            "/opt/openclaw:/opt/openclaw:ro",
+            "/usr/lib/node_modules/openclaw/skills:/home/openclaw/.openclaw/workspace/skills:ro"
           ]
         }
       }
