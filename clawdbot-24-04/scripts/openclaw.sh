@@ -196,25 +196,24 @@ fi
 echo "Stopping Openclaw service..."
 systemctl stop openclaw
 
-cd /opt/openclaw
-
 # Stash any local changes
-git stash
+echo "Stashing any local changes..."
+su - openclaw -c "cd /opt/openclaw && git stash"
 
 echo "Fetching updates from GitHub..."
-git fetch --tags --all
+su - openclaw -c "cd /opt/openclaw && git fetch --tags --all"
 
 if [ "$APP_VERSION" = "Latest" ]; then
     TARGET_REF="main"
     echo "Checking out branch ${TARGET_REF}..."
-    git checkout "${TARGET_REF}"
+    su - openclaw -c "cd /opt/openclaw && git checkout ${TARGET_REF}"
     echo "Pulling latest code from ${TARGET_REF}..."
-    git pull origin "${TARGET_REF}"
+    su - openclaw -c "cd /opt/openclaw && git pull origin ${TARGET_REF}"
 else
     TARGET_REF="$APP_VERSION"
     echo "Checking out tagged release ${TARGET_REF}..."
-    git checkout "${TARGET_REF}"
-    git reset --hard "${TARGET_REF}"
+    su - openclaw -c "cd /opt/openclaw && git checkout ${TARGET_REF}"
+    su - openclaw -c "cd /opt/openclaw && git reset --hard ${TARGET_REF}"
 fi
 
 if [ $? -eq 0 ]; then
@@ -256,6 +255,7 @@ cat > /opt/openclaw-cli.sh << 'EOF'
 su - openclaw -c "cd /opt/openclaw && node dist/index.js $*"
 EOF
 
+# Create TUI helper script
 cat > /opt/openclaw-tui.sh << 'EOF'
 gateway_token=$(grep "^OPENCLAW_GATEWAY_TOKEN=" /opt/openclaw.env 2>/dev/null | cut -d'=' -f2)
 
@@ -353,8 +353,8 @@ bash scripts/sandbox-setup.sh || echo "Warning: Sandbox image build failed, will
 systemctl enable openclaw
 
 su - openclaw -c "mkdir -p ~/homebrew && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C ~/homebrew"
-su - openclaw -c "~/homebrew/bin/brew install steipete/tap/wacli"
-su - openclaw -c "~/homebrew/bin/brew link wacli"
+# su - openclaw -c "~/homebrew/bin/brew install steipete/tap/wacli"
+# su - openclaw -c "~/homebrew/bin/brew link wacli"
 
 chown -R openclaw /home/openclaw/.npm
 su - openclaw -c "npm config set prefix /home/openclaw/.npm"
