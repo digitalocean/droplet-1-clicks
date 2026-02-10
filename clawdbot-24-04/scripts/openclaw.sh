@@ -18,7 +18,6 @@ echo "deb [signed-by=/usr/share/keyrings/caddy-stable-archive-keyring.gpg] https
 apt-get update -y
 apt-get install -y caddy
 mkdir -p /var/log/caddy
-useradd -m -s /bin/bash caddy || true
 
 chown -R caddy:caddy /var/log/caddy
 touch /var/log/caddy/access.json
@@ -47,9 +46,6 @@ chmod 0700 /home/openclaw/.openclaw
 systemctl enable fail2ban
 systemctl restart fail2ban
 
-cp /etc/config/openclaw.json  /home/openclaw/.openclaw/openclaw.json
-chmod 0600 /home/openclaw/.openclaw/openclaw.json
-
 # Make all scripts executable
 chmod +x /opt/restart-openclaw.sh
 chmod +x /opt/status-openclaw.sh
@@ -59,12 +55,6 @@ chmod +x /opt/setup-openclaw-domain.sh
 chmod +x /etc/setup_wizard.sh
 chmod +x /opt/openclaw-tui.sh
 
-# Build the sandbox image
-if which openclaw > /dev/null 2>&1; then
-    # Run openclaw's docker setup if available
-    su - openclaw -c "openclaw docker-setup" || echo "Warning: Sandbox image build failed, will be built on first use"
-fi
-
 # Enable but don't start the service yet (will start after onboot configuration)
 systemctl enable openclaw
 
@@ -72,5 +62,6 @@ su - openclaw -c "mkdir -p ~/homebrew && curl -L https://github.com/Homebrew/bre
 # su - openclaw -c "~/homebrew/bin/brew install steipete/tap/wacli"
 # su - openclaw -c "~/homebrew/bin/brew link wacli"
 
+mkdir /home/openclaw/.npm
 chown -R openclaw /home/openclaw/.npm
 su - openclaw -c "npm config set prefix /home/openclaw/.npm"
