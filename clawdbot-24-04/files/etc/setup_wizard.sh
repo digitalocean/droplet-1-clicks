@@ -105,9 +105,9 @@ DROPL_IP=$(hostname -I | awk '{print$1}')
 printf "\nPlease open UI dashboard in your browser to trigger pairing process.\n\n"
 printf "Dashboard URL:\n\t> https://${DROPL_IP}\n\n"
 printf "When the dashboard prompts for authentication:\n"
-printf "  1. Open the settings panel in the dashboard\n"
+printf "  1. Open the Overview panel in the sidebar\n"
 printf "  2. Paste your gateway token: ${GATEWAY_TOKEN}\n"
-printf "  3. Connect to the gateway\n\n"
+printf "  3. Click 'Connect' button\n\n"
 printf "You will see a pairing request dialog - this is expected.\n\n"
 
 while true; do
@@ -138,7 +138,7 @@ if [ "$COUNT" -eq 1 ]; then
     # Return the single Request ID
     printf "Pairing request found!...\n"
     /opt/openclaw-cli.sh devices approve "${REQUEST_IDS[0]}" --token=${GATEWAY_TOKEN}
-    printf "Pairing request approved!\n\nSetup complete. You should now be able to refresh dashboard UI and start using your OpenClaw 1-Click!\n"
+    printf "Pairing request approved! It may take few seconds before the dashboard updates.\n\nSetup complete. You should now be able to refresh dashboard UI and start using your OpenClaw 1-Click!\n"
 
     cp /etc/skel/.bashrc /root
     exit 0

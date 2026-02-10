@@ -13,7 +13,7 @@
       "api_token": "{{user `do_api_token`}}",
       "image": "ubuntu-24-04-x64",
       "region": "nyc3",
-      "size": "s-2vcpu-4gb",
+      "size": "s-1vcpu-2gb",
       "ssh_username": "root",
       "snapshot_name": "{{user `image_name`}}"
     }
@@ -39,6 +39,11 @@
       "type": "file",
       "source": "clawdbot-24-04/files/var/",
       "destination": "/var/"
+    },
+    {
+      "type": "file",
+      "source": "clawdbot-24-04/files/opt/",
+      "destination": "/opt/"
     },
     {
       "type": "shell",
