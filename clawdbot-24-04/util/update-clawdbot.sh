@@ -4,7 +4,7 @@
 # this script is used to update the DigitalOcean 1-Click Clawdbot/Moltbot image
 # to the latest openclaw version. It is used to update version 2026.1.24 to 2026.2.3
 
-APP_VERSION="v2026.2.3"
+APP_VERSION="v2026.2.9"
 REPO_URL="https://github.com/openclaw/openclaw.git"
 REPO_DIR="/opt/openclaw"
 
@@ -42,12 +42,10 @@ cd "$REPO_DIR"
 # Set ownership
 chown -R openclaw:openclaw "$REPO_DIR"
 
-# Create openclaw home directory and config directory
-mkdir -p /home/openclaw/.openclaw
-mkdir -p /home/openclaw/clawd
-chown -R openclaw:openclaw /home/openclaw/.openclaw
-chmod 0700 /home/openclaw/.openclaw
-chown -R openclaw:openclaw /home/openclaw/clawd
+# Create openclaw home directory (but NOT .openclaw - that will come from migration)
+# The .openclaw directory will be created from the clawdbot migration or later if needed
+mkdir -p /home/openclaw
+chown openclaw:openclaw /home/openclaw
 
 # Create systemd service file
 cat > /etc/systemd/system/openclaw.service << 'EOF'
@@ -125,21 +123,29 @@ if [ -d /home/clawdbot ]; then
     cp -r /home/clawdbot/.* /home/openclaw/ 2>/dev/null || true
     echo "Copied clawdbot home directory to openclaw"
     
-    # Rename .clawdbot directory to .openclaw if it exists
-    if [ -d /home/openclaw/.clawdbot ] && [ ! -d /home/openclaw/.openclaw ]; then
+    # Rename .clawdbot directory to .openclaw (simple rename, no merge needed)
+    if [ -d /home/openclaw/.clawdbot ]; then
         mv /home/openclaw/.clawdbot /home/openclaw/.openclaw
         echo "Renamed .clawdbot directory to .openclaw"
-    elif [ -d /home/openclaw/.clawdbot ] && [ -d /home/openclaw/.openclaw ]; then
-        # Both exist, merge .clawdbot into .openclaw
-        cp -r /home/openclaw/.clawdbot/* /home/openclaw/.openclaw/ 2>/dev/null || true
-        cp -r /home/openclaw/.clawdbot/.* /home/openclaw/.openclaw/ 2>/dev/null || true
-        rm -rf /home/openclaw/.clawdbot
-        echo "Merged .clawdbot into .openclaw"
     fi
     
     # Set ownership of entire home directory to openclaw user
     chown -R openclaw:openclaw /home/openclaw
     echo "Set ownership of /home/openclaw to openclaw:openclaw"
+    
+    # Ensure .openclaw has correct permissions for security
+    if [ -d /home/openclaw/.openclaw ]; then
+        chmod 0700 /home/openclaw/.openclaw
+        echo "Set secure permissions on .openclaw directory"
+    fi
+else
+    echo "Warning: /home/clawdbot directory not found, skipping migration"
+    # If clawdbot doesn't exist, ensure required directories exist for openclaw
+    mkdir -p /home/openclaw/clawd
+    mkdir -p /home/openclaw/.openclaw
+    chown -R openclaw:openclaw /home/openclaw/clawd
+    chown -R openclaw:openclaw /home/openclaw/.openclaw
+    chmod 0700 /home/openclaw/.openclaw
 fi
 
 # Step 2: Ensure openclaw.json exists with proper naming
@@ -172,6 +178,25 @@ else
     mkdir -p /home/openclaw/.openclaw
     echo "Warning: No config found. Creating default config."
     printf '%s\n' '{"gateway":{"mode":"local","bind":"loopback","auth":{"token":"${OPENCLAW_GATEWAY_TOKEN}"},"trustedProxies":["127.0.0.1"]}}' > /home/openclaw/.openclaw/openclaw.json
+fi
+
+# Step 2b: Update any clawdbot paths in ALL config files to openclaw paths
+if [ -d /home/openclaw/.openclaw ]; then
+    echo "Updating all clawdbot paths to openclaw paths in config files..."
+    # Find all JSON files and update paths
+    find /home/openclaw/.openclaw -type f -name "*.json" -exec sed -i 's|/home/clawdbot|/home/openclaw|g' {} \;
+    find /home/openclaw/.openclaw -type f -name "*.json" -exec sed -i 's|/opt/clawdbot|/opt/openclaw|g' {} \;
+    # Also replace .clawdbot directory references with .openclaw
+    find /home/openclaw/.openclaw -type f -name "*.json" -exec sed -i 's|\.clawdbot|.openclaw|g' {} \;
+    # Also update any text files that might contain paths
+    find /home/openclaw/.openclaw -type f -name "*.txt" -exec sed -i 's|/home/clawdbot|/home/openclaw|g' {} \; 2>/dev/null || true
+    find /home/openclaw/.openclaw -type f -name "*.txt" -exec sed -i 's|/opt/clawdbot|/opt/openclaw|g' {} \; 2>/dev/null || true
+    find /home/openclaw/.openclaw -type f -name "*.txt" -exec sed -i 's|\.clawdbot|.openclaw|g' {} \; 2>/dev/null || true
+    # Also update JSONL session transcript files
+    find /home/openclaw/.openclaw -type f -name "*.jsonl" -exec sed -i 's|/home/clawdbot|/home/openclaw|g' {} \; 2>/dev/null || true
+    find /home/openclaw/.openclaw -type f -name "*.jsonl" -exec sed -i 's|/opt/clawdbot|/opt/openclaw|g' {} \; 2>/dev/null || true
+    find /home/openclaw/.openclaw -type f -name "*.jsonl" -exec sed -i 's|\.clawdbot|.openclaw|g' {} \; 2>/dev/null || true
+    echo "Updated paths in all config files (clawdbot → openclaw)"
 fi
 
 # Step 3: Ensure proper permissions on config directory and files
@@ -253,11 +278,30 @@ chmod +x /opt/restart-openclaw.sh
 chmod +x /opt/status-openclaw.sh
 chmod +x /opt/update-openclaw.sh
 chmod +x /opt/openclaw-cli.sh
-chmod +x /opt/setup-openclaw-domain.sh
+chmod +x /opt/setup-openclaw-domain.sh 2>/dev/null || true
 chmod +x /opt/openclaw-tui.sh
+
+# Setup npm directory BEFORE building to avoid permission errors on /home/clawdbot/.npm
+mkdir -p /home/openclaw/.npm
+chown -R openclaw:openclaw /home/openclaw/.npm
+su - openclaw -c "npm config set prefix /home/openclaw/.npm"
 
 # Build Openclaw as openclaw user
 cd /opt/openclaw
+
+# Create temporary swap if needed to prevent OOM during pnpm install
+AVAILABLE_MEM=$(free -m | awk 'NR==2{print $7}')
+SWAP_TOTAL=$(free -m | awk 'NR==3{print $2}')
+
+# Create temporary swap if memory is low and swap is insufficient
+if [ $AVAILABLE_MEM -lt 1500 ] && [ $SWAP_TOTAL -lt 1000 ]; then
+    echo "Creating temporary 2GB swap file to prevent OOM during build..."
+    dd if=/dev/zero of=/swapfile bs=1M count=2048 2>/dev/null || true
+    chmod 600 /swapfile
+    mkswap /swapfile >/dev/null 2>&1 || true
+    swapon /swapfile 2>/dev/null || true
+fi
+
 su - openclaw -c "cd /opt/openclaw && pnpm install --frozen-lockfile"
 su - openclaw -c "cd /opt/openclaw && pnpm build"
 su - openclaw -c "cd /opt/openclaw && pnpm ui:install"
@@ -270,9 +314,11 @@ bash scripts/sandbox-setup.sh || echo "Warning: Sandbox image build failed, will
 # Enable but don't start the service yet (will start after onboot configuration)
 systemctl enable openclaw
 
-mkdir -p /home/openclaw/.npm
-chown -R openclaw /home/openclaw/.npm
-su - openclaw -c "npm config set prefix /home/openclaw/.npm"
+# Cleanup temporary swap if we created it
+if [ -f /swapfile ]; then
+    swapoff /swapfile 2>/dev/null || true
+    rm -f /swapfile
+fi
 
 # Update MOTD with current dashboard URL and tools
 echo "Updating Message of the Day (MOTD)..."
@@ -296,7 +342,7 @@ OpenClaw is a personal AI assistant you run on your own devices. It answers you
 on the channels you already use (WhatsApp, Telegram, Slack, Discord, and more).
 
 🌐 Control UI & Gateway Access:
-  Dashboard URL: https://$myip?token=$gateway_token
+  Dashboard URL: https://$myip
   Gateway Token: $gateway_token
 
 📝 Configuration:
@@ -340,7 +386,16 @@ MOTDEOF
 chmod +x /etc/update-motd.d/99-one-click
 
 echo "MOTD updated successfully"
-echo "Dashboard URL: https://$myip?token=$gateway_token"
+echo "Dashboard URL: https://$myip"
+echo "Gateway Token: $gateway_token"
+
+
+echo ""
+echo "=========================================="
+echo "Migration complete!"
+echo "Clawdbot has been successfully upgraded to OpenClaw"
+echo "Your conversation history and agent personality have been preserved"
+echo "=========================================="
 
 systemctl restart ssh
 systemctl restart openclaw
