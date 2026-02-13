@@ -3,8 +3,8 @@
 # OpenClaw Token Setup Script
 # Run this script to configure OpenClaw with a AI API key
 
-PS3="Select a provider (1-3): "
-options=("GradientAI" "OpenAI" "Anthropic")
+PS3="Select a provider (1-4): "
+options=("GradientAI" "OpenAI" "Anthropic" "OpenRouter")
 
 selected_provider="n/a"
 target_config="n/a"
@@ -33,6 +33,13 @@ do
         echo "You selected Anthropic."
         break
         ;;
+    "OpenRouter")
+        selected_provider="OpenRouter"
+        target_config="/etc/config/openrouter.json"
+        env_key_name="OPENROUTER_API_KEY"
+        echo "You selected OpenRouter."
+        break
+        ;;
     *)
         echo "Invalid option. Please try again."
         ;;
@@ -52,6 +59,8 @@ mkdir -p /home/openclaw/.openclaw
 
 if [[ "$selected_provider" == "GradientAI" ]]; then
     jq --arg key "$model_access_key" '.models.providers.gradient.apiKey = $key' "$target_config" > /home/openclaw/.openclaw/openclaw.json
+elif [[ "$selected_provider" == "OpenRouter" ]] then
+    jq --arg key "$model_access_key" '.models.providers.openrouter.apiKey = $key' "$target_config" > /home/openclaw/.openclaw/openclaw.json
 else
     cp ${target_config} /home/openclaw/.openclaw/openclaw.json
     echo -e "\n${env_key_name}=${model_access_key}" >> /opt/openclaw.env
