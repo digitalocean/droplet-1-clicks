@@ -4,7 +4,7 @@
 # this script is used to update the DigitalOcean 1-Click Clawdbot/Moltbot image
 # to the latest openclaw version. It is used to update version 2026.1.24 to 2026.2.3
 
-APP_VERSION="v2026.2.9"
+APP_VERSION="v2026.2.12"
 REPO_URL="https://github.com/openclaw/openclaw.git"
 REPO_DIR="/opt/openclaw"
 
