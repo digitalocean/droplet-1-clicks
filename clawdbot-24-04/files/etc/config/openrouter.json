@@ -1,0 +1,50 @@
+{
+  "models": {
+    "mode": "replace",
+    "providers": {
+      "openrouter": {
+        "baseUrl": "https://openrouter.ai/api/v1",
+        "apiKey": "PLACEHOLDER",
+        "api": "openai-completions",
+        "models": []
+      }
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "openrouter/openai/gpt-4o-mini"
+      },
+      "models": {
+        "openrouter/moonshotai/kimi-k2.5": {},
+        "openrouter/deepseek/deepseek-v3.2": {},
+        "openrouter/openai/gpt-4o-mini": {},
+        "openrouter/google/gemini-3-flash-preview": {}
+      },
+      "maxConcurrent": 4,
+      "subagents": {
+        "maxConcurrent": 8
+      },
+      "sandbox": {
+        "workspaceAccess":"rw",
+        "mode": "all",
+        "docker": {
+          "network": "bridge",
+          "binds": [
+            "/home/openclaw/homebrew:/home/openclaw/homebrew:ro",
+            "/opt/openclaw:/opt/openclaw:ro",
+            "/usr/lib/node_modules/openclaw/skills:/home/openclaw/.openclaw/workspace/skills:ro"
+          ]
+        }
+      }
+    }
+  },
+  "gateway": {
+    "mode": "local",
+    "bind": "loopback",
+    "auth": {
+      "token": "${OPENCLAW_GATEWAY_TOKEN}"
+    },
+    "trustedProxies": ["127.0.0.1"]
+  }
+}
