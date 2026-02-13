@@ -4,7 +4,7 @@
     "image_name": "openclaw-snap-{{timestamp}}",
     "apt_packages": "procps file apt-transport-https ca-certificates curl software-properties-common git build-essential libsystemd-dev jq unzip docker.io gnupg fail2ban",
     "application_name": "OpenClaw",
-    "application_version": "v2026.2.9"
+    "application_version": "v2026.2.12"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
