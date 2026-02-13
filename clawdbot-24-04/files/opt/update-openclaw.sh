@@ -10,6 +10,8 @@ if [ -f "/opt/openclaw.env" ]; then
         APP_VERSION="$APP_VERSION_VALUE"
     fi
 fi
+# If env file had unsubstituted template (e.g. OPENCLAW_VERSION=${APP_VERSION}), use Latest
+case "$APP_VERSION" in *'$'*) APP_VERSION="Latest";; esac
 
 echo "Updating OpenClaw (target version: ${APP_VERSION})..."
 
