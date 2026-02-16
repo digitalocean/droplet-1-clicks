@@ -1,0 +1,49 @@
+#!/bin/bash
+
+set -e
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
+
+# Create OpenCode config directory if it doesn't exist
+mkdir -p /root/.config/opencode
+
+# Create a getting started file for first-time users
+cat > /root/opencode_info.txt << 'EOF'
+================================================================================
+OpenCode 1-Click Droplet - Getting Started
+================================================================================
+
+OpenCode is an AI coding agent that runs in your terminal. Code and context
+stay local by default.
+
+NEXT STEPS:
+
+1. Configure your LLM provider (required for AI features):
+   Visit https://opencode.ai/auth to set up free models, or add your API key
+   for Claude, OpenAI, Gemini, or other providers.
+   See: https://opencode.ai/docs
+
+2. Run OpenCode:
+   cd /path/to/your/project
+   opencode
+
+3. Helper commands:
+   Check version:  /opt/opencode-version.sh
+   Update:         /opt/update-opencode.sh
+
+Configuration: /root/.config/opencode/
+
+For documentation: https://opencode.ai/docs
+
+================================================================================
+EOF
+
+chmod 600 /root/opencode_info.txt
+
+echo "OpenCode first-boot initialization complete!"
+echo "Getting started info saved to /root/opencode_info.txt"

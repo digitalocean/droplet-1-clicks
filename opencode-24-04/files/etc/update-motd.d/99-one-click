@@ -1,0 +1,36 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's One-Click OpenCode Droplet.
+
+OpenCode is an open-source AI coding agent that runs in your terminal. Use
+natural language to write, debug, and refactor code. It supports multiple
+LLM providers (Claude, GPT, Gemini, and more) and works with Models.dev
+for free model access.
+
+GETTING STARTED:
+
+1. Configure your LLM provider (required):
+   Visit https://opencode.ai/auth for free models, or add your API key.
+   See docs: https://opencode.ai/docs
+
+2. Run OpenCode:
+   cd /path/to/your/project
+   opencode
+
+Helper Commands:
+  Check version:  /opt/opencode-version.sh
+  Update:         /opt/update-opencode.sh
+
+Configuration:  /root/.config/opencode/
+Getting started: cat /root/opencode_info.txt
+
+For full documentation: https://opencode.ai/docs
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
