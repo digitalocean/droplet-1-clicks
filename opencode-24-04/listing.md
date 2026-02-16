@@ -1,12 +1,13 @@
 # OpenCode 1-Click Application
 
-Deploy OpenCode, an open-source AI coding agent that runs in your terminal. Use natural language to write, debug, and refactor code. Code and context stay local by default.
+Deploy OpenCode, an open-source AI coding agent that runs in your terminal, pre-configured to use DigitalOcean Gradient AI for inference. Use natural language to write, debug, and refactor code. Code and context stay local by default.
 
 ## What is OpenCode?
 
-OpenCode brings AI assistance into the command line. It's a terminal-based coding agent that works with your favorite LLM providers—Claude, GPT, Gemini, and more—via Models.dev or your own API keys.
+OpenCode brings AI assistance into the command line. It's a terminal-based coding agent pre-configured with DigitalOcean Gradient AI, giving you access to Llama 3.3 70B, Qwen3, DeepSeek, and more using a single Gradient model access key.
 
 - **Terminal-first** – Works natively in your shell, no web interface required
+- **DigitalOcean Gradient AI** – Pre-configured with open-source models via Gradient inference
 - **Multiple sessions** – Run multiple agents for different tasks
 - **File references** – Use `@filename` to include files in context
 - **Shell commands** – Execute commands with `!` prefix
@@ -16,8 +17,7 @@ OpenCode brings AI assistance into the command line. It's a terminal-based codin
 ## Key Features
 
 - Natural language coding assistance in the terminal
-- Support for many LLM providers (Claude, OpenAI, Gemini, etc.)
-- Free models available via Models.dev / OpenCode Zen
+- Pre-configured with DigitalOcean Gradient AI (Claude, GPT, DeepSeek, Llama, and more)
 - Works with existing projects—navigate, edit, and run code
 - No IDE required—pure terminal workflow
 
@@ -34,6 +34,7 @@ OpenCode is lightweight; most compute happens at the LLM provider.
 
 - **Ubuntu 24.04 LTS** – Base operating system
 - **OpenCode** – AI coding agent (version 1.2.5)
+- **DigitalOcean Gradient AI** – Pre-configured inference provider
 - **Git** – Version control
 - **UFW Firewall** – SSH only (rate-limited)
 
@@ -46,23 +47,22 @@ OpenCode is lightweight; most compute happens at the LLM provider.
 3. Add your SSH key for secure access
 4. Create the Droplet
 
-### 2. SSH In and Configure
+### 2. SSH In
 
 ```bash
 ssh root@your-droplet-ip
 ```
 
-### 3. Set Up Your LLM Provider (Required)
+### 3. Complete the Setup Wizard
 
-OpenCode needs an LLM to operate. Choose one:
+On first login, the setup wizard will prompt for your DigitalOcean Gradient model access key. To create one:
 
-**Free option (recommended for getting started):**
-- Visit https://opencode.ai/auth
-- Sign in and connect your Models.dev account for free models
+1. Go to https://cloud.digitalocean.com/gen-ai
+2. Navigate to **API Keys > Model Access Keys**
+3. Click **Create Model Access Key**
+4. Paste the key when prompted by the setup wizard
 
-**Or use your own API keys:**
-- Set your provider's API key in OpenCode's configuration
-- See https://opencode.ai/docs for provider-specific setup
+The wizard verifies your key and configures OpenCode automatically.
 
 ### 4. Run OpenCode
 
@@ -70,6 +70,8 @@ OpenCode needs an LLM to operate. Choose one:
 cd /path/to/your/project
 opencode
 ```
+
+The default model is **Llama 3.3 70B Instruct**. You can change it in `/root/.config/opencode/opencode.json`.
 
 ## Managing OpenCode
 
@@ -79,11 +81,39 @@ opencode
 |--------|---------|
 | Check version | `/opt/opencode-version.sh` |
 | Update to latest | `/opt/update-opencode.sh` |
+| Re-run setup wizard | `/opt/setup-opencode.sh` |
 
 ### Configuration
 
-- **Config directory**: `/root/.config/opencode/`
+- **OpenCode config**: `/root/.config/opencode/opencode.json`
+- **Auth / API key**: `/root/.local/share/opencode/auth.json`
 - **Getting started guide**: `cat /root/opencode_info.txt`
+
+### Pre-Configured Models
+
+The following top-rated coding models are available via DigitalOcean Gradient (only a Gradient model access key is required):
+
+| Model | ID | Provider |
+|-------|----|----------|
+| Claude Opus 4.6 | `anthropic-claude-opus-4.6` | Anthropic |
+| Claude Opus 4.5 | `anthropic-claude-opus-4.5` | Anthropic |
+| Claude Sonnet 4.5 (default) | `anthropic-claude-4.5-sonnet` | Anthropic |
+| Claude Sonnet 4 | `anthropic-claude-sonnet-4` | Anthropic |
+| Claude 3.7 Sonnet | `anthropic-claude-3.7-sonnet` | Anthropic |
+| GPT-5.2 | `openai-gpt-5.2` | OpenAI |
+| GPT-5 | `openai-gpt-5` | OpenAI |
+| GPT-5.1 Codex Max | `openai-gpt-5.1-codex-max` | OpenAI |
+| GPT-4.1 | `openai-gpt-4.1` | OpenAI |
+| o3 | `openai-o3` | OpenAI |
+| DeepSeek R1 Distill Llama 70B | `deepseek-r1-distill-llama-70b` | DeepSeek |
+| Qwen3 32B | `alibaba-qwen3-32b` | Alibaba |
+| Llama 3.3 70B Instruct | `llama3.3-70b-instruct` | Meta |
+
+To change the default model, edit `"model"` in `/root/.config/opencode/opencode.json`.
+
+### Using OpenCode's Built-in Providers
+
+If you prefer to use OpenCode's standard providers (Anthropic, OpenAI, Google, etc.) with your own API keys instead of Gradient, choose option **2** during the first-login setup wizard. You can then use the `/connect` command inside OpenCode to add your API keys for any of 75+ supported providers.
 
 ## Updating
 
@@ -105,7 +135,13 @@ Ensure you're in a login shell (SSH session) where PATH is set. Or run directly:
 
 ### AI features not working
 
-Configure your LLM provider at https://opencode.ai/auth or add your API key. See the docs: https://opencode.ai/docs
+Re-run the setup wizard to reconfigure your Gradient model access key:
+
+```bash
+/opt/setup-opencode.sh
+```
+
+Or manually edit `/root/.local/share/opencode/auth.json` with a valid key. You can create a new key at https://cloud.digitalocean.com/gen-ai.
 
 ## Additional Resources
 
@@ -125,4 +161,4 @@ For DigitalOcean Droplet issues:
 
 ---
 
-**Note**: This 1-Click installs OpenCode via the official install script. SSH is the only exposed port; there is no web interface.
+**Note**: This 1-Click installs OpenCode via the official install script and pre-configures DigitalOcean Gradient AI as the inference provider. SSH is the only exposed port; there is no web interface. Commercial models (Anthropic Claude, OpenAI GPT) are also available through Gradient but require their respective provider API keys configured in the DigitalOcean console.

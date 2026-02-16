@@ -23,6 +23,7 @@
     {"type": "file", "source": "common/files/var/", "destination": "/var/"},
     {"type": "file", "source": "opencode-24-04/files/etc/", "destination": "/etc/"},
     {"type": "file", "source": "opencode-24-04/files/opt/", "destination": "/opt/"},
+    {"type": "file", "source": "opencode-24-04/files/root/", "destination": "/root/"},
     {"type": "file", "source": "opencode-24-04/files/var/", "destination": "/var/"},
     {
       "type": "shell",

@@ -35,9 +35,13 @@ else
   fi
 fi
 
+# Ensure OpenCode auth directory exists for the setup wizard
+mkdir -p /root/.local/share/opencode
+
 # Make helper scripts, MOTD, and onboot script executable (copied by Packer)
 chmod +x /opt/update-opencode.sh
 chmod +x /opt/opencode-version.sh
+chmod +x /opt/setup-opencode.sh
 chmod +x /etc/update-motd.d/99-one-click
 chmod +x /var/lib/cloud/scripts/per-instance/001_onboot
 
