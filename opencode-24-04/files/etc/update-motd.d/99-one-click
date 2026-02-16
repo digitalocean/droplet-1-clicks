@@ -8,28 +8,35 @@ cat <<EOF
 Welcome to DigitalOcean's One-Click OpenCode Droplet.
 
 OpenCode is an open-source AI coding agent that runs in your terminal. Use
-natural language to write, debug, and refactor code. It supports multiple
-LLM providers (Claude, GPT, Gemini, and more) and works with Models.dev
-for free model access.
+natural language to write, debug, and refactor code. This droplet is
+pre-configured to use DigitalOcean Gradient AI for inference.
+
+PRE-CONFIGURED MODELS (via DigitalOcean Gradient):
+  Anthropic:    Claude Opus 4.6, Opus 4.5, Sonnet 4.5 (default), Sonnet 4, 3.7 Sonnet
+  OpenAI:       GPT-5.2, GPT-5, GPT-5.1 Codex Max, GPT-4.1, o3
+  Open Source:  DeepSeek R1 70B, Qwen3 32B, Llama 3.3 70B
 
 GETTING STARTED:
 
-1. Configure your LLM provider (required):
-   Visit https://opencode.ai/auth for free models, or add your API key.
-   See docs: https://opencode.ai/docs
+  1. On first login, the setup wizard will prompt for your Gradient
+     model access key. Create one at:
+     https://cloud.digitalocean.com/gen-ai
+     (API Keys > Model Access Keys)
 
-2. Run OpenCode:
-   cd /path/to/your/project
-   opencode
+  2. Run OpenCode:
+     cd /path/to/your/project
+     opencode
 
 Helper Commands:
-  Check version:  /opt/opencode-version.sh
-  Update:         /opt/update-opencode.sh
+  Check version:    /opt/opencode-version.sh
+  Update OpenCode:  /opt/update-opencode.sh
+  Re-run setup:     /opt/setup-opencode.sh
 
-Configuration:  /root/.config/opencode/
-Getting started: cat /root/opencode_info.txt
+Other providers: use /connect inside OpenCode to add your own API keys
+                 for Anthropic, OpenAI, Google, and 70+ more providers.
 
-For full documentation: https://opencode.ai/docs
+Configuration:  /root/.config/opencode/opencode.json
+Documentation:  https://opencode.ai/docs
 
 ********************************************************************************
 To delete this message of the day: rm -rf $(readlink -f ${0})

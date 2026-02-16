@@ -9,8 +9,14 @@ sed -e '/Match User root/d' \
 
 systemctl restart ssh
 
-# Create OpenCode config directory if it doesn't exist
+# Create OpenCode directories
 mkdir -p /root/.config/opencode
+mkdir -p /root/.local/share/opencode
+
+# Hook setup wizard to run on first SSH login
+cat >> /root/.bashrc <<EOM
+/opt/setup-opencode.sh
+EOM
 
 # Create a getting started file for first-time users
 cat > /root/opencode_info.txt << 'EOF'
@@ -18,25 +24,36 @@ cat > /root/opencode_info.txt << 'EOF'
 OpenCode 1-Click Droplet - Getting Started
 ================================================================================
 
-OpenCode is an AI coding agent that runs in your terminal. Code and context
-stay local by default.
+OpenCode is an AI coding agent that runs in your terminal, pre-configured to
+use DigitalOcean Gradient AI for inference.
+
+PRE-CONFIGURED MODELS (via DigitalOcean Gradient):
+
+  Anthropic:    Claude Opus 4.6, Opus 4.5, Sonnet 4.5 (default), Sonnet 4, 3.7 Sonnet
+  OpenAI:       GPT-5.2, GPT-5, GPT-5.1 Codex Max, GPT-4.1, o3
+  Open Source:  DeepSeek R1 70B, Qwen3 32B, Llama 3.3 70B
 
 NEXT STEPS:
 
-1. Configure your LLM provider (required for AI features):
-   Visit https://opencode.ai/auth to set up free models, or add your API key
-   for Claude, OpenAI, Gemini, or other providers.
-   See: https://opencode.ai/docs
+1. The setup wizard will run on first login to configure your
+   Gradient model access key. To create one:
+     https://cloud.digitalocean.com/gen-ai
+     Navigate to API Keys > Model Access Keys
 
 2. Run OpenCode:
    cd /path/to/your/project
    opencode
 
 3. Helper commands:
-   Check version:  /opt/opencode-version.sh
-   Update:         /opt/update-opencode.sh
+   Check version:    /opt/opencode-version.sh
+   Update OpenCode:  /opt/update-opencode.sh
+   Re-run setup:     /opt/setup-opencode.sh
 
-Configuration: /root/.config/opencode/
+Other providers: use /connect inside OpenCode to add your own API keys
+                 for Anthropic, OpenAI, Google, and 70+ more providers.
+
+Configuration:  /root/.config/opencode/opencode.json
+Auth:           /root/.local/share/opencode/auth.json
 
 For documentation: https://opencode.ai/docs
 
