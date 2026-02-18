@@ -1,0 +1,8 @@
+# Temporary Caddyfile for setup pending page
+:80 {
+    root * /var/www
+    file_server
+    
+    # Rewrite everything to setup-pending.html
+    rewrite * /setup-pending.html
+}

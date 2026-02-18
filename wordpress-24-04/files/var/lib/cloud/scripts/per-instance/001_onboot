@@ -104,3 +104,8 @@ sed -e '/Match User root/d' \
     -i /etc/ssh/sshd_config
 
 systemctl restart ssh
+
+# Configure Caddy to show setup-pending page until first login setup completes
+cp /etc/caddy/Caddyfile.setup-pending /etc/caddy/Caddyfile
+systemctl enable caddy
+systemctl restart caddy
