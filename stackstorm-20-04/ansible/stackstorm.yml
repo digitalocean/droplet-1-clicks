@@ -1,0 +1,10 @@
+---
+- name: stackstorm | provision image
+  hosts: default
+  vars:
+    st2_version: "{{ lookup('ansible.builtin.env', 'ST2_VERSION') }}"
+    st2_auth_username: "{{ lookup('ansible.builtin.env', 'ST2_AUTH_USERNAME') }}"
+    st2_auth_password: "{{ lookup('ansible.builtin.env', 'ST2_AUTH_PASSWORD') }}"
+    st2_rbac_enable: false
+  roles:
+    - role: stackstorm
