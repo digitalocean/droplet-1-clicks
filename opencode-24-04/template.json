@@ -2,9 +2,9 @@
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "opencode-24-04-snapshot-{{timestamp}}",
-    "apt_packages": "apt-transport-https ca-certificates curl software-properties-common git jq unzip ufw",
+    "apt_packages": "apt-transport-https ca-certificates curl software-properties-common git jq unzip ufw libssh-4",
     "application_name": "OpenCode",
-    "application_version": "1.2.5"
+    "application_version": "1.2.6"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [

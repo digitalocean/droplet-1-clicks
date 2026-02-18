@@ -33,7 +33,7 @@ OpenCode is lightweight; most compute happens at the LLM provider.
 ## Included System Components
 
 - **Ubuntu 24.04 LTS** – Base operating system
-- **OpenCode** – AI coding agent (version 1.2.5)
+- **OpenCode** – AI coding agent (version 1.2.6)
 - **DigitalOcean Gradient AI** – Pre-configured inference provider
 - **Git** – Version control
 - **UFW Firewall** – SSH only (rate-limited)
@@ -57,9 +57,8 @@ ssh root@your-droplet-ip
 
 On first login, the setup wizard will prompt for your DigitalOcean Gradient model access key. To create one:
 
-1. Go to https://cloud.digitalocean.com/gen-ai
-2. Navigate to **API Keys > Model Access Keys**
-3. Click **Create Model Access Key**
+1. Go to https://cloud.digitalocean.com/gen-ai/model-access-keys
+2. Click **Create Model Access Key**
 4. Paste the key when prompted by the setup wizard
 
 The wizard verifies your key and configures OpenCode automatically.
@@ -71,7 +70,7 @@ cd /path/to/your/project
 opencode
 ```
 
-The default model is **Llama 3.3 70B Instruct**. You can change it in `/root/.config/opencode/opencode.json`.
+The default model is **Claude Sonnet 4.5** (via DigitalOcean Gradient). You can change it in `/root/.config/opencode/opencode.json` or use the `/models` command inside OpenCode.
 
 ## Managing OpenCode
 
@@ -113,7 +112,7 @@ To change the default model, edit `"model"` in `/root/.config/opencode/opencode.
 
 ### Using OpenCode's Built-in Providers
 
-If you prefer to use OpenCode's standard providers (Anthropic, OpenAI, Google, etc.) with your own API keys instead of Gradient, choose option **2** during the first-login setup wizard. You can then use the `/connect` command inside OpenCode to add your API keys for any of 75+ supported providers.
+If you prefer to use OpenCode's standard providers (Anthropic, OpenAI, Google, etc.) with your own API keys instead of Gradient, skip the setup wizard by pressing Enter, then use the `/connect` command inside OpenCode to add your API keys for any of 75+ supported providers.
 
 ## Updating
 
@@ -141,7 +140,7 @@ Re-run the setup wizard to reconfigure your Gradient model access key:
 /opt/setup-opencode.sh
 ```
 
-Or manually edit `/root/.local/share/opencode/auth.json` with a valid key. You can create a new key at https://cloud.digitalocean.com/gen-ai.
+Or manually edit `/root/.local/share/opencode/auth.json` with a valid key. You can create a new key at https://cloud.digitalocean.com/gen-ai/model-access-keys.
 
 ## Additional Resources
 
