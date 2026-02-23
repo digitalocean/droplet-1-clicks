@@ -112,7 +112,7 @@ done
 DROPL_IP=$(hostname -I | awk '{print$1}')
 
 printf '\n----------!!IMPORTANT!!----------'
-printf '\n---------!!!PLEASE READ!!!-------------\n'
+printf '\n---------!!!PLEASE READ!!!-------------\n\n'
 
 printf "\nPlease open UI dashboard in your browser to trigger pairing process.\n\n"
 printf "Dashboard URL:\n\t> https://${DROPL_IP}\n\n"
