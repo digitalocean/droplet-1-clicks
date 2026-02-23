@@ -148,7 +148,7 @@ if [ "$COUNT" -eq 1 ]; then
     printf "Pairing request found!...\n"
     /opt/openclaw-cli.sh devices approve "${REQUEST_IDS[0]}" --token=${GATEWAY_TOKEN}
     printf "Pairing request approved! It may take few seconds before the dashboard updates.\n\nSetup complete. You should now be able to refresh dashboard UI and start using your OpenClaw 1-Click!\n"
-    printf "🔧 You can launch OpenClaw TUI using:\n\t$ /opt/openclaw-tui.sh"
+    printf "🔧 You can launch OpenClaw TUI using:\n\t$ /opt/openclaw-tui.sh\n"
 
     cp /etc/skel/.bashrc /root
     exit 0
