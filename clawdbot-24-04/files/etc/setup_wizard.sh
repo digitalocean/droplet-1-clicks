@@ -111,6 +111,9 @@ done
 
 DROPL_IP=$(hostname -I | awk '{print$1}')
 
+printf "\n----------!!IMPORTANT!!----------\n"
+printf "---------!!!PLEASE READ!!!-------------\n"
+
 printf "\nPlease open UI dashboard in your browser to trigger pairing process.\n\n"
 printf "Dashboard URL:\n\t> https://${DROPL_IP}\n\n"
 printf "Dashboard will show 'disconnected (1008): unauthorized' error. To authorize:\n"
