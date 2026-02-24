@@ -111,6 +111,9 @@ done
 
 DROPL_IP=$(hostname -I | awk '{print$1}')
 
+printf '\n----------!!IMPORTANT!!----------'
+printf '\n---------!!!PLEASE READ!!!-------------\n\n'
+
 printf "\nPlease open UI dashboard in your browser to trigger pairing process.\n\n"
 printf "Dashboard URL:\n\t> https://${DROPL_IP}\n\n"
 printf "Dashboard will show 'disconnected (1008): unauthorized' error. To authorize:\n"
@@ -148,7 +151,7 @@ if [ "$COUNT" -eq 1 ]; then
     printf "Pairing request found!...\n"
     /opt/openclaw-cli.sh devices approve "${REQUEST_IDS[0]}" --token=${GATEWAY_TOKEN}
     printf "Pairing request approved! It may take few seconds before the dashboard updates.\n\nSetup complete. You should now be able to refresh dashboard UI and start using your OpenClaw 1-Click!\n"
-    printf "🔧 You can launch OpenClaw TUI using:\n\t$ /opt/openclaw-tui.sh"
+    printf "🔧 You can launch OpenClaw TUI using:\n\t$ /opt/openclaw-tui.sh\n"
 
     cp /etc/skel/.bashrc /root
     exit 0
