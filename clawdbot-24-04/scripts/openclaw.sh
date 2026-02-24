@@ -66,4 +66,6 @@ mkdir /home/openclaw/.npm
 chown -R openclaw /home/openclaw/.npm
 su - openclaw -c "npm config set prefix /home/openclaw/.npm"
 
+mkdir /home/openclaw/.openclaw/workspace/skills
+chown -R /home/openclaw/.openclaw/workspace/skills
 mount --bind /usr/lib/node_modules/openclaw/skills /home/openclaw/.openclaw/workspace/skills
