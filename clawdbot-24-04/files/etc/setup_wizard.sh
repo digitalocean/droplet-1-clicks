@@ -91,7 +91,7 @@ else
     echo "⚠️ Service may need attention. Check with: systemctl status openclaw"
 fi
 
-cp -r /usr/lib/node_modules/openclaw/skills /home/openclaw/.openclaw/workspace/skills
+cp -r /usr/lib/node_modules/openclaw/skills /home/openclaw/.openclaw/workspace/
 
 printf "\nSince version 1.26 OpenClaw requires manual pairing to allow access to UI dashboard.\n"
 
