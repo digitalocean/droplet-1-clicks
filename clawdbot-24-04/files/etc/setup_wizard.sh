@@ -3,6 +3,7 @@
 # OpenClaw Token Setup Script
 # Run this script to configure OpenClaw with a AI API key
 
+DROPL_IP=$(hostname -I | awk '{print$1}')
 PS3="Select a provider (1-4): "
 options=("GradientAI" "OpenAI" "Anthropic" "OpenRouter")
 
@@ -69,7 +70,9 @@ fi
 GATEWAY_TOKEN=$(grep "^OPENCLAW_GATEWAY_TOKEN=" /opt/openclaw.env 2>/dev/null | cut -d'=' -f2)
 
 jq --arg key "${GATEWAY_TOKEN}" '.gateway.auth.token = $key' /home/openclaw/.openclaw/openclaw.json > /home/openclaw/.openclaw/openclaw.json.tmp
+mv /home/openclaw/.openclaw/openclaw.json.tmp /home/openclaw/.openclaw/openclaw.json
 
+jq --arg key "https://${DROPL_IP}" '.gateway.controlUi.allowedOrigins = [ $key ]' /home/openclaw/.openclaw/openclaw.json > /home/openclaw/.openclaw/openclaw.json.tmp
 mv /home/openclaw/.openclaw/openclaw.json.tmp /home/openclaw/.openclaw/openclaw.json
 
 chown openclaw:openclaw /home/openclaw/.openclaw/openclaw.json
@@ -88,7 +91,7 @@ else
     echo "⚠️ Service may need attention. Check with: systemctl status openclaw"
 fi
 
-mount --bind /usr/lib/node_modules/openclaw/skills /home/openclaw/.openclaw/workspace/skills
+cp -r /usr/lib/node_modules/openclaw/skills /home/openclaw/.openclaw/workspace/skills
 
 printf "\nSince version 1.26 OpenClaw requires manual pairing to allow access to UI dashboard.\n"
 
@@ -110,8 +113,6 @@ while true; do
             ;;
     esac
 done
-
-DROPL_IP=$(hostname -I | awk '{print$1}')
 
 printf '\n----------!!IMPORTANT!!----------'
 printf '\n---------!!!PLEASE READ!!!-------------\n\n'
