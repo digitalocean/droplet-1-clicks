@@ -58,10 +58,12 @@ chmod +x /opt/openclaw-tui.sh
 # Enable but don't start the service yet (will start after onboot configuration)
 systemctl enable openclaw
 
-su - openclaw -c "mkdir -p ~/homebrew && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C ~/homebrew"
+su - openclaw -c "mkdir -p /home/openclaw/.openclaw/workspace/homebrew && curl -L https://github.com/Homebrew/brew/tarball/master | tar xz --strip 1 -C /home/openclaw/.openclaw/workspace/homebrew"
 # su - openclaw -c "~/homebrew/bin/brew install steipete/tap/wacli"
 # su - openclaw -c "~/homebrew/bin/brew link wacli"
 
 mkdir /home/openclaw/.npm
 chown -R openclaw /home/openclaw/.npm
 su - openclaw -c "npm config set prefix /home/openclaw/.npm"
+
+mount --bind /usr/lib/node_modules/openclaw/skills /home/openclaw/.openclaw/workspace/skills

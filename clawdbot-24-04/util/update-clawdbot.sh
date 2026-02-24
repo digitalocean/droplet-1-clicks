@@ -63,7 +63,7 @@ WorkingDirectory=/opt/openclaw
 EnvironmentFile=/opt/openclaw.env
 Environment="HOME=/home/openclaw"
 Environment="NODE_ENV=production"
-Environment="PATH=/home/openclaw/.npm/bin:/home/openclaw/homebrew/bin:/usr/local/bin:/usr/bin:/bin:"
+Environment="PATH=/home/openclaw/.npm/bin:/home/openclaw/.openclaw/workspace/homebrew/bin:/usr/local/bin:/usr/bin:/bin:"
 
 # Start command - uses the gateway executable with allow-unconfigured for initial setup
 ExecStart=/usr/bin/node /opt/openclaw/dist/index.js gateway --port ${OPENCLAW_GATEWAY_PORT} --allow-unconfigured
