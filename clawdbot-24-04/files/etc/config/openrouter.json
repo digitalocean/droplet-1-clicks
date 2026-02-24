@@ -31,9 +31,9 @@
         "docker": {
           "network": "bridge",
           "binds": [
-            "/home/openclaw/homebrew:/home/openclaw/homebrew:ro",
-            "/opt/openclaw:/opt/openclaw:ro",
-            "/usr/lib/node_modules/openclaw/skills:/home/openclaw/.openclaw/workspace/skills:ro"
+            "/home/openclaw/.openclaw/workspace/homebrew:/home/openclaw/.openclaw/workspace/homebrew:ro",
+            "/home/openclaw/.openclaw/workspace/skills:/home/openclaw/.openclaw/workspace/skills:ro",
+            "/home/openclaw/.openclaw/workspace/npm:/home/openclaw/.openclaw/workspace/npm:ro"
           ]
         }
       }
@@ -45,6 +45,9 @@
     "auth": {
       "token": "${OPENCLAW_GATEWAY_TOKEN}"
     },
-    "trustedProxies": ["127.0.0.1"]
+    "trustedProxies": ["127.0.0.1"],
+    "controlUi": {
+      "enabled": true
+    }
   }
 }
