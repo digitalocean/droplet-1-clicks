@@ -1,0 +1,34 @@
+#!/bin/bash -x
+exec > >(tee /var/log/one_click_setup.log) 2>&1
+
+sudo -u ananconda bash <<EOF
+echo "Now upgrading jupyter environment"
+
+cd ~
+source /home/anaconda/anaconda3/etc/profile.d/conda.sh
+
+conda activate jupyter
+
+yes| pip install  pip --upgrade
+yes| pip install  -r /etc/jupyter/requirements.txt --upgrade
+conda deactivate
+EOF
+
+TOKEN=$(openssl rand -base64 60 | head -c49)
+
+cat > /root/.digitalocean_passwords <<EOM
+JUPYTER_TOKEN="${TOKEN}"
+EOM
+
+systemctl enable jupyter-notebook
+systemctl start jupyter-notebook
+
+systemctl stop apache2
+systemctl start caddy
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
