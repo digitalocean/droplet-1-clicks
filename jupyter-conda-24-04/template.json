@@ -6,7 +6,7 @@
     "application_name": "Jupyter-Conda",
     "anaconda_version": "2025.12-2",
     "jupyter_ai_version": "2.31.7",
-    "jupyterlab_version": "4.4.5"
+    "application_version": "4.5.5"
   },
   "builders": [
     {
@@ -61,9 +61,9 @@
       "environment_vars": [
         "ANACONDA_VERSION={{user `anaconda_version`}}",
         "JUPYTER_AI_VERSION={{user `jupyter_ai_version`}}",
-        "JUPYTERLAB_VERSION={{user `jupyterlab_version`}}",
+        "JUPYTERLAB_VERSION={{user `application_version`}}",
         "application_name={{user `application_name`}}",
-        "application_version={{user `jupyterlab_version`}}",
+        "application_version={{user `application_version`}}",
         "DEBIAN_FRONTEND=noninteractive",
         "LC_ALL=C",
         "LANG=en_US.UTF-8",
