@@ -1,0 +1,26 @@
+{
+  "agents": {
+    "defaults": {
+      "sandbox": {
+        "workspaceAccess":"rw",
+        "mode": "all",
+        "docker": {
+          "network": "bridge",
+          "binds": [
+            "/home/openclaw/.openclaw/workspace/homebrew:/home/openclaw/.openclaw/workspace/homebrew:ro",
+            "/home/openclaw/.openclaw/workspace/skills:/home/openclaw/.openclaw/workspace/skills:ro",
+            "/home/openclaw/.openclaw/workspace/npm:/home/openclaw/.openclaw/workspace/npm:ro"
+          ]
+        }
+      }
+    }
+  },
+  "gateway": {
+    "mode": "local",
+    "bind": "loopback",
+    "trustedProxies": ["127.0.0.1"],
+    "controlUi": {
+      "enabled": true
+    }
+  }
+}
