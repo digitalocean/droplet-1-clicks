@@ -4,9 +4,7 @@
     "image_name": "jupyter-conda-24-04-snapshot-{{timestamp}}",
     "apt_packages": "fail2ban jq libgl1 libglx-mesa0 ffmpeg libsm6 libxext6 build-essential git-all debian-keyring debian-archive-keyring apt-transport-https curl",
     "application_name": "Jupyter-Conda",
-    "anaconda_version": "2025.12-2",
-    "jupyter_ai_version": "2.31.7",
-    "application_version": "4.5.5"
+    "application_version": "latest"
   },
   "builders": [
     {
@@ -59,9 +57,6 @@
     {
       "type": "shell",
       "environment_vars": [
-        "ANACONDA_VERSION={{user `anaconda_version`}}",
-        "JUPYTER_AI_VERSION={{user `jupyter_ai_version`}}",
-        "JUPYTERLAB_VERSION={{user `application_version`}}",
         "application_name={{user `application_name`}}",
         "application_version={{user `application_version`}}",
         "DEBIAN_FRONTEND=noninteractive",
