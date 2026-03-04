@@ -57,6 +57,7 @@
     {
       "type": "shell",
       "environment_vars": [
+        "JUPYTERLAB_VERSION={{user `application_version`}}",
         "application_name={{user `application_name`}}",
         "application_version={{user `application_version`}}",
         "DEBIAN_FRONTEND=noninteractive",

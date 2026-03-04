@@ -2,8 +2,25 @@
 
 set -e
 
-echo "jupyterlab" >> /etc/jupyter/requirements.txt
-echo "jupyter-ai" >> /etc/jupyter/requirements.txt
+# Use application_version (e.g. 4.5.5 or "latest") for JupyterLab install
+JUPYTERLAB_VERSION="${JUPYTERLAB_VERSION:-latest}"
+if [ "${JUPYTERLAB_VERSION}" = "latest" ]; then
+  apt-get install -y jq > /dev/null 2>&1 || true
+  JUPYTERLAB_VERSION=$(curl -sf "https://pypi.org/pypi/jupyterlab/json" | jq -r '.info.version') || {
+    echo "ERROR: Failed to resolve latest JupyterLab version from PyPI" >&2
+    exit 1
+  }
+  echo "Resolved latest JupyterLab version: ${JUPYTERLAB_VERSION}"
+fi
+
+# Pin jupyterlab and jupyter-ai; build requirements with them first so pip installs this version (not jupyterlab-lsp's dependency)
+JUPYTER_AI_VERSION="${JUPYTER_AI_VERSION:-2.31.7}"
+REQS_TMP=$(mktemp)
+echo "jupyterlab==${JUPYTERLAB_VERSION}" > "${REQS_TMP}"
+echo "jupyter-ai==${JUPYTER_AI_VERSION}" >> "${REQS_TMP}"
+cat /etc/jupyter/requirements.txt >> "${REQS_TMP}"
+mv "${REQS_TMP}" /etc/jupyter/requirements.txt
+chown anaconda: /etc/jupyter/requirements.txt
 
 # JUPYTER
 sudo -u anaconda bash <<EOF
@@ -18,6 +35,7 @@ yes | conda tos accept --channel conda-forge
 
 conda create -n jupyter python --yes
 conda run -n jupyter pip install --upgrade pip
+conda run -n jupyter pip install "jupyterlab==${JUPYTERLAB_VERSION}" "jupyter-ai==${JUPYTER_AI_VERSION}"
 conda run -n jupyter pip install -r /etc/jupyter/requirements.txt
 EOF
 
