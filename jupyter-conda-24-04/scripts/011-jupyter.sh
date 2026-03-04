@@ -2,11 +2,8 @@
 
 set -e
 
-JUPYTERLAB="jupyterlab==${JUPYTERLAB_VERSION}"
-JUPYTER_AI="jupyter-ai==${JUPYTER_AI_VERSION}"
-
-echo "${JUPYTERLAB}" >> /etc/jupyter/requirements.txt
-echo "${JUPYTER_AI}" >> /etc/jupyter/requirements.txt
+echo "jupyterlab" >> /etc/jupyter/requirements.txt
+echo "jupyter-ai" >> /etc/jupyter/requirements.txt
 
 # JUPYTER
 sudo -u anaconda bash <<EOF
@@ -15,13 +12,13 @@ echo "Now installing jupyter environment"
 cd ~
 source /home/anaconda/anaconda3/etc/profile.d/conda.sh
 
-conda create -n jupyter python=3.12 --yes
-conda activate jupyter
+yes | conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
+yes | conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+yes | conda tos accept --channel conda-forge
 
-yes| pip install  pip --upgrade
-yes| pip install  -r /etc/jupyter/requirements.txt
-
-conda deactivate
+conda create -n jupyter python --yes
+conda run -n jupyter pip install --upgrade pip
+conda run -n jupyter pip install -r /etc/jupyter/requirements.txt
 EOF
 
 # Stable Diffusion 1.5
@@ -35,17 +32,17 @@ git clone https://github.com/bes-dev/stable_diffusion.openvino.git
 cd /home/anaconda/examples/stable_diffusion.openvino
 source /home/anaconda/anaconda3/etc/profile.d/conda.sh
 
+yes | conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
+yes | conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+yes | conda tos accept --channel conda-forge #not found
+
 conda create -n stable-diffusion-1.5 python=3.9 --yes
-conda activate stable-diffusion-1.5
+conda run -n stable-diffusion-1.5 pip install --upgrade pip
+conda run -n stable-diffusion-1.5 pip install openvino-dev[onnx,pytorch]==2022.3.0
+conda run -n stable-diffusion-1.5 pip install -r requirements.txt
+conda run -n stable-diffusion-1.5 pip install ipykernel
 
-yes| pip install  pip --upgrade
-yes| pip install openvino-dev[onnx,pytorch]==2022.3.0
-yes| pip install -r requirements.txt
-yes| pip install ipykernel
-
-python -m ipykernel install --user --name stable-diffusion-1.5 --display-name "Stable Diffusion 1.5"
-
-conda deactivate
+conda run -n stable-diffusion-1.5 python -m ipykernel install --user --name stable-diffusion-1.5 --display-name "Stable Diffusion 1.5"
 EOF
 
 # Install Intel Openvino Tutorials
@@ -59,16 +56,16 @@ sed -i 's/^jupyterlab/#jupyterlab/; s/^ipywidgets/#ipywidgets/; s/^ipykernel/#ip
 
 source /home/anaconda/anaconda3/etc/profile.d/conda.sh
 
+yes | conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
+yes | conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+yes | conda tos accept --channel conda-forge
+
 conda create -n openvino_notebooks python=3.10 --yes
-conda activate openvino_notebooks
+conda run -n openvino_notebooks python -m pip install --upgrade pip
+conda run -n openvino_notebooks pip install wheel setuptools
+conda run -n openvino_notebooks pip install -r requirements.txt
+conda run -n openvino_notebooks pip install ipykernel
 
-yes| python -m pip install --upgrade pip
-yes| pip install wheel setuptools
-yes| pip install -r requirements.txt
-yes| pip install ipykernel
-
-python -m ipykernel install --user --name openvino_notebooks --display-name “Openvino-Notebooks”
-
-conda deactivate
+conda run -n openvino_notebooks python -m ipykernel install --user --name openvino_notebooks --display-name "Openvino-Notebooks"
 
 EOF
