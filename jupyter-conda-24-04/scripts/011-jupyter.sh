@@ -2,9 +2,6 @@
 
 set -e
 
-echo "jupyterlab" >> /etc/jupyter/requirements.txt
-echo "jupyter-ai" >> /etc/jupyter/requirements.txt
-
 # JUPYTER
 sudo -u anaconda bash <<EOF
 echo "Now installing jupyter environment"
@@ -14,11 +11,11 @@ source /home/anaconda/anaconda3/etc/profile.d/conda.sh
 
 yes | conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
 yes | conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
-yes | conda tos accept --channel conda-forge
 
 conda create -n jupyter python --yes
 conda run -n jupyter pip install --upgrade pip
 conda run -n jupyter pip install -r /etc/jupyter/requirements.txt
+conda run -n jupyter pip install jupyterlab==$(curl -s "https://pypi.org/pypi/jupyterlab/json" | jq -r '.info.version') jupyter-ai
 EOF
 
 # Stable Diffusion 1.5
@@ -34,7 +31,6 @@ source /home/anaconda/anaconda3/etc/profile.d/conda.sh
 
 yes | conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
 yes | conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
-yes | conda tos accept --channel conda-forge #not found
 
 conda create -n stable-diffusion-1.5 python=3.9 --yes
 conda run -n stable-diffusion-1.5 pip install --upgrade pip
@@ -58,7 +54,6 @@ source /home/anaconda/anaconda3/etc/profile.d/conda.sh
 
 yes | conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
 yes | conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
-yes | conda tos accept --channel conda-forge
 
 conda create -n openvino_notebooks python=3.10 --yes
 conda run -n openvino_notebooks python -m pip install --upgrade pip
