@@ -1,0 +1,43 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+. /root/.digitalocean_passwords
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's JupyterLab Droplet 1-Click.
+To keep this Droplet secure, the UFW firewall is enabled.
+All ports are BLOCKED except 22 (SSH), 80 (HTTP), and 443 (HTTPS).
+
+Access the Jupyter Server:
+  * http://$myip
+  * Token: ${JUPYTER_TOKEN}
+
+
+Applications are installed under user 'anaconda'!
+
+To review the Readme.txt, switch to the Anaconda user. Conda is already installed, and JupyterLab is available in the Jupyter virtual environment.
+To access this virtual environment run the following commands:
+
+source /home/anaconda/anaconda3/etc/profile.d/conda.sh
+conda activate jupyter
+
+================================================================================
+
+If you prefer to always SSH into the Anaconda user, you can perform the following steps once. This will copy your .ssh folder from the root user to the Anaconda user, allowing you to SSH using the same keys but with the 'anaconda' username.
+
+rsync --archive --chown=anaconda:anaconda ~/.ssh /home/anaconda
+chmod 700 /home/anaconda/.ssh
+chmod 600 /home/anaconda/.ssh/authorized_keys
+
+================================================================================
+
+For more information, please refer to the Getting Started Guide:
+https://marketplace.digitalocean.com/apps/jupyter-notebook
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
