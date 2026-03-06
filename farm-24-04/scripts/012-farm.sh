@@ -26,7 +26,7 @@ cp /etc/sample-project/client/src/* /home/farm/client/src
 mkdir server
 cd server
 
-pip install fastapi uvicorn[standard] motor gunicorn pipenv
+pip3 install --ignore-installed --break-system-packages fastapi uvicorn[standard] motor gunicorn pipenv
 
 # Copy sample server
 cp /etc/sample-project/server/* /home/farm/server

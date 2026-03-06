@@ -2,7 +2,7 @@
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "farm-24-04-snapshot-{{timestamp}}",
-    "apt_packages": "apt-transport-https gnupg2 nginx wget curl unzip git python3-certbot-nginx python3-pip",
+    "apt_packages": "apt-transport-https gnupg2 nginx wget curl unzip git python3-certbot-nginx python3-pip python3-venv",
     "application_name": "FARM",
     "node_version": "20.x",
     "application_version": "latest"
