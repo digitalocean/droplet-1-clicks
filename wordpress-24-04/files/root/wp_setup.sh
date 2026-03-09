@@ -1,15 +1,24 @@
 #!/bin/bash
 #
-# WordPress activation script
+# WordPress automatic setup script with IP-based SSL
 #
-# This script will configure Apache with the domain
-# provided by the user and offer the option to set up
-# LetsEncrypt as well.
+# This script automatically configures Apache and WordPress with
+# an IP-based SSL certificate from Let's Encrypt
+
+set -e  # Exit on error
+
+echo "================================================================"
+echo "WordPress Automatic Setup"
+echo "================================================================"
+echo ""
+echo "This script will automatically configure your WordPress installation"
+echo "with HTTPS using Let's Encrypt SSL certificate for your server's IP."
+echo ""
 
 # Enable WordPress on first login
 if [[ -d /var/www/wordpress ]]
 then
-  mv /var/www/html /var/www/html.old
+  mv /var/www/html /var/www/html.old 2>/dev/null || true
   mv /var/www/wordpress /var/www/html
 fi
 chown -Rf www-data:www-data /var/www/html
@@ -52,68 +61,53 @@ EOM
   systemctl disable mysql.service
 fi
 
-echo "This script will copy the WordPress installation into"
-echo "Your web root and move the existing one to /var/www/html.old"
-echo "--------------------------------------------------"
-echo "This setup requires a domain name.  If you do not have one yet, you may"
-echo "cancel this setup, press Ctrl+C.  This script will run again on your next login"
-echo "--------------------------------------------------"
-echo "Enter the domain name for your new WordPress site."
-echo "(ex. example.org or test.example.org) do not include www or http/s"
-echo "--------------------------------------------------"
+echo "Step 1: Detecting server IP address..."
+echo "----------------------------------------"
 
-a=0
-while [ $a -eq 0 ]
-do
- read -p "Domain/Subdomain name: " dom
- if [ -z "$dom" ]
- then
-  a=0
-  echo "Please provide a valid domain or subdomain name to continue or press Ctrl+C to cancel"
- else
-  a=1
+# Get the server's IP address
+server_ip=$(hostname -I | awk '{print$1}')
+
+if [ -z "$server_ip" ]; then
+  echo "ERROR: Could not automatically detect server IP address."
+  echo "Please manually run: /root/wp_setup_domain.sh for domain-based setup"
+  exit 1
 fi
-done
-sed -i "s/\$domain/$dom/g"  /etc/apache2/sites-enabled/000-default.conf
-a2enconf block-xmlrpc
 
-service apache2 restart
+echo "✓ Detected IP address: $server_ip"
+echo ""
 
-echo -en "Now we will create your new admin user account for WordPress."
+echo "Step 2: WordPress Admin Account Setup"
+echo "----------------------------------------"
 
 function wordpress_admin_account(){
 
-  while [ -z $email ]
+  while [ -z "$email" ]
   do
-    echo -en "\n"
     read -p "Your Email Address: " email
   done
 
-  while [ -z $username ]
+  while [ -z "$username" ]
   do
-    echo -en "\n"
-    read -p  "Username: " username
+    read -p "Admin Username: " username
   done
 
-  while [ -z $pass ]
+  while [ -z "$pass" ]
   do
-    echo -en "\n"
-    read -s -p "Password: " pass
-    echo -en "\n"
+    read -s -p "Admin Password: " pass
+    echo ""
   done
 
   while [ -z "$title" ]
   do
-    echo -en "\n"
-    read -p "Blog Title: " title
+    read -p "Site Title: " title
   done
 }
 
 wordpress_admin_account
 
+echo ""
 while true
 do
-    echo -en "\n"
     read -p "Is the information correct? [Y/n] " confirmation
     confirmation=${confirmation,,}
     if [[ "${confirmation}" =~ ^(yes|y)$ ]] || [ -z $confirmation ]
@@ -121,34 +115,114 @@ do
       break
     else
       unset email username pass title confirmation
+      echo ""
       wordpress_admin_account
+      echo ""
     fi
 done
 
-echo -en "\n\n\n"
-echo "Next, you have the option of configuring LetsEncrypt to secure your new site.  Before doing this, be sure that you have pointed your domain or subdomain to this server's IP address.  You can also run LetsEncrypt certbot later with the command 'certbot --apache'"
-echo -en "\n\n\n"
- read -p "Would you like to use LetsEncrypt (certbot) to configure SSL(https) for your new site? (y/n): " yn
-    case $yn in
-        [Yy]* ) certbot --apache; echo "WordPress has been enabled at https://$dom  Please open this URL in a browser to complete the setup of your site.";break;;
-        [Nn]* ) echo "Skipping LetsEncrypt certificate generation";break;;
-        * ) echo "Please answer y or n.";;
-    esac
-
-echo "Finalizing installation..."
-wget https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -O /usr/bin/wp
+echo ""
+echo "Step 3: Installing WP-CLI..."
+echo "----------------------------------------"
+wget -q https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -O /usr/bin/wp 2>/dev/null
 chmod +x /usr/bin/wp
+echo "✓ WP-CLI installed"
+echo ""
 
-echo -en "Completing the configuration of WordPress."
-wp core install --allow-root --path="/var/www/html" --title="$title" --url="$dom" --admin_email="$email"  --admin_password="$pass" --admin_user="$username"
-#looks like ams3 region is a little slow and wp-cli times out, so we will add the timeout
-sleep 1
-echo -en "Installing fail2ban plugin."
-wp plugin install wp-fail2ban --allow-root --path="/var/www/html"
-sleep 1
-echo -en "Activating fail2ban plugin."
-wp plugin activate wp-fail2ban --allow-root --path="/var/www/html"
-chown -Rf www-data.www-data /var/www/
+echo "Step 4: Configuring WordPress..."
+echo "----------------------------------------"
+wp core install --allow-root --path="/var/www/html" --title="$title" --url="http://$server_ip" --admin_email="$email" --admin_password="$pass" --admin_user="$username" 2>/dev/null
+echo "✓ WordPress configured"
+echo ""
+
+echo "Step 5: Configuring Caddy with SSL..."
+echo "----------------------------------------"
+echo "Setting up automatic HTTPS with short-lived certificates for $server_ip"
+echo ""
+
+# Create Caddyfile with short-lived certificate configuration
+cat > /etc/caddy/Caddyfile <<EOF
+# Global options
+{
+    email $email
+}
+
+# HTTP configuration (for setup)
+http://$server_ip {
+    redir https://{host}{uri} permanent
+}
+
+# HTTPS configuration with short-lived certificates
+https://$server_ip {
+    tls {
+        issuer acme {
+            dir https://acme-v02.api.letsencrypt.org/directory
+            profile shortlived
+        }
+    }
+    
+    root * /var/www/html
+    php_fastcgi unix//run/php/php8.3-fpm.sock
+    file_server
+    
+    encode gzip
+    
+    # WordPress permalinks
+    try_files {path} {path}/ /index.php?{query}
+    
+    # Deny access to sensitive files
+    @blocked {
+        path */xmlrpc.php
+        path */.git/*
+        path */wp-config.php
+    }
+    respond @blocked 403
+}
+EOF
+
+# Reload Caddy
+systemctl enable caddy 2>/dev/null
+systemctl restart caddy
+
+echo "✓ Caddy configured with automatic HTTPS"
+echo ""
+
+echo "Step 6: Installing security plugins..."
+echo "----------------------------------------"
+sleep 3
+
+# Update WordPress URLs to use HTTPS
+wp --allow-root --path="/var/www/html" option update home "https://$server_ip" 2>/dev/null
+wp --allow-root --path="/var/www/html" option update siteurl "https://$server_ip" 2>/dev/null
+
+wp plugin install wp-fail2ban --allow-root --path="/var/www/html" 2>/dev/null
+wp plugin activate wp-fail2ban --allow-root --path="/var/www/html" 2>/dev/null
+echo "✓ Security plugins installed"
+echo ""
+
+chown -Rf www-data:www-data /var/www/
 cp /etc/skel/.bashrc /root
 
-echo "Installation complete. Access your new WordPress site in a browser to continue."
+echo ""
+echo "================================================================"
+echo "🎉 WordPress Installation Complete!"
+echo "================================================================"
+echo ""
+echo "Your WordPress site is now accessible at:"
+echo ""
+echo "    👉  https://$server_ip"
+echo ""
+echo "Admin login:"
+echo "    Username: $username"
+echo "    Email: $email"
+echo ""
+echo "================================================================"
+echo ""
+echo "📝 Additional Information:"
+echo ""
+echo "• SSL: Short-lived certificates (auto-renew every ~6 days)"
+echo "• Web server: Caddy (automatic HTTPS)"
+echo "• Add custom domain: /root/wp_setup_domain.sh"
+echo ""
+echo "================================================================"
+echo ""
