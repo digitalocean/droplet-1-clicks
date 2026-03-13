@@ -4,8 +4,8 @@
 # Run this script to configure OpenClaw with a AI API key
 
 DROPL_IP=$(hostname -I | awk '{print$1}')
-PS3="Select a provider (1-4): "
-options=("GradientAI" "OpenAI" "Anthropic" "OpenRouter")
+PS3="Select a provider (1-5): "
+options=("GradientAI" "OpenAI" "Anthropic" "OpenRouter" "OpenClaw Model Setup")
 
 selected_provider="n/a"
 target_config="n/a"
@@ -41,6 +41,13 @@ do
         echo "You selected OpenRouter."
         break
         ;;
+    "OpenClaw Model Setup")
+        selected_provider="OpenClaw Model Setup"
+        target_config="/etc/config/openclaw.json"
+        echo "You selected OpenClaw Built-in Model Setup."
+        echo "When prompted 'Where will the Gateway run?' please select 'Local'"
+        break
+        ;;
     *)
         echo "Invalid option. Please try again."
         ;;
@@ -51,10 +58,16 @@ echo "${selected_provider} Configuration Setup"
 echo "=============================="
 echo ""
 
-while [ -z "$model_access_key" ]
-  do
-    read -p "Enter ${selected_provider} model access key: " model_access_key
-  done
+if [[ "$selected_provider" == "OpenClaw Model Setup" ]]; then
+  /opt/openclaw-cli.sh configure --section model
+  jq -s '.[0] * .[1]' /home/openclaw/.openclaw/openclaw.json ${target_config} > /home/openclaw/.openclaw/openclaw.json.bak
+  cp /home/openclaw/.openclaw/openclaw.json.bak /home/openclaw/.openclaw/openclaw.json
+else
+  while [ -z "$model_access_key" ]
+    do
+      read -p "Enter ${selected_provider} model access key: " model_access_key
+    done
+fi
 
 mkdir -p /home/openclaw/.openclaw
 
@@ -62,7 +75,7 @@ if [[ "$selected_provider" == "GradientAI" ]]; then
     jq --arg key "$model_access_key" '.models.providers.gradient.apiKey = $key' "$target_config" > /home/openclaw/.openclaw/openclaw.json
 elif [[ "$selected_provider" == "OpenRouter" ]] then
     jq --arg key "$model_access_key" '.models.providers.openrouter.apiKey = $key' "$target_config" > /home/openclaw/.openclaw/openclaw.json
-else
+elif [[ "$selected_provider" != "OpenClaw Model Setup" ]] then
     cp ${target_config} /home/openclaw/.openclaw/openclaw.json
     echo -e "\n${env_key_name}=${model_access_key}" >> /opt/openclaw.env
 fi
@@ -92,6 +105,23 @@ else
 fi
 
 cp -r /usr/lib/node_modules/openclaw/skills /home/openclaw/.openclaw/workspace/
+
+printf "\nPairing local device. Please ignore the 'gateway connect failed' error...\n"
+
+sleep 5
+
+OUTPUT=$(/opt/openclaw-cli.sh devices list --token=${GATEWAY_TOKEN} | sed -n '/Pending/,/Paired/p')
+
+REQUEST_IDS=($(echo "$OUTPUT" | grep -oP '[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}'))
+
+COUNT=${#REQUEST_IDS[@]}
+
+if [ "$COUNT" -eq 1 ]; then
+    /opt/openclaw-cli.sh devices approve "${REQUEST_IDS[0]}" --token=${GATEWAY_TOKEN}
+    printf "\nSuccessfully paired local device\n"
+else
+    printf "\nFailed to pair local device\n"
+fi
 
 printf "\nSince version 1.26 OpenClaw requires manual pairing to allow access to UI dashboard.\n"
 
