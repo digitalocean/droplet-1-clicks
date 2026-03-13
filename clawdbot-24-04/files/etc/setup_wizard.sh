@@ -149,14 +149,14 @@ printf '\n---------!!!PLEASE READ!!!-------------\n\n'
 
 printf "\nPlease open UI dashboard in your browser to trigger pairing process.\n\n"
 printf "Dashboard URL:\n\t> https://${DROPL_IP}\n\n"
-printf "Dashboard will show 'disconnected (1008): unauthorized' error. To authorize:\n"
-printf "  1. Open the Overview panel in the sidebar\n"
-printf "  2. Paste your gateway token: ${GATEWAY_TOKEN}\n"
+printf "Dashboard will show 'unauthorized: gateway token missing' error. To authorize:\n"
+printf "  1. Copy your gateway token: ${GATEWAY_TOKEN}\n"
+printf "  2. Enter your token in Gateway Token field\n"
 printf "  3. Click 'Connect' button\n\n"
-printf "After authorizing you will see a different error 'pairing required'. Don't worry, it is expected.\n\n"
+printf "After clicking 'Connect' you will see a different error 'pairing required'. Don't worry, it is expected.\n\n"
 
 while true; do
-    read -p "Type continue once you've connected and see the 'pairing required' error. (continue/exit): " yn
+    read -p "Type continue once you've entered gateway token and see the 'pairing required' error. (continue/exit): " yn
     case "${yn,,}" in
         continue|c )
             printf "\nSearching pairing request..."
@@ -172,6 +172,8 @@ while true; do
     esac
 done
 
+sleep 5
+
 OUTPUT=$(/opt/openclaw-cli.sh devices list --token=${GATEWAY_TOKEN} | sed -n '/Pending/,/Paired/p')
 
 REQUEST_IDS=($(echo "$OUTPUT" | grep -oP '[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}'))
@@ -183,7 +185,7 @@ if [ "$COUNT" -eq 1 ]; then
     # Return the single Request ID
     printf "Pairing request found!...\n"
     /opt/openclaw-cli.sh devices approve "${REQUEST_IDS[0]}" --token=${GATEWAY_TOKEN}
-    printf "Pairing request approved! It may take few seconds before the dashboard updates.\n\nSetup complete. You should now be able to refresh dashboard UI and start using your OpenClaw 1-Click!\n"
+    printf "Pairing request approved! Refresh the page to open dashboard.\n\nSetup complete. You should now be able to refresh dashboard UI and start using your OpenClaw 1-Click!\n"
     printf "🔧 You can launch OpenClaw TUI using:\n\t$ /opt/openclaw-tui.sh\n"
 
     cp /etc/skel/.bashrc /root
