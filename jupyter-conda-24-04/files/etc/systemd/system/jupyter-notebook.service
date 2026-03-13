@@ -1,0 +1,14 @@
+[Unit]
+Description=Jupyter Notebook Service
+After=network.target
+
+[Service]
+User=anaconda
+WorkingDirectory=/home/anaconda
+EnvironmentFile=/root/.digitalocean_passwords
+ExecStart=/home/anaconda/.conda/envs/jupyter/bin/jupyter lab --no-browser --IdentityProvider.token="${JUPYTER_TOKEN}" --ServerApp.allow_remote_access=true
+Restart=always
+SyslogIdentifier=jupyter-notebook
+
+[Install]
+WantedBy=multi-user.target
