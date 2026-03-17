@@ -1,0 +1,23 @@
+api_key = "PLACEHOLDER"
+default_provider = "openai"
+default_model = "gpt-4o-mini"
+default_temperature = 0.7
+
+[memory]
+backend = "sqlite"
+auto_save = true
+embedding_provider = "none"
+
+[gateway]
+port = 42617
+host = "127.0.0.1"
+require_pairing = true
+allow_public_bind = false
+
+[autonomy]
+level = "supervised"
+workspace_only = true
+allowed_commands = ["git", "npm", "cargo", "ls", "cat", "grep"]
+
+[secrets]
+encrypt = true

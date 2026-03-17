@@ -1,0 +1,10 @@
+PLACEHOLDER_IP {
+    tls {
+        issuer acme {
+            dir https://acme-v02.api.letsencrypt.org/directory
+            profile shortlived
+        }
+    }
+    reverse_proxy localhost:42617
+    header X-DO-MARKETPLACE "zeroclaw"
+}
