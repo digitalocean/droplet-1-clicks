@@ -6,4 +6,10 @@ sed -e '/Match User root/d' -e '/.*ForceCommand.*droplet.*/d' -i /etc/ssh/sshd_c
 
 systemctl restart ssh
 
+cat <<EOF > /etc/docker/daemon.json
+{
+  "default-cgroupns-mode": "host"
+}
+EOF
+
 curl -fsSL https://nvidia.com/nemoclaw.sh | bash
