@@ -1,0 +1,18 @@
+[Unit]
+Description=OpenShell sandbox running OpenClaw (forward 18789)
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root
+ExecStart=openshell sandbox connect openclaw-sandbox <<< "openclaw gateway --port 18789 --allow-unconfigured"
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
