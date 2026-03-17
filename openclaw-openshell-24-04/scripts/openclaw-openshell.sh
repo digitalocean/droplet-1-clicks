@@ -39,8 +39,3 @@ grep -q '\. "/root/.local/bin/env"' /root/.bashrc 2>/dev/null || echo '. "/root/
 # Create openclaw user and install OpenClaw (needed for sandbox --from openclaw)
 useradd -m -s /bin/bash openclaw || true
 usermod -aG docker openclaw || true
-
-. "/root/.local/bin/env" 2>/dev/null || true
-# nohup + </dev/null so create runs in background; sandbox shell gets EOF and exits, packer script continues
-nohup openshell sandbox create --name openclaw-sandbox --forward 18789 --from openclaw </dev/null >/var/log/openclaw-sandbox-create.log 2>&1 &
-sleep 180

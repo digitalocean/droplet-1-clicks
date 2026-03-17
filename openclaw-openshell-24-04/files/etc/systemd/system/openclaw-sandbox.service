@@ -8,8 +8,7 @@ Requires=docker.service
 Type=simple
 User=root
 WorkingDirectory=/root
-ExecStart=openshell sandbox connect openclaw-sandbox <<< "openclaw gateway --port 18789 --allow-unconfigured"
-Restart=always
+ExecStart=echo "openclaw gateway --port 18789 --allow-unconfigured" | openshell sandbox connect openclaw-sandboxRestart=always
 RestartSec=10
 StandardOutput=journal
 StandardError=journal
