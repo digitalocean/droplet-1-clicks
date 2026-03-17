@@ -1,6 +1,17 @@
 #!/bin/sh
 # Per-instance: unique gateway token, Caddy with droplet IP, run setup wizard on first login, start sandbox and Caddy.
 
+# Log errors and important output to a file
+ONBOOT_LOG="/var/log/openclaw-onboot.log"
+log() { echo "$(date -Iseconds): $*" >> "$ONBOOT_LOG"; }
+log_err() { echo "$(date -Iseconds): ERROR: $*" >> "$ONBOOT_LOG" 2>&1; }
+trap 'log_err "onboot failed at line $LINENO (exit $?)"; exit 1' ERR 2>/dev/null || true
+set -e
+
+touch "$ONBOOT_LOG" 2>/dev/null || true
+exec 2>>"$ONBOOT_LOG"
+log "onboot started"
+
 # Generate unique gateway token for this droplet
 echo "Generating unique gateway token for this droplet..."
 NEW_GATEWAY_TOKEN=$(openssl rand -hex 32)
@@ -27,5 +38,4 @@ chmod +x /etc/setup_wizard.sh
 EOM
 
 systemctl restart ssh
-systemctl restart openclaw-sandbox
 systemctl restart caddy
