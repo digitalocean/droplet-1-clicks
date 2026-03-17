@@ -29,6 +29,14 @@ case "$MODEL_CHOICE" in
     *) MODEL_ID="anthropic-claude-4.5-sonnet"; MODEL_NAME="Claude 4.5 Sonnet" ;;
 esac
 
+openshell provider create \
+  --name do-gradient \
+  --type openai --credential \
+  OPENAI_API_KEY=$GRADIENT_API_KEY \
+  --config OPENAI_BASE_URL=https://inference.do-ai.run/v1
+
+openshell inference set --provider do-gradient --model $MODEL_ID
+
 # Start from existing /etc/config/openclaw.json (token already set by onboot), only set API key and model id/name
 CONFIG_FILE="/tmp/openclaw.json.tmp"
 jq \
@@ -49,7 +57,7 @@ CONFIG_FILE="/tmp/openclaw.json"
 openshell sandbox upload openclaw-sandbox "$CONFIG_FILE" /home/openclaw/.openclaw/openclaw.json || true
 
 # Restart sandbox to pick up config
-systemctl restart openclaw-sandbox
+systemctl enable openclaw-sandbox
 
 # Remove wizard from .bashrc so it runs only once
 sed -i '/\/etc\/setup_wizard.sh/d' /root/.bashrc 2>/dev/null || true
