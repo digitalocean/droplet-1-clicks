@@ -9,6 +9,9 @@ ufw allow 443
 ufw limit ssh/tcp
 ufw --force enable
 
+systemctl enable fail2ban
+systemctl restart fail2ban
+
 # Install Node.js 22 (required for OpenClaw)
 curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
 apt-get install -y nodejs
@@ -37,15 +40,7 @@ grep -q '\. "/root/.local/bin/env"' /root/.bashrc 2>/dev/null || echo '. "/root/
 useradd -m -s /bin/bash openclaw || true
 usermod -aG docker openclaw || true
 
-
-echo exit | openshell sandbox create --name openclaw-sandbox --forward 18789 --from openclaw 
-
-# OpenClaw workspace (homebrew, npm, skills) - same as OpenClaw 1-Click
-
-systemctl enable fail2ban
-systemctl restart fail2ban
-
-
-
-# Enable sandbox service (started on first boot after onboot config)
-systemctl enable openclaw-sandbox
+. "/root/.local/bin/env" 2>/dev/null || true
+# nohup + </dev/null so create runs in background; sandbox shell gets EOF and exits, packer script continues
+nohup openshell sandbox create --name openclaw-sandbox --forward 18789 --from openclaw </dev/null >/var/log/openclaw-sandbox-create.log 2>&1 &
+sleep 180
