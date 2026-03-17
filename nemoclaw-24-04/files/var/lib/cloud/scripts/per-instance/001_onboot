@@ -13,3 +13,7 @@ cat <<EOF > /etc/docker/daemon.json
 EOF
 
 curl -fsSL https://nvidia.com/nemoclaw.sh | bash
+
+source /root/.bashrc
+nemoclaw setup-spark
+nemoclaw onboard
