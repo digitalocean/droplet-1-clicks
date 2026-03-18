@@ -8,7 +8,17 @@ Requires=docker.service
 Type=simple
 User=root
 WorkingDirectory=/root
-ExecStart=echo "openclaw gateway --port 18789 --allow-unconfigured" | openshell sandbox connect openclaw-sandboxRestart=always
+
+ExecStartPre=-/bin/sh -c 'echo "pkill -9 -f openclaw" | /root/.local/bin/openshell sandbox connect openclaw-sandbox'
+
+# 2. THE MAIN PROCESS:
+ExecStart=/bin/sh -c 'echo "/sandbox/openclaw/openclaw-runner.sh" | /root/.local/bin/openshell sandbox connect openclaw-sandbox'
+
+# 3. CLEANUP ON STOP:
+# When you run 'systemctl stop', it will pipe this kill command in before shutting down
+ExecStop=/bin/sh -c 'echo "pkill -f openclaw" | /root/.local/bin/openshell sandbox connect openclaw-sandbox'
+ExecStart=/bin/sh -c 'echo "/sandbox/openclaw/openclaw-runner.sh" | /root/.local/bin/openshell sandbox connect openclaw-sandbox'
+Restart=always
 RestartSec=10
 StandardOutput=journal
 StandardError=journal

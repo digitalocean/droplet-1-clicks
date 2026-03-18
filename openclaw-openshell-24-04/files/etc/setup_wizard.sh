@@ -1,6 +1,6 @@
 #!/bin/bash
 # OpenClaw OpenShell setup wizard: GradientAI API key and model selection
-
+export PATH="/root/.local/bin:$PATH"
 set -e
 DROPL_IP=$(hostname -I | awk '{print$1}')
 
@@ -28,6 +28,8 @@ case "$MODEL_CHOICE" in
         ;;
     *) MODEL_ID="anthropic-claude-4.5-sonnet"; MODEL_NAME="Claude 4.5 Sonnet" ;;
 esac
+
+echo "Starting gateway..."
 
 sleep 10
 
@@ -58,10 +60,11 @@ mv "$CONFIG_FILE" /tmp/openclaw.json
 CONFIG_FILE="/tmp/openclaw.json"
 
 
-echo "exit" | openshell sandbox create --name openclaw-sandbox --forward 18789 --from openclaw 
+echo "exit" | openshell sandbox create --name openclaw-sandbox --forward 18789 --from openclaw
 
 # Upload config into OpenShell sandbox (per instructions: openshell sandbox upload <NAME> <LOCAL_PATH> [DEST])
 openshell sandbox upload openclaw-sandbox "$CONFIG_FILE" /sandbox/openclaw/.openclaw/
+openshell sandbox upload openclaw-sandbox "/etc/config/openclaw-runner.sh" /sandbox/openclaw/
 
 # Restart sandbox to pick up config
 systemctl enable openclaw-sandbox

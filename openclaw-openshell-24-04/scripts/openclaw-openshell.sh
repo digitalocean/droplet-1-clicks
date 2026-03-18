@@ -34,7 +34,7 @@ systemctl start docker
 # Install OpenShell CLI (per instructions: curl | sh)
 curl -LsSf https://raw.githubusercontent.com/NVIDIA/OpenShell/main/install.sh | sh
 # Ensure root's bashrc sources OpenShell env so non-interactive shells have openshell on PATH
-grep -q '\. "/root/.local/bin/env"' /root/.bashrc 2>/dev/null || echo '. "/root/.local/bin/env"' >> /root/.bashrc
+echo 'export PATH="/root/.local/bin:$PATH"' >> ~/.bashrc
 
 # Create openclaw user and install OpenClaw (needed for sandbox --from openclaw)
 useradd -m -s /bin/bash openclaw || true
