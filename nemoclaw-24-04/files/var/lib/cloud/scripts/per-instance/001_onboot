@@ -4,19 +4,15 @@ exec > >(tee /var/log/one_click_setup.log) 2>&1
 # Remove the ssh force logout command
 sed -e '/Match User root/d' -e '/.*ForceCommand.*droplet.*/d' -i /etc/ssh/sshd_config
 
-
 cat <<EOF > /etc/docker/daemon.json
 {
   "default-cgroupns-mode": "host"
 }
 EOF
 
-curl -fsSL https://nvidia.com/nemoclaw.sh | bash
-
-systemctl restart ssh
-
-
 cat >> /root/.bashrc <<EOM
 chmod +x /etc/setup_wizard.sh
 /etc/setup_wizard.sh
 EOM
+
+systemctl restart ssh
