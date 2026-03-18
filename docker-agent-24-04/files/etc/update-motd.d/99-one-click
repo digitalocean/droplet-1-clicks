@@ -46,5 +46,5 @@ Usage guide:         https://github.com/docker/docker-agent/blob/main/docs/USAGE
 Run 'cagent --help' for all available commands.
 
 ********************************************************************************
-To delete this message of the day: rm -rf $(readlink -f ${0})
+To delete this message of the day: rm -rf /etc/update-motd.d/99-one-click
 EOF

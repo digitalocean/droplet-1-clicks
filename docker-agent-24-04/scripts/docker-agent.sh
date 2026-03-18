@@ -29,3 +29,10 @@ cd -
 
 chown -R root:root /opt/docker-agent
 chmod -R 755 /opt/docker-agent
+
+# MOTD (run-parts only runs executable scripts)
+chmod +x /etc/update-motd.d/99-one-click
+
+# First-login setup (runs once when root SSHs in)
+chmod +x /etc/setup_docker_agent.sh
+[ -f /var/lib/cloud/scripts/per-instance/001_onboot ] && chmod +x /var/lib/cloud/scripts/per-instance/001_onboot

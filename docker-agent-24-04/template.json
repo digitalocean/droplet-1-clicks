@@ -41,6 +41,11 @@
       "destination": "/opt/"
     },
     {
+      "type": "file",
+      "source": "docker-agent-24-04/files/var/",
+      "destination": "/var/"
+    },
+    {
       "type": "shell",
       "environment_vars": [
         "DEBIAN_FRONTEND=noninteractive",
