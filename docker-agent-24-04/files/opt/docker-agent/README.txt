@@ -18,6 +18,9 @@ GETTING STARTED
    # For Google Gemini models
    export GOOGLE_API_KEY=your_api_key_here
 
+   # DigitalOcean Inference (Gradient) - create at https://cloud.digitalocean.com/gen-ai
+   export DO_GRADIENT_API_KEY=your_gradient_key_here
+
 2. Run example agents:
 
    # Run a basic agent (requires OPENAI_API_KEY)
@@ -72,5 +75,22 @@ NOTES
 - Enable DMR in Docker Desktop settings or via CLI for Docker Engine
 - Example configurations are in /opt/docker-agent/examples/
 - Agent configurations are YAML files describing models, tools, and behavior
+
+DigitalOcean Inference (Gradient)
+=================================
+Create a model access key at https://cloud.digitalocean.com/gen-ai then:
+  export DO_GRADIENT_API_KEY=your_key
+
+Use in your agent YAML (define model in models section with base_url/token_key):
+  agents:
+    root:
+      model: do_gradient
+      instruction: You are a helpful assistant.
+  models:
+    do_gradient:
+      provider: openai
+      model: anthropic-claude-4.5-sonnet
+      base_url: https://inference.do-ai.run/v1
+      token_key: DO_GRADIENT_API_KEY
 
 For questions and support, visit: https://github.com/docker/docker-agent

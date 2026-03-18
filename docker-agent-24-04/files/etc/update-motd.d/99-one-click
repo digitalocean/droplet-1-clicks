@@ -19,6 +19,7 @@ QUICK START
    export OPENAI_API_KEY=your_key_here      # For OpenAI models
    export ANTHROPIC_API_KEY=your_key_here   # For Anthropic models
    export GOOGLE_API_KEY=your_key_here      # For Google Gemini models
+   export DO_GRADIENT_API_KEY=your_key_here # DigitalOcean Inference (Gradient)
 
 2. Run example agents:
 
@@ -44,6 +45,9 @@ GitHub repository:  https://github.com/docker/docker-agent
 Usage guide:         https://github.com/docker/docker-agent/blob/main/docs/USAGE.md
 
 Run 'cagent --help' for all available commands.
+
+DigitalOcean Inference (Gradient): create a key at https://cloud.digitalocean.com/gen-ai
+Then use in your agent YAML: provider base_url https://inference.do-ai.run/v1, token_key DO_GRADIENT_API_KEY
 
 ********************************************************************************
 To delete this message of the day: rm -rf /etc/update-motd.d/99-one-click

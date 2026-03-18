@@ -26,6 +26,7 @@ curl -sL https://raw.githubusercontent.com/docker/docker-agent/${DOCKER_AGENT_VE
 curl -sL https://raw.githubusercontent.com/docker/docker-agent/${DOCKER_AGENT_VERSION}/examples/todo.yaml -o todo.yaml
 curl -sL https://raw.githubusercontent.com/docker/docker-agent/${DOCKER_AGENT_VERSION}/examples/README.md -o README.md
 cd -
+# gradient_agent.yaml is provided via files/opt/docker-agent/examples/ (DigitalOcean Gradient)
 
 chown -R root:root /opt/docker-agent
 chmod -R 755 /opt/docker-agent
