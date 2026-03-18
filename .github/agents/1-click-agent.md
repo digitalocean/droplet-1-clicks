@@ -25,8 +25,9 @@ You will need to create a new Packer builder to configure a system that runs Ubu
 5. Include systemctl scripts to control the service
 6. Use a per-instance/onboot script to perform final runtime configuration and start the installed services.  Any secrets, ssh keys or passwords should be set in the onboot script so they are unique when new droplets get created from the packer image.
 7. Create a MOTD file that gets copied into place using the template file.  It should display basic usage instructions as well as any passwords needed to use the droplet.
-8. Make sure that the PATH is correctly set on the server, and the helper, main script, unboot script and motd are all executable
-9. If the installed software has an http interface, the 1-click should install caddy and letsencrypt and use on of the new IP certs like this:
+8. Make sure permissions are set to executable for all shell scripts you generate, including the helper scripts, setup wizard, motd, and onboot script. The best place to do this is in the main builder shell script.
+9. Make sure that the PATH is correctly set on the server, and the helper, main script, unboot script and motd are all executable
+10. If the installed software has an http interface, the 1-click should install caddy and letsencrypt and use on of the new IP certs like this:
 
 PLACEHOLDER_DOMAIN {
     tls {
@@ -39,8 +40,8 @@ PLACEHOLDER_DOMAIN {
     header X-DO-MARKETPLACE "openclaw"
 }
 
-10. Create a listing.md file that provides copy for the catalog page.  It should include a list of system components included, and a getting started section.  It should also describe how to start, stop, restart and update the services
-11. Create a readme.md in the root of the project directory to explain the builder
+11. Create a listing.md file that provides copy for the catalog page.  It should include a list of system components included, and a getting started section.  It should also describe how to start, stop, restart and update the services
+12. Create a readme.md in the root of the project directory to explain the builder
 
 In addition, I want you to be very careful about making sure that the versions of various libraries and dependencies can work together, and select the correct ones for the version if the software being installed.
 
