@@ -106,18 +106,44 @@ fi
 
 cp -r /usr/lib/node_modules/openclaw/skills /home/openclaw/.openclaw/workspace/
 
-printf "\nPairing local device. Please ignore the 'gateway connect failed' error...\n"
+printf "\nWaiting for gateway to become ready..."
 
-sleep 5
+GATEWAY_READY=false
+for i in $(seq 1 30); do
+    if ss -tlnp | grep -q ':18789'; then
+        GATEWAY_READY=true
+        break
+    fi
+    sleep 1
+    printf "."
+done
+printf "\n"
 
-OUTPUT=$(/opt/openclaw-cli.sh devices list --token=${GATEWAY_TOKEN} | sed -n '/Pending/,/Paired/p')
+if [ "$GATEWAY_READY" = false ]; then
+    echo "⚠️ Gateway did not start listening on port 18789 within 30s."
+    echo "Check with: systemctl status openclaw"
+fi
 
-REQUEST_IDS=($(echo "$OUTPUT" | grep -oP '[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}'))
+printf "Pairing local device...\n"
 
-COUNT=${#REQUEST_IDS[@]}
+PAIR_SUCCESS=false
+for attempt in $(seq 1 5); do
+    sleep 3
 
-if [ "$COUNT" -eq 1 ]; then
-    /opt/openclaw-cli.sh devices approve "${REQUEST_IDS[0]}" --token=${GATEWAY_TOKEN}
+    OUTPUT=$(/opt/openclaw-cli.sh devices list --token=${GATEWAY_TOKEN} 2>/dev/null | sed -n '/Pending/,/Paired/p') || true
+
+    REQUEST_IDS=($(echo "$OUTPUT" | grep -oP '[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}'))
+    COUNT=${#REQUEST_IDS[@]}
+
+    if [ "$COUNT" -eq 1 ]; then
+        /opt/openclaw-cli.sh devices approve "${REQUEST_IDS[0]}" --token=${GATEWAY_TOKEN} && PAIR_SUCCESS=true
+        break
+    fi
+
+    printf "Gateway not ready yet, retrying (%d/5)...\n" "$attempt"
+done
+
+if [ "$PAIR_SUCCESS" = true ]; then
     printf "\nSuccessfully paired local device\n"
 else
     printf "\nFailed to pair local device\n"
