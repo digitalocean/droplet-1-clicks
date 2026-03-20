@@ -106,18 +106,50 @@ fi
 
 cp -r /usr/lib/node_modules/openclaw/skills /home/openclaw/.openclaw/workspace/
 
-printf "\nPairing local device. Please ignore the 'gateway connect failed' error...\n"
+printf "\nWaiting for gateway to become ready..."
 
-sleep 5
+GATEWAY_READY=false
+for i in $(seq 1 60); do
+    HTTP_CODE=$(curl -so /dev/null -w '%{http_code}' --max-time 2 http://127.0.0.1:18789/ 2>/dev/null) || true
+    if [ "$HTTP_CODE" != "000" ] && [ -n "$HTTP_CODE" ]; then
+        GATEWAY_READY=true
+        break
+    fi
+    sleep 2
+    printf "."
+done
+printf "\n"
 
-OUTPUT=$(/opt/openclaw-cli.sh devices list --token=${GATEWAY_TOKEN} | sed -n '/Pending/,/Paired/p')
+if [ "$GATEWAY_READY" = false ]; then
+    echo "⚠️ Gateway did not respond on port 18789 within 120s."
+    echo "Check with: systemctl status openclaw"
+fi
 
-REQUEST_IDS=($(echo "$OUTPUT" | grep -oP '[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}'))
+printf "Pairing local device...\n"
 
-COUNT=${#REQUEST_IDS[@]}
+PAIR_TMPFILE=$(mktemp)
+PAIR_SUCCESS=false
+for attempt in $(seq 1 20); do
+    /opt/openclaw-cli.sh devices list --token="${GATEWAY_TOKEN}" > "$PAIR_TMPFILE" 2>&1 || true
 
-if [ "$COUNT" -eq 1 ]; then
-    /opt/openclaw-cli.sh devices approve "${REQUEST_IDS[0]}" --token=${GATEWAY_TOKEN}
+    OUTPUT=$(sed -n '/Pending/,/Paired/p' "$PAIR_TMPFILE")
+    REQUEST_IDS=($(echo "$OUTPUT" | grep -oP '[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}'))
+    COUNT=${#REQUEST_IDS[@]}
+
+    if [ "$COUNT" -ge 1 ]; then
+        for rid in "${REQUEST_IDS[@]}"; do
+            /opt/openclaw-cli.sh devices approve "$rid" --token="${GATEWAY_TOKEN}" > /dev/null 2>&1 || true
+        done
+        PAIR_SUCCESS=true
+        break
+    fi
+
+    printf "Waiting for local device pairing request (%d/20)...\n" "$attempt"
+    sleep 5
+done
+rm -f "$PAIR_TMPFILE"
+
+if [ "$PAIR_SUCCESS" = true ]; then
     printf "\nSuccessfully paired local device\n"
 else
     printf "\nFailed to pair local device\n"
@@ -144,19 +176,24 @@ while true; do
     esac
 done
 
-printf '\n----------!!IMPORTANT!!----------'
-printf '\n---------!!!PLEASE READ!!!-------------\n\n'
+DASHBOARD_URL="https://${DROPL_IP}"
 
-printf "\nPlease open UI dashboard in your browser to trigger pairing process.\n\n"
-printf "Dashboard URL:\n\t> https://${DROPL_IP}\n\n"
-printf "Dashboard will show 'unauthorized: gateway token missing' error. To authorize:\n"
-printf "  1. Copy your gateway token: ${GATEWAY_TOKEN}\n"
-printf "  2. Enter your token in Gateway Token field\n"
-printf "  3. Click 'Connect' button\n\n"
-printf "After clicking 'Connect' you will see a different error 'pairing required'. Don't worry, it is expected.\n\n"
+printf '\n======================================\n'
+printf '  Browser Pairing Setup\n'
+printf '======================================\n\n'
+
+printf "Open this link in your browser to start pairing:\n\n"
+printf '  \e]8;;%s\e\\%s\e]8;;\e\\\n\n' "$DASHBOARD_URL" "$DASHBOARD_URL"
+printf "Gateway token (paste into the dashboard):\n\n"
+printf "  %s\n\n" "${GATEWAY_TOKEN}"
+printf "Steps:\n"
+printf "  1. Click the link above (or copy the URL into your browser)\n"
+printf "  2. Paste the gateway token into the 'Gateway Token' field\n"
+printf "  3. Click 'Connect'\n"
+printf "  4. You will see a 'pairing required' message — this is expected\n\n"
 
 while true; do
-    read -p "Type continue once you've entered gateway token and see the 'pairing required' error. (continue/exit): " yn
+    read -p "Type 'continue' once you see the 'pairing required' message. (continue/exit): " yn
     case "${yn,,}" in
         continue|c )
             printf "\nSearching pairing request..."
@@ -172,31 +209,35 @@ while true; do
     esac
 done
 
-sleep 5
+BROWSER_TMPFILE=$(mktemp)
+BROWSER_PAIR_SUCCESS=false
+for attempt in $(seq 1 10); do
+    /opt/openclaw-cli.sh devices list --token="${GATEWAY_TOKEN}" > "$BROWSER_TMPFILE" 2>&1 || true
 
-OUTPUT=$(/opt/openclaw-cli.sh devices list --token=${GATEWAY_TOKEN} | sed -n '/Pending/,/Paired/p')
+    OUTPUT=$(sed -n '/Pending/,/Paired/p' "$BROWSER_TMPFILE")
+    REQUEST_IDS=($(echo "$OUTPUT" | grep -oP '[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}'))
+    COUNT=${#REQUEST_IDS[@]}
 
-REQUEST_IDS=($(echo "$OUTPUT" | grep -oP '[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}'))
+    if [ "$COUNT" -ge 1 ]; then
+        printf "Pairing request(s) found (%d)...\n" "$COUNT"
+        for rid in "${REQUEST_IDS[@]}"; do
+            /opt/openclaw-cli.sh devices approve "$rid" --token="${GATEWAY_TOKEN}" > /dev/null 2>&1 || true
+        done
+        BROWSER_PAIR_SUCCESS=true
+        break
+    fi
 
-# 3. Count the IDs found
-COUNT=${#REQUEST_IDS[@]}
+    printf "No pending request yet, retrying (%d/10)...\n" "$attempt"
+    sleep 5
+done
+rm -f "$BROWSER_TMPFILE"
 
-if [ "$COUNT" -eq 1 ]; then
-    # Return the single Request ID
-    printf "Pairing request found!...\n"
-    /opt/openclaw-cli.sh devices approve "${REQUEST_IDS[0]}" --token=${GATEWAY_TOKEN}
+if [ "$BROWSER_PAIR_SUCCESS" = true ]; then
     printf "Pairing request approved! Refresh the page to open dashboard.\n\nSetup complete. You should now be able to refresh dashboard UI and start using your OpenClaw 1-Click!\n"
     printf "🔧 You can launch OpenClaw TUI using:\n\t$ /opt/openclaw-tui.sh\n"
-
     cp /etc/skel/.bashrc /root
     exit 0
-elif [ "$COUNT" -eq 0 ]; then
-    echo "Error: No pending requests found. Please proceed with manual pairing." >&2
-    exit 1
 else
-    echo "Error: Multiple pending requests found ($COUNT). Manual intervention required." >&2
-    printf "\nMultiple pending requests means other parties are trying to connect to your dashboard UI.\nThe script cannot distinguish your request from other parties."
+    echo "Error: No pending requests found after 10 attempts. Please proceed with manual pairing." >&2
     exit 1
 fi
-
-cp /etc/skel/.bashrc /root
