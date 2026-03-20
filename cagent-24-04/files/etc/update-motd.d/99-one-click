@@ -6,10 +6,12 @@ myip=$(hostname -I | awk '{print$1}')
 cat <<EOF
 ********************************************************************************
 
-Welcome to cagent by Docker!
+Welcome to Docker Agent by Docker Engineering!
 
-cagent is a powerful multi-agent AI runtime that orchestrates AI agents with 
-specialized capabilities and tools.
+Docker Agent is an AI agent builder and runtime: a multi-agent stack that
+orchestrates agents with specialized tools and capabilities.
+
+The command-line tool is \`cagent\` (see \`cagent --help\`).
 
 QUICK START
 ===========
@@ -17,7 +19,7 @@ QUICK START
 1. Set your API keys (choose based on your needs):
 
    export OPENAI_API_KEY=your_key_here      # For OpenAI models
-   export ANTHROPIC_API_KEY=your_key_here   # For Anthropic models  
+   export ANTHROPIC_API_KEY=your_key_here   # For Anthropic models
    export GOOGLE_API_KEY=your_key_here      # For Google Gemini models
 
 2. Run example agents:
@@ -40,8 +42,8 @@ USEFUL RESOURCES
 
 Documentation:       /opt/cagent/README.txt
 Example agents:      /opt/cagent/examples/
-GitHub repository:   https://github.com/docker/cagent
-Usage guide:         https://github.com/docker/cagent/blob/main/docs/USAGE.md
+GitHub repository:   https://github.com/docker/docker-agent
+Usage guide:         https://github.com/docker/docker-agent/blob/main/docs/USAGE.md
 
 Run 'cagent --help' for all available commands.
 

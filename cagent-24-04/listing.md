@@ -1,111 +1,100 @@
-# cagent 1-Click Application
+# Docker Agent 1-Click Application
 
-Deploy cagent by Docker, a powerful multi-agent AI runtime that orchestrates AI agents with specialized capabilities and tools. Build intelligent agent teams that collaborate to solve complex problems with ease.
+Deploy **Docker Agent** by Docker Engineering—an AI agent builder and runtime that orchestrates agents with specialized tools and capabilities. Build agent teams that collaborate on complex tasks using YAML configuration, MCP tools, and Docker.
 
-## What is cagent?
+**CLI note:** Releases ship the command-line binary as `cagent`. All examples below use that command; run `cagent --help` on the Droplet for the full command reference.
 
-cagent is Docker's cutting-edge AI agent framework that lets you create and run intelligent AI agents with specialized knowledge, tools, and capabilities. Think of it as building a team of virtual experts that work together to solve problems for you.
+## What is Docker Agent?
 
-Built on modern AI technologies, cagent offers:
+Docker Agent is Docker’s open source stack for defining, running, and sharing AI agents. You describe agents and models in YAML, run them locally or with cloud providers, and extend them with Model Context Protocol (MCP) tools.
 
-- **Multi-agent architecture** - Create specialized agents for different domains
-- **Rich tool ecosystem** - Agents can use external tools and APIs via the MCP protocol
-- **Smart delegation** - Agents automatically route tasks to the most suitable specialist
-- **YAML configuration** - Simple, declarative model and agent configuration
-- **Advanced reasoning** - Built-in "think", "todo" and "memory" tools for complex problem-solving
-- **Multiple AI providers** - Support for OpenAI, Anthropic, Google Gemini, and Docker Model Runner
+Docker Agent offers:
+
+- **Multi-agent architecture** — Specialized agents for different domains
+- **Rich tool ecosystem** — MCP tools and container-backed capabilities
+- **Smart delegation** — Route work to the right specialist agents
+- **YAML configuration** — Declarative models and agent definitions
+- **Reasoning helpers** — Built-in patterns for planning, memory, and tasks
+- **Multiple AI providers** — OpenAI, Anthropic, Google Gemini, Docker Model Runner, and more
 
 ## Key Features
 
-- Create intelligent AI agents with specialized capabilities
-- Build multi-agent teams that collaborate on complex tasks
-- Use Model Context Protocol (MCP) tools for extended functionality
-- Simple YAML-based configuration
-- Support for both cloud-based and local AI models
-- Push and pull agents from Docker Hub
-- Built-in reasoning and memory capabilities
-- Docker-based deployment for easy management
+- Create and run intelligent agents from YAML
+- Multi-agent workflows with delegation
+- MCP tool integration
+- Cloud APIs or local models (e.g. via Docker Model Runner)
+- Push and pull agents with Docker Hub
+- Docker-based execution for models and tools
 
 ## System Requirements
 
-cagent is installed as a binary on Ubuntu 24.04 and requires Docker for containerized AI models and tools.
+The `cagent` CLI is installed on Ubuntu 24.04. Docker is required for containerized models, tools, and typical workflows.
 
 | Use Case | RAM | CPU |
 |----------|-----|-----|
-| Basic agents with cloud APIs | 1GB | 1CPU |
-| Local models (small) | 4GB | 2CPU |
-| Local models (medium) | 8GB | 4CPU |
-| Local models (large) | 16GB+ | 8CPU+ |
+| Basic agents with cloud APIs | 1GB | 1 CPU |
+| Local models (small) | 4GB | 2 CPU |
+| Local models (medium) | 8GB | 4 CPU |
+| Local models (large) | 16GB+ | 8 CPU+ |
 
-**Note**: Using cloud AI providers (OpenAI, Anthropic, Google) requires minimal resources. Running local models via Docker Model Runner requires more resources depending on model size.
+**Note:** Cloud providers need only light resources. Local inference via Docker Model Runner scales with model size.
 
 ## Getting Started
 
-### Quick Start
+### Quick start
 
-1. **Deploy the Droplet** - Select this 1-Click App from the DigitalOcean Marketplace
-2. **SSH into your Droplet** - `ssh root@your-droplet-ip`
-3. **Set your API key** - Configure access to your preferred AI provider
-4. **Run an agent** - Start with example configurations or create your own
+1. **Deploy the Droplet** — Choose this 1-Click from the DigitalOcean Marketplace.
+2. **SSH in** — `ssh root@your-droplet-ip`
+3. **Set API keys** — For any cloud providers you use (see below).
+4. **Run an agent** — Start from bundled examples or run `cagent new`.
 
-### Setting Up API Keys
-
-Based on the AI models you plan to use, set the corresponding provider API key:
+### Setting up API keys
 
 ```bash
-# For OpenAI models (GPT-4, GPT-3.5, etc.)
+# OpenAI (GPT family, etc.)
 export OPENAI_API_KEY=your_openai_key_here
 
-# For Anthropic models (Claude)
+# Anthropic (Claude)
 export ANTHROPIC_API_KEY=your_anthropic_key_here
 
-# For Google Gemini models
+# Google Gemini
 export GOOGLE_API_KEY=your_google_key_here
 ```
 
-**Note**: You only need API keys for the providers you intend to use. For local models via Docker Model Runner, no API key is required.
+You only need keys for providers you use. Docker Model Runner workflows can avoid cloud keys when models run locally.
 
-### Running Your First Agent
-
-Try the included example agents:
+### Running your first agent
 
 ```bash
-# Run a basic agent (requires OPENAI_API_KEY)
+# Basic agent (needs OPENAI_API_KEY)
 cagent run /opt/cagent/examples/basic_agent.yaml
 
-# Run a local agent using Docker Model Runner (no API key needed)
+# Local-style agent via Docker Model Runner
 cagent run /opt/cagent/examples/dmr.yaml
 
-# Try other examples
-cagent run /opt/cagent/examples/pirate.yaml      # Fun pirate assistant
-cagent run /opt/cagent/examples/pythonist.yaml   # Python programming expert
-cagent run /opt/cagent/examples/todo.yaml        # Task manager with memory
+# More examples on the image
+cagent run /opt/cagent/examples/pirate.yaml
+cagent run /opt/cagent/examples/pythonist.yaml
+cagent run /opt/cagent/examples/todo.yaml
 ```
 
-### Creating Custom Agents
-
-Use the interactive agent builder:
+### Creating custom agents
 
 ```bash
-# Interactive mode - follow the prompts
 cagent new
-
-# Generate with a specific model
 cagent new --model openai/gpt-4o-mini
-
-# Generate with a local model via DMR
 cagent new --model dmr/ai/gemma3:2B-Q4_0
 ```
 
-### Using Docker Model Runner (DMR)
+### Docker Model Runner (DMR)
 
-Docker Model Runner allows you to run AI models locally without API keys:
+DMR runs models locally without cloud API keys when configured appropriately:
 
-1. **Enable DMR** in Docker Engine (may be enabled by default)
-2. **Pull a model**: Docker will automatically pull models when needed
-3. **Run agents** using the `dmr` provider in your configuration
+1. Ensure DMR is available in your Docker setup.
+2. Pull or run models as needed for your agent YAML.
+3. Reference the `dmr` provider in your configuration.
 
-Example DMR configuration:
+Example snippet:
 
 ```yaml
 version: "2"
@@ -123,26 +112,17 @@ models:
     max_tokens: 8192
 ```
 
-### Agent Store - Push and Pull Agents
-
-Share your agents via Docker Hub:
+### Agent registry — push and pull
 
 ```bash
-# Pull an agent from Docker Hub
 cagent pull docker.io/username/my-agent:latest
-
-# Push your agent to Docker Hub
 cagent push ./my-agent.yaml docker.io/username/my-agent:latest
-
-# Run an agent directly from Docker Hub
 cagent run creek/pirate
 ```
 
-## Configuration
+## Configuration examples
 
-### Basic Agent Configuration
-
-Agents are configured using YAML files. Here's a minimal example:
+### Minimal single agent
 
 ```yaml
 version: "2"
@@ -152,8 +132,7 @@ agents:
     model: openai/gpt-4o-mini
     description: A helpful AI assistant
     instruction: |
-      You are a knowledgeable assistant that helps users with various tasks.
-      Be helpful, accurate, and concise in your responses.
+      You are a knowledgeable assistant. Be clear and concise.
 
 models:
   openai:
@@ -162,9 +141,7 @@ models:
     max_tokens: 4096
 ```
 
-### Multi-Agent Teams
-
-Create specialized agents that work together:
+### Multi-agent team (illustrative)
 
 ```yaml
 version: "2"
@@ -172,22 +149,19 @@ version: "2"
 agents:
   root:
     model: coordinator
-    description: Main coordinator agent
-    instruction: |
-      You coordinate tasks and delegate to specialized agents.
+    description: Main coordinator
+    instruction: You coordinate and delegate to specialists.
     sub_agents: ["researcher", "writer"]
-  
+
   researcher:
     model: research-model
     description: Research specialist
-    instruction: |
-      You research topics and gather information.
-  
+    instruction: You research and summarize sources.
+
   writer:
     model: writing-model
     description: Writing specialist
-    instruction: |
-      You create well-written content based on research.
+    instruction: You turn research into polished text.
 
 models:
   coordinator:
@@ -201,9 +175,7 @@ models:
     model: claude-sonnet-4-0
 ```
 
-### Adding Tools via MCP
-
-Extend agent capabilities with Model Context Protocol tools:
+### MCP tools
 
 ```yaml
 version: "2"
@@ -211,11 +183,11 @@ version: "2"
 agents:
   root:
     model: assistant
-    description: Assistant with web search capabilities
-    instruction: You help users by searching the web when needed.
+    description: Assistant with extra tools
+    instruction: Help the user; use tools when useful.
     toolsets:
       - type: mcp
-        ref: docker:duckduckgo  # Web search via containerized MCP server
+        ref: docker:duckduckgo
 
 models:
   assistant:
@@ -224,81 +196,54 @@ models:
     max_tokens: 4096
 ```
 
-## Common Commands
+## Common commands
 
 ```bash
-# View all available commands
 cagent --help
-
-# Run an agent
 cagent run ./my-agent.yaml
-
-# Create a new agent interactively
 cagent new
-
-# Build a Docker image for your agent
 cagent build ./my-agent.yaml my-agent:latest
-
-# Pull an agent from Docker Hub
 cagent pull creek/pirate
-
-# Push your agent to Docker Hub
 cagent push ./my-agent.yaml username/my-agent:latest
-
-# View agent readme
 cagent readme ./my-agent.yaml
 ```
 
-## Examples and Documentation
+## Examples and documentation
 
-Example agent configurations are available in:
-- `/opt/cagent/examples/` - Local example configurations
-- `/opt/cagent/README.txt` - Quick reference guide
-- [GitHub Examples](https://github.com/docker/cagent/tree/main/examples) - Comprehensive examples
+- `/opt/cagent/examples/` — Examples copied onto the image at build time
+- `/opt/cagent/README.txt` — Short reference after SSH
+- [Examples on GitHub](https://github.com/docker/docker-agent/tree/main/examples)
 
-Categories of examples:
-- **Basic**: Simple single-agent configurations
-- **Advanced**: Agents with specialized tools and capabilities  
-- **Multi-agent**: Agent teams that collaborate on complex tasks
+## Support and resources
 
-## Use Cases
+- **Repository:** [github.com/docker/docker-agent](https://github.com/docker/docker-agent)
+- **Usage:** [docs/USAGE.md](https://github.com/docker/docker-agent/blob/main/docs/USAGE.md)
+- **Contributing:** [docs/CONTRIBUTING.md](https://github.com/docker/docker-agent/blob/main/docs/CONTRIBUTING.md)
+- **DigitalOcean Community:** [digitalocean.com/community](https://www.digitalocean.com/community)
+- **Docker Community Slack:** [dockercommunity.slack.com](https://dockercommunity.slack.com/) (see project README for channels)
 
-- **Code Assistance**: Specialized agents for different programming languages
-- **Research and Analysis**: Agents that search, analyze, and summarize information
-- **Content Creation**: Multi-agent teams for research, writing, and editing
-- **Task Automation**: Agents with tools for filesystem, git, and system operations
-- **Custom Workflows**: Build specialized agent teams for your specific needs
+## Post-deployment notes
 
-## Support and Resources
+After deploy you get:
 
-- **GitHub Repository**: https://github.com/docker/cagent
-- **Documentation**: https://github.com/docker/cagent/blob/main/docs/USAGE.md
-- **Contributing Guide**: https://github.com/docker/cagent/blob/main/docs/CONTRIBUTING.md
-- **DigitalOcean Community**: https://www.digitalocean.com/community
-- **Docker Community Slack**: https://dockercommunity.slack.com/archives/C09DASHHRU4
+- `cagent` at `/usr/local/bin/cagent`
+- Docker for models and tools
+- Examples under `/opt/cagent/examples/`
+- Quick reference at `/opt/cagent/README.txt`
 
-## Post-Deployment Notes
+### Next steps
 
-After deployment, you'll have:
-- cagent binary installed at `/usr/local/bin/cagent`
-- Docker pre-installed for running containerized models and tools
-- Example agent configurations in `/opt/cagent/examples/`
-- Quick reference guide at `/opt/cagent/README.txt`
+1. Configure provider API keys if you use cloud models.
+2. Run an example agent from `/opt/cagent/examples/`.
+3. Run `cagent new` to scaffold your own YAML.
+4. Explore MCP tools and multi-agent patterns in the upstream repo.
 
-### Next Steps
+### Operational notes
 
-1. Set up your preferred AI provider API key
-2. Try the example agents
-3. Create your first custom agent with `cagent new`
-4. Explore the MCP tool ecosystem
-5. Build specialized agent teams for your workflows
+- Store secrets in environment variables or a secrets manager—not in world-readable files.
+- Local models need enough RAM/CPU for the chosen weights.
+- Some MCP servers need extra runtimes (e.g. Node, Rust) on the host or in containers.
+- The CLI is local; no inbound ports are required for basic usage.
+- Check version with `cagent --version`; upgrade by installing a newer release from [GitHub Releases](https://github.com/docker/docker-agent/releases).
 
-### Important Notes
-
-- **API Keys**: Store API keys securely in environment variables
-- **Docker Model Runner**: Requires sufficient RAM for local model inference
-- **Tool Installation**: Some MCP tools may require additional installation (npm, cargo)
-- **Networking**: cagent primarily operates via CLI; no open ports required for basic usage
-- **Updates**: Run `cagent --version` to check your version; update by downloading new releases
-
-Perfect for developers, researchers, and teams looking to harness the power of AI agents for complex problem-solving and automation.
+Ideal for developers and teams building agentic workflows on top of Docker and the wider AI tooling ecosystem.

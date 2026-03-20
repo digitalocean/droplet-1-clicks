@@ -1,10 +1,10 @@
 {
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
-    "image_name": "cagent-24-04-snapshot-{{timestamp}}",
+    "image_name": "docker-agent-24-04-snapshot-{{timestamp}}",
     "apt_packages": "apt-transport-https ca-certificates curl software-properties-common git build-essential libsystemd-dev jq unzip",
-    "application_name": "cagent",
-    "application_version": "1.10.3"
+    "application_name": "Docker Agent",
+    "application_version": "1.34.0"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
@@ -60,7 +60,7 @@
       "environment_vars": [
         "application_name={{user `application_name`}}",
         "application_version={{user `application_version`}}",
-        "cagent_version={{user `application_version`}}",
+        "docker_agent_version={{user `application_version`}}",
         "DEBIAN_FRONTEND=noninteractive",
         "LC_ALL=C",
         "LANG=en_US.UTF-8",
