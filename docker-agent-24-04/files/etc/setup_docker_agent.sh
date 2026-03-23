@@ -29,7 +29,7 @@ echo "**************************************************************************
 echo "  Docker Agent – First-login setup"
 echo "********************************************************************************"
 echo ""
-echo "You can set an API key now so 'cagent run ...' works without exporting each time."
+echo "You can set an API key now so 'docker-agent run ...' works without exporting each time."
 echo "Leave blank to skip and set later."
 echo ""
 
@@ -89,18 +89,18 @@ sed -i '\|/etc/setup_docker_agent.sh|d' "$BASHRC"
 echo ""
 echo "Setup complete."
 if [ -n "$SET_GRADIENT" ]; then
-    echo "Run (Gradient): cagent run /opt/docker-agent/examples/gradient_agent.yaml"
+    echo "Run (Gradient): docker-agent run /opt/docker-agent/examples/gradient_agent.yaml"
 fi
 if [ -n "$SET_OPENAI" ]; then
-    echo "Run (OpenAI):  cagent run /opt/docker-agent/examples/basic_agent.yaml"
+    echo "Run (OpenAI):  docker-agent run /opt/docker-agent/examples/basic_agent.yaml"
 fi
 if [ -n "$SET_ANTHROPIC" ]; then
     echo "Run (Anthropic): use an agent YAML that references your Anthropic model"
 fi
 if [ -z "$SET_GRADIENT$SET_OPENAI$SET_ANTHROPIC" ]; then
     echo "Set an API key (e.g. export DO_GRADIENT_API_KEY=...) then run an example."
-    echo "Gradient: cagent run /opt/docker-agent/examples/gradient_agent.yaml"
-    echo "OpenAI:   cagent run /opt/docker-agent/examples/basic_agent.yaml"
+    echo "Gradient: docker-agent run /opt/docker-agent/examples/gradient_agent.yaml"
+    echo "OpenAI:   docker-agent run /opt/docker-agent/examples/basic_agent.yaml"
 fi
 echo "Full guide: /opt/docker-agent/README.txt"
 echo "********************************************************************************"

@@ -67,19 +67,19 @@ You only need API keys for the providers you use. For local models via Docker Mo
 
 ### Run Your First Agent
 
-Try the included example agents (use the `cagent` CLI—Docker Agent’s command-line tool):
+Try the included example agents (use the `docker-agent` CLI—Docker Agent’s command-line tool):
 
 ```bash
 # Run a basic agent (requires OPENAI_API_KEY)
-cagent run /opt/docker-agent/examples/basic_agent.yaml
+docker-agent run /opt/docker-agent/examples/basic_agent.yaml
 
 # Run a local agent using Docker Model Runner (no API key needed)
-cagent run /opt/docker-agent/examples/dmr.yaml
+docker-agent run /opt/docker-agent/examples/dmr.yaml
 
 # Other examples
-cagent run /opt/docker-agent/examples/pirate.yaml      # Fun pirate assistant
-cagent run /opt/docker-agent/examples/pythonist.yaml  # Python programming expert
-cagent run /opt/docker-agent/examples/todo.yaml       # Task manager with memory
+docker-agent run /opt/docker-agent/examples/pirate.yaml      # Fun pirate assistant
+docker-agent run /opt/docker-agent/examples/pythonist.yaml  # Python programming expert
+docker-agent run /opt/docker-agent/examples/todo.yaml       # Task manager with memory
 ```
 
 ### Create Custom Agents
@@ -88,13 +88,13 @@ Use the interactive agent builder:
 
 ```bash
 # Interactive mode—follow the prompts
-cagent new
+docker-agent new
 
 # Generate with a specific model
-cagent new --model openai/gpt-4o-mini
+docker-agent new --model openai/gpt-4o-mini
 
 # Generate with a local model via DMR
-cagent new --model dmr/ai/gemma3:2B-Q4_0
+docker-agent new --model dmr/ai/gemma3:2B-Q4_0
 ```
 
 ### Using Docker Model Runner (DMR)
@@ -129,13 +129,13 @@ Share agents via Docker Hub:
 
 ```bash
 # Pull an agent from Docker Hub
-cagent pull docker.io/username/my-agent:latest
+docker-agent pull docker.io/username/my-agent:latest
 
 # Push your agent to Docker Hub
-cagent push ./my-agent.yaml docker.io/username/my-agent:latest
+docker-agent push ./my-agent.yaml docker.io/username/my-agent:latest
 
 # Run an agent from Docker Hub
-cagent run creek/pirate
+docker-agent run creek/pirate
 ```
 
 ## Configuration
@@ -226,25 +226,25 @@ models:
 
 ```bash
 # View all available commands
-cagent --help
+docker-agent --help
 
 # Run an agent
-cagent run ./my-agent.yaml
+docker-agent run ./my-agent.yaml
 
 # Create a new agent interactively
-cagent new
+docker-agent new
 
 # Build a Docker image for your agent
-cagent build ./my-agent.yaml my-agent:latest
+docker-agent build ./my-agent.yaml my-agent:latest
 
 # Pull an agent from Docker Hub
-cagent pull creek/pirate
+docker-agent pull creek/pirate
 
 # Push your agent to Docker Hub
-cagent push ./my-agent.yaml username/my-agent:latest
+docker-agent push ./my-agent.yaml username/my-agent:latest
 
 # View agent readme
-cagent readme ./my-agent.yaml
+docker-agent readme ./my-agent.yaml
 ```
 
 ## Examples and Documentation
@@ -275,7 +275,7 @@ Example categories: basic single-agent configs, advanced agents with tools, and 
 
 After deployment you have:
 
-- Docker Agent CLI (`cagent`) at `/usr/local/bin/cagent`
+- Docker Agent CLI (`docker-agent`) at `/usr/local/bin/docker-agent`
 - Docker installed for containerized models and tools
 - Example configurations in `/opt/docker-agent/examples/`
 - Quick reference at `/opt/docker-agent/README.txt`
@@ -284,7 +284,7 @@ After deployment you have:
 
 1. Set your preferred AI provider API key.
 2. Run the example agents.
-3. Create a custom agent with `cagent new`.
+3. Create a custom agent with `docker-agent new`.
 4. Explore MCP tools and multi-agent setups.
 
 ### Important Notes
@@ -293,6 +293,6 @@ After deployment you have:
 - **Docker Model Runner** – Ensure enough RAM for local model inference.
 - **MCP tools** – Some may need extra setup (e.g., npm, cargo).
 - **Networking** – Docker Agent is CLI-based; no open ports required for basic use.
-- **Updates** – Check version with `cagent --version`; update by installing newer releases from [docker/docker-agent releases](https://github.com/docker/docker-agent/releases).
+- **Updates** – Check version with `docker-agent --version`; update by installing newer releases from [docker/docker-agent releases](https://github.com/docker/docker-agent/releases).
 
 Ideal for developers, researchers, and teams who want to use AI agents for complex tasks and automation.

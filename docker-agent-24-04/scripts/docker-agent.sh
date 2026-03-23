@@ -5,14 +5,13 @@ ufw --force enable
 
 DOCKER_AGENT_VERSION=${docker_agent_version:-$(curl -s "https://api.github.com/repos/docker/docker-agent/releases/latest" | jq -r '.tag_name')}
 [ "${DOCKER_AGENT_VERSION#v}" = "$DOCKER_AGENT_VERSION" ] && DOCKER_AGENT_VERSION="v${DOCKER_AGENT_VERSION}"
-CAGENT_ARCH="amd64"
+DOCKER_AGENT_ARCH="amd64"
+BASE_URL="https://github.com/docker/docker-agent/releases/download/${DOCKER_AGENT_VERSION}"
 
-# Docker Agent (docker-agent) releases still use the cagent binary name
-DOWNLOAD_URL="https://github.com/docker/docker-agent/releases/download/${DOCKER_AGENT_VERSION}/cagent-linux-${CAGENT_ARCH}"
-curl -L "$DOWNLOAD_URL" -o /usr/local/bin/cagent
-chmod +x /usr/local/bin/cagent
+curl -fL "${BASE_URL}/docker-agent-linux-${DOCKER_AGENT_ARCH}" -o /usr/local/bin/docker-agent || exit 1
+chmod +x /usr/local/bin/docker-agent
 
-if ! /usr/local/bin/cagent version >/dev/null 2>&1; then
+if ! /usr/local/bin/docker-agent version >/dev/null 2>&1; then
     exit 1
 fi
 

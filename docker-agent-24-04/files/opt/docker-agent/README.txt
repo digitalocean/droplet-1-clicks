@@ -2,7 +2,7 @@ Welcome to Docker Agent on DigitalOcean!
 
 Docker Agent (from docker/docker-agent) is an AI Agent Builder and Runtime that lets you
 create and run intelligent AI agents with specialized capabilities and tools.
-Use the "cagent" CLI to run and manage agents.
+Use the docker-agent CLI to run and manage agents.
 
 GETTING STARTED
 ===============
@@ -24,42 +24,42 @@ GETTING STARTED
 2. Run example agents:
 
    # Run a basic agent (requires OPENAI_API_KEY)
-   cagent run /opt/docker-agent/examples/basic_agent.yaml
+   docker-agent run /opt/docker-agent/examples/basic_agent.yaml
 
    # Run a local agent using Docker Model Runner (no API key needed)
-   cagent run /opt/docker-agent/examples/dmr.yaml
+   docker-agent run /opt/docker-agent/examples/dmr.yaml
 
    # Run other examples
-   cagent run /opt/docker-agent/examples/pirate.yaml          # Fun pirate assistant
-   cagent run /opt/docker-agent/examples/pythonist.yaml       # Python expert
-   cagent run /opt/docker-agent/examples/todo.yaml            # Task manager
+   docker-agent run /opt/docker-agent/examples/pirate.yaml          # Fun pirate assistant
+   docker-agent run /opt/docker-agent/examples/pythonist.yaml       # Python expert
+   docker-agent run /opt/docker-agent/examples/todo.yaml            # Task manager
 
 3. Create your own agents:
 
    # Generate a new agent configuration interactively
-   cagent new
+   docker-agent new
 
    # Create agents from prompts
-   cagent new --model openai/gpt-4o-mini
+   docker-agent new --model openai/gpt-4o-mini
 
 4. Pull and run agents from Docker Hub:
 
-   cagent run creek/pirate
+   docker-agent run creek/pirate
 
 USEFUL COMMANDS
 ===============
 
 # View available commands
-cagent --help
+docker-agent --help
 
 # Pull an agent from Docker Hub
-cagent pull docker.io/username/my-agent:latest
+docker-agent pull docker.io/username/my-agent:latest
 
 # Push your agent to Docker Hub
-cagent push ./my-agent.yaml docker.io/username/my-agent:latest
+docker-agent push ./my-agent.yaml docker.io/username/my-agent:latest
 
 # Build a Docker image for your agent
-cagent build ./my-agent.yaml my-agent:latest
+docker-agent build ./my-agent.yaml my-agent:latest
 
 DOCUMENTATION
 =============

@@ -8,7 +8,7 @@ cat <<EOF
 
 Welcome to Docker Agent by Docker Engineering!
 
-Docker Agent is an AI Agent Builder and Runtime. Use the "cagent" CLI to run
+Docker Agent is an AI Agent Builder and Runtime. Use the docker-agent CLI to run
 and manage intelligent AI agents with specialized capabilities and tools.
 
 QUICK START
@@ -23,18 +23,18 @@ QUICK START
 
 2. Run example agents:
 
-   cagent run /opt/docker-agent/examples/basic_agent.yaml     # Requires API key
-   cagent run /opt/docker-agent/examples/dmr.yaml             # Uses Docker Model Runner
-   cagent run /opt/docker-agent/examples/pirate.yaml         # Fun pirate assistant
+   docker-agent run /opt/docker-agent/examples/basic_agent.yaml     # Requires API key
+   docker-agent run /opt/docker-agent/examples/dmr.yaml             # Uses Docker Model Runner
+   docker-agent run /opt/docker-agent/examples/pirate.yaml         # Fun pirate assistant
 
 3. Create new agents:
 
-   cagent new                                            # Interactive mode
-   cagent new --model openai/gpt-4o-mini                # With specific model
+   docker-agent new                                            # Interactive mode
+   docker-agent new --model openai/gpt-4o-mini                # With specific model
 
 4. Pull and run agents from Docker Hub:
 
-   cagent run creek/pirate
+   docker-agent run creek/pirate
 
 USEFUL RESOURCES
 ================
@@ -44,7 +44,7 @@ Example agents:      /opt/docker-agent/examples/
 GitHub repository:  https://github.com/docker/docker-agent
 Usage guide:         https://github.com/docker/docker-agent/blob/main/docs/USAGE.md
 
-Run 'cagent --help' for all available commands.
+Run 'docker-agent --help' for all available commands.
 
 DigitalOcean Inference (Gradient): create a key at https://cloud.digitalocean.com/gen-ai
 Then use in your agent YAML: provider base_url https://inference.do-ai.run/v1, token_key DO_GRADIENT_API_KEY
