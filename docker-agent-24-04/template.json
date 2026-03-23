@@ -4,7 +4,7 @@
     "image_name": "docker-agent-24-04-snapshot-{{timestamp}}",
     "apt_packages": "apt-transport-https ca-certificates curl software-properties-common git build-essential libsystemd-dev jq unzip",
     "application_name": "docker-agent",
-    "application_version": "1.32.5"
+    "application_version": "1.36.1"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
