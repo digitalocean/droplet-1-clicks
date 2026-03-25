@@ -1,0 +1,12 @@
+version: "2"
+agents:
+  root:
+    model: do_gradient
+    description: Assistant using DigitalOcean Inference (Gradient)
+    instruction: You are a helpful assistant. Be concise.
+models:
+  do_gradient:
+    provider: openai
+    model: anthropic-claude-4.5-sonnet
+    base_url: https://inference.do-ai.run/v1
+    token_key: DO_GRADIENT_API_KEY
