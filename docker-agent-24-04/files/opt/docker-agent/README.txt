@@ -7,7 +7,11 @@ Use the docker-agent CLI to run and manage agents.
 GETTING STARTED
 ===============
 
-1. Set your API keys for AI providers (choose based on your needs):
+1. Set your API keys for AI providers (only the ones your agent YAML needs):
+
+   # DigitalOcean Inference (Gradient) — create a model access key at:
+   # https://cloud.digitalocean.com/gen-ai
+   export DO_GRADIENT_API_KEY=your_gradient_key_here
 
    # For OpenAI models
    export OPENAI_API_KEY=your_api_key_here
@@ -18,18 +22,21 @@ GETTING STARTED
    # For Google Gemini models
    export GOOGLE_API_KEY=your_api_key_here
 
-   # DigitalOcean Inference (Gradient) - create at https://cloud.digitalocean.com/gen-ai
-   export DO_GRADIENT_API_KEY=your_gradient_key_here
-
 2. Run example agents:
 
-   # Run a basic agent (requires OPENAI_API_KEY)
+   # DigitalOcean Inference / Gradient (requires DO_GRADIENT_API_KEY)
+   docker-agent run /opt/docker-agent/examples/gradient_agent.yaml
+
+   # OpenAI (requires OPENAI_API_KEY)
    docker-agent run /opt/docker-agent/examples/basic_agent.yaml
 
-   # Run a local agent using Docker Model Runner (no API key needed)
+   # One command without a separate export:
+   DO_GRADIENT_API_KEY=your_key docker-agent run /opt/docker-agent/examples/gradient_agent.yaml
+
+   # Docker Model Runner — local models (no cloud API key)
    docker-agent run /opt/docker-agent/examples/dmr.yaml
 
-   # Run other examples
+   # Other examples (see each YAML for provider / token_key)
    docker-agent run /opt/docker-agent/examples/pirate.yaml          # Fun pirate assistant
    docker-agent run /opt/docker-agent/examples/pythonist.yaml       # Python expert
    docker-agent run /opt/docker-agent/examples/todo.yaml            # Task manager
@@ -49,8 +56,9 @@ GETTING STARTED
 USEFUL COMMANDS
 ===============
 
-# View available commands
+# View available commands (this image appends a DigitalOcean Gradient run example)
 docker-agent --help
+docker-agent run --help
 
 # Pull an agent from Docker Hub
 docker-agent pull docker.io/username/my-agent:latest
@@ -78,10 +86,13 @@ NOTES
 
 DigitalOcean Inference (Gradient)
 =================================
-Create a model access key at https://cloud.digitalocean.com/gen-ai then:
+Create a model access key at https://cloud.digitalocean.com/gen-ai then run the CLI:
   export DO_GRADIENT_API_KEY=your_key
+  docker-agent run /opt/docker-agent/examples/gradient_agent.yaml
 
-Use in your agent YAML (define model in models section with base_url/token_key):
+The same `docker-agent run` line is shown at the end of `docker-agent --help` on this image.
+
+Custom YAML (models section with base_url/token_key):
   agents:
     root:
       model: do_gradient

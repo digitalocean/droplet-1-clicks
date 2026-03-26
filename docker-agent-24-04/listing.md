@@ -13,7 +13,7 @@ Built on modern AI technologies, Docker Agent offers:
 - **Smart delegation** – Agents automatically route tasks to the most suitable specialist
 - **YAML configuration** – Simple, declarative model and agent configuration
 - **Advanced reasoning** – Built-in "think", "todo", and "memory" tools for complex problem-solving
-- **Multiple AI providers** – Support for OpenAI, Anthropic, Google Gemini, and Docker Model Runner
+- **Multiple AI providers** – Support for OpenAI, Anthropic, Google Gemini, DigitalOcean Inference (Gradient), and Docker Model Runner
 
 ## Key Features
 
@@ -37,7 +37,7 @@ Docker Agent is installed as a binary on Ubuntu 24.04 and requires Docker for co
 | Local models (medium) | 8GB | 4 CPU |
 | Local models (large) | 16GB+ | 8 CPU+ |
 
-**Note:** Using cloud AI providers (OpenAI, Anthropic, Google) requires minimal resources. Running local models via Docker Model Runner requires more resources depending on model size.
+**Note:** Using cloud AI providers (OpenAI, Anthropic, Google, DigitalOcean Gradient) requires minimal resources. Running local models via Docker Model Runner requires more resources depending on model size.
 
 ## Getting Started
 
@@ -45,41 +45,47 @@ Docker Agent is installed as a binary on Ubuntu 24.04 and requires Docker for co
 
 1. **Deploy the Droplet** – Choose this 1-Click App from the DigitalOcean Marketplace.
 2. **SSH into your Droplet** – `ssh root@your-droplet-ip`
-3. **Set your API key** – Configure access to your preferred AI provider (see below).
+3. **Set your API key** – Configure access to your preferred AI provider (OpenAI, Anthropic, Google, or DigitalOcean Gradient — see below). On this image, `docker-agent --help` ends with a short Gradient run reminder.
 4. **Run an agent** – Use the included examples or create your own.
 
 ### Setting Up API Keys
 
-Set the environment variable for the AI provider you plan to use:
+Set the environment variable for each provider your agent YAML uses. For DigitalOcean Inference (Gradient), create a model access key in the [DigitalOcean Gen AI console](https://cloud.digitalocean.com/gen-ai):
 
 ```bash
-# For OpenAI models (GPT-4, GPT-3.5, etc.)
+# DigitalOcean Inference (Gradient)
+export DO_GRADIENT_API_KEY=your_gradient_key_here
+
+# OpenAI models (GPT-4, GPT-3.5, etc.)
 export OPENAI_API_KEY=your_openai_key_here
 
-# For Anthropic models (Claude)
+# Anthropic models (Claude)
 export ANTHROPIC_API_KEY=your_anthropic_key_here
 
-# For Google Gemini models
+# Google Gemini models
 export GOOGLE_API_KEY=your_google_key_here
 ```
 
-You only need API keys for the providers you use. For local models via Docker Model Runner, no API key is required.
+You only need API keys for the providers you use. Example one-liner: `DO_GRADIENT_API_KEY=key docker-agent run /opt/docker-agent/examples/gradient_agent.yaml`. For local models via Docker Model Runner, no API key is required.
 
 ### Run Your First Agent
 
 Try the included example agents (use the `docker-agent` CLI—Docker Agent’s command-line tool):
 
 ```bash
-# Run a basic agent (requires OPENAI_API_KEY)
+# DigitalOcean Inference / Gradient (requires DO_GRADIENT_API_KEY)
+docker-agent run /opt/docker-agent/examples/gradient_agent.yaml
+
+# Basic OpenAI agent (requires OPENAI_API_KEY)
 docker-agent run /opt/docker-agent/examples/basic_agent.yaml
 
-# Run a local agent using Docker Model Runner (no API key needed)
+# Local agent using Docker Model Runner (no API key needed)
 docker-agent run /opt/docker-agent/examples/dmr.yaml
 
-# Other examples
-docker-agent run /opt/docker-agent/examples/pirate.yaml      # Fun pirate assistant
-docker-agent run /opt/docker-agent/examples/pythonist.yaml  # Python programming expert
-docker-agent run /opt/docker-agent/examples/todo.yaml       # Task manager with memory
+# Other examples (check each YAML for provider / token_key)
+docker-agent run /opt/docker-agent/examples/pirate.yaml
+docker-agent run /opt/docker-agent/examples/pythonist.yaml
+docker-agent run /opt/docker-agent/examples/todo.yaml
 ```
 
 ### Create Custom Agents

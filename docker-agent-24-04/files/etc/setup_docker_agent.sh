@@ -29,8 +29,10 @@ echo "**************************************************************************
 echo "  Docker Agent – First-login setup"
 echo "********************************************************************************"
 echo ""
-echo "You can set an API key now so 'docker-agent run ...' works without exporting each time."
-echo "Leave blank to skip and set later."
+echo "Set API keys for docker-agent (OpenAI, Anthropic, DigitalOcean Gradient, etc.)."
+echo "They are saved in /root/.bashrc. Leave blank to skip."
+echo "After saving, run: source /root/.bashrc"
+echo "Gradient example: docker-agent run /opt/docker-agent/examples/gradient_agent.yaml"
 echo ""
 
 read -p "Set OPENAI_API_KEY now? (y/n) [n]: " yn
@@ -102,6 +104,7 @@ if [ -z "$SET_GRADIENT$SET_OPENAI$SET_ANTHROPIC" ]; then
     echo "Gradient: docker-agent run /opt/docker-agent/examples/gradient_agent.yaml"
     echo "OpenAI:   docker-agent run /opt/docker-agent/examples/basic_agent.yaml"
 fi
+echo "Tip: docker-agent --help on this image includes a Gradient run reminder at the end."
 echo "Full guide: /opt/docker-agent/README.txt"
 echo "********************************************************************************"
 echo ""
