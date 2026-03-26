@@ -3,56 +3,83 @@
 # Configured as part of the DigitalOcean 1-Click Image build process
 
 myip=$(hostname -I | awk '{print$1}')
-cat <<EOF
+cat <<'EOF'
 ********************************************************************************
 
 Welcome to Docker Agent by Docker Engineering!
 
 Docker Agent is an AI Agent Builder and Runtime. Use the docker-agent CLI to run
-and manage intelligent AI agents with specialized capabilities and tools.
+and manage agents with tools and YAML-based configuration.
 
+--------------------------------------------------------------------------------
 QUICK START
-===========
+--------------------------------------------------------------------------------
 
-1. Set your API keys (only what your agent YAML needs):
+(1) API KEYS
 
-   export DO_GRADIENT_API_KEY=your_key_here # DigitalOcean Inference (Gradient)
-                                            # Create key: https://cloud.digitalocean.com/gen-ai
-   export OPENAI_API_KEY=your_key_here      # OpenAI
-   export ANTHROPIC_API_KEY=your_key_here   # Anthropic
-   export GOOGLE_API_KEY=your_key_here      # Google Gemini
+    Export only what your agent YAML needs.
 
-2. Run example agents:
+      OPENAI_API_KEY          OpenAI
+      ANTHROPIC_API_KEY       Anthropic
+      GOOGLE_API_KEY          Google Gemini
+      DO_GRADIENT_API_KEY     DigitalOcean Inference (Gradient)
 
-   docker-agent run /opt/docker-agent/examples/gradient_agent.yaml  # needs DO_GRADIENT_API_KEY
-   docker-agent run /opt/docker-agent/examples/basic_agent.yaml     # needs OPENAI_API_KEY
-   docker-agent run /opt/docker-agent/examples/dmr.yaml             # Docker Model Runner (local)
-   docker-agent run /opt/docker-agent/examples/pirate.yaml          # see YAML for provider
+    Example:
 
-   One line (Gradient): DO_GRADIENT_API_KEY=key docker-agent run /opt/docker-agent/examples/gradient_agent.yaml
+      export OPENAI_API_KEY=your_key_here
+      export ANTHROPIC_API_KEY=your_key_here
+      export GOOGLE_API_KEY=your_key_here
+      export DO_GRADIENT_API_KEY=your_key_here
 
-3. Create new agents:
+    Gradient keys: https://cloud.digitalocean.com/gen-ai
+    All key URLs:  /opt/docker-agent/README.txt
 
-   docker-agent new                                            # Interactive mode
-   docker-agent new --model openai/gpt-4o-mini                # With specific model
+(2) RUN EXAMPLES
 
-4. Pull and run agents from Docker Hub:
+    Bundled examples:
 
-   docker-agent run creek/pirate
+      docker-agent run /opt/docker-agent/examples/basic_agent.yaml
+      docker-agent run /opt/docker-agent/examples/gradient_agent.yaml
+      docker-agent run /opt/docker-agent/examples/dmr.yaml
+      docker-agent run /opt/docker-agent/examples/pirate.yaml
 
-USEFUL RESOURCES
-================
+    Keys: basic + gradient need OPENAI / DO_GRADIENT; dmr is local; pirate: see YAML.
 
-Documentation:       /opt/docker-agent/README.txt
-Example agents:      /opt/docker-agent/examples/
-GitHub repository:  https://github.com/docker/docker-agent
-Usage guide:         https://github.com/docker/docker-agent/blob/main/docs/USAGE.md
+    Anthropic / Google: set the matching key, then run YAML that uses the same
+    token_key. Create a starter with:
+      docker-agent new --model anthropic/...
+      docker-agent new --model google/...
 
-Run 'docker-agent --help' for all docker-agent CLI commands and flags.
+    One line per provider (same order as keys above):
 
-DigitalOcean Inference (Gradient): export DO_GRADIENT_API_KEY, then
-  docker-agent run /opt/docker-agent/examples/gradient_agent.yaml
-Custom YAML: base_url https://inference.do-ai.run/v1, token_key DO_GRADIENT_API_KEY
+      OPENAI_API_KEY=k docker-agent run /opt/docker-agent/examples/basic_agent.yaml
+      ANTHROPIC_API_KEY=k docker-agent run ./your-agent.yaml
+      GOOGLE_API_KEY=k docker-agent run ./your-agent.yaml
+      DO_GRADIENT_API_KEY=k docker-agent run /opt/docker-agent/examples/gradient_agent.yaml
+
+(3) CREATE AGENTS
+
+      docker-agent new
+      docker-agent new --model openai/gpt-4o-mini
+
+(4) DOCKER HUB
+
+      docker-agent run creek/pirate
+
+--------------------------------------------------------------------------------
+RESOURCES
+--------------------------------------------------------------------------------
+
+  README & key help:   /opt/docker-agent/README.txt
+  Example YAML:        /opt/docker-agent/examples/
+  Upstream repo:       https://github.com/docker/docker-agent
+  Usage docs:          https://github.com/docker/docker-agent/blob/main/docs/USAGE.md
+
+  docker-agent --help   (CLI reference)
+
+  Variables: OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, DO_GRADIENT_API_KEY
+  Gradient YAML:       base_url https://inference.do-ai.run/v1
+                       token_key DO_GRADIENT_API_KEY
 
 ********************************************************************************
 To delete this message of the day: rm -rf /etc/update-motd.d/99-one-click

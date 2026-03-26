@@ -20,17 +20,13 @@ if [ ! -t 0 ]; then
     exit 0
 fi
 
-SET_OPENAI=""
-SET_ANTHROPIC=""
-SET_GRADIENT=""
-
 echo ""
 echo "********************************************************************************"
 echo "  Docker Agent – First-login setup"
 echo "********************************************************************************"
 echo ""
-echo "You can set an API key now so 'docker-agent run ...' works without exporting each time."
-echo "Leave blank to skip and set later."
+echo "Optional: save API keys to /root/.bashrc. Then: source /root/.bashrc"
+echo "See /opt/docker-agent/README.txt for key order, URLs, and run examples."
 echo ""
 
 read -p "Set OPENAI_API_KEY now? (y/n) [n]: " yn
@@ -45,7 +41,6 @@ if [[ "${yn,,}" == "y" || "${yn,,}" == "yes" ]]; then
             echo "export OPENAI_API_KEY='$key'" >> "$BASHRC"
         fi
         echo "OPENAI_API_KEY added to /root/.bashrc (loaded on next login)."
-        SET_OPENAI=1
     fi
 fi
 
@@ -61,7 +56,21 @@ if [[ "${yn,,}" == "y" || "${yn,,}" == "yes" ]]; then
             echo "export ANTHROPIC_API_KEY='$key'" >> "$BASHRC"
         fi
         echo "ANTHROPIC_API_KEY added to /root/.bashrc."
-        SET_ANTHROPIC=1
+    fi
+fi
+
+read -p "Set GOOGLE_API_KEY now? (y/n) [n]: " yn
+yn=${yn:-n}
+if [[ "${yn,,}" == "y" || "${yn,,}" == "yes" ]]; then
+    read -p "Enter your GOOGLE_API_KEY: " key
+    key=$(strip_quotes "$key")
+    if [ -n "$key" ]; then
+        if grep -q 'GOOGLE_API_KEY' "$BASHRC" 2>/dev/null; then
+            sed -i "s|^export GOOGLE_API_KEY=.*|export GOOGLE_API_KEY='$key'|" "$BASHRC"
+        else
+            echo "export GOOGLE_API_KEY='$key'" >> "$BASHRC"
+        fi
+        echo "GOOGLE_API_KEY added to /root/.bashrc."
     fi
 fi
 
@@ -77,7 +86,6 @@ if [[ "${yn,,}" == "y" || "${yn,,}" == "yes" ]]; then
             echo "export DO_GRADIENT_API_KEY='$key'" >> "$BASHRC"
         fi
         echo "DO_GRADIENT_API_KEY added to /root/.bashrc."
-        SET_GRADIENT=1
     fi
 fi
 
@@ -87,21 +95,6 @@ sed -i "/$MARKER/d" "$BASHRC"
 sed -i '\|/etc/setup_docker_agent.sh|d' "$BASHRC"
 
 echo ""
-echo "Setup complete."
-if [ -n "$SET_GRADIENT" ]; then
-    echo "Run (Gradient): docker-agent run /opt/docker-agent/examples/gradient_agent.yaml"
-fi
-if [ -n "$SET_OPENAI" ]; then
-    echo "Run (OpenAI):  docker-agent run /opt/docker-agent/examples/basic_agent.yaml"
-fi
-if [ -n "$SET_ANTHROPIC" ]; then
-    echo "Run (Anthropic): use an agent YAML that references your Anthropic model"
-fi
-if [ -z "$SET_GRADIENT$SET_OPENAI$SET_ANTHROPIC" ]; then
-    echo "Set an API key (e.g. export DO_GRADIENT_API_KEY=...) then run an example."
-    echo "Gradient: docker-agent run /opt/docker-agent/examples/gradient_agent.yaml"
-    echo "OpenAI:   docker-agent run /opt/docker-agent/examples/basic_agent.yaml"
-fi
-echo "Full guide: /opt/docker-agent/README.txt"
+echo "Setup complete. Full guide (keys, run commands, order): /opt/docker-agent/README.txt"
 echo "********************************************************************************"
 echo ""
