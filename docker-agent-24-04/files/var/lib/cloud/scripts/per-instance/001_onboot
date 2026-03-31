@@ -1,0 +1,3 @@
+#!/bin/sh
+# Run on first boot. No interactive setup on SSH; users set API keys via MOTD/README.
+# Optional: run /etc/setup_docker_agent.sh manually to be prompted for keys.
