@@ -4,6 +4,7 @@
 # Prompts for a DigitalOcean Gradient model access key and configures OpenCode.
 
 SETUP_MARKER="/root/.opencode_setup_complete"
+CONFIG_FILE="/root/.config/opencode/opencode.json"
 
 # Allow re-running manually; only auto-skip when called from .bashrc
 if [ -f "$SETUP_MARKER" ] && [ "$1" != "--force" ]; then
@@ -24,9 +25,11 @@ echo ""
 echo "This droplet is pre-configured with DigitalOcean Gradient AI, which gives"
 echo "you access to top coding models through a single Gradient model access key:"
 echo ""
-echo "  Anthropic:    Claude Opus 4.6, Opus 4.5, Sonnet 4.5 (default), Sonnet 4, 3.7 Sonnet"
-echo "  OpenAI:       GPT-5.2, GPT-5, GPT-5.1 Codex Max, GPT-4.1, o3"
-echo "  Open Source:  DeepSeek R1 70B, Qwen3 32B, Llama 3.3 70B"
+echo "  digitalocean/ (OpenAI-compatible):  GPT-5.2, GPT-5, GPT-5.1 Codex Max,"
+echo "    GPT-4.1, o3, DeepSeek R1 70B, Qwen3 32B, Llama 3.3 70B, Kimi K2.5 (default),"
+echo "    glm-5, MiniMax M2.5"
+echo ""
+echo "  do-anthropic/:  Claude Opus 4.6, Opus 4.5, Sonnet 4.5, Sonnet 4"
 echo ""
 echo "To create a Gradient model access key:"
 echo "  1. Go to https://cloud.digitalocean.com/gen-ai"
@@ -57,6 +60,17 @@ cat > /root/.local/share/opencode/auth.json << EOF
 EOF
 chmod 600 /root/.local/share/opencode/auth.json
 
+# Inject the same key into do-anthropic provider options (Anthropic SDK path)
+if [ -f "$CONFIG_FILE" ]; then
+  tmp="$(mktemp)"
+  if jq --arg key "$MODEL_KEY" '.provider["do-anthropic"].options.authToken = $key' "$CONFIG_FILE" > "$tmp"; then
+    mv "$tmp" "$CONFIG_FILE"
+  else
+    rm -f "$tmp"
+    echo "Warning: Could not update $CONFIG_FILE (jq failed)."
+  fi
+fi
+
 echo ""
 echo "Testing connection to DigitalOcean Gradient..."
 
@@ -82,10 +96,11 @@ echo ""
 echo "========================================================================"
 echo "  Setup complete! OpenCode is ready to use."
 echo ""
-echo "  Default model: Claude Sonnet 4.5 (via DigitalOcean Gradient)"
+echo "  Default model: Kimi K2.5 (digitalocean/kimi-k2.5)"
 echo ""
 echo "  To start:  cd /path/to/your/project && opencode"
 echo "  Config:    /root/.config/opencode/opencode.json"
+echo "  Auth:      /root/.local/share/opencode/auth.json"
 echo "  Switch models:    use /models inside OpenCode"
 echo "  Other providers:  use /connect to add Anthropic, OpenAI, Google, etc."
 echo "========================================================================"

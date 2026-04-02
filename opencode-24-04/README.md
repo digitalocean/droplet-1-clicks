@@ -82,13 +82,13 @@ OpenCode is installed to `/root/.opencode/bin/` and added to PATH via `/etc/prof
 On first SSH login, the setup wizard runs and:
 1. Prompts the user for their DigitalOcean Gradient model access key
 2. Writes the key to `/root/.local/share/opencode/auth.json`
-3. Tests the connection to `https://inference.do-ai.run/v1/models`
-4. Self-removes from `.bashrc` (one-time only)
+3. Sets `provider.do-anthropic.options.authToken` in `/root/.config/opencode/opencode.json` to the same key (for Claude models via `do-anthropic/`)
+4. Tests the connection to `https://inference.do-ai.run/v1/models`
+5. Self-removes from `.bashrc` (one-time only)
 
 Pre-configured models (no separate provider key needed, all via Gradient):
-- **Anthropic**: Claude Opus 4.6, Opus 4.5, Sonnet 4.5 (default), Sonnet 4, 3.7 Sonnet
-- **OpenAI**: GPT-5.2, GPT-5, GPT-5.1 Codex Max, GPT-4.1, o3
-- **Open Source**: DeepSeek R1 70B, Qwen3 32B, Llama 3.3 70B
+- **`digitalocean/`** (OpenAI-compatible): GPT-5.2, GPT-5, GPT-5.1 Codex Max, GPT-4.1, o3, DeepSeek R1 70B, Qwen3 32B, Llama 3.3 70B, **Kimi K2.5 (default)**, glm-5, MiniMax M2.5
+- **`do-anthropic/`**: Claude Opus 4.6, Opus 4.5, Sonnet 4.5, Sonnet 4
 
 If the user chooses option 2 in the setup wizard, the custom Gradient config is removed and OpenCode falls back to its standard built-in providers (75+ options via `/connect`).
 
