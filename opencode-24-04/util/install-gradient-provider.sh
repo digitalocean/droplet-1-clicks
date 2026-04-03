@@ -149,16 +149,7 @@ GRADIENT_PROVIDER_JSON='{
       "llama3.3-70b-instruct": { "name": "Llama 3.3 70B Instruct" },
       "kimi-k2.5": { "name": "Kimi K2.5" },
       "glm-5": { "name": "glm-5" },
-      "minimax-m2.5": { "name": "MiniMax M2.5" }
-    }
-  },
-  "do-anthropic": {
-    "npm": "@ai-sdk/anthropic",
-    "options": {
-      "baseURL": "https://inference.do-ai.run/v1",
-      "setCacheKey": true
-    },
-    "models": {
+      "minimax-m2.5": { "name": "MiniMax M2.5" },
       "claude-opus-4-6": { "name": "Claude Opus 4.6" },
       "claude-opus-4-5": { "name": "Claude Opus 4.5" },
       "claude-sonnet-4-5": { "name": "Claude Sonnet 4.5" },
@@ -237,18 +228,6 @@ prompt_and_save_key() {
 
   ok "API key saved to $AUTH_FILE"
 
-  if [ -f "$CONFIG_FILE" ]; then
-    local ptmp
-    ptmp="$(mktemp)"
-    if jq --arg key "$MODEL_KEY" '.provider["do-anthropic"].options.authToken = $key' "$CONFIG_FILE" > "$ptmp" 2>/dev/null; then
-      mv "$ptmp" "$CONFIG_FILE"
-      ok "Updated do-anthropic authToken in $CONFIG_FILE"
-    else
-      rm -f "$ptmp"
-      warn "Could not set do-anthropic.options.authToken in $CONFIG_FILE (jq failed or provider missing)."
-    fi
-  fi
-
   return 0
 }
 
@@ -293,8 +272,8 @@ print_success() {
   echo ""
   echo "  Available models via Gradient:"
   echo "    digitalocean/:  GPT-5.2, GPT-5, GPT-5.1 Codex Max, GPT-4.1, o3,"
-  echo "                    DeepSeek R1 70B, Qwen3 32B, Llama 3.3 70B, Kimi K2.5, glm-5, MiniMax M2.5"
-  echo "    do-anthropic/:   Claude Opus 4.6, Opus 4.5, Sonnet 4.5, Sonnet 4"
+  echo "                    DeepSeek R1 70B, Qwen3 32B, Llama 3.3 70B, Kimi K2.5, glm-5, MiniMax M2.5,"
+  echo "                    Claude Opus 4.6, Opus 4.5, Sonnet 4.5, Sonnet 4"
   echo ""
   echo "  To start:         cd /path/to/your/project && opencode"
   echo "  Switch models:    use /models inside OpenCode"

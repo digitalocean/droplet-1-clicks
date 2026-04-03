@@ -107,15 +107,10 @@ The following models are available via DigitalOcean Gradient (only a Gradient mo
 | Llama 3.3 70B Instruct | `digitalocean/llama3.3-70b-instruct` |
 | glm-5 | `digitalocean/glm-5` |
 | MiniMax M2.5 | `digitalocean/minimax-m2.5` |
-
-**`do-anthropic`** (Anthropic SDK via Gradient)
-
-| Model | Full model id |
-|-------|---------------|
-| Claude Opus 4.6 | `do-anthropic/claude-opus-4-6` |
-| Claude Opus 4.5 | `do-anthropic/claude-opus-4-5` |
-| Claude Sonnet 4.5 | `do-anthropic/claude-sonnet-4-5` |
-| Claude Sonnet 4 | `do-anthropic/claude-sonnet-4-6` |
+| Claude Opus 4.6 | `digitalocean/claude-opus-4-6` |
+| Claude Opus 4.5 | `digitalocean/claude-opus-4-5` |
+| Claude Sonnet 4.5 | `digitalocean/claude-sonnet-4-5` |
+| Claude Sonnet 4 | `digitalocean/claude-sonnet-4-6` |
 
 To change the default model, edit `"model"` in `/root/.config/opencode/opencode.json`.
 
@@ -149,7 +144,7 @@ Re-run the setup wizard to reconfigure your Gradient model access key:
 /opt/setup-opencode.sh
 ```
 
-Or manually edit `/root/.local/share/opencode/auth.json` with a valid key, and set `provider.do-anthropic.options.authToken` in `/root/.config/opencode/opencode.json` to the same key for Claude models. You can create a new key at https://cloud.digitalocean.com/gen-ai/model-access-keys.
+Or manually edit `/root/.local/share/opencode/auth.json` — set `digitalocean` to `{"type": "api", "key": "<your key>"}`. Create keys at https://cloud.digitalocean.com/gen-ai/model-access-keys.
 
 ## Additional Resources
 

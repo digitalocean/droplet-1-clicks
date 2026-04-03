@@ -27,9 +27,7 @@ echo "you access to top coding models through a single Gradient model access key
 echo ""
 echo "  digitalocean/ (OpenAI-compatible):  GPT-5.2, GPT-5, GPT-5.1 Codex Max,"
 echo "    GPT-4.1, o3, DeepSeek R1 70B, Qwen3 32B, Llama 3.3 70B, Kimi K2.5 (default),"
-echo "    glm-5, MiniMax M2.5"
-echo ""
-echo "  do-anthropic/:  Claude Opus 4.6, Opus 4.5, Sonnet 4.5, Sonnet 4"
+echo "    glm-5, MiniMax M2.5, Claude Opus 4.6, Opus 4.5, Sonnet 4.5, Sonnet 4"
 echo ""
 echo "To create a Gradient model access key:"
 echo "  1. Go to https://cloud.digitalocean.com/gen-ai"
@@ -48,7 +46,7 @@ if [ -z "$MODEL_KEY" ]; then
   exit 0
 fi
 
-# Write the auth.json file
+# Write the auth.json file for the Gradient OpenAI-compatible provider.
 mkdir -p /root/.local/share/opencode
 cat > /root/.local/share/opencode/auth.json << EOF
 {
@@ -59,17 +57,6 @@ cat > /root/.local/share/opencode/auth.json << EOF
 }
 EOF
 chmod 600 /root/.local/share/opencode/auth.json
-
-# Inject the same key into do-anthropic provider options (Anthropic SDK path)
-if [ -f "$CONFIG_FILE" ]; then
-  tmp="$(mktemp)"
-  if jq --arg key "$MODEL_KEY" '.provider["do-anthropic"].options.authToken = $key' "$CONFIG_FILE" > "$tmp"; then
-    mv "$tmp" "$CONFIG_FILE"
-  else
-    rm -f "$tmp"
-    echo "Warning: Could not update $CONFIG_FILE (jq failed)."
-  fi
-fi
 
 echo ""
 echo "Testing connection to DigitalOcean Gradient..."

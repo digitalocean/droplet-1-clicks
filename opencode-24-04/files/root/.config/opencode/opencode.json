@@ -18,16 +18,7 @@
         "llama3.3-70b-instruct": { "name": "Llama 3.3 70B Instruct" },
         "kimi-k2.5": { "name": "Kimi K2.5" },
         "glm-5": { "name": "glm-5" },
-        "minimax-m2.5": { "name": "MiniMax M2.5" }
-      }
-    },
-    "do-anthropic": {
-      "npm": "@ai-sdk/anthropic",
-      "options": {
-        "baseURL": "https://inference.do-ai.run/v1",
-        "setCacheKey": true
-      },
-      "models": {
+        "minimax-m2.5": { "name": "MiniMax M2.5" },
         "claude-opus-4-6": { "name": "Claude Opus 4.6" },
         "claude-opus-4-5": { "name": "Claude Opus 4.5" },
         "claude-sonnet-4-5": { "name": "Claude Sonnet 4.5" },
