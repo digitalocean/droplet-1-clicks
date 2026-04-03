@@ -1,0 +1,47 @@
+#!/bin/bash -x
+
+exec > >(tee /var/log/one_click_setup.log) 2>&1
+
+PASSWORD=$(openssl rand -base64 60 | head -c49)
+
+cat > /root/.digitalocean_passwords <<EOM
+PASSWORD="${PASSWORD}"
+EOM
+
+sed -e "s|my-password|${PASSWORD}|" \
+    -i /var/lib/digitalocean/finish-setup.sh
+
+chown airflow:airflow /var/lib/digitalocean/finish-setup.sh
+chmod +x /var/lib/digitalocean/finish-setup.sh
+chown airflow:airflow /var/lib/digitalocean/setup-logging.sh
+chmod +x /var/lib/digitalocean/setup-logging.sh
+chown airflow:airflow /var/lib/digitalocean/setup-dbaas.sh
+chmod +x /var/lib/digitalocean/setup-dbaas.sh
+
+sudo -s -u airflow /var/lib/digitalocean/finish-setup.sh
+
+mkdir -p /home/airflow/airflow/dags
+chown airflow:airflow /home/airflow/airflow/dags
+
+source /var/lib/digitalocean/setup-dbaas.sh
+
+source /var/lib/digitalocean/setup-logging.sh
+
+chown airflow:airflow /var/lib/digitalocean/scheduler.sh
+chmod +x /var/lib/digitalocean/scheduler.sh
+chown airflow:airflow /var/lib/digitalocean/webserver.sh
+chmod +x /var/lib/digitalocean/webserver.sh
+
+
+systemctl enable airflow-scheduler
+systemctl enable airflow-webserver
+
+systemctl start airflow-scheduler
+systemctl start airflow-webserver
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
