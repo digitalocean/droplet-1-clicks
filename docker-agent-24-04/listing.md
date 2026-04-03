@@ -13,7 +13,7 @@ Built on modern AI technologies, Docker Agent offers:
 - **Smart delegation** – Agents automatically route tasks to the most suitable specialist
 - **YAML configuration** – Simple, declarative model and agent configuration
 - **Advanced reasoning** – Built-in "think", "todo", and "memory" tools for complex problem-solving
-- **Multiple AI providers** – Support for OpenAI, Anthropic, Google Gemini, and Docker Model Runner
+- **Multiple AI providers** – Support for OpenAI, Anthropic, Google Gemini, DigitalOcean Inference (Gradient), and Docker Model Runner
 
 ## Key Features
 
@@ -37,7 +37,7 @@ Docker Agent is installed as a binary on Ubuntu 24.04 and requires Docker for co
 | Local models (medium) | 8GB | 4 CPU |
 | Local models (large) | 16GB+ | 8 CPU+ |
 
-**Note:** Using cloud AI providers (OpenAI, Anthropic, Google) requires minimal resources. Running local models via Docker Model Runner requires more resources depending on model size.
+**Note:** Using cloud AI providers (OpenAI, Anthropic, Google, DigitalOcean Gradient) requires minimal resources. Running local models via Docker Model Runner requires more resources depending on model size.
 
 ## Getting Started
 
@@ -45,42 +45,85 @@ Docker Agent is installed as a binary on Ubuntu 24.04 and requires Docker for co
 
 1. **Deploy the Droplet** – Choose this 1-Click App from the DigitalOcean Marketplace.
 2. **SSH into your Droplet** – `ssh root@your-droplet-ip`
-3. **Set your API key** – Configure access to your preferred AI provider (see below).
-4. **Run an agent** – Use the included examples or create your own.
+3. **Set API keys** – Export only what your agent YAML needs. If you use several providers, use this order:  
+   `OPENAI_API_KEY` → `ANTHROPIC_API_KEY` → `GOOGLE_API_KEY` → `DO_GRADIENT_API_KEY`  
+   (Details and key URLs are in [Setting Up API Keys](#setting-up-api-keys) below.)
+4. **Run an agent** – Start with a bundled example, or run your own YAML for Anthropic/Google.
 
 ### Setting Up API Keys
 
-Set the environment variable for the AI provider you plan to use:
+Each provider maps to one environment variable. Export the variables that match the `token_key` values in your agent YAML.
+
+**Reference (use this order when setting multiple keys):**
+
+| # | Variable | Provider | Get a key |
+|---|----------|----------|-----------|
+| 1 | `OPENAI_API_KEY` | OpenAI | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
+| 2 | `ANTHROPIC_API_KEY` | Anthropic | [console.anthropic.com](https://console.anthropic.com/) |
+| 3 | `GOOGLE_API_KEY` | Google Gemini | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
+| 4 | `DO_GRADIENT_API_KEY` | DigitalOcean Inference (Gradient) | [cloud.digitalocean.com/gen-ai](https://cloud.digitalocean.com/gen-ai) |
+
+**Typical `export` block:**
 
 ```bash
-# For OpenAI models (GPT-4, GPT-3.5, etc.)
 export OPENAI_API_KEY=your_openai_key_here
-
-# For Anthropic models (Claude)
 export ANTHROPIC_API_KEY=your_anthropic_key_here
-
-# For Google Gemini models
 export GOOGLE_API_KEY=your_google_key_here
+export DO_GRADIENT_API_KEY=your_gradient_key_here
 ```
 
-You only need API keys for the providers you use. For local models via Docker Model Runner, no API key is required.
+**One command per provider (no prior `export`):**
+
+```bash
+OPENAI_API_KEY=your_key docker-agent run /opt/docker-agent/examples/basic_agent.yaml
+ANTHROPIC_API_KEY=your_key docker-agent run ./your-agent.yaml
+GOOGLE_API_KEY=your_key docker-agent run ./your-agent.yaml
+DO_GRADIENT_API_KEY=your_key docker-agent run /opt/docker-agent/examples/gradient_agent.yaml
+```
+
+Notes:
+
+- **Anthropic / Google** – `./your-agent.yaml` must use `token_key: ANTHROPIC_API_KEY` or `token_key: GOOGLE_API_KEY` in the `models` section. A quick way to get a starter file is `docker-agent new --model anthropic/...` or `docker-agent new --model google/...`.
+- **Docker Model Runner** – Local models do not need a cloud API key.
 
 ### Run Your First Agent
 
-Try the included example agents (use the `docker-agent` CLI—Docker Agent’s command-line tool):
+Use the `docker-agent` CLI on the Droplet. Paths below are under `/opt/docker-agent/examples/`.
+
+**Bundled cloud examples**
+
+| Command | Required key |
+|---------|----------------|
+| `docker-agent run .../basic_agent.yaml` | `OPENAI_API_KEY` |
+| `docker-agent run .../gradient_agent.yaml` | `DO_GRADIENT_API_KEY` |
+
+**Anthropic or Google**
+
+Set `ANTHROPIC_API_KEY` or `GOOGLE_API_KEY`, then run YAML that references the same `token_key`:
 
 ```bash
-# Run a basic agent (requires OPENAI_API_KEY)
-docker-agent run /opt/docker-agent/examples/basic_agent.yaml
-
-# Run a local agent using Docker Model Runner (no API key needed)
-docker-agent run /opt/docker-agent/examples/dmr.yaml
-
-# Other examples
-docker-agent run /opt/docker-agent/examples/pirate.yaml      # Fun pirate assistant
-docker-agent run /opt/docker-agent/examples/pythonist.yaml  # Python programming expert
-docker-agent run /opt/docker-agent/examples/todo.yaml       # Task manager with memory
+docker-agent run /path/to/your-agent.yaml
 ```
+
+**Local (no cloud key)**
+
+```bash
+docker-agent run /opt/docker-agent/examples/dmr.yaml
+```
+
+**More sample YAML** (check each file for `provider` / `token_key`)
+
+```bash
+docker-agent run /opt/docker-agent/examples/pirate.yaml
+docker-agent run /opt/docker-agent/examples/pythonist.yaml
+docker-agent run /opt/docker-agent/examples/todo.yaml
+```
+
+**Summary**
+
+- `basic_agent.yaml` → OpenAI.
+- `gradient_agent.yaml` → Gradient (`base_url` `https://inference.do-ai.run/v1`, `token_key` `DO_GRADIENT_API_KEY`).
+- Anthropic / Google → your own YAML (or from `docker-agent new --model`).
 
 ### Create Custom Agents
 
@@ -278,14 +321,15 @@ After deployment you have:
 - Docker Agent CLI (`docker-agent`) at `/usr/local/bin/docker-agent`
 - Docker installed for containerized models and tools
 - Example configurations in `/opt/docker-agent/examples/`
-- Quick reference at `/opt/docker-agent/README.txt`
+- Quick reference at `/opt/docker-agent/README.txt` (API key order, URLs, and run commands)
+- Login MOTD with the same quick reference; optional first-login prompts can append keys to `/root/.bashrc` (see README for details)
 
 ### Next Steps
 
-1. Set your preferred AI provider API key.
-2. Run the example agents.
-3. Create a custom agent with `docker-agent new`.
-4. Explore MCP tools and multi-agent setups.
+1. **Keys** – Export `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY`, and/or `DO_GRADIENT_API_KEY` as needed (same order is a good habit).
+2. **Run** – Try `basic_agent.yaml` and `gradient_agent.yaml`, or your YAML for Anthropic/Google.
+3. **Create** – Run `docker-agent new` for an interactive agent definition.
+4. **Extend** – Explore MCP tools and multi-agent setups in the upstream docs.
 
 ### Important Notes
 
