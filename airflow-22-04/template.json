@@ -1,20 +1,21 @@
-
 {
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "airflow-22-04-snapshot-{{timestamp}}",
-    "apt_packages": "apt-transport-https ca-certificates curl jq nginx python3-certbot-nginx software-properties-common python3-pip python3-venv postgresql-client",
+    "apt_packages": "apt-transport-https ca-certificates curl jq nginx python3-certbot-nginx software-properties-common python3-pip python3-venv postgresql redis-server libpq-dev",
     "application_name": "Airflow",
-    "application_version": "2.8.3"
+    "application_version": "3.1.8"
   },
-  "sensitive-variables": ["do_api_token"],
+  "sensitive-variables": [
+    "do_api_token"
+  ],
   "builders": [
     {
       "type": "digitalocean",
       "api_token": "{{user `do_api_token`}}",
-      "image": "ubuntu-22-04-x64",
+      "image": "ubuntu-24-04-x64",
       "region": "sfo3",
-      "size": "s-1vcpu-512mb-10gb",
+      "size": "s-1vcpu-2gb",
       "ssh_username": "root",
       "snapshot_name": "{{user `image_name`}}"
     }
@@ -34,6 +35,11 @@
     {
       "type": "file",
       "source": "airflow-22-04/files/var/",
+      "destination": "/var/"
+    },
+    {
+      "type": "file",
+      "source": "common/files/var/",
       "destination": "/var/"
     },
     {

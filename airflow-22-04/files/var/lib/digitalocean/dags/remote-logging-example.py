@@ -1,5 +1,5 @@
 from airflow import DAG
-from airflow.operators.python_operator import PythonOperator
+from airflow.operators.python import PythonOperator
 from datetime import datetime
 
 def generate_logs():
@@ -9,7 +9,7 @@ def generate_logs():
 with DAG(
     "remote_logging_test",
     start_date=datetime(2024, 4, 25),
-    schedule_interval=None,
+    schedule=None,
     catchup=False,
 ) as dag:
 

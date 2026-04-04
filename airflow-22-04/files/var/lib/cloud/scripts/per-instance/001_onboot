@@ -8,9 +8,6 @@ cat > /root/.digitalocean_passwords <<EOM
 PASSWORD="${PASSWORD}"
 EOM
 
-sed -e "s|my-password|${PASSWORD}|" \
-    -i /var/lib/digitalocean/finish-setup.sh
-
 chown airflow:airflow /var/lib/digitalocean/finish-setup.sh
 chmod +x /var/lib/digitalocean/finish-setup.sh
 chown airflow:airflow /var/lib/digitalocean/setup-logging.sh
@@ -21,7 +18,42 @@ chmod +x /var/lib/digitalocean/setup-dbaas.sh
 sudo -s -u airflow /var/lib/digitalocean/finish-setup.sh
 
 mkdir -p /home/airflow/airflow/dags
-chown airflow:airflow /home/airflow/dags
+chown airflow:airflow /home/airflow/airflow/dags
+
+# Airflow 3.x SimpleAuthManager: write the admin password to the JSON file
+# The admin user+role is configured in airflow.cfg via simple_auth_manager_users
+cat > /home/airflow/airflow/simple_auth_manager_passwords.json.generated <<PASSEOF
+{"admin": "${PASSWORD}"}
+PASSEOF
+chown airflow:airflow /home/airflow/airflow/simple_auth_manager_passwords.json.generated
+
+# Set a random password for local Redis
+REDIS_PASS=$(openssl rand -base64 32 | head -c 32)
+cat >> /root/.digitalocean_passwords <<EOM
+REDIS_PASSWORD="${REDIS_PASS}"
+EOM
+
+sed -i "s|^# *requirepass foobared|requirepass ${REDIS_PASS}|" /etc/redis/redis.conf
+systemctl restart redis-server
+
+# Deploy redis example DAG
+cp /var/lib/digitalocean/dags/redis-example.py /home/airflow/airflow/dags
+chown airflow:airflow /home/airflow/airflow/dags/redis-example.py
+
+# Add local redis connection to Airflow
+sudo -u airflow AIRFLOW_HOME=/home/airflow/airflow bash -c "
+cd /home/airflow/airflow-project &&
+source airflow-env/bin/activate &&
+airflow connections add redis_local \
+   --conn-type redis \
+   --conn-host localhost \
+   --conn-port 6379 \
+   --conn-password '${REDIS_PASS}' &&
+airflow connections add redis_managed \
+   --conn-type redis \
+   --conn-host localhost \
+   --conn-port 6379 \
+   --conn-password '${REDIS_PASS}'"
 
 source /var/lib/digitalocean/setup-dbaas.sh
 
@@ -31,6 +63,8 @@ chown airflow:airflow /var/lib/digitalocean/scheduler.sh
 chmod +x /var/lib/digitalocean/scheduler.sh
 chown airflow:airflow /var/lib/digitalocean/webserver.sh
 chmod +x /var/lib/digitalocean/webserver.sh
+chown airflow:airflow /var/lib/digitalocean/celery-worker.sh
+chmod +x /var/lib/digitalocean/celery-worker.sh
 
 
 systemctl enable airflow-scheduler
@@ -38,6 +72,18 @@ systemctl enable airflow-webserver
 
 systemctl start airflow-scheduler
 systemctl start airflow-webserver
+
+# Start Celery worker if CeleryExecutor was configured (managed Postgres + Redis)
+if [ "$CELERY_EXECUTOR_ENABLED" = true ]; then
+    systemctl enable airflow-celery-worker
+    systemctl start airflow-celery-worker
+fi
+
+# Force DAG reserialization to populate database immediately
+sudo -u airflow AIRFLOW_HOME=/home/airflow/airflow bash -c "
+cd /home/airflow/airflow-project &&
+source airflow-env/bin/activate &&
+airflow dags reserialize > /var/log/airflow_dag_reserialize.log 2>&1"
 
 # Remove the ssh force logout command
 sed -e '/Match User root/d' \

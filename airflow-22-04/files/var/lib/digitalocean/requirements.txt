@@ -1,11 +1,12 @@
 # Apache Airflow - version locked dependencies
-# Installed with the official Apache Airflow constraints file to pin
-# all transitive dependencies to tested-compatible versions.
+# The Airflow version will be appended by scripts/012-airflow.sh before installation.
+# The constraints file pins all provider and dependency versions.
 #
-# Constraints URL pattern:
+# Constraints URL (used in scripts/012-airflow.sh):
 #   https://raw.githubusercontent.com/apache/airflow/constraints-{VERSION}/constraints-{PYTHON_VERSION}.txt
 #
-apache-airflow==3.1.8
+apache-airflow
+apache-airflow-providers-celery
 apache-airflow-providers-postgres
 apache-airflow-providers-redis
 apache-airflow-providers-amazon

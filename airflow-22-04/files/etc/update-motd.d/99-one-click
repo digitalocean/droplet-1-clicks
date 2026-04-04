@@ -5,7 +5,8 @@
 # Read in the passwords....
 . /root/.digitalocean_passwords
 
-dbaas_text=""
+dbaas_text="Airflow uses local PostgreSQL (localhost:5432) and Redis (localhost:6379).
+    Redis password is stored in /root/.digitalocean_passwords"
 if [ -f "/root/.digitalocean_dbaas_credentials" ]; then
     . /root/.digitalocean_dbaas_credentials
     dbaas_text="Airflow is configured to use managed Postgres as its database. Use the following credentials to manage the database:
@@ -15,19 +16,24 @@ if [ -f "/root/.digitalocean_dbaas_credentials" ]; then
     User:     ${db_username}
     Pass:     ${db_password}
 
-    Redis is also configured to be used as a keystore. Use the following credentials to manage Redis:
+    Managed Valkey/Redis is configured as the broker and keystore. Use the following credentials:
 
     Host:     ${redis_host}
     Port:     ${redis_port}
     User:     ${redis_username}
     Pass:     ${redis_password}
-    SSL:      Enabled"
+    SSL:      Enabled
+
+    Note: The local Redis service has been stopped. To re-enable it, run:
+          sudo systemctl start redis-server
+          sudo systemctl enable redis-server
+    The 'redis_local' connection uses localhost Redis, while 'redis_managed' uses the managed service."
 fi
 
 spaces_text=""
 if [ -f "/root/.digitalocean_spaces_credentials" ]; then
     . /root/.digitalocean_spaces_credentials
-    spaces_text="A Spaces bucket is also configured for remote loggign. Following are the bucket details:
+    spaces_text="A Spaces bucket is also configured for remote logging. Following are the bucket details:
     Bucket:         ${bucket_name}
     Host:           ${spaces_host}
     Access_Key:     ${spaces_access_key_id}
