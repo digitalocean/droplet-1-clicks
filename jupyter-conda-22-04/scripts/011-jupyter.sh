@@ -7,6 +7,8 @@ JUPYTER_AI="jupyter-ai==${JUPYTER_AI_VERSION}"
 
 echo "${JUPYTERLAB}" >> /etc/jupyter/requirements.txt
 echo "${JUPYTER_AI}" >> /etc/jupyter/requirements.txt
+# Re-pin requests last so pip resolves over transitive jupyterlab/jupyter-ai deps (CVE-2026-25645).
+echo "requests==2.33.1" >> /etc/jupyter/requirements.txt
 
 # JUPYTER
 sudo -u anaconda bash <<EOF
