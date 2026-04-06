@@ -22,9 +22,39 @@ do
     "DigitalOcean Gradient")
         selected_provider="DigitalOcean Gradient"
         onboard_provider="custom:https://inference.do-ai.run/v1"
-        onboard_model="anthropic-claude-4.5-sonnet"
         echo "You selected DigitalOcean Gradient."
-        break
+        echo ""
+        echo "Choose a Gradient inference model (default: Kimi K2.5):"
+        PS3="Select model (1-4): "
+        gradient_options=("Kimi K2.5" "MiniMax M2.5" "GLM 5" "Claude Sonnet 4.5")
+        select gopt in "${gradient_options[@]}"
+        do
+          case $gopt in
+            "Kimi K2.5")
+              onboard_model="kimi-k2.5"
+              echo "Using Kimi K2.5 (kimi-k2.5)."
+              break 2
+              ;;
+            "MiniMax M2.5")
+              onboard_model="minimax-m2.5"
+              echo "Using MiniMax M2.5 (minimax-m2.5)."
+              break 2
+              ;;
+            "GLM 5")
+              onboard_model="glm-5"
+              echo "Using GLM 5 (glm-5)."
+              break 2
+              ;;
+            "Claude Sonnet 4.5")
+              onboard_model="anthropic-claude-4.5-sonnet"
+              echo "Using Claude Sonnet 4.5 (anthropic-claude-4.5-sonnet)."
+              break 2
+              ;;
+            *)
+              echo "Invalid option. Please try again."
+              ;;
+          esac
+        done
         ;;
     "OpenAI")
         selected_provider="OpenAI"
@@ -52,6 +82,10 @@ do
         ;;
   esac
 done
+
+if [[ "$onboard_provider" == "custom:https://inference.do-ai.run/v1" && -z "$onboard_model" ]]; then
+  onboard_model="kimi-k2.5"
+fi
 
 echo ""
 echo "${selected_provider} Configuration Setup"

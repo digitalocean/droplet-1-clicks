@@ -12,9 +12,20 @@ This Packer template builds a DigitalOcean Marketplace 1-Click image for [ZeroCl
 
 ## How It Works
 
-ZeroClaw is installed as a pre-built binary at `/usr/local/bin/zeroclaw`. It runs as a systemd service under a dedicated `zeroclaw` user. On first SSH login, an interactive setup wizard prompts you to select an AI provider (DigitalOcean Gradient, OpenAI, Anthropic, or OpenRouter) and enter your API key.
+ZeroClaw is installed as a pre-built binary at `/usr/local/bin/zeroclaw`. It runs as a systemd service under a dedicated `zeroclaw` user. On first SSH login, an interactive setup wizard prompts you to select an AI provider (DigitalOcean Gradient, OpenAI, Anthropic, or OpenRouter), choose a Gradient inference model when applicable, and enter your API key.
 
 Caddy provides HTTPS via IP-based TLS certificates from Let's Encrypt, reverse-proxying to ZeroClaw's gateway on port 42617.
+
+### DigitalOcean Gradient
+
+When you choose **DigitalOcean Gradient** in the setup wizard, inference uses `https://inference.do-ai.run/v1` with a Gradient model access key. The default model is **Kimi K2.5** (`kimi-k2.5`). You can pick another model during setup or change `default_model` in `/home/zeroclaw/.zeroclaw/config.toml` later.
+
+| Model | Model ID |
+|-------|----------|
+| Kimi K2.5 (default) | `kimi-k2.5` |
+| MiniMax M2.5 | `minimax-m2.5` |
+| GLM 5 | `glm-5` |
+| Claude Sonnet 4.5 | `anthropic-claude-4.5-sonnet` |
 
 ## Building
 

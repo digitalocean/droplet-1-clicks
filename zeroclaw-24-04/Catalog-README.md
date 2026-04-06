@@ -29,9 +29,13 @@ With a memory footprint under 5MB and cold start times under 10ms, ZeroClaw is d
 
 1. **Create a Droplet** using this 1-Click image
 2. **SSH into your Droplet** — the setup wizard will run automatically on first login
-3. **Select an AI provider** (DigitalOcean Gradient, OpenAI, Anthropic, or OpenRouter)
+3. **Select an AI provider** (DigitalOcean Gradient, OpenAI, Anthropic, or OpenRouter). For Gradient, choose an inference model (default: Kimi K2.5).
 4. **Enter your API key** when prompted
 5. **Access the gateway** at `https://your-droplet-ip`
+
+### DigitalOcean Gradient
+
+Gradient uses a single model access key for serverless inference at `https://inference.do-ai.run/v1`. The default model is **Kimi K2.5** (`kimi-k2.5`). During first-login setup you can choose **Kimi K2.5**, **MiniMax M2.5** (`minimax-m2.5`), **GLM 5** (`glm-5`), or **Claude Sonnet 4.5** (`anthropic-claude-4.5-sonnet`). Re-run `sudo /etc/setup_wizard.sh` to switch models, or edit `default_model` in `/home/zeroclaw/.zeroclaw/config.toml`.
 
 ## Managing ZeroClaw
 

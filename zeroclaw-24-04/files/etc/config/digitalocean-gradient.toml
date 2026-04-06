@@ -1,6 +1,8 @@
 api_key = "PLACEHOLDER"
 default_provider = "custom:https://inference.do-ai.run/v1"
-default_model = "anthropic-claude-4.5-sonnet"
+# Default: Kimi K2.5 (open source on Gradient). Alternatives: minimax-m2.5, glm-5,
+# anthropic-claude-4.5-sonnet (Claude Sonnet 4.5).
+default_model = "kimi-k2.5"
 default_temperature = 0.7
 
 [memory]
