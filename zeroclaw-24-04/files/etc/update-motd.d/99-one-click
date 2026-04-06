@@ -1,0 +1,50 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+
+cat <<EOF
+********************************************************************************
+
+Welcome to ZeroClaw - Fast, Small, Fully Autonomous AI Assistant Infrastructure
+
+ZeroClaw is a lightweight Rust runtime for agentic workflows. It abstracts
+models, tools, memory, and execution so agents can be built once and run
+anywhere. Uses <5MB RAM and starts in <10ms.
+
+  Dashboard URL: https://$myip
+  Direct Gateway: http://$myip:42617
+
+  Configuration:
+    Config file:    /home/zeroclaw/.zeroclaw/config.toml
+    Environment:    /opt/zeroclaw.env
+    Gradient default model: Kimi K2.5 — change via: sudo /etc/setup_wizard.sh
+
+  Management Commands:
+    Restart service:  systemctl restart zeroclaw
+    Check status:     systemctl status zeroclaw
+    View logs:        journalctl -u zeroclaw -f
+    System status:    /opt/zeroclaw-cli.sh status
+    System doctor:    /opt/zeroclaw-cli.sh doctor
+
+  Helper Scripts:
+    /opt/restart-zeroclaw.sh       Restart with status check
+    /opt/status-zeroclaw.sh        Show status and version
+    /opt/update-zeroclaw.sh        Update to latest version
+    /opt/setup-zeroclaw-domain.sh  Configure custom domain with TLS
+    /opt/zeroclaw-cli.sh           Run ZeroClaw CLI commands
+
+  Enable HTTPS (TLS):
+    Point your domain to this droplet, then run:
+      sudo /opt/setup-zeroclaw-domain.sh
+
+  Reconfigure Provider:
+    sudo /etc/setup_wizard.sh
+
+  Documentation: https://zeroclawlabs.ai
+  GitHub:        https://github.com/zeroclaw-labs/zeroclaw
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF

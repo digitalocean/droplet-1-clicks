@@ -1,0 +1,16 @@
+#!/bin/sh
+
+DROPL_IP=$(hostname -I | awk '{print$1}')
+sed "s/PLACEHOLDER_IP/${DROPL_IP}/" /etc/caddy/Caddyfile.tmp > /etc/caddy/Caddyfile
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' -e '/.*ForceCommand.*droplet.*/d' -i /etc/ssh/sshd_config
+
+cat >> /root/.bashrc <<EOM
+chmod +x /etc/setup_wizard.sh
+/etc/setup_wizard.sh
+EOM
+
+systemctl restart ssh
+systemctl enable caddy
+systemctl restart caddy

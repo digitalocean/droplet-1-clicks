@@ -1,0 +1,25 @@
+[Unit]
+Description=ZeroClaw Daemon
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=zeroclaw
+Group=zeroclaw
+WorkingDirectory=/home/zeroclaw/workspace
+EnvironmentFile=/opt/zeroclaw.env
+Environment="HOME=/home/zeroclaw"
+Environment="PATH=/usr/local/bin:/usr/bin:/bin"
+
+ExecStart=/usr/local/bin/zeroclaw daemon -p ${ZEROCLAW_GATEWAY_PORT}
+
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
