@@ -2,3 +2,5 @@ jupyterlab-lsp
 ipywidgets
 ipykernel
 ipython
+# CVE-2026-25645: transitive requests from jupyterlab stack; require patched release
+requests>=2.33.0
