@@ -1,7 +1,7 @@
 #!/bin/bash -x
 exec > >(tee /var/log/one_click_setup.log) 2>&1
 
-sudo -u ananconda bash <<EOF
+sudo -u anaconda bash <<EOF
 echo "Now upgrading jupyter environment"
 
 cd ~
@@ -11,6 +11,7 @@ conda activate jupyter
 
 yes| pip install  pip --upgrade
 yes| pip install  -r /etc/jupyter/requirements.txt --upgrade
+yes| pip install  "requests==2.33.1" --upgrade
 conda deactivate
 EOF
 

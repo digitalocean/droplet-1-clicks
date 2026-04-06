@@ -2,13 +2,16 @@
 
 set -e
 
-JUPYTERLAB="jupyterlab==${JUPYTERLAB_VERSION}"
-JUPYTER_AI="jupyter-ai==${JUPYTER_AI_VERSION}"
-
-echo "${JUPYTERLAB}" >> /etc/jupyter/requirements.txt
-echo "${JUPYTER_AI}" >> /etc/jupyter/requirements.txt
-# Re-pin requests last so pip resolves over transitive jupyterlab/jupyter-ai deps (CVE-2026-25645).
-echo "requests==2.33.1" >> /etc/jupyter/requirements.txt
+# Merge pinned Jupyter packages first (matches jupyter-conda-24-04); keep -c constraints line on top.
+REQS_TMP=$(mktemp)
+{
+  echo "-c constraints.txt"
+  echo "jupyterlab==${JUPYTERLAB_VERSION}"
+  echo "jupyter-ai==${JUPYTER_AI_VERSION}"
+  tail -n +2 /etc/jupyter/requirements.txt
+} > "${REQS_TMP}"
+mv "${REQS_TMP}" /etc/jupyter/requirements.txt
+chown anaconda: /etc/jupyter/requirements.txt
 
 # JUPYTER
 sudo -u anaconda bash <<EOF
@@ -22,6 +25,7 @@ conda activate jupyter
 
 yes| pip install  pip --upgrade
 yes| pip install  -r /etc/jupyter/requirements.txt
+yes| pip install  "requests==2.33.1" --upgrade
 
 conda deactivate
 EOF

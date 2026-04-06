@@ -1,6 +1,5 @@
+-c constraints.txt
 jupyterlab-lsp
 ipywidgets
 ipykernel
 ipython
-# CVE-2026-25645 — pin exact patched release (Mend requires !=2.32.5)
-requests==2.33.1
