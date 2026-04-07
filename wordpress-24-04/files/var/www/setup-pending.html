@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WordPress Setup - DigitalOcean</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0080ff 0%, #0052cc 100%);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .container {
+            text-align: center;
+            max-width: 700px;
+            padding: 2rem;
+        }
+        
+        .logo {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 2rem;
+            background: white;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: #0080ff;
+            font-weight: bold;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            font-weight: 300;
+        }
+        
+        .subtitle {
+            font-size: 1.3rem;
+            margin-bottom: 2rem;
+            opacity: 0.95;
+            font-weight: 500;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin: 2rem 0;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .status {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin-bottom: 2rem;
+            font-weight: 500;
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 2rem 0;
+            text-align: left;
+            backdrop-filter: blur(10px);
+        }
+        
+        .instructions h2 {
+            margin-top: 0;
+            font-size: 1.5rem;
+            font-weight: 500;
+            margin-bottom: 1.5rem;
+        }
+        
+        .instructions ol {
+            margin: 0;
+            padding-left: 1.5rem;
+            line-height: 1.8;
+        }
+        
+        .instructions li {
+            margin-bottom: 1rem;
+            font-size: 1rem;
+        }
+        
+        .instructions code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+        
+        .note {
+            background: rgba(255, 255, 255, 0.15);
+            border-left: 4px solid white;
+            padding: 1rem 1.5rem;
+            margin: 2rem 0;
+            border-radius: 4px;
+            text-align: left;
+        }
+        
+        .note strong {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+        
+        .footer {
+            margin-top: 3rem;
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+        
+        .footer a {
+            color: white;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">W</div>
+        
+        <h1>WordPress Setup Required</h1>
+        <p class="subtitle">Your WordPress installation is ready to be configured</p>
+        
+        <div class="loading"></div>
+        
+        <p class="status">Waiting for initial setup to complete...</p>
+        
+        <div class="instructions">
+            <h2>📝 Setup Instructions</h2>
+            <ol>
+                <li>Connect to your Droplet via SSH:
+                    <br><code>ssh root@your-droplet-ip</code>
+                </li>
+                <li>The automatic setup wizard will launch on first login</li>
+                <li>The wizard will:
+                    <ul style="margin-top: 0.5rem;">
+                        <li>Configure HTTPS with Caddy web server</li>
+                        <li>Obtain Let's Encrypt short-lived SSL certificate (supports IPs!)</li>
+                        <li>Set up your WordPress admin account</li>
+                        <li>Install security plugins</li>
+                    </ul>
+                </li>
+                <li>After setup completes, WordPress will be accessible at:
+                    <br><code>https://your-droplet-ip</code>
+                </li>
+            </ol>
+        </div>
+        
+        <div class="note">
+            <strong>🔒 Automatic SSL with Caddy</strong>
+            This WordPress installation uses Caddy web server with Let's Encrypt short-lived certificates. These special certificates work with IP addresses and auto-renew every ~6 days!
+        </div>
+        
+        <div class="note">
+            <strong>💡 Want to use a custom domain?</strong>
+            After setup, you can run <code>/root/wp_setup_domain.sh</code> to configure a custom domain (will use standard 90-day certificates).
+        </div>
+        
+        <div class="footer">
+            <p>Need help? Check out the <a href="https://www.digitalocean.com/community/" target="_blank">DigitalOcean Community</a></p>
+            <p>Powered by DigitalOcean 1-Click Apps</p>
+        </div>
+    </div>
+    
+    <script>
+        // Auto-refresh every 10 seconds to check if setup is complete
+        setTimeout(function() {
+            location.reload();
+        }, 10000);
+    </script>
+</body>
+</html>

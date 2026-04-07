@@ -10,30 +10,41 @@ Welcome to DigitalOcean's One-Click WordPress Droplet.
 To keep this Droplet secure, the UFW firewall is enabled.
 All ports are BLOCKED except 22 (SSH), 80 (HTTP), and 443 (HTTPS).
 
+🚀 AUTOMATIC SETUP WITH SSL:
+ * The automatic setup wizard will launch now (first login only)
+ * Your WordPress site will be secured with HTTPS using Caddy
+ * Uses Let's Encrypt short-lived certificates (supports IP addresses!)
+ * Setup takes ~2-3 minutes to complete
+
 In a web browser, you can view:
- * The WordPress One-Click Quickstart guide: https://do.co/34TfYn8#start
- * The new WordPress site: http://$myip
+ * Setup pending page (before setup): http://$myip
+ * Your WordPress site (after setup): https://$myip
+ * WordPress admin panel: https://$myip/wp-admin
 
 On the server:
- * The default web root is located at /var/www/html
- * If you're using the embedded database, the MySQL root password
-   and MySQL wordpress user password are saved in /root/.digitalocean_password
-   If you've opted in to using a DBaaS instance with DigitalOcean, you will
-   find your credentials written to /root/.digitalocean_dbaas_credentials and
-   you will have access to a DATABASE_URL environment variable holding your
-   database connection string.
- * The must-use WordPress security plugin, fail2ban, is located at
-   /var/www/html/wp-content/mu-plugins/fail2ban.php
- * Certbot is preinstalled. Run it to configure HTTPS. See
-   https://do.co/34TfYn8#enable-https for more detail.
- * For security, xmlrpc calls are blocked by default.  This block can be
-    disabled by running "a2disconf block-xmlrpc" in the terminal.
+ * WordPress root: /var/www/html
+ * Caddy config: /etc/caddy/Caddyfile
+ * SSL certificates: /var/lib/caddy/.local/share/caddy/certificates/
+ * Database credentials: /root/.digitalocean_password
+   (If using DBaaS: /root/.digitalocean_dbaas_credentials)
+ * WP-Fail2Ban plugin: /var/www/html/wp-content/mu-plugins/fail2ban.php
+
+🔧 USEFUL COMMANDS:
+ * Add a custom domain: /root/wp_setup_domain.sh
+ * WordPress CLI: wp --allow-root --path="/var/www/html" [command]
+ * Reload Caddy config: systemctl reload caddy
+ * View Caddy logs: journalctl -u caddy -f
+ * View PHP logs: tail -f /var/log/php8.3-fpm.log
+
+📚 DOCUMENTATION:
+ * WordPress 1-Click Guide: https://do.co/34TfYn8
+ * DigitalOcean Community: https://www.digitalocean.com/community/
 
 IMPORTANT:
-   After connecting to the Droplet for the first time,
-   immediately add the WordPress administrator at http://$myip.
-
-For help and more information, visit https://do.co/34TfYn8
+ * SSL certificates auto-renew every ~6 days (short-lived certificates)
+ * Caddy handles renewals automatically in the background
+ * For security, xmlrpc endpoint is blocked by default
+ * You can switch to a custom domain anytime using /root/wp_setup_domain.sh
 
 ********************************************************************************
 To delete this message of the day: rm -rf $(readlink -f ${0})
