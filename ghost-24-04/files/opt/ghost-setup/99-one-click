@@ -1,0 +1,25 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+. /root/.digitalocean_password
+myip=$(hostname -I | awk '{print$1}')
+export TERM=xterm-256color
+echo "
+-------------------------------------------------------------------------------
+
+The $(tput setaf 6)ufw$(tput sgr0) firewall is enabled. All ports except for 22, 80, and 443 are BLOCKED.
+You can find more information on using this image at: $(tput setaf 6)https://marketplace.digitalocean.com/apps/ghost$(tput sgr0)
+
+------------------------------------------------------------------------------
+
+Please switch to the $(tput setaf 6)ghost-mgr$(tput sgr0) user to manage Ghost via the CLI:
+
+    $(tput setaf 3)sudo -i -u ghost-mgr$(tput sgr0)
+
+For an overview of available Ghost CLI commands, run:
+
+    $(tput setaf 3)ghost help$(tput sgr0)
+
+------------------------------------------------------------------------------
+"
