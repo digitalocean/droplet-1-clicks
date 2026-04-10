@@ -18,6 +18,7 @@ do
         selected_provider="GradientAI"
         target_config="/etc/config/gradientai.json"
         echo "You selected DigitalOcean GradientAI."
+        echo "Configured models include Llama 3.3 70B, DeepSeek R1 Distill Llama 70B, GPT OSS 120B, Claude 4.5 Sonnet, MiniMax M2.5, Kimi K2.5, and GLM 5 (full list: /etc/config/gradientai.json)."
         break
         ;;
     "OpenAI")
@@ -73,9 +74,9 @@ mkdir -p /home/openclaw/.openclaw
 
 if [[ "$selected_provider" == "GradientAI" ]]; then
     jq --arg key "$model_access_key" '.models.providers.gradient.apiKey = $key' "$target_config" > /home/openclaw/.openclaw/openclaw.json
-elif [[ "$selected_provider" == "OpenRouter" ]] then
+elif [[ "$selected_provider" == "OpenRouter" ]]; then
     jq --arg key "$model_access_key" '.models.providers.openrouter.apiKey = $key' "$target_config" > /home/openclaw/.openclaw/openclaw.json
-elif [[ "$selected_provider" != "OpenClaw Model Setup" ]] then
+elif [[ "$selected_provider" != "OpenClaw Model Setup" ]]; then
     cp ${target_config} /home/openclaw/.openclaw/openclaw.json
     echo -e "\n${env_key_name}=${model_access_key}" >> /opt/openclaw.env
 fi
