@@ -126,37 +126,10 @@ if [ "$GATEWAY_READY" = false ]; then
     echo "Check with: systemctl status openclaw"
 fi
 
-printf "Pairing local device...\n"
+# Pending device requests only appear after a client connects (e.g. Control UI in the browser step below).
 
-PAIR_TMPFILE=$(mktemp)
-PAIR_SUCCESS=false
-for attempt in $(seq 1 20); do
-    /opt/openclaw-cli.sh devices list --token="${GATEWAY_TOKEN}" > "$PAIR_TMPFILE" 2>&1 || true
-
-    OUTPUT=$(sed -n '/Pending/,/Paired/p' "$PAIR_TMPFILE")
-    REQUEST_IDS=($(echo "$OUTPUT" | grep -oP '[a-f0-9]{8}-([a-f0-9]{4}-){3}[a-f0-9]{12}'))
-    COUNT=${#REQUEST_IDS[@]}
-
-    if [ "$COUNT" -ge 1 ]; then
-        for rid in "${REQUEST_IDS[@]}"; do
-            /opt/openclaw-cli.sh devices approve "$rid" --token="${GATEWAY_TOKEN}" > /dev/null 2>&1 || true
-        done
-        PAIR_SUCCESS=true
-        break
-    fi
-
-    printf "Waiting for local device pairing request (%d/20)...\n" "$attempt"
-    sleep 5
-done
-rm -f "$PAIR_TMPFILE"
-
-if [ "$PAIR_SUCCESS" = true ]; then
-    printf "\nSuccessfully paired local device\n"
-else
-    printf "\nFailed to pair local device\n"
-fi
-
-printf "\nSince version 1.26 OpenClaw requires manual pairing to allow access to UI dashboard.\n"
+printf "\nSince version 1.26 OpenClaw requires pairing the Control UI (dashboard) before it can be used.\n"
+printf "The next steps open the dashboard in your browser and approve the pending request.\n"
 
 while true; do
     read -p "Do you want to run pairing automation now? (yes/no): " yn
