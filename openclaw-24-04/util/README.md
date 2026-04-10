@@ -19,14 +19,14 @@ The script:
 Run directly on your droplet via SSH:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/digitalocean/droplet-1-clicks/main/clawdbot-24-04/util/update-clawdbot.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/digitalocean/droplet-1-clicks/main/openclaw-24-04/util/update-clawdbot.sh | sudo bash
 ```
 
 ### Option 2: Download, review, then execute
 
 ```bash
 # Download the script
-curl -fsSL https://raw.githubusercontent.com/digitalocean/droplet-1-clicks/main/clawdbot-24-04/util/update-clawdbot.sh -o update-clawdbot.sh
+curl -fsSL https://raw.githubusercontent.com/digitalocean/droplet-1-clicks/main/openclaw-24-04/util/update-clawdbot.sh -o update-clawdbot.sh
 
 # Review the script
 less update-clawdbot.sh
@@ -41,7 +41,7 @@ sudo ./update-clawdbot.sh
 ### Option 3: Using wget
 
 ```bash
-wget -O - https://raw.githubusercontent.com/digitalocean/droplet-1-clicks/main/clawdbot-24-04/util/update-clawdbot.sh | sudo bash
+wget -O - https://raw.githubusercontent.com/digitalocean/droplet-1-clicks/main/openclaw-24-04/util/update-clawdbot.sh | sudo bash
 ```
 
 ## Prerequisites
