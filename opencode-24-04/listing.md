@@ -70,7 +70,7 @@ cd /path/to/your/project
 opencode
 ```
 
-The default model is **Claude Sonnet 4.5** (via DigitalOcean Gradient). You can change it in `/root/.config/opencode/opencode.json` or use the `/models` command inside OpenCode.
+The default model is **Kimi K2.5** (`digitalocean/kimi-k2.5` via DigitalOcean Gradient). You can change it in `/root/.config/opencode/opencode.json` or use the `/models` command inside OpenCode.
 
 ## Managing OpenCode
 
@@ -90,23 +90,27 @@ The default model is **Claude Sonnet 4.5** (via DigitalOcean Gradient). You can 
 
 ### Pre-Configured Models
 
-The following top-rated coding models are available via DigitalOcean Gradient (only a Gradient model access key is required):
+The following models are available via DigitalOcean Gradient (only a Gradient model access key is required). Use the full `provider/model-id` value in OpenCode or in `"model"` in `opencode.json`.
 
-| Model | ID | Provider |
-|-------|----|----------|
-| Claude Opus 4.6 | `anthropic-claude-opus-4.6` | Anthropic |
-| Claude Opus 4.5 | `anthropic-claude-opus-4.5` | Anthropic |
-| Claude Sonnet 4.5 (default) | `anthropic-claude-4.5-sonnet` | Anthropic |
-| Claude Sonnet 4 | `anthropic-claude-sonnet-4` | Anthropic |
-| Claude 3.7 Sonnet | `anthropic-claude-3.7-sonnet` | Anthropic |
-| GPT-5.2 | `openai-gpt-5.2` | OpenAI |
-| GPT-5 | `openai-gpt-5` | OpenAI |
-| GPT-5.1 Codex Max | `openai-gpt-5.1-codex-max` | OpenAI |
-| GPT-4.1 | `openai-gpt-4.1` | OpenAI |
-| o3 | `openai-o3` | OpenAI |
-| DeepSeek R1 Distill Llama 70B | `deepseek-r1-distill-llama-70b` | DeepSeek |
-| Qwen3 32B | `alibaba-qwen3-32b` | Alibaba |
-| Llama 3.3 70B Instruct | `llama3.3-70b-instruct` | Meta |
+**`digitalocean`** (OpenAI-compatible; default **Kimi K2.5**)
+
+| Model | Full model id |
+|-------|---------------|
+| Kimi K2.5 (default) | `digitalocean/kimi-k2.5` |
+| GPT-5.2 | `digitalocean/openai-gpt-5.2` |
+| GPT-5 | `digitalocean/openai-gpt-5` |
+| GPT-5.1 Codex Max | `digitalocean/openai-gpt-5.1-codex-max` |
+| GPT-4.1 | `digitalocean/openai-gpt-4.1` |
+| OpenAI o3 | `digitalocean/openai-o3` |
+| DeepSeek R1 Distill Llama 70B | `digitalocean/deepseek-r1-distill-llama-70b` |
+| Qwen3 32B | `digitalocean/alibaba-qwen3-32b` |
+| Llama 3.3 70B Instruct | `digitalocean/llama3.3-70b-instruct` |
+| glm-5 | `digitalocean/glm-5` |
+| MiniMax M2.5 | `digitalocean/minimax-m2.5` |
+| Claude Opus 4.6 | `digitalocean/claude-opus-4-6` |
+| Claude Opus 4.5 | `digitalocean/claude-opus-4-5` |
+| Claude Sonnet 4.5 | `digitalocean/claude-sonnet-4-5` |
+| Claude Sonnet 4 | `digitalocean/claude-sonnet-4-6` |
 
 To change the default model, edit `"model"` in `/root/.config/opencode/opencode.json`.
 
@@ -140,7 +144,7 @@ Re-run the setup wizard to reconfigure your Gradient model access key:
 /opt/setup-opencode.sh
 ```
 
-Or manually edit `/root/.local/share/opencode/auth.json` with a valid key. You can create a new key at https://cloud.digitalocean.com/gen-ai/model-access-keys.
+Or manually edit `/root/.local/share/opencode/auth.json` — set `digitalocean` to `{"type": "api", "key": "<your key>"}`. Create keys at https://cloud.digitalocean.com/gen-ai/model-access-keys.
 
 ## Additional Resources
 

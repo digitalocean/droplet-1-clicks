@@ -29,9 +29,10 @@ use DigitalOcean Gradient AI for inference.
 
 PRE-CONFIGURED MODELS (via DigitalOcean Gradient):
 
-  Anthropic:    Claude Opus 4.6, Opus 4.5, Sonnet 4.5 (default), Sonnet 4, 3.7 Sonnet
-  OpenAI:       GPT-5.2, GPT-5, GPT-5.1 Codex Max, GPT-4.1, o3
-  Open Source:  DeepSeek R1 70B, Qwen3 32B, Llama 3.3 70B
+  digitalocean/ (default: Kimi K2.5):
+    GPT-5.2, GPT-5, GPT-5.1 Codex Max, GPT-4.1, o3, DeepSeek R1 70B, Qwen3 32B,
+    Llama 3.3 70B, Kimi K2.5, glm-5, MiniMax M2.5,
+    Claude Opus 4.6, Opus 4.5, Sonnet 4.5, Sonnet 4
 
 NEXT STEPS:
 

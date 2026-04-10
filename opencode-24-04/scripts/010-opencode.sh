@@ -15,7 +15,6 @@ curl -fsSL https://opencode.ai/install | bash -s -- --version "${application_ver
 # Ensure OpenCode is in PATH for all users (install script uses ~/.opencode/bin for root)
 mkdir -p /etc/profile.d
 cat > /etc/profile.d/opencode.sh << 'EOF'
-# OpenCode - add to PATH for all login shells
 if [ -d /root/.opencode/bin ]; then
   export PATH="/root/.opencode/bin:$PATH"
 fi

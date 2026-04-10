@@ -139,11 +139,6 @@ GRADIENT_PROVIDER_JSON='{
       "baseURL": "https://inference.do-ai.run/v1"
     },
     "models": {
-      "anthropic-claude-opus-4.6": { "name": "Claude Opus 4.6" },
-      "anthropic-claude-opus-4.5": { "name": "Claude Opus 4.5" },
-      "anthropic-claude-4.5-sonnet": { "name": "Claude Sonnet 4.5" },
-      "anthropic-claude-sonnet-4": { "name": "Claude Sonnet 4" },
-      "anthropic-claude-3.7-sonnet": { "name": "Claude 3.7 Sonnet" },
       "openai-gpt-5.2": { "name": "GPT-5.2" },
       "openai-gpt-5": { "name": "GPT-5" },
       "openai-gpt-5.1-codex-max": { "name": "GPT-5.1 Codex Max" },
@@ -151,12 +146,19 @@ GRADIENT_PROVIDER_JSON='{
       "openai-o3": { "name": "OpenAI o3" },
       "deepseek-r1-distill-llama-70b": { "name": "DeepSeek R1 Distill Llama 70B" },
       "alibaba-qwen3-32b": { "name": "Qwen3 32B" },
-      "llama3.3-70b-instruct": { "name": "Llama 3.3 70B Instruct" }
+      "llama3.3-70b-instruct": { "name": "Llama 3.3 70B Instruct" },
+      "kimi-k2.5": { "name": "Kimi K2.5" },
+      "glm-5": { "name": "glm-5" },
+      "minimax-m2.5": { "name": "MiniMax M2.5" },
+      "claude-opus-4-6": { "name": "Claude Opus 4.6" },
+      "claude-opus-4-5": { "name": "Claude Opus 4.5" },
+      "claude-sonnet-4-5": { "name": "Claude Sonnet 4.5" },
+      "claude-sonnet-4-6": { "name": "Claude Sonnet 4" }
     }
   }
 }'
 
-DEFAULT_MODEL="digitalocean/anthropic-claude-4.5-sonnet"
+DEFAULT_MODEL="digitalocean/kimi-k2.5"
 
 # ── 6. Merge provider config ────────────────────────────────────────────────
 
@@ -225,6 +227,7 @@ prompt_and_save_key() {
   chmod 600 "$AUTH_FILE" 2>/dev/null || true
 
   ok "API key saved to $AUTH_FILE"
+
   return 0
 }
 
@@ -265,12 +268,12 @@ print_success() {
   echo "========================================================================"
   echo "  DigitalOcean Gradient is now configured for OpenCode!"
   echo ""
-  echo "  Default model: Claude Sonnet 4.5"
+  echo "  Default model: Kimi K2.5 (digitalocean/kimi-k2.5)"
   echo ""
   echo "  Available models via Gradient:"
-  echo "    Anthropic:    Claude Opus 4.6, Opus 4.5, Sonnet 4.5, Sonnet 4, 3.7 Sonnet"
-  echo "    OpenAI:       GPT-5.2, GPT-5, GPT-5.1 Codex Max, GPT-4.1, o3"
-  echo "    Open Source:  DeepSeek R1 70B, Qwen3 32B, Llama 3.3 70B"
+  echo "    digitalocean/:  GPT-5.2, GPT-5, GPT-5.1 Codex Max, GPT-4.1, o3,"
+  echo "                    DeepSeek R1 70B, Qwen3 32B, Llama 3.3 70B, Kimi K2.5, glm-5, MiniMax M2.5,"
+  echo "                    Claude Opus 4.6, Opus 4.5, Sonnet 4.5, Sonnet 4"
   echo ""
   echo "  To start:         cd /path/to/your/project && opencode"
   echo "  Switch models:    use /models inside OpenCode"
