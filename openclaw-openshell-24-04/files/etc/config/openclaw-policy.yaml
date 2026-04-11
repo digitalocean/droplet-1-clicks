@@ -1,0 +1,49 @@
+{
+  "agents.defaults": {
+    "workspace": "/sandbox/openclaw/workspace",
+    "model": {
+      "primary": "custom/inference.do-ai.run",
+      "fallback": [
+        "anthropic/claude-3-5-sonnet",
+        "openai/gpt-4o"
+      ]
+    },
+    "tools": {
+      "allow": [
+        "read",
+        "write",
+        "edit",
+        "exec"
+      ],
+      "exec": {
+        "security": "restricted"
+      }
+    }
+  },
+  "policy": {
+    "allowedSkills": [
+      "builtin.file_manager",
+      "builtin.shell_safe",
+      "builtin.http_client"
+    ],
+    "blockedSkills": [
+      "builtin.system_admin",
+      "builtin.network_scanner"
+    ],
+    "allowExternalCalls": true,
+    "allowedDomains": [
+      "inference.do-ai.run",
+      "api.openai.com",
+      "api.anthropic.com",
+      "openrouter.ai",
+      "ghcr.io",
+      "github.com",
+      "api.github.com",
+      "pypi.org",
+      "files.pythonhosted.org",
+      "registry.npmjs.org"
+    ],
+    "maxConcurrentTasks": 2,
+    "notes": "Internal OpenClaw constraints for the DO 1-Click environment. Ensure this file is placed at /sandbox/.openclaw/openclaw.json and works in tandem with the OpenShell external gateway policy."
+  }
+}

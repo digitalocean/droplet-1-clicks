@@ -1,0 +1,63 @@
+{
+  "models": {
+    "mode": "merge",
+    "providers": {
+      "openshell": {
+        "baseUrl": "https://inference.local/v1",
+        "apiKey": "sk-do-openshell-placeholder",
+        "api": "openai-completions",
+        "models": [
+          {
+            "id": "anthropic-claude-4.5-sonnet",
+            "name": "Claude 4.5 Sonnet",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 200000,
+            "maxTokens": 64000,
+            "compat": {
+              "supportsStore": false,
+              "maxTokensField": "max_tokens"
+            },
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            }
+          }
+        ]
+      }
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "openshell/anthropic-claude-4.5-sonnet"
+      },
+      "models": {
+        "openshell/anthropic-claude-4.5-sonnet": {
+          "params": {
+            "maxTokens": 64000
+          }
+        }
+      },
+      "maxConcurrent": 4,
+      "subagents": {
+        "maxConcurrent": 8
+      }
+    }
+  },
+  "gateway": {
+    "mode": "local",
+    "bind": "loopback",
+    "auth": {
+      "token": "test64"
+    },
+    "trustedProxies": ["127.0.0.1"],
+    "controlUi": {
+      "enabled": true
+    }
+  }
+}
