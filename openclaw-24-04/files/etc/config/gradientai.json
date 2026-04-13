@@ -86,6 +86,66 @@
               "cacheRead": 0,
               "cacheWrite": 0
             }
+          },
+          {
+            "id": "minimax-m2.5",
+            "name": "MiniMax M2.5",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 200000,
+            "maxTokens": 128000,
+            "compat": {
+              "supportsStore": false,
+              "maxTokensField": "max_tokens"
+            },
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            }
+          },
+          {
+            "id": "kimi-k2.5",
+            "name": "Kimi K2.5",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 256000,
+            "maxTokens": 32768,
+            "compat": {
+              "supportsStore": false,
+              "maxTokensField": "max_tokens"
+            },
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            }
+          },
+          {
+            "id": "glm-5",
+            "name": "GLM 5",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 200000,
+            "maxTokens": 128000,
+            "compat": {
+              "supportsStore": false,
+              "maxTokensField": "max_tokens"
+            },
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            }
           }
         ]
       }
@@ -94,7 +154,7 @@
   "agents": {
     "defaults": {
       "model": {
-        "primary": "gradient/anthropic-claude-4.5-sonnet"
+        "primary": "gradient/kimi-k2.5"
       },
       "models": {
         "gradient/llama3.3-70b-instruct": {
@@ -115,6 +175,21 @@
         "gradient/anthropic-claude-4.5-sonnet": {
           "params": {
             "maxTokens": 64000
+          }
+        },
+        "gradient/minimax-m2.5": {
+          "params": {
+            "maxTokens": 128000
+          }
+        },
+        "gradient/kimi-k2.5": {
+          "params": {
+            "maxTokens": 32768
+          }
+        },
+        "gradient/glm-5": {
+          "params": {
+            "maxTokens": 128000
           }
         }
       },
