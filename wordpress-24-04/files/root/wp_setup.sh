@@ -2,8 +2,8 @@
 #
 # WordPress automatic setup script with IP-based SSL
 #
-# This script automatically configures Apache and WordPress with
-# an IP-based SSL certificate from Let's Encrypt
+# Configures Caddy (HTTPS) and PHP-FPM with WordPress using a Let's Encrypt
+# certificate for the server's public IP.
 
 set -e  # Exit on error
 

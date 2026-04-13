@@ -43,11 +43,10 @@ Key features include:
 This 1-Click installs and configures:
 
 - **Ubuntu 24.04 LTS** - Long-term support base operating system
-- **Apache 2.4** - High-performance web server
+- **Caddy** - Web server and reverse proxy with automatic HTTPS (Let's Encrypt)
+- **PHP 8.3 FPM** - PHP FastCGI Process Manager for WordPress
 - **MySQL 8.0** - Relational database
-- **PHP 8.3** - Latest PHP with performance optimizations
 - **WordPress (Latest)** - Latest stable WordPress release
-- **Certbot** - Let's Encrypt SSL certificate management
 - **WP-CLI** - WordPress command-line interface
 - **WP-Fail2Ban Plugin** - Security plugin with fail2ban integration
 - **UFW Firewall** - Pre-configured with secure defaults
@@ -88,8 +87,8 @@ The setup script will launch automatically on first login. It will:
    - Admin username
    - Admin password
    - Site title
-3. **Obtain SSL certificate** - Requests Let's Encrypt certificate for your IP
-4. **Configure Apache** - Sets up HTTPS with automatic HTTP→HTTPS redirect
+3. **Obtain SSL certificate** - Caddy requests a Let's Encrypt certificate for your IP (short-lived profile)
+4. **Configure Caddy** - Serves WordPress over HTTPS with automatic HTTP→HTTPS redirect
 5. **Install security plugins** - Adds and activates WP-Fail2Ban
 
 The entire process takes about 2-3 minutes.
@@ -122,28 +121,27 @@ To use a custom domain instead of the IP address:
 ```
 
 This script will:
-- Configure Apache for your domain
+
+- Configure Caddy for your domain
 - Obtain a domain-based SSL certificate
 - Update WordPress URLs
 - Set up automatic HTTP→HTTPS redirect
 
 ### SSL Certificate Renewal
 
-Let's Encrypt certificates are valid for 90 days and automatically renew via certbot.
+Caddy obtains and renews Let's Encrypt certificates automatically. You do not need to run Certbot manually.
 
-Test renewal:
-```bash
-certbot renew --dry-run
-```
+To confirm Caddy is healthy:
 
-Check renewal status:
 ```bash
-certbot certificates
+systemctl status caddy
+journalctl -u caddy -n 50 --no-pager
 ```
 
 ### Database Credentials
 
 MySQL credentials are stored in:
+
 ```bash
 cat /root/.digitalocean_password
 ```
@@ -161,8 +159,9 @@ cat /root/.digitalocean_password
 ### Firewall Configuration
 
 UFW firewall is pre-configured with:
+
 - Port 22 (SSH) - Open
-- Port 80 (HTTP) - Open, redirects to HTTPS
+- Port 80 (HTTP) - Open, redirects to HTTPS after setup
 - Port 443 (HTTPS) - Open
 
 ### WP-CLI Usage
@@ -196,27 +195,37 @@ chmod +x /root/wp_setup.sh
 
 ### SSL Certificate Failed
 
-If SSL certificate acquisition fails, WordPress will still be accessible via HTTP. To retry:
+If HTTPS fails after setup, check Caddy's logs and configuration:
 
 ```bash
-certbot certonly --standalone -d your-droplet-ip
+systemctl status caddy
+journalctl -u caddy -b --no-pager
 ```
 
-Then reconfigure Apache to use SSL.
+Ensure ports 80 and 443 are open (`ufw status`). For a custom domain, run `/root/wp_setup_domain.sh` after DNS points to this Droplet.
 
 ### Can't Access WordPress
 
-1. Check Apache status:
+1. Check Caddy status:
+
    ```bash
-   systemctl status apache2
+   systemctl status caddy
    ```
 
-2. Check error logs:
+2. Check Caddy logs:
+
    ```bash
-   tail -f /var/log/apache2/error.log
+   journalctl -u caddy -f
    ```
 
-3. Verify firewall rules:
+3. Verify PHP-FPM:
+
+   ```bash
+   systemctl status php8.3-fpm
+   ```
+
+4. Verify firewall rules:
+
    ```bash
    ufw status
    ```
@@ -224,6 +233,7 @@ Then reconfigure Apache to use SSL.
 ### Database Connection Errors
 
 1. Check MySQL status:
+
    ```bash
    systemctl status mysql
    ```
@@ -233,17 +243,16 @@ Then reconfigure Apache to use SSL.
 ## File Locations
 
 - **WordPress Root**: `/var/www/html/`
-- **Apache Config**: `/etc/apache2/sites-available/`
-- **SSL Certificates**: `/etc/letsencrypt/live/your-ip/`
-- **Apache Logs**: `/var/log/apache2/`
+- **Caddy config**: `/etc/caddy/Caddyfile`
+- **SSL certificates**: `/var/lib/caddy/.local/share/caddy/certificates/`
 - **MySQL Data**: `/var/lib/mysql/`
-- **PHP Config**: `/etc/php/8.3/`
+- **PHP (FPM + CLI)**: `/etc/php/8.3/`
 
 ## Additional Resources
 
 - [WordPress Documentation](https://wordpress.org/support/)
 - [DigitalOcean WordPress Tutorials](https://www.digitalocean.com/community/tags/wordpress)
-- [Let's Encrypt Documentation](https://letsencrypt.org/docs/)
+- [Caddy Documentation](https://caddyserver.com/docs/)
 - [WP-CLI Documentation](https://wp-cli.org/)
 
 ## Support
@@ -254,4 +263,4 @@ For general WordPress questions, visit the [WordPress Support Forums](https://wo
 
 ---
 
-**Note**: This deployment uses Let's Encrypt's IP address certificate feature, which became generally available in 2024. These certificates work identically to domain-based certificates and are automatically renewed by certbot.
+**Note**: The first-login setup uses Let's Encrypt with a short-lived certificate profile for access by IP. After you add a custom domain with `/root/wp_setup_domain.sh`, Caddy continues to manage issuance and renewal automatically.
