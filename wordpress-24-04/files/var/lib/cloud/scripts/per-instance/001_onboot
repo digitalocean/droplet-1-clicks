@@ -8,6 +8,7 @@ debian_sys_maint_mysql_pass=$(openssl rand -hex 24)
 # Don't enable WordPress until first login
 cat >> /root/.bashrc <<EOM
 chmod +x /root/wp_setup.sh
+chmod +x /root/wp_setup_domain.sh
 /root/wp_setup.sh
 EOM
 

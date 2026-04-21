@@ -56,11 +56,10 @@
         "LC_CTYPE=en_US.UTF-8"
       ],
       "inline": [
-        "gpg --keyserver keyserver.ubuntu.com --recv B7B3B788A8D3785C",
-        "gpg --export --armor B7B3B788A8D3785C | apt-key add -",
         "add-apt-repository -y ppa:ondrej/php",
-        "wget -c https://dev.mysql.com/get/mysql-apt-config_0.8.22-1_all.deb",
-        "dpkg -i mysql-apt-config_0.8.22-1_all.deb",
+        "wget -c https://dev.mysql.com/get/mysql-apt-config_0.8.36-1_all.deb",
+        "dpkg -i mysql-apt-config_0.8.36-1_all.deb",
+        "echo 'deb [arch=amd64 trusted=yes] http://repo.mysql.com/apt/ubuntu/ noble mysql-apt-config mysql-8.4' | sudo tee /etc/apt/sources.list.d/mysql.list",
         "apt -qqy update",
         "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' full-upgrade",
         "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' install {{user `apt_packages`}}",
