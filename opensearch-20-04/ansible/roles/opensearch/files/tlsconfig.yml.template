@@ -1,0 +1,45 @@
+ca:
+  root:
+    dn: CN=root.ca.opensearch,OU=CA,O=opensearch\, Inc.,DC=opensearch
+    keysize: 2048
+    validityDays: 3650
+    pkPassword: none
+    file: root-ca.pem
+
+### Default values and global settings
+defaults:
+  validityDays: 3650
+  pkPassword: none
+  # Set this to true in order to generate config and certificates for
+  # the HTTP interface of nodes
+  httpsEnabled: true
+  reuseTransportCertificatesForHttp: false
+  verifyHostnames: false
+  resolveHostnames: false
+
+
+###
+### Nodes
+###
+#
+# Specify the nodes of your ES cluster here
+#
+nodes:
+- name: opensearch
+  dn: CN=opensearch,OU=Ops,O=opensearch\, Inc.,DC=opensearch
+  dns: opensearch
+  ip: {{ datasource "ip_address" }}
+
+###
+### Clients
+###
+#
+# Specify the clients that shall access your ES cluster with certificate authentication here
+#
+# At least one client must be an admin user (i.e., a super-user). Admin users can
+# be specified with the attribute admin: true
+#
+clients:
+  - name: admin
+    dn: CN=admin.opensearch,OU=Ops,O=opensearch\, Inc.,DC=opensearch
+    admin: true
