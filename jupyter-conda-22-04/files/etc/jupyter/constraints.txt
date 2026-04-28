@@ -1,0 +1,3 @@
+# CVE-2026-25645 — constrain transitive requests from jupyterlab/jupyter-server.
+# requirements.txt line 1: -c constraints.txt (resolved next to this file for pip and SCA tools).
+requests==2.33.1
