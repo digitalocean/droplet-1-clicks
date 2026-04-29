@@ -1,0 +1,13 @@
+[Unit]
+Description=Web terminal for Goose (ttyd, localhost only)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/ttyd -i 127.0.0.1 -p 7681 -W bash -l
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
