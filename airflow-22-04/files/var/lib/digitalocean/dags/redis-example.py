@@ -13,10 +13,13 @@ with DAG(
     default_args=default_args,
 ) as dag:
     # [START RedisPublishOperator_DAG]
+    # Uses 'redis_managed' connection:
+    # - Points to local Redis (localhost:6379) by default
+    # - Automatically switches to managed Valkey/Redis when DBaaS is attached
+    # - Use 'redis_local' connection to explicitly target local Redis
     publish_task = RedisPublishOperator(
         task_id="publish_task",
-        redis_conn_id="redis_conn",
+        redis_conn_id="redis_managed",
         channel="your_channel",
         message="Start processing",
-        dag=dag,
     )
