@@ -62,12 +62,6 @@ cat > /root/.local/share/opencode/auth.json << EOF
 EOF
 chmod 600 /root/.local/share/opencode/auth.json
 
-# Substitute Gradient key into opencode.json (do-anthropic authToken placeholder).
-if [ -f "$CONFIG_FILE" ] && grep -q '%API_TOKEN%' "$CONFIG_FILE" 2>/dev/null; then
-  ESC_KEY=$(printf '%s\n' "$MODEL_KEY" | sed 's/\\/\\\\/g; s/&/\\&/g; s/|/\\|/g')
-  sed -i "s|%API_TOKEN%|${ESC_KEY}|g" "$CONFIG_FILE"
-fi
-
 echo ""
 echo "Testing connection to DigitalOcean Gradient..."
 

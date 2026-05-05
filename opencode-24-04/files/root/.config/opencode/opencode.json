@@ -23,10 +23,9 @@
     }, 
     "do-anthropic": {
       "npm": "@ai-sdk/anthropic",
-	  "options": {
-		"baseURL": "https://inference.do-ai.run/v1",
-		"authToken": "%API_TOKEN%"
-	   },
+      "options": {
+        "baseURL": "https://inference.do-ai.run/v1"
+      },
       "models": {
         "anthropic-claude-opus-4.6": { "name": "Claude Opus 4.6" },
         "anthropic-claude-opus-4.5": { "name": "Claude Opus 4.5" },
