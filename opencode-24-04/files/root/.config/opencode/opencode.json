@@ -18,13 +18,23 @@
         "llama3.3-70b-instruct": { "name": "Llama 3.3 70B Instruct" },
         "kimi-k2.5": { "name": "Kimi K2.5" },
         "glm-5": { "name": "glm-5" },
-        "minimax-m2.5": { "name": "MiniMax M2.5" },
-        "claude-opus-4-6": { "name": "Claude Opus 4.6" },
-        "claude-opus-4-5": { "name": "Claude Opus 4.5" },
-        "claude-sonnet-4-5": { "name": "Claude Sonnet 4.5" },
-        "claude-sonnet-4-6": { "name": "Claude Sonnet 4" }
+        "minimax-m2.5": { "name": "MiniMax M2.5" }        
+      }
+    }, 
+    "do-anthropic": {
+      "npm": "@ai-sdk/anthropic",
+	  "options": {
+		"baseURL": "https://inference.do-ai.run/v1",
+		"authToken": "%API_TOKEN%"
+	   },
+      "models": {
+        "anthropic-claude-opus-4.6": { "name": "Claude Opus 4.6" },
+        "anthropic-claude-opus-4.5": { "name": "Claude Opus 4.5" },
+        "anthropic-claude-4.5-sonnet": { "name": "Claude Sonnet 4.5" },
+        "anthropic-claude-sonnet-4": { "name": "Claude Sonnet 4" },
+        "anthropic-claude-3.7-sonnet": { "name": "Claude 3.7 Sonnet" }
       }
     }
   },
-  "model": "digitalocean/kimi-k2.5"
+  "model": "digitalocean/minimax-m2.5"
 }
