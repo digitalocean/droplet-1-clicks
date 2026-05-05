@@ -59,6 +59,7 @@ On first login, the setup wizard will prompt for your DigitalOcean Gradient mode
 
 1. Go to https://cloud.digitalocean.com/gen-ai/model-access-keys
 2. Click **Create Model Access Key**
+3. Copy the new key
 4. Paste the key when prompted by the setup wizard
 
 The wizard verifies your key and configures OpenCode automatically.
@@ -87,6 +88,10 @@ The default model is **Kimi K2.5** (`digitalocean/kimi-k2.5` via DigitalOcean Gr
 - **OpenCode config**: `/root/.config/opencode/opencode.json`
 - **Auth / API key**: `/root/.local/share/opencode/auth.json`
 - **Getting started guide**: `cat /root/opencode_info.txt`
+
+### Inference usage (Gradient)
+
+API `usage` may list cache-related fields, but on DigitalOcean Gradient’s OpenAI-compatible inference they are **often zero** regardless of model. Treat **DigitalOcean billing and documentation** as the source of truth for charges. The same note is in `/root/opencode_info.txt`. If you add providers with `/connect`, their APIs define usage and any prompt-cache behavior.
 
 ### Pre-Configured Models
 

@@ -58,6 +58,14 @@ Auth:           /root/.local/share/opencode/auth.json
 
 For documentation: https://opencode.ai/docs
 
+INFERENCE USAGE (DigitalOcean Gradient):
+
+  Chat responses may include usage fields (including names like cache read/write).
+  On the Gradient OpenAI-compatible endpoint those cache-related values are often
+  zero across models; rely on DigitalOcean billing and product docs for what is
+  actually charged. For other providers added via /connect, usage follows each
+  vendor's API.
+
 ================================================================================
 EOF
 

@@ -64,12 +64,16 @@ make build-opencode-24-04
 
 ## What Gets Installed
 
-- **OpenCode** (version from `application_version` in template.json, currently 1.2.5)
-- **DigitalOcean Gradient AI config** – Pre-configured provider in `opencode.json`
+- **OpenCode** (version from `application_version` in template.json; see `template.json` for the current pin)
+- **DigitalOcean Gradient AI config** – Pre-configured provider in `files/root/.config/opencode/opencode.json` (`baseURL` only; no extra client options that imply prompt caching on Gradient)
 - **Git**, **curl**, **jq**, **unzip** – utilities
 - **UFW** – Firewall (SSH only, rate-limited)
 
 OpenCode is installed to `/root/.opencode/bin/` and PATH is set in `/etc/profile.d/opencode.sh`. Claude and other Gradient models are exposed through the same OpenAI-compatible `digitalocean` provider; authentication uses your Gradient model access key in `auth.json`.
+
+## Inference usage on Gradient
+
+Field testing shows **cache-related usage fields are often zero** on `https://inference.do-ai.run/v1` across models, so this image **does not** set OpenCode’s `setCacheKey` (or similar) for Gradient. Billing and semantics should be taken from **DigitalOcean Gen AI / Gradient documentation**, not from those API numbers alone. A short note is in **`001_onboot`** (`opencode_info.txt`) and **`listing.md`**.
 
 ## First Boot Behavior
 
