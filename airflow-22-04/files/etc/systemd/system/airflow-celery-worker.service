@@ -1,0 +1,12 @@
+[Unit]
+Description=Airflow Celery worker
+After=network.target
+
+[Service]
+WorkingDirectory=/home/airflow
+ExecStart=sudo -s -u airflow /var/lib/digitalocean/celery-worker.sh
+Restart=always
+SyslogIdentifier=airflow-celery-worker
+
+[Install]
+WantedBy=multi-user.target
