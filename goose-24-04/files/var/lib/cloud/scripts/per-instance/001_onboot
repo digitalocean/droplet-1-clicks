@@ -1,0 +1,49 @@
+#!/bin/sh
+set -e
+
+# Allow normal SSH sessions on the customer Droplet (DO marketplace images)
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+systemctl restart ssh
+
+meta() {
+    curl -fsS --retry 10 --retry-connrefused --max-time 3 "$1" 2>/dev/null || true
+}
+
+DROPLET_IP="$(meta http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address)"
+if [ -z "$DROPLET_IP" ]; then
+    DROPLET_IP="$(hostname -I | awk '{print $1}')"
+fi
+
+mkdir -p /etc/ssl/goose /var/www/html/.well-known/acme-challenge
+
+openssl req -newkey rsa:2048 -nodes -x509 -days 30 \
+    -subj "/CN=${DROPLET_IP}" \
+    -addext "subjectAltName=IP:${DROPLET_IP}" \
+    -keyout /etc/ssl/goose/selfsigned.key \
+    -out /etc/ssl/goose/selfsigned.crt 2>/dev/null
+
+chmod 640 /etc/ssl/goose/selfsigned.key
+chmod 644 /etc/ssl/goose/selfsigned.crt
+
+# Pending site is available for first-login or enable-web-console.sh; nginx stays off until then.
+sed "s/__DROPLET_IP__/${DROPLET_IP}/g" /opt/goose/nginx-pending.conf.tpl \
+    >/etc/nginx/sites-available/goose-ttyd
+
+rm -f /etc/nginx/sites-enabled/default /etc/nginx/sites-enabled/goose-bootstrap /etc/nginx/sites-enabled/goose-ttyd
+
+systemctl stop nginx 2>/dev/null || true
+systemctl disable nginx 2>/dev/null || true
+
+systemctl daemon-reload
+systemctl enable ttyd-goose
+systemctl start ttyd-goose
+
+if ! grep -q 'goose-24-04 first-login' /root/.bashrc 2>/dev/null; then
+    cat >> /root/.bashrc <<'EOM'
+
+# goose-24-04 first-login
+[ -x /opt/goose/first-login-setup.sh ] && /opt/goose/first-login-setup.sh
+EOM
+fi

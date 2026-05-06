@@ -1,0 +1,93 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+
+if [ -f /root/.goose-web-console-disabled ]; then
+    cat <<EOF
+********************************************************************************
+
+Welcome to Goose on DigitalOcean!
+
+Goose is an open source, extensible AI agent (CLI and more) for coding, automation,
+and general tasks with the LLM providers you configure.
+
+WEB CONSOLE
+===========
+
+You chose not to enable the HTTPS browser terminal (nginx) during first-time setup.
+
+To turn it on later (password prompt, nginx, Basic Auth, Let's Encrypt for this IP):
+
+  /opt/goose/enable-web-console.sh
+
+ttyd still listens on 127.0.0.1:7681 for local use (e.g. SSH port forwarding).
+
+USEFUL PATHS
+============
+
+  Quick reference:       /opt/goose/README.txt
+  Enable web console:    /opt/goose/enable-web-console.sh
+  Certbot (venv):        /opt/certbot-venv/bin/certbot
+
+DOCUMENTATION
+=============
+
+  Project: https://github.com/aaif-goose/goose
+
+Run 'goose --help' after installation. Configure providers with 'goose configure'.
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
+else
+    cat <<EOF
+********************************************************************************
+
+Welcome to Goose on DigitalOcean!
+
+Goose is an open source, extensible AI agent (CLI and more) for coding, automation,
+and general tasks with the LLM providers you configure.
+
+FIRST-TIME SETUP
+================
+
+On your first SSH login as root, you can set a web console password or leave it
+empty to skip nginx entirely. See /opt/goose/README.txt.
+
+WEB CONSOLE (nginx + ttyd)
+==========================
+
+After setup with a non-empty password, open in a browser:
+
+  https://${myip}/
+
+Use HTTP Basic username 'goose' and the password you chose. To enable the web
+console later if you skipped it:
+
+  /opt/goose/enable-web-console.sh
+
+A copy of your web password may be stored at (delete when no longer needed):
+
+  /root/.goose_web_console_password.txt
+
+USEFUL PATHS
+============
+
+  Quick reference:       /opt/goose/README.txt
+  Enable web console:    /opt/goose/enable-web-console.sh
+  First-login script:    /opt/goose/first-login-setup.sh
+  Certbot (venv):        /opt/certbot-venv/bin/certbot
+
+DOCUMENTATION
+=============
+
+  Project: https://github.com/aaif-goose/goose
+
+Run 'goose --help' after installation. Configure providers with 'goose configure'.
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
+fi
