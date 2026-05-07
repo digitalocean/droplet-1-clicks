@@ -89,6 +89,39 @@ wget -O - https://raw.githubusercontent.com/digitalocean/droplet-1-clicks/main/o
    - `/opt/openclaw-cli.sh` - run CLI commands
    - `/opt/openclaw-tui.sh` - launch TUI interface
 
+## Testing the OpenClaw 1-Click Control UI (origin + pairing)
+
+Use these checks on a **fresh** or **re-provisioned** Droplet after the first-login wizard (or after editing config manually).
+
+1. **Public IP matches browser URL** (avoids `origin not allowed`):
+
+   ```bash
+   curl -fsS http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address
+   jq -r '.gateway.controlUi.allowedOrigins[]?' /home/openclaw/.openclaw/openclaw.json
+   ```
+
+   You should see `https://<that-public-ip>` in `allowedOrigins`. Open the Control UI at exactly that URL.
+
+2. **Caddy proxies to the gateway:**
+
+   ```bash
+   systemctl is-active caddy openclaw
+   curl -skI "https://$(curl -fsS http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address)/" | head -5
+   ```
+
+3. **Pairing after "pairing required":** In the browser, paste the gateway token and click Connect. Then on the Droplet:
+
+   ```bash
+   sudo /opt/openclaw-approve-ui-pairing.sh
+   ```
+
+   Refresh the browser. For debugging:
+
+   ```bash
+   TOKEN=$(grep '^OPENCLAW_GATEWAY_TOKEN=' /opt/openclaw.env | cut -d= -f2-)
+   sudo /opt/openclaw-cli.sh devices list --token="$TOKEN"
+   ```
+
 ## Troubleshooting
 
 ### Service won't start

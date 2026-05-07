@@ -54,6 +54,7 @@ chmod +x /opt/openclaw-cli.sh
 chmod +x /opt/setup-openclaw-domain.sh
 chmod +x /etc/setup_wizard.sh
 chmod +x /opt/openclaw-tui.sh
+chmod +x /opt/openclaw-approve-ui-pairing.sh
 
 # Enable but don't start the service yet (will start after onboot configuration)
 systemctl enable openclaw
