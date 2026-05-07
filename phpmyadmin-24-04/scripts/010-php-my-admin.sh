@@ -25,5 +25,12 @@ sed -i "s+\$cfg\['blowfish_secret'\] = ''; \/\* YOU MUST FILL IN THIS FOR COOKIE
 
 chmod -Rf 755 /usr/share/phpmyadmin
 
+# Certbot from Ubuntu apt is too old for IP-address certificates.
+# Install recent Certbot in a dedicated venv for first-boot HTTPS provisioning.
+python3 -m venv /opt/certbot-venv
+/opt/certbot-venv/bin/pip install --disable-pip-version-check --no-cache-dir "certbot>=5.4,<6"
+chmod +x /var/lib/cloud/scripts/per-instance/001_onboot
+chmod +x /etc/update-motd.d/99-one-click
+
 # Remove auto.cnf so a unique UUID is generated at first boot
 rm -f /var/lib/mysql/auto.cnf
