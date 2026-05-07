@@ -15,7 +15,9 @@ fi
 
 # Replace PLACEHOLDER_DOMAIN in Caddyfile with actual IP address
 meta() { curl -fsS --retry 10 --retry-connrefused --max-time 2 "$1"; }
-DROPLET_IP="$(meta http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)"
+DROPLET_PUBLIC_IP="$(meta http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)"
+DROPLET_PRIVATE_IP="$(hostname -I | awk '{print $1}')"
+DROPLET_IP="${DROPLET_PUBLIC_IP:-$DROPLET_PRIVATE_IP}"
 
 mv /etc/caddy/Caddyfile.tmp /etc/caddy/Caddyfile
 
@@ -24,6 +26,35 @@ if grep -q "PLACEHOLDER_DOMAIN" /etc/caddy/Caddyfile 2>/dev/null; then
     sed -i "s/PLACEHOLDER_DOMAIN/$DROPLET_IP/" /etc/caddy/Caddyfile
     systemctl enable caddy
 fi
+
+# Seed user config early so Control UI origin checks pass even before wizard completes.
+mkdir -p /home/openclaw/.openclaw
+if [ ! -f /home/openclaw/.openclaw/openclaw.json ]; then
+    cp /etc/config/openclaw.json /home/openclaw/.openclaw/openclaw.json
+fi
+
+GATEWAY_TOKEN="$(grep '^OPENCLAW_GATEWAY_TOKEN=' /opt/openclaw.env 2>/dev/null | cut -d'=' -f2-)"
+if [ -n "$GATEWAY_TOKEN" ] && [ -f /home/openclaw/.openclaw/openclaw.json ]; then
+    jq --arg key "$GATEWAY_TOKEN" '.gateway.auth.token = $key' /home/openclaw/.openclaw/openclaw.json > /home/openclaw/.openclaw/openclaw.json.tmp
+    mv /home/openclaw/.openclaw/openclaw.json.tmp /home/openclaw/.openclaw/openclaw.json
+
+    jq \
+      --arg pub "$DROPLET_PUBLIC_IP" \
+      --arg prv "$DROPLET_PRIVATE_IP" \
+      '.gateway.controlUi.allowedOrigins = (
+          if ($pub != "" and $pub != $prv) then
+            ["https://" + $pub, "http://" + $pub, "https://" + $prv, "http://" + $prv]
+          elif ($pub != "") then
+            ["https://" + $pub, "http://" + $pub]
+          else
+            ["https://" + $prv, "http://" + $prv]
+          end
+        )' /home/openclaw/.openclaw/openclaw.json > /home/openclaw/.openclaw/openclaw.json.tmp
+    mv /home/openclaw/.openclaw/openclaw.json.tmp /home/openclaw/.openclaw/openclaw.json
+fi
+chown -R openclaw:openclaw /home/openclaw/.openclaw
+chmod 700 /home/openclaw/.openclaw
+chmod 600 /home/openclaw/.openclaw/openclaw.json 2>/dev/null || true
 
 # Remove the ssh force logout command
 sed -e '/Match User root/d' -e '/.*ForceCommand.*droplet.*/d' -i /etc/ssh/sshd_config

@@ -1,3 +1,10 @@
 #!/bin/bash
-# Helper script to run Openclaw CLI commands as the openclaw user
-su - openclaw -c "openclaw $*"
+# Run OpenClaw CLI as the openclaw user (arguments preserved and shell-safe).
+if [ "$#" -eq 0 ]; then
+  exec su - openclaw -c "openclaw"
+fi
+cmd="openclaw"
+for a in "$@"; do
+  cmd+=" $(printf '%q' "$a")"
+done
+exec su - openclaw -c "$cmd"
