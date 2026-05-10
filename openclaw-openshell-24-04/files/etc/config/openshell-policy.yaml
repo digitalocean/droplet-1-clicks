@@ -1,0 +1,47 @@
+version: "1.0"
+description: "Runtime restrictions for OpenClaw sandbox - enforced by OpenShell"
+
+filesystem_policy:
+  read_write:
+    - /sandbox/openclaw
+    - /tmp
+    - /dev/null
+    - /dev/urandom
+  read_only:
+    # You still need to allow read access to basic system binaries
+    # otherwise Python/Node and the OpenClaw binary won't execute
+    - /usr
+    - /bin
+    - /lib
+    - /etc/ssl/certs
+
+network_policies:
+  # CRITICAL: Do not remove this for Droplet environments
+  block_metadata:
+    action: deny
+    endpoints:
+      - host: 169.254.169.254
+        port: '*'
+
+  allowed_egress:
+    action: allow
+    endpoints:
+      - host: inference.do-ai.run
+        port: 443
+      - host: api.openai.com
+        port: 443
+      - host: api.anthropic.com
+        port: 443
+      - host: openrouter.ai
+        port: 443
+      - host: ghcr.io
+        port: 443
+    binaries:
+      - path: /usr/bin/python3
+      - path: /usr/bin/node
+      - path: /usr/local/bin/openclaw
+
+# OpenShell locks down process privileges by default, but if you need to
+# explicitly define them based on your JSON intent:
+process_policy:
+  prevent_privilege_escalation: true
