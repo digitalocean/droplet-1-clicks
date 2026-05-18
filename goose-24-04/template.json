@@ -73,6 +73,7 @@
       "scripts": [
         "common/scripts/014-ufw-nginx.sh",
         "goose-24-04/scripts/goose.sh",
+        "common/scripts/018-force-ssh-logout.sh",
         "common/scripts/020-application-tag.sh",
         "common/scripts/900-cleanup.sh"
       ]
