@@ -2,8 +2,10 @@
 #
 # Configured as part of the DigitalOcean 1-Click Image build process
 
-myip=$(hostname -I | awk '{print$1}')
-gateway_token=$(grep "^OPENCLAW_GATEWAY_TOKEN=" /opt/openclaw.env 2>/dev/null | cut -d'=' -f2)
+pub=$(curl -fsS --retry 3 --retry-connrefused --max-time 3 \
+  http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)
+myip="${pub:-$(hostname -I | awk '{print$1}')}"
+gateway_token=$(grep "^OPENCLAW_GATEWAY_TOKEN=" /opt/openclaw.env 2>/dev/null | cut -d'=' -f2-)
 
 cat <<EOF
 ********************************************************************************
@@ -15,8 +17,12 @@ on the channels you already use (WhatsApp, Telegram, Slack, Discord, and more).
 
 🌐 Control UI & Gateway Access:
   Dashboard URL: https://$myip
+  (Use this URL in the browser — it must match gateway.controlUi.allowedOrigins.)
   (Paste token in dashboard settings if prompted)
   Gateway Token: $gateway_token
+
+  Stuck on "pairing required"? After you connect in the browser, run as root:
+    sudo /opt/openclaw-approve-ui-pairing.sh
 
 📝 Configuration:
   Edit settings: /opt/openclaw.env
@@ -32,6 +38,7 @@ on the channels you already use (WhatsApp, Telegram, Slack, Discord, and more).
   - /opt/status-openclaw.sh    (show status and token)
   - /opt/update-openclaw.sh    (update to latest version)
   - /opt/openclaw-cli.sh       (run CLI commands)
+  - /opt/openclaw-approve-ui-pairing.sh  (approve Control UI after "pairing required")
 
 🔒 Enable HTTPS (TLS):
   Point your domain to this droplet, then run:
@@ -46,6 +53,7 @@ on the channels you already use (WhatsApp, Telegram, Slack, Discord, and more).
 
 📚 Documentation: https://docs.clawd.bot/
 🔗 GitHub: https://github.com/openclaw/openclaw
+📘 OpenAI vs Codex (API key vs subscription): https://github.com/openclaw/openclaw/blob/main/docs/providers/openai.md
 
 🔧 You can launch OpenClaw TUI using:
   $ /opt/openclaw-tui.sh
