@@ -135,16 +135,17 @@ CRON
 fi
 
 echo ""
-echo "Installing Goose CLI (official install script; non-interactive configure)..."
-export GOOSE_BIN_DIR=/usr/local/bin
-export CONFIGURE=false
-curl -fsSL https://github.com/aaif-goose/goose/releases/download/stable/download_cli.sh | bash
-
-if ! command -v goose >/dev/null 2>&1; then
-    echo "Warning: goose not found on PATH after install. Check /usr/local/bin and ~/.local/bin."
+if command -v goose >/dev/null 2>&1; then
+    echo "Goose CLI (pre-installed on this image): $(goose --version 2>/dev/null || true)"
 else
-    echo "Goose installed: $(goose --version 2>/dev/null || true)"
+    echo "Warning: Goose CLI not found. It should have been installed during the image build."
+    echo "Install manually:  export GOOSE_BIN_DIR=/usr/local/bin CONFIGURE=false"
+    echo "  curl -fsSL https://github.com/aaif-goose/goose/releases/download/stable/download_cli.sh | bash"
 fi
+
+echo ""
+# Same path as manual /opt/goose/configure-gradient-key.sh (sync JSON, migrate legacy id, prompt, apply).
+bash /opt/goose/configure-gradient-key.sh --first-login
 
 touch "$MARKER"
 sed -i '/# goose-24-04 first-login/,/first-login-setup.sh/d' /root/.bashrc
@@ -157,5 +158,12 @@ if [ "$WEB_SKIP" -eq 1 ]; then
 else
     echo "Web console: https://${PUBLIC_IP}/  (HTTP Basic user: goose)"
 fi
-echo "Run 'goose configure' to connect providers, then use the 'goose' command as usual."
+if [ -f /etc/profile.d/goose-gradient.sh ] || grep -q '^DO_GRADIENT_API_KEY:' /root/.config/goose/secrets.yaml 2>/dev/null; then
+    echo "Goose is ready to run (no need to run 'goose configure' for Gradient). Use 'goose configure' only to add other providers or change defaults."
+else
+    echo "Run 'goose configure' to pick a provider and model, or /opt/goose/configure-gradient-key.sh for DigitalOcean Gradient."
+fi
+echo "Model list: /root/.config/goose/custom_providers/digitalocean_gradient.json"
+echo ""
+echo "Then use the 'goose' command as usual (see 'goose --help')."
 echo ""

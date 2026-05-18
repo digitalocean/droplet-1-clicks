@@ -1,6 +1,6 @@
 # Goose 1-Click Application
 
-Deploy [Goose](https://github.com/aaif-goose/goose), an open source, extensible AI agent for the terminal and beyond. This image installs **nginx** and **ttyd** during the build. On first **SSH** login as **root** you can set a **web console password** (nginx + HTTP Basic Auth + **Let's Encrypt** for the Droplet's **public IPv4**) or leave the password **empty** to **skip nginx** entirely and use **CLI-only** until you run **`/opt/goose/enable-web-console.sh`** later.
+Deploy [Goose](https://github.com/aaif-goose/goose), an open source, extensible AI agent for the terminal and beyond. This image installs **nginx**, **ttyd**, and the **Goose CLI** during the build, ships a **DigitalOcean Gradient** declarative provider for Goose, and on first **SSH** login as **root** you can set a **web console password** (nginx + HTTP Basic Auth + **Let's Encrypt** for the Droplet's **public IPv4**) or leave the password **empty** to **skip nginx** entirely and use **CLI-only** until you run **`/opt/goose/enable-web-console.sh`** later.
 
 ## What is Goose?
 
@@ -14,7 +14,9 @@ Goose is an AI agent framework for real work: install packages, run commands, ed
 | **nginx** | Listens on 80/443, terminates TLS, enforces **HTTP Basic Auth**, reverse-proxies WebSockets to ttyd. |
 | **Certbot (venv)** | `/opt/certbot-venv` with Certbot 5.4+ for **IP address** certificates using Let's Encrypt's **shortlived** profile (six-day lifetime; renewal is scheduled). |
 | **First-login script** | `/opt/goose/first-login-setup.sh` (hooked from `/root/.bashrc` until setup completes). |
+| **Goose CLI** | Installed at **image build** time (`goose-24-04/scripts/goose.sh`) to `/usr/local/bin/goose` so a broken upstream install fails Packer instead of first login. |
 | **Enable web later** | `/opt/goose/enable-web-console.sh` — prompts for password, starts nginx, TLS, Certbot, renewal cron. |
+| **DigitalOcean Gradient** | Declarative provider id **`digitalocean_gradient`** (`digitalocean_gradient.json` → `~/.config/goose/custom_providers/`). Default model **`minimax-m2.5`**. Optional key during first login or via `/opt/goose/configure-gradient-key.sh`. Writes `secrets.yaml`, sets `GOOSE_PROVIDER` / `GOOSE_MODEL`, enables file-backed secrets (`GOOSE_DISABLE_KEYRING`), and loads `DO_GRADIENT_API_KEY` from `/etc/profile.d` plus `.bashrc` (non-login SSH). |
 
 ## System requirements
 
@@ -37,17 +39,11 @@ ssh root@YOUR_DROPLET_IPV4
 
 The first interactive login runs the setup wizard. It will:
 
-1. **Prompt for a web console password.** Enter the same password twice, **minimum 8 characters**, to enable nginx, HTTP Basic Auth, and the browser terminal. **Leave both prompts empty** (press Enter twice each time) if you **do not** want nginx or a public HTTPS web UI; **Goose CLI** is still installed, and you can enable the web console later with **`/opt/goose/enable-web-console.sh`**.
-2. If you set a password: a **local copy** is saved at `/root/.goose_web_console_password.txt` (mode `600`). Delete this file after you store the password elsewhere.
-3. Install the **Goose CLI** using the official script:
+1. **Prompt for a web console password.** Enter the same password twice, **minimum 8 characters**, to enable nginx, HTTP Basic Auth, and the browser terminal. **Leave both prompts empty** (press Enter twice each time) if you **do not** want nginx or a public HTTPS web UI; you can enable the web console later with **`/opt/goose/enable-web-console.sh`**.
+2. **If you set a web password:** a **local copy** is saved at `/root/.goose_web_console_password.txt` (mode `600`), nginx serves the web terminal, and **Certbot** requests a **Let's Encrypt** certificate for this Droplet's **public IPv4** (short-lived IP profile) with renewal configured. **If you skipped the password**, nginx and Certbot for the browser stay off until you run **`/opt/goose/enable-web-console.sh`**.
+3. The **Goose CLI** is already on the image from the build; use `goose --version` to confirm. Run `goose configure` when you want other providers beyond what the wizard sets up for Gradient.
 
-   ```bash
-   curl -fsSL https://github.com/aaif-goose/goose/releases/download/stable/download_cli.sh | bash
-   ```
-
-   The wizard exports `GOOSE_BIN_DIR=/usr/local/bin` and `CONFIGURE=false` so install is non-interactive; run `goose configure` when you want provider setup.
-
-4. **Only if you set a web password:** run **Certbot** for a **Let's Encrypt** certificate on the Droplet's **public IPv4** and configure renewal. nginx stays **stopped and disabled** when you skip the web password.
+4. **Optional — DigitalOcean Gradient:** enter your [Gradient model access key](https://cloud.digitalocean.com/gen-ai) when prompted, or press Enter to skip and run `/opt/goose/configure-gradient-key.sh` later. The image installs **DigitalOcean Gradient** (`GOOSE_PROVIDER: digitalocean_gradient`) against `https://inference.do-ai.run/v1` with the same model ids as the OpenClaw/OpenCode 1-Clicks (for example `minimax-m2.5`, `kimi-k2.5`, `anthropic-claude-4.5-sonnet`). Default model is **`minimax-m2.5`**; edit `GOOSE_MODEL` in `~/.config/goose/config.yaml` or use `goose configure` to switch. If you enter a key, you do **not** need to run `goose configure` for Gradient alone.
 
 ### 3. Open the web console (if enabled)
 
@@ -75,9 +71,11 @@ You will be prompted for a password (8+ characters). The script configures nginx
 ### 4. Use Goose on the CLI
 
 ```bash
-goose configure    # add API keys / providers when you are ready
+goose configure    # optional: other providers or to change defaults away from Gradient
 goose --help
 ```
+
+If you saved a Gradient key at first login (or via `/opt/goose/configure-gradient-key.sh`), Goose uses **DigitalOcean Gradient** with default model **minimax-m2.5**; run `goose configure` only if you want a different provider or model.
 
 ## TLS, Let's Encrypt, and IP addresses
 
@@ -98,6 +96,13 @@ UFW is configured via `014-ufw-nginx.sh`: **SSH**, **HTTP**, and **HTTPS** are a
 |------|---------|
 | `/opt/goose/README.txt` | Operator quick reference |
 | `/opt/goose/first-login-setup.sh` | First-login wizard |
+| `/opt/goose/configure-gradient-key.sh` | Set or remove `DO_GRADIENT_API_KEY` for Gradient |
+| `/opt/goose/migrate-gradient-provider-id.sh` | Refresh declarative JSON and rewrite legacy `GOOSE_PROVIDER: kimi` → `digitalocean_gradient` |
+| `/opt/goose/lib-goose-gradient.sh` | Shared helpers (sourced by setup scripts; not run directly) |
+| `/root/.config/goose/secrets.yaml` | Gradient key for Goose (when configured) |
+| `/root/.config/goose/config.yaml` | `GOOSE_PROVIDER`, `GOOSE_MODEL`, `GOOSE_DISABLE_KEYRING` when Gradient is configured |
+| `/opt/goose/custom_providers/digitalocean_gradient.json` | Declarative provider definition (copied to `/root/.config/goose/custom_providers/`) |
+| `/etc/profile.d/goose-gradient.sh` | Optional `export DO_GRADIENT_API_KEY=…` (mode 600); also sourced from `.bashrc` |
 | `/opt/goose/enable-web-console.sh` | Prompt for password; start nginx, TLS, Certbot, cron |
 | `/root/.goose-web-console-disabled` | Present if you skipped the web password at first login |
 | `/opt/goose/nginx-*.conf.tpl` | nginx templates used during boot / setup |
