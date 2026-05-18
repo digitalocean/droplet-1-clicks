@@ -54,6 +54,12 @@ chmod +x /opt/openclaw-cli.sh
 chmod +x /opt/setup-openclaw-domain.sh
 chmod +x /etc/setup_wizard.sh
 chmod +x /opt/openclaw-tui.sh
+chmod +x /opt/apply-gradient-from-env.sh
+
+if [ -f /opt/openclaw.env ]; then
+    sed -i "s|\${APP_VERSION}|${APP_VERSION}|g" /opt/openclaw.env
+    chmod 600 /opt/openclaw.env
+fi
 
 # Enable but don't start the service yet (will start after onboot configuration)
 systemctl enable openclaw

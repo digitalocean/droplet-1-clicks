@@ -1,4 +1,8 @@
-#!/bin/sh
+#!/bin/bash
+
+set -a
+source /etc/environment 2>/dev/null || true
+set +a
 
 # Generate unique gateway token for this droplet
 if grep -q "PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT" /opt/openclaw.env 2>/dev/null; then
@@ -28,10 +32,16 @@ fi
 # Remove the ssh force logout command
 sed -e '/Match User root/d' -e '/.*ForceCommand.*droplet.*/d' -i /etc/ssh/sshd_config
 
-cat >> /root/.bashrc <<EOM
+chmod +x /opt/apply-gradient-from-env.sh
+if /opt/apply-gradient-from-env.sh; then
+    echo "Skipping interactive setup wizard (Gradient pre-configured from droplet environment)."
+elif ! grep -q 'setup_wizard.sh' /root/.bashrc 2>/dev/null; then
+    cat >>/root/.bashrc <<'EOM'
+
 chmod +x /etc/setup_wizard.sh
 /etc/setup_wizard.sh
 EOM
+fi
 
 systemctl restart ssh
 systemctl restart openclaw

@@ -3,6 +3,18 @@
 # OpenClaw Token Setup Script
 # Run this script to configure OpenClaw with a AI API key
 
+if [ -f /home/openclaw/.openclaw/openclaw.json ]; then
+    configured_key=$(jq -r '.models.providers.gradient.apiKey // empty' /home/openclaw/.openclaw/openclaw.json 2>/dev/null || true)
+    if [ -n "$configured_key" ] && [ "$configured_key" != "PLACEHOLDER" ] && [ "$configured_key" != "null" ]; then
+        echo "DigitalOcean Gradient is already configured. Skipping setup wizard."
+        sed -i \
+            -e '/chmod +x \/etc\/setup_wizard\.sh/d' \
+            -e '/\/etc\/setup_wizard\.sh/d' \
+            /root/.bashrc 2>/dev/null || true
+        exit 0
+    fi
+fi
+
 DROPL_IP=$(hostname -I | awk '{print$1}')
 PS3="Select a provider (1-5): "
 options=("GradientAI" "OpenAI" "Anthropic" "OpenRouter" "OpenClaw Model Setup")
@@ -74,6 +86,10 @@ mkdir -p /home/openclaw/.openclaw
 
 if [[ "$selected_provider" == "GradientAI" ]]; then
     jq --arg key "$model_access_key" '.models.providers.gradient.apiKey = $key' "$target_config" > /home/openclaw/.openclaw/openclaw.json
+    grep -v '^GRADIENT_KEY=' /opt/openclaw.env > /opt/openclaw.env.tmp 2>/dev/null || : >/opt/openclaw.env.tmp
+    printf 'GRADIENT_KEY=%q\n' "$model_access_key" >> /opt/openclaw.env.tmp
+    mv /opt/openclaw.env.tmp /opt/openclaw.env
+    chmod 600 /opt/openclaw.env
 elif [[ "$selected_provider" == "OpenRouter" ]]; then
     jq --arg key "$model_access_key" '.models.providers.openrouter.apiKey = $key' "$target_config" > /home/openclaw/.openclaw/openclaw.json
 elif [[ "$selected_provider" != "OpenClaw Model Setup" ]]; then
