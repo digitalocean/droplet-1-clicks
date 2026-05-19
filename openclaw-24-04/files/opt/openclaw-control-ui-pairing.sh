@@ -46,7 +46,9 @@ read_gateway_token() {
     if [ -f /opt/openclaw.env ]; then
         line=$(grep -E '^OPENCLAW_GATEWAY_TOKEN=' /opt/openclaw.env 2>/dev/null | tail -n 1) || true
         if [ -n "$line" ]; then
-            eval "val=${line#OPENCLAW_GATEWAY_TOKEN=}"
+val="${line#OPENCLAW_GATEWAY_TOKEN=}"
+val="${val#[\'\"]}"
+val="${val%[\'\"]}"
             case "$val" in
                 ''|*'${'*|PLACEHOLDER*) ;;
                 *) printf '%s' "$val"; return 0 ;;
