@@ -55,6 +55,19 @@ chmod +x /opt/setup-openclaw-domain.sh
 chmod +x /etc/setup_wizard.sh
 chmod +x /opt/openclaw-tui.sh
 chmod +x /opt/apply-gradient-from-env.sh
+chmod +x /opt/sync-openclaw-gateway.sh
+chmod +x /opt/openclaw-approve-ui-pairing.sh
+chmod +x /opt/openclaw-control-ui-pairing.sh
+chmod +x /opt/install-openclaw-pairing-hook.sh
+
+systemctl enable docker
+systemctl start docker
+OPENCLAW_PKG="$(npm root -g 2>/dev/null)/openclaw"
+if [ -f "${OPENCLAW_PKG}/scripts/sandbox-setup.sh" ]; then
+    echo "Building OpenClaw sandbox image (openclaw-sandbox:bookworm-slim)..."
+    bash "${OPENCLAW_PKG}/scripts/sandbox-setup.sh" || \
+        echo "Warning: sandbox image build failed; default config uses sandbox.mode=off." >&2
+fi
 
 if [ -f /opt/openclaw.env ]; then
     sed -i "s|\${APP_VERSION}|${APP_VERSION}|g" /opt/openclaw.env

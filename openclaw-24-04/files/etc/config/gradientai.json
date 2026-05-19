@@ -154,7 +154,7 @@
   "agents": {
     "defaults": {
       "model": {
-        "primary": "gradient/kimi-k2.5"
+        "primary": "gradient/minimax-m2.5"
       },
       "models": {
         "gradient/llama3.3-70b-instruct": {
@@ -199,7 +199,7 @@
       },
       "sandbox": {
         "workspaceAccess":"rw",
-        "mode": "all",
+        "mode": "off",
         "docker": {
           "network": "bridge",
           "binds": [

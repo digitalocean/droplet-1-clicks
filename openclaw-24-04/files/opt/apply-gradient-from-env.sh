@@ -75,13 +75,7 @@ PRIMARY_MODEL=$(normalize_gradient_model "$GRADIENT_MODEL")
 write_env_file_kv GRADIENT_KEY "$GRADIENT_KEY"
 write_env_file_kv GRADIENT_MODEL "${PRIMARY_MODEL#gradient/}"
 
-DROPLET_IP="$(curl -fsS --retry 3 --retry-connrefused --max-time 3 \
-    http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)"
-if [ -z "$DROPLET_IP" ]; then
-    DROPLET_IP="$(hostname -I | awk '{print $1}')"
-fi
-
-GATEWAY_TOKEN=$(grep "^OPENCLAW_GATEWAY_TOKEN=" "$ENV_FILE" 2>/dev/null | cut -d'=' -f2- || true)
+GATEWAY_TOKEN=$(read_file_kv OPENCLAW_GATEWAY_TOKEN || true)
 if ! env_value_usable "$GATEWAY_TOKEN"; then
     echo "apply-gradient-from-env: OPENCLAW_GATEWAY_TOKEN not ready in $ENV_FILE" >&2
     exit 1
@@ -91,23 +85,15 @@ mkdir -p /home/openclaw/.openclaw
 
 jq --arg key "$GRADIENT_KEY" \
     --arg model "$PRIMARY_MODEL" \
-    '.models.providers.gradient.apiKey = $key | .agents.defaults.model.primary = $model' \
+    --arg token "$GATEWAY_TOKEN" \
+    '.models.providers.gradient.apiKey = $key
+     | .agents.defaults.model.primary = $model
+     | .gateway.auth.token = $token
+     | .gateway.remote.token = $token' \
     "$GRADIENT_CONFIG" >"$OPENCLAW_JSON"
 
-jq --arg token "$GATEWAY_TOKEN" \
-    '.gateway.auth.token = $token' \
-    "$OPENCLAW_JSON" >"${OPENCLAW_JSON}.tmp"
-mv "${OPENCLAW_JSON}.tmp" "$OPENCLAW_JSON"
-
-if [ -n "$DROPLET_IP" ]; then
-    jq --arg origin "https://${DROPLET_IP}" \
-        '.gateway.controlUi.allowedOrigins = [ $origin ]' \
-        "$OPENCLAW_JSON" >"${OPENCLAW_JSON}.tmp"
-    mv "${OPENCLAW_JSON}.tmp" "$OPENCLAW_JSON"
-fi
-
-chown openclaw:openclaw "$OPENCLAW_JSON"
-chmod 0600 "$OPENCLAW_JSON"
+chmod +x /opt/sync-openclaw-gateway.sh
+/opt/sync-openclaw-gateway.sh
 
 if [ -d /usr/lib/node_modules/openclaw/skills ]; then
     mkdir -p /home/openclaw/.openclaw/workspace

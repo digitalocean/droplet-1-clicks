@@ -27,7 +27,7 @@
       },
       "sandbox": {
         "workspaceAccess":"rw",
-        "mode": "all",
+        "mode": "off",
         "docker": {
           "network": "bridge",
           "binds": [
