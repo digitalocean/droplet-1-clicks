@@ -14,7 +14,7 @@ read_env_kv() {
     local key="$1"
     local line val
     line=$(grep -E "^${key}=" "$ENV_FILE" 2>/dev/null | tail -n 1) || return 1
-    eval "val=${line#${key}=}"
+val="${line#${key}=}"
     printf '%s' "$val"
 }
 
