@@ -27,7 +27,7 @@
       },
       "sandbox": {
         "workspaceAccess":"rw",
-        "mode": "off",
+        "mode": "all",
         "docker": {
           "network": "bridge",
           "binds": [
@@ -43,6 +43,9 @@
     "mode": "local",
     "bind": "loopback",
     "auth": {
+      "token": "${OPENCLAW_GATEWAY_TOKEN}"
+    },
+    "remote": {
       "token": "${OPENCLAW_GATEWAY_TOKEN}"
     },
     "trustedProxies": ["127.0.0.1"],

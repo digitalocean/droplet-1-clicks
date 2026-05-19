@@ -39,7 +39,7 @@ fi
 
 if [ -f /home/openclaw/.openclaw/openclaw.json ]; then
     chmod +x /opt/sync-openclaw-gateway.sh
-    /opt/sync-openclaw-gateway.sh || true
+    /opt/sync-openclaw-gateway.sh 2>/dev/null || true
 fi
 chown -R openclaw:openclaw /home/openclaw/.openclaw
 chmod 700 /home/openclaw/.openclaw
@@ -67,7 +67,12 @@ EOM
 fi
 
 chmod +x /opt/sync-openclaw-gateway.sh
-/opt/sync-openclaw-gateway.sh || true
+chmod +x /opt/build-openclaw-sandbox.sh
+/opt/build-openclaw-sandbox.sh || {
+    echo "ERROR: failed to build openclaw-sandbox:bookworm-slim (required for sandbox.mode=all)." >&2
+    exit 1
+}
+/opt/sync-openclaw-gateway.sh
 
 systemctl restart ssh
 systemctl restart openclaw

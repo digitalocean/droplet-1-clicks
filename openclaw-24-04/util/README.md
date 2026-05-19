@@ -135,6 +135,16 @@ Common issues:
 - **Build failed:** Re-run the script; pnpm builds can fail due to transient issues
 - **Missing dependencies:** Ensure Node.js 22+ is installed
 - **Docker not running:** `systemctl start docker` (required for sandbox)
+- **Sandbox image missing** (`openclaw-sandbox:bookworm-slim`): image is built at snapshot time and on first boot. On a live droplet: `sudo /opt/build-openclaw-sandbox.sh`
+- **Gateway token missing** in logs: tokens live in `openclaw.json` (`gateway.auth.token` and `gateway.remote.token`), not only `/opt/openclaw.env`. Fix: `sudo /opt/ensure-openclaw-ready.sh`
+
+### One-shot repair on a live droplet
+
+```bash
+sudo /opt/ensure-openclaw-ready.sh
+```
+
+Then paste the gateway token from `/opt/openclaw.env` into the Control UI and run `sudo /opt/openclaw-approve-ui-pairing.sh` if needed.
 
 ### Connection refused error
 

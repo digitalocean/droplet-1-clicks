@@ -3,7 +3,7 @@
     "defaults": {
       "sandbox": {
         "workspaceAccess":"rw",
-        "mode": "off",
+        "mode": "all",
         "docker": {
           "network": "bridge",
           "binds": [

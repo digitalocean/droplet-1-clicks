@@ -181,7 +181,17 @@ else
       read -p "Enter ${selected_provider} model access key: " model_access_key
     done
   if [[ "$selected_provider" == "GradientAI" ]]; then
-      jq --arg key "$model_access_key" '.models.providers.gradient.apiKey = $key' "$target_config" > /home/openclaw/.openclaw/openclaw.json
+      GATEWAY_TOKEN_PRE=$(read_openclaw_gateway_token 2>/dev/null || true)
+      if [ -n "$GATEWAY_TOKEN_PRE" ]; then
+        jq --arg key "$model_access_key" --arg token "$GATEWAY_TOKEN_PRE" \
+          '.models.providers.gradient.apiKey = $key
+           | .gateway.remote = ((.gateway.remote // {}) + {})
+           | .gateway.auth.token = $token
+           | .gateway.remote.token = $token' \
+          "$target_config" > /home/openclaw/.openclaw/openclaw.json
+      else
+        jq --arg key "$model_access_key" '.models.providers.gradient.apiKey = $key' "$target_config" > /home/openclaw/.openclaw/openclaw.json
+      fi
   elif [[ "$selected_provider" == "OpenRouter" ]]; then
       jq --arg key "$model_access_key" '.models.providers.openrouter.apiKey = $key' "$target_config" > /home/openclaw/.openclaw/openclaw.json
   else

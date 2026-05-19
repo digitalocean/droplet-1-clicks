@@ -14,7 +14,7 @@ read_env_kv() {
     local key="$1"
     local line val
     line=$(grep -E "^${key}=" "$ENV_FILE" 2>/dev/null | tail -n 1) || return 1
-val="${line#${key}=}"
+    eval "val=${line#${key}=}"
     printf '%s' "$val"
 }
 
@@ -30,7 +30,8 @@ DROPLET_PRIVATE_IP="$(hostname -I | awk '{print $1}')"
 jq --arg token "$GATEWAY_TOKEN" \
     --arg pub "$DROPLET_PUBLIC_IP" \
     --arg prv "$DROPLET_PRIVATE_IP" \
-    '.gateway.auth.token = $token
+    '.gateway.remote = ((.gateway.remote // {}) + {})
+     | .gateway.auth.token = $token
      | .gateway.remote.token = $token
      | .gateway.controlUi.allowedOrigins = (
          if ($pub != "" and $pub != $prv) then
