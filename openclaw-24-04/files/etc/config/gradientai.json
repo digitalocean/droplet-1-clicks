@@ -154,7 +154,7 @@
   "agents": {
     "defaults": {
       "model": {
-        "primary": "gradient/kimi-k2.5"
+        "primary": "gradient/minimax-m2.5"
       },
       "models": {
         "gradient/llama3.3-70b-instruct": {
@@ -215,6 +215,9 @@
     "mode": "local",
     "bind": "loopback",
     "auth": {
+      "token": "${OPENCLAW_GATEWAY_TOKEN}"
+    },
+    "remote": {
       "token": "${OPENCLAW_GATEWAY_TOKEN}"
     },
     "trustedProxies": ["127.0.0.1"],
