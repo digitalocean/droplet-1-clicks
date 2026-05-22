@@ -34,6 +34,14 @@ else
     npm install -g openclaw@latest
 fi
 
+# Put the 1-Click wrapper ahead of the npm binary for interactive SSH users.
+# systemd still uses /usr/bin/openclaw directly for the gateway service.
+cat > /usr/local/bin/openclaw <<'EOF'
+#!/bin/sh
+exec /opt/openclaw-cli.sh "$@"
+EOF
+chmod 0755 /usr/local/bin/openclaw
+
 # Create openclaw home directory and config directory
 mkdir -p /home/openclaw/.openclaw
 mkdir -p /home/openclaw/workspace

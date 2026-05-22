@@ -3,17 +3,122 @@
 # OpenClaw Token Setup Script
 # Run this script to configure OpenClaw with a AI API key
 
-if [ -f /home/openclaw/.openclaw/openclaw.json ]; then
+SETUP_DONE_MARKER=/home/openclaw/.openclaw/provider-configured
+
+remove_first_login_hook() {
+  if [ -f /root/.bashrc ]; then
+    sed -i '/chmod +x \/etc\/setup_wizard\.sh/d' /root/.bashrc
+    sed -i '/\/etc\/setup_wizard\.sh/d' /root/.bashrc
+  fi
+}
+
+env_value_configured() {
+  local key="$1" line val
+  [ -f /opt/openclaw.env ] || return 1
+  line=$(grep -E "^${key}=" /opt/openclaw.env 2>/dev/null | tail -n 1) || return 1
+  val="${line#${key}=}"
+  val="${val#\"}"; val="${val%\"}"; val="${val#\'}"; val="${val%\'}"
+  case "$val" in
+    ''|*'${'*|PLACEHOLDER*|your_*_here) return 1 ;;
+  esac
+  return 0
+}
+
+codex_oauth_configured() {
+  local state_dir auth_file
+  state_dir=/home/openclaw/.openclaw
+
+  for auth_file in \
+    "${state_dir}"/agents/*/auth-profiles.json \
+    "${state_dir}"/agents/*/auth.json \
+    "${state_dir}"/credentials/oauth.json; do
+    [ -s "$auth_file" ] || continue
+    if grep -Eiq 'openai|codex|refresh[_-]?token|access[_-]?token' "$auth_file"; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+json_api_provider_configured() {
+  local config_file=/home/openclaw/.openclaw/openclaw.json
+  [ -f "$config_file" ] || return 1
+
+  jq -e '
+    (.models.providers // {})
+    | to_entries
+    | map(.value.apiKey? // empty)
+    | any(. != null and . != "" and . != "PLACEHOLDER" and (. | tostring | startswith("${") | not))
+  ' "$config_file" >/dev/null 2>&1
+}
+
+model_setup_configured() {
+  local config_file=/home/openclaw/.openclaw/openclaw.json
+  [ -f "$config_file" ] || return 1
+
+  jq -e '
+    (.agents.defaults.model.primary // "") as $primary
+    | ($primary != "" and $primary != "PLACEHOLDER" and ($primary | startswith("${") | not))
+  ' "$config_file" >/dev/null 2>&1
+}
+
+configured_provider_reason() {
+  local configured_key
+
+  if [ -f "$SETUP_DONE_MARKER" ]; then
+    echo "provider setup is already complete"
+    return 0
+  fi
+
+  if [ -f /home/openclaw/.openclaw/openclaw.json ]; then
     configured_key=$(jq -r '.models.providers.gradient.apiKey // empty' /home/openclaw/.openclaw/openclaw.json 2>/dev/null || true)
     if [ -n "$configured_key" ] && [ "$configured_key" != "PLACEHOLDER" ] && [ "$configured_key" != "null" ]; then
-        echo "DigitalOcean Gradient is already configured. Skipping provider setup."
-        sed -i \
-            -e '/chmod +x \/etc\/setup_wizard\.sh/d' \
-            -e '/\/etc\/setup_wizard\.sh/d' \
-            /root/.bashrc 2>/dev/null || true
-        echo "Control UI pairing: sudo /opt/openclaw-control-ui-pairing.sh"
-        exit 0
+      echo "DigitalOcean Gradient is already configured"
+      return 0
     fi
+  fi
+
+  if json_api_provider_configured; then
+    echo "an API-key provider is already configured"
+    return 0
+  fi
+
+  if codex_oauth_configured; then
+    echo "OpenAI Codex OAuth is already configured"
+    return 0
+  fi
+
+  if env_value_configured OPENAI_API_KEY; then
+    echo "OpenAI API key is already configured"
+    return 0
+  fi
+  if env_value_configured ANTHROPIC_API_KEY; then
+    echo "Anthropic API key is already configured"
+    return 0
+  fi
+  if env_value_configured OPENROUTER_API_KEY; then
+    echo "OpenRouter API key is already configured"
+    return 0
+  fi
+
+  if model_setup_configured; then
+    echo "OpenClaw model setup is already configured"
+    return 0
+  fi
+
+  return 1
+}
+
+configured_reason=$(configured_provider_reason || true)
+if [ -n "$configured_reason" ]; then
+  echo "${configured_reason}. Skipping provider setup."
+  if [ -x /opt/sync-openclaw-gateway.sh ]; then
+    /opt/sync-openclaw-gateway.sh 2>/dev/null || true
+  fi
+  remove_first_login_hook
+  echo "Control UI pairing: sudo /opt/openclaw-control-ui-pairing.sh"
+  exit 0
 fi
 
 # OpenClaw first-login setup (DigitalOcean 1-Click)
@@ -40,12 +145,6 @@ else
   DROPL_IP="$DROPL_PRIVATE_IP"
   DASHBOARD_HOST="$DROPL_PRIVATE_IP"
 fi
-remove_first_login_hook() {
-  if [ -f /root/.bashrc ]; then
-    sed -i '/chmod +x \/etc\/setup_wizard\.sh/d' /root/.bashrc
-    sed -i '/\/etc\/setup_wizard\.sh/d' /root/.bashrc
-  fi
-}
 
 read_openclaw_gateway_token() {
   local line val
@@ -64,6 +163,38 @@ val="${line#OPENCLAW_GATEWAY_TOKEN=}"; val="${val#\"}"; val="${val%\"}"; val="${
       /home/openclaw/.openclaw/openclaw.json 2>/dev/null | \
       grep -vE '^(null|PLACEHOLDER|\$\{)' || true
   fi
+}
+
+sync_openclaw_gateway_or_exit() {
+  chmod +x /opt/sync-openclaw-gateway.sh
+  if ! /opt/sync-openclaw-gateway.sh; then
+    echo "ERROR: Could not sync OPENCLAW_GATEWAY_TOKEN into openclaw.json." >&2
+    echo "Check /opt/openclaw.env and /home/openclaw/.openclaw/openclaw.json." >&2
+    exit 1
+  fi
+}
+
+ensure_gateway_reachable_for_onboard() {
+  local i code
+
+  sync_openclaw_gateway_or_exit
+  systemctl restart openclaw || true
+
+  printf "Waiting for local OpenClaw gateway before onboarding..."
+  for i in $(seq 1 30); do
+    code=$(curl -so /dev/null -w '%{http_code}' --max-time 2 http://127.0.0.1:18789/ 2>/dev/null || true)
+    if [ "$code" != "000" ] && [ -n "$code" ]; then
+      printf " ready.\n"
+      return 0
+    fi
+    sleep 2
+    printf "."
+  done
+
+  printf "\n"
+  echo "Warning: local gateway did not respond before onboarding." >&2
+  echo "The built-in 'Hatch in web' option may be hidden; choose 'Hatch later' and use the 1-Click Control UI pairing after setup." >&2
+  return 1
 }
 
 PS3="Select a provider (1-6): "
@@ -159,8 +290,14 @@ if [[ "$selected_provider" == "OpenClaw Model Setup" ]]; then
   jq -s '.[0] * .[1]' /home/openclaw/.openclaw/openclaw.json ${target_config} > /home/openclaw/.openclaw/openclaw.json.bak
   cp /home/openclaw/.openclaw/openclaw.json.bak /home/openclaw/.openclaw/openclaw.json
 elif [[ "$selected_provider" == "OpenAI Codex" ]]; then
+  if [ ! -f /home/openclaw/.openclaw/openclaw.json ]; then
+    cp /etc/config/openclaw.json /home/openclaw/.openclaw/openclaw.json
+    chown openclaw:openclaw /home/openclaw/.openclaw/openclaw.json
+  fi
+  ensure_gateway_reachable_for_onboard || true
   echo "Starting OpenClaw onboarding for Codex (interactive; browser / device flow may be required)..."
   echo "Reference: ${DOCS_OPENAI}"
+  echo "If the Hatch menu does not show 'Hatch in web', choose 'Hatch later'; this 1-Click runs Control UI pairing after onboarding."
   if /opt/openclaw-cli.sh onboard --auth-choice openai-codex; then
     :
   else
@@ -175,6 +312,7 @@ elif [[ "$selected_provider" == "OpenAI Codex" ]]; then
     cp /etc/config/openclaw.json /home/openclaw/.openclaw/openclaw.json
     chown openclaw:openclaw /home/openclaw/.openclaw/openclaw.json
   fi
+  sync_openclaw_gateway_or_exit
 else
   while [ -z "${model_access_key:-}" ]
     do
@@ -200,8 +338,7 @@ else
   fi
 fi
 
-chmod +x /opt/sync-openclaw-gateway.sh
-/opt/sync-openclaw-gateway.sh
+sync_openclaw_gateway_or_exit
 
 GATEWAY_TOKEN=$(read_openclaw_gateway_token)
 if [ -z "$GATEWAY_TOKEN" ]; then
@@ -215,6 +352,9 @@ echo "(Open the Control UI at https://${DASHBOARD_HOST}/ so the browser Origin m
 
 chown openclaw:openclaw /home/openclaw/.openclaw/openclaw.json
 chmod 0600 /home/openclaw/.openclaw/openclaw.json
+printf '%s\n' "$selected_provider" > "$SETUP_DONE_MARKER"
+chown openclaw:openclaw "$SETUP_DONE_MARKER"
+chmod 0600 "$SETUP_DONE_MARKER"
 
 echo ""
 if [[ "$selected_provider" == "OpenAI Codex" ]]; then

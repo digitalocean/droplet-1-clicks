@@ -39,6 +39,14 @@
       }
     }
   },
+  "tools": {
+    "deny": ["sessions_send"]
+  },
+  "session": {
+    "agentToAgent": {
+      "maxPingPongTurns": 0
+    }
+  },
   "gateway": {
     "mode": "local",
     "bind": "loopback",

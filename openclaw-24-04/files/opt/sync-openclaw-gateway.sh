@@ -30,9 +30,16 @@ DROPLET_PRIVATE_IP="$(hostname -I | awk '{print $1}')"
 jq --arg token "$GATEWAY_TOKEN" \
     --arg pub "$DROPLET_PUBLIC_IP" \
     --arg prv "$DROPLET_PRIVATE_IP" \
-    '.gateway.remote = ((.gateway.remote // {}) + {})
+    '.gateway = (if (.gateway | type) == "object" then .gateway else {} end)
+     | .gateway.auth = (if (.gateway.auth | type) == "object" then .gateway.auth else {} end)
+     | .gateway.remote = (if (.gateway.remote | type) == "object" then .gateway.remote else {} end)
      | .gateway.auth.token = $token
      | .gateway.remote.token = $token
+     | .tools = (if (.tools | type) == "object" then .tools else {} end)
+     | .tools.deny = (((.tools.deny // []) + ["sessions_send"]) | unique)
+     | .session = (if (.session | type) == "object" then .session else {} end)
+     | .session.agentToAgent = (if (.session.agentToAgent | type) == "object" then .session.agentToAgent else {} end)
+     | .session.agentToAgent.maxPingPongTurns = 0
      | .gateway.controlUi.allowedOrigins = (
          if ($pub != "" and $pub != $prv) then
            ["https://" + $pub, "http://" + $pub, "https://" + $prv, "http://" + $prv]
@@ -44,6 +51,14 @@ jq --arg token "$GATEWAY_TOKEN" \
        )' \
     "$OPENCLAW_JSON" >"${OPENCLAW_JSON}.tmp"
 mv "${OPENCLAW_JSON}.tmp" "$OPENCLAW_JSON"
+
+if ! jq -e --arg token "$GATEWAY_TOKEN" \
+    '.gateway.auth.token == $token and .gateway.remote.token == $token' \
+    "$OPENCLAW_JSON" >/dev/null; then
+    echo "sync-openclaw-gateway: failed to persist matching gateway auth/remote tokens" >&2
+    exit 1
+fi
+
 chown openclaw:openclaw "$OPENCLAW_JSON"
 chmod 600 "$OPENCLAW_JSON"
 

@@ -3,6 +3,8 @@
 # Injects --token from /opt/openclaw.env only for gateway RPC commands (devices,
 # tui, status, …). Subcommands like `skills` do not accept --token.
 
+OPENCLAW_BIN=${OPENCLAW_BIN:-/usr/bin/openclaw}
+
 read_gateway_token_from_env() {
     local line val
     [ -f /opt/openclaw.env ] || return 1
@@ -40,10 +42,17 @@ if [ "$args_have_token" -eq 0 ] && openclaw_cli_accepts_gateway_token "${1:-}"; 
 fi
 
 if [ "${#cli_args[@]}" -eq 0 ]; then
-    exec su - openclaw -c "openclaw"
+    if [ "$(id -un)" = "openclaw" ]; then
+        exec "$OPENCLAW_BIN"
+    fi
+    exec su - openclaw -c "$(printf '%q' "$OPENCLAW_BIN")"
 fi
 
-cmd="openclaw"
+if [ "$(id -un)" = "openclaw" ]; then
+    exec "$OPENCLAW_BIN" "${cli_args[@]}"
+fi
+
+cmd="$(printf '%q' "$OPENCLAW_BIN")"
 for a in "${cli_args[@]}"; do
     cmd+=" $(printf '%q' "$a")"
 done
