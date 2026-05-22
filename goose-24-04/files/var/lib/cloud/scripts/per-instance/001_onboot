@@ -1,12 +1,6 @@
 #!/bin/sh
 set -e
 
-# Allow normal SSH sessions on the customer Droplet (DO marketplace images)
-sed -e '/Match User root/d' \
-    -e '/.*ForceCommand.*droplet.*/d' \
-    -i /etc/ssh/sshd_config
-systemctl restart ssh
-
 meta() {
     curl -fsS --retry 10 --retry-connrefused --max-time 3 "$1" 2>/dev/null || true
 }
@@ -41,9 +35,16 @@ systemctl enable ttyd-goose
 systemctl start ttyd-goose
 
 if ! grep -q 'goose-24-04 first-login' /root/.bashrc 2>/dev/null; then
-    cat >> /root/.bashrc <<'EOM'
+    cat >>/root/.bashrc <<'EOM'
 
 # goose-24-04 first-login
 [ -x /opt/goose/first-login-setup.sh ] && /opt/goose/first-login-setup.sh
 EOM
 fi
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh

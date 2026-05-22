@@ -36,7 +36,7 @@ DOCUMENTATION
 
   Project: https://github.com/aaif-goose/goose
 
-Run 'goose --help' after installation. Configure providers with 'goose configure'.
+Run 'goose --help' after installation. Optional: DigitalOcean Gradient key via first login or /opt/goose/configure-gradient-key.sh; use 'goose configure' for other providers.
 
 ********************************************************************************
 To delete this message of the day: rm -rf $(readlink -f ${0})
@@ -85,7 +85,7 @@ DOCUMENTATION
 
   Project: https://github.com/aaif-goose/goose
 
-Run 'goose --help' after installation. Configure providers with 'goose configure'.
+Run 'goose --help' after installation. Optional: DigitalOcean Gradient key via first login or /opt/goose/configure-gradient-key.sh; use 'goose configure' for other providers.
 
 ********************************************************************************
 To delete this message of the day: rm -rf $(readlink -f ${0})

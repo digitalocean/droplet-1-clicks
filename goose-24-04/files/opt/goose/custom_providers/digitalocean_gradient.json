@@ -1,0 +1,47 @@
+{
+  "name": "digitalocean_gradient",
+  "engine": "openai",
+  "display_name": "DigitalOcean Gradient",
+  "description": "DigitalOcean Gradient (OpenAI-compatible). DO_GRADIENT_API_KEY. Image default model minimax-m2.5. kimi-k2.5 may lag if Goose sends max_completion_tokens; upstream can add digitalocean_gradient to OpenAI compat remaps.",
+  "api_key_env": "DO_GRADIENT_API_KEY",
+  "base_url": "https://inference.do-ai.run/v1",
+  "supports_streaming": true,
+  "requires_auth": true,
+  "models": [
+    {
+      "name": "llama3.3-70b-instruct",
+      "context_limit": 128000,
+      "max_tokens": 8192
+    },
+    {
+      "name": "deepseek-r1-distill-llama-70b",
+      "context_limit": 128000,
+      "max_tokens": 8192
+    },
+    {
+      "name": "openai-gpt-oss-120b",
+      "context_limit": 128000,
+      "max_tokens": 8192
+    },
+    {
+      "name": "anthropic-claude-4.5-sonnet",
+      "context_limit": 200000,
+      "max_tokens": 64000
+    },
+    {
+      "name": "minimax-m2.5",
+      "context_limit": 200000,
+      "max_tokens": 128000
+    },
+    {
+      "name": "kimi-k2.5",
+      "context_limit": 256000,
+      "max_tokens": 32768
+    },
+    {
+      "name": "glm-5",
+      "context_limit": 200000,
+      "max_tokens": 128000
+    }
+  ]
+}

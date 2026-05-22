@@ -114,10 +114,10 @@ dpkg-reconfigure --force  phpmyadmin
 
 ln -sf /etc/phpmyadmin/apache.conf /etc/apache2/conf-enabled/phpmyadmin.conf
 
-echo "\$cfg['blowfish_secret'] = '${blowfish_secret}' ;" >> /etc/phpmyadmin/config.inc.php
+echo "\$cfg['blowfish_secret'] = '${blowfish_secret}';" >> /etc/phpmyadmin/config.inc.php
 mkdir /usr/share/phpmyadmin/tmp
 chown www-data.www-data /usr/share/phpmyadmin/tmp
-echo "\$cfg['TempDir'] = '/usr/share/phpmyadmin/tmp'" >> /etc/phpmyadmin/config.inc.php
+echo "\$cfg['TempDir'] = '/usr/share/phpmyadmin/tmp';" >> /etc/phpmyadmin/config.inc.php
 
 systemctl restart apache2
 
