@@ -22,10 +22,21 @@
       }
     }
   },
+  "tools": {
+    "deny": ["sessions_send"]
+  },
+  "session": {
+    "agentToAgent": {
+      "maxPingPongTurns": 0
+    }
+  },
   "gateway": {
     "mode": "local",
     "bind": "loopback",
     "auth": {
+      "token": "${OPENCLAW_GATEWAY_TOKEN}"
+    },
+    "remote": {
       "token": "${OPENCLAW_GATEWAY_TOKEN}"
     },
     "trustedProxies": ["127.0.0.1"],

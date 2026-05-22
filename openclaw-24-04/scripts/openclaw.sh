@@ -34,6 +34,14 @@ else
     npm install -g openclaw@latest
 fi
 
+# Put the 1-Click wrapper ahead of the npm binary for interactive SSH users.
+# systemd still uses /usr/bin/openclaw directly for the gateway service.
+cat > /usr/local/bin/openclaw <<'EOF'
+#!/bin/sh
+exec /opt/openclaw-cli.sh "$@"
+EOF
+chmod 0755 /usr/local/bin/openclaw
+
 # Create openclaw home directory and config directory
 mkdir -p /home/openclaw/.openclaw
 mkdir -p /home/openclaw/workspace
@@ -54,6 +62,24 @@ chmod +x /opt/openclaw-cli.sh
 chmod +x /opt/setup-openclaw-domain.sh
 chmod +x /etc/setup_wizard.sh
 chmod +x /opt/openclaw-tui.sh
+chmod +x /opt/apply-gradient-from-env.sh
+chmod +x /opt/sync-openclaw-gateway.sh
+chmod +x /opt/openclaw-approve-ui-pairing.sh
+chmod +x /opt/openclaw-control-ui-pairing.sh
+chmod +x /opt/install-openclaw-pairing-hook.sh
+chmod +x /opt/build-openclaw-sandbox.sh
+chmod +x /opt/ensure-openclaw-ready.sh
+
+systemctl enable docker
+systemctl start docker
+
+chmod +x /opt/build-openclaw-sandbox.sh
+/opt/build-openclaw-sandbox.sh
+
+if [ -f /opt/openclaw.env ]; then
+    sed -i "s|\${APP_VERSION}|${APP_VERSION}|g" /opt/openclaw.env
+    chmod 600 /opt/openclaw.env
+fi
 
 # Enable but don't start the service yet (will start after onboot configuration)
 systemctl enable openclaw

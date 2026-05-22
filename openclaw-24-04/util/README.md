@@ -89,6 +89,39 @@ wget -O - https://raw.githubusercontent.com/digitalocean/droplet-1-clicks/main/o
    - `/opt/openclaw-cli.sh` - run CLI commands
    - `/opt/openclaw-tui.sh` - launch TUI interface
 
+## Testing the OpenClaw 1-Click Control UI (origin + pairing)
+
+Use these checks on a **fresh** or **re-provisioned** Droplet after the first-login wizard (or after editing config manually).
+
+1. **Public IP matches browser URL** (avoids `origin not allowed`):
+
+   ```bash
+   curl -fsS http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address
+   jq -r '.gateway.controlUi.allowedOrigins[]?' /home/openclaw/.openclaw/openclaw.json
+   ```
+
+   You should see `https://<that-public-ip>` in `allowedOrigins`. Open the Control UI at exactly that URL.
+
+2. **Caddy proxies to the gateway:**
+
+   ```bash
+   systemctl is-active caddy openclaw
+   curl -skI "https://$(curl -fsS http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address)/" | head -5
+   ```
+
+3. **Pairing after "pairing required":** In the browser, paste the gateway token and click Connect. Then on the Droplet:
+
+   ```bash
+   sudo /opt/openclaw-approve-ui-pairing.sh
+   ```
+
+   Refresh the browser. For debugging:
+
+   ```bash
+   TOKEN=$(grep '^OPENCLAW_GATEWAY_TOKEN=' /opt/openclaw.env | cut -d= -f2-)
+   sudo /opt/openclaw-cli.sh devices list --token="$TOKEN"
+   ```
+
 ## Troubleshooting
 
 ### Service won't start
@@ -102,6 +135,16 @@ Common issues:
 - **Build failed:** Re-run the script; pnpm builds can fail due to transient issues
 - **Missing dependencies:** Ensure Node.js 22+ is installed
 - **Docker not running:** `systemctl start docker` (required for sandbox)
+- **Sandbox image missing** (`openclaw-sandbox:bookworm-slim`): image is built at snapshot time and on first boot. On a live droplet: `sudo /opt/build-openclaw-sandbox.sh`
+- **Gateway token missing** in logs: tokens live in `openclaw.json` (`gateway.auth.token` and `gateway.remote.token`), not only `/opt/openclaw.env`. Fix: `sudo /opt/ensure-openclaw-ready.sh`
+
+### One-shot repair on a live droplet
+
+```bash
+sudo /opt/ensure-openclaw-ready.sh
+```
+
+Then paste the gateway token from `/opt/openclaw.env` into the Control UI and run `sudo /opt/openclaw-approve-ui-pairing.sh` if needed.
 
 ### Connection refused error
 
