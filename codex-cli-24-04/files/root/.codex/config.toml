@@ -1,0 +1,15 @@
+# Pre-configured for DigitalOcean Gradient AI inference.
+# Set MODEL_ACCESS_KEY via /opt/setup-codex-cli.sh on first login.
+
+model_provider = "openai_custom"
+model = "openai-gpt-5.1-codex-max"
+preferred_auth_method = "apikey"
+model_reasoning_effort = "high"
+web_search = "disabled"
+
+[model_providers.openai_custom]
+name = "DigitalOcean Gradient"
+base_url = "https://inference.do-ai.run/v1"
+env_key = "MODEL_ACCESS_KEY"
+wire_api = "responses"
+query_params = {}
