@@ -40,7 +40,11 @@ echo "Alternatively, set GRADIENT_KEY in /opt/codex-cli.env or as a droplet"
 echo "environment variable and reboot, or run: /opt/apply-gradient-from-env.sh"
 echo ""
 
-read -p "Enter your Gradient model access key (or press Enter to skip): " MODEL_KEY
+old_histfile="${HISTFILE-}"
+unset HISTFILE
+read -rsp "Enter your Gradient model access key (or press Enter to skip): " MODEL_KEY
+echo ""
+[ -n "${old_histfile:-}" ] && export HISTFILE="$old_histfile"
 
 if [ -z "$MODEL_KEY" ]; then
   echo ""

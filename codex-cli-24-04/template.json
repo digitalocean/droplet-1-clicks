@@ -4,7 +4,9 @@
     "image_name": "codex-cli-24-04-snapshot-{{timestamp}}",
     "apt_packages": "apt-transport-https ca-certificates curl software-properties-common git jq unzip ufw",
     "application_name": "Codex CLI",
-    "application_version": "0.133.0"
+    "application_version": "0.133.0",
+    "codex_tarball_sha256": "d06019ab9c35d281b78dc2ebb2ae55c2bb97ea11bf7f452bafe390eddb0034ef",
+    "bwrap_tarball_sha256": "03398bc3cf462d693ed38c331c05565db21d8fc1f891378ab8c17672ffd53c14"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
@@ -40,6 +42,8 @@
       "environment_vars": [
         "application_name={{user `application_name`}}",
         "application_version={{user `application_version`}}",
+        "codex_tarball_sha256={{user `codex_tarball_sha256`}}",
+        "bwrap_tarball_sha256={{user `bwrap_tarball_sha256`}}",
         "DEBIAN_FRONTEND=noninteractive",
         "LC_ALL=C",
         "LANG=en_US.UTF-8",

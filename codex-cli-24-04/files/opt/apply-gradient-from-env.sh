@@ -85,6 +85,21 @@ normalize_gradient_model() {
     esac
 }
 
+write_codex_env() {
+    local key="$1"
+    umask 077
+    printf 'export MODEL_ACCESS_KEY=%q\n' "$key" > "$CODEX_ENV"
+    chmod 600 "$CODEX_ENV"
+}
+
+redact_gradient_secrets_from_system_environment() {
+    local env_file=/etc/environment
+    [ -f "$env_file" ] || return 0
+    grep -Ev '^(GRADIENT_KEY|GRADIENT_MODEL)=' "$env_file" >"${env_file}.tmp" 2>/dev/null || : >"${env_file}.tmp"
+    mv "${env_file}.tmp" "$env_file"
+    chmod 644 "$env_file"
+}
+
 GRADIENT_KEY=$(read_config_value GRADIENT_KEY || true)
 GRADIENT_MODEL=$(read_config_value GRADIENT_MODEL || true)
 
@@ -102,10 +117,7 @@ write_env_file_kv GRADIENT_MODEL "$PRIMARY_MODEL"
 
 mkdir -p /root/.codex
 write_codex_profiled "$GRADIENT_KEY"
-cat > "$CODEX_ENV" << EOF
-export MODEL_ACCESS_KEY="${GRADIENT_KEY}"
-EOF
-chmod 600 "$CODEX_ENV"
+write_codex_env "$GRADIENT_KEY"
 # shellcheck source=/dev/null
 . "$CODEX_PROFILED"
 
@@ -120,6 +132,7 @@ fi
 
 ensure_codex_env_sourced
 remove_setup_wizard_bashrc_hook
+redact_gradient_secrets_from_system_environment
 touch "$SETUP_MARKER"
 
 echo "Testing connection to DigitalOcean Gradient..."
