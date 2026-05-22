@@ -53,16 +53,36 @@ Codex CLI is lightweight; most compute happens at the inference provider.
 ssh root@your-droplet-ip
 ```
 
-### 3. Complete the Setup Wizard
+### 3. Configure Your Gradient Key
 
-On first login, the setup wizard will prompt for your DigitalOcean Gradient model access key. To create one:
+Choose one of these options:
+
+**Option A — Droplet environment variables (recommended for automation)**
+
+Set at droplet create time:
+
+- `GRADIENT_KEY` — your Gradient model access key (required)
+- `GRADIENT_MODEL` — optional model id (default: `openai-gpt-5.5`)
+
+Codex CLI is configured automatically on first boot; no wizard required.
+
+**Option B — Edit `/opt/codex-cli.env`**
+
+Set `GRADIENT_KEY` and optionally `GRADIENT_MODEL`, then reboot or run:
+
+```bash
+/opt/apply-gradient-from-env.sh
+```
+
+**Option C — First-login setup wizard**
+
+On first SSH login, the wizard prompts for your key if it was not pre-configured.
+
+To create a key:
 
 1. Go to https://cloud.digitalocean.com/gen-ai/model-access-keys
 2. Click **Create Model Access Key**
-3. Copy the new key
-4. Paste the key when prompted by the setup wizard
-
-The wizard verifies your key and configures Codex CLI automatically.
+3. Copy the new key and use it with one of the options above
 
 ### 4. Run Codex CLI
 
@@ -71,7 +91,7 @@ cd /path/to/your/project
 codex
 ```
 
-The default model is **GPT-5.1 Codex Max** (`openai-gpt-5.1-codex-max`). Change it with `codex -m "openai-gpt-5.2"` or the `/model` command inside Codex.
+The default model is **GPT-5.5** (`openai-gpt-5.5`). Change it with `codex -m "openai-gpt-5.1-codex-max"` or the `/model` command inside Codex.
 
 ## Managing Codex CLI
 
@@ -87,6 +107,7 @@ The default model is **GPT-5.1 Codex Max** (`openai-gpt-5.1-codex-max`). Change 
 
 - **Codex config**: `/root/.codex/config.toml`
 - **API key**: `/root/.codex/env` (`MODEL_ACCESS_KEY`)
+- **Droplet env template**: `/opt/codex-cli.env` (`GRADIENT_KEY`, `GRADIENT_MODEL`)
 - **Getting started guide**: `cat /root/codex_cli_info.txt`
 
 ### Available Models
@@ -95,8 +116,9 @@ Use model IDs from the Gradient Model Catalog with `codex -m "<model-id>"` or ed
 
 | Model | Model ID |
 |-------|----------|
-| GPT-5.1 Codex Max (default) | `openai-gpt-5.1-codex-max` |
+| GPT-5.5 (default) | `openai-gpt-5.5` |
 | GPT-5.2 | `openai-gpt-5.2` |
+| GPT-5.1 Codex Max | `openai-gpt-5.1-codex-max` |
 | GPT-5 | `openai-gpt-5` |
 | GPT-4.1 | `openai-gpt-4.1` |
 | OpenAI o3 | `openai-o3` |

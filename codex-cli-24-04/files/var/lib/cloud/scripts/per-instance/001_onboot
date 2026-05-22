@@ -2,6 +2,10 @@
 
 set -e
 
+set -a
+source /etc/environment 2>/dev/null || true
+set +a
+
 # Remove the ssh force logout command
 sed -e '/Match User root/d' \
     -e '/.*ForceCommand.*droplet.*/d' \
@@ -12,13 +16,64 @@ systemctl restart ssh
 # Ensure Codex config directory exists
 mkdir -p /root/.codex
 
-# Hook setup wizard to run on first SSH login
-cat >> /root/.bashrc <<EOM
+chmod +x /opt/apply-gradient-from-env.sh
+
+GRADIENT_APPLIED=0
+if /opt/apply-gradient-from-env.sh; then
+    GRADIENT_APPLIED=1
+    echo "Gradient pre-configured from droplet environment."
+else
+    # Hook setup wizard to run on first SSH login
+    if ! grep -q '/opt/setup-codex-cli.sh' /root/.bashrc 2>/dev/null; then
+        cat >> /root/.bashrc <<EOM
 /opt/setup-codex-cli.sh
 EOM
+    fi
+fi
 
 # Create a getting started file for first-time users
-cat > /root/codex_cli_info.txt << 'EOF'
+if [ "$GRADIENT_APPLIED" -eq 1 ]; then
+    cat > /root/codex_cli_info.txt << 'EOF'
+================================================================================
+Codex CLI 1-Click Droplet - Getting Started
+================================================================================
+
+Codex CLI is OpenAI's terminal-based coding agent, pre-configured to use
+DigitalOcean Gradient AI for inference.
+
+Gradient was configured automatically from droplet environment variables
+(GRADIENT_KEY / GRADIENT_MODEL) or /opt/codex-cli.env.
+
+PRE-CONFIGURED MODELS (via DigitalOcean Gradient):
+
+  Default: openai-gpt-5.5 (GPT-5.5)
+  Also available: GPT-5.2, GPT-5.1 Codex Max, GPT-5, GPT-4.1, o3, DeepSeek R1 70B, Qwen3 32B,
+  Llama 3.3 70B, Kimi K2.5, glm-5, MiniMax M2.5, Claude Opus/Sonnet models
+
+NEXT STEPS:
+
+1. Run Codex CLI:
+   cd /path/to/your/project
+   codex
+
+2. Helper commands:
+   Check version:    /opt/codex-cli-version.sh
+   Update Codex CLI: /opt/update-codex-cli.sh
+   Re-run setup:     /opt/setup-codex-cli.sh
+
+Switch models:  codex -m "openai-gpt-5.1-codex-max"  or use /model inside Codex
+
+Configuration:  /root/.codex/config.toml
+API key:        /root/.codex/env (MODEL_ACCESS_KEY)
+
+ChatGPT subscription: run 'codex login' for OAuth instead of Gradient.
+
+For documentation: https://developers.openai.com/codex/cli
+
+================================================================================
+EOF
+else
+    cat > /root/codex_cli_info.txt << 'EOF'
 ================================================================================
 Codex CLI 1-Click Droplet - Getting Started
 ================================================================================
@@ -28,14 +83,18 @@ DigitalOcean Gradient AI for inference.
 
 PRE-CONFIGURED MODELS (via DigitalOcean Gradient):
 
-  Default: openai-gpt-5.1-codex-max (GPT-5.1 Codex Max)
-  Also available: GPT-5.2, GPT-5, GPT-4.1, o3, DeepSeek R1 70B, Qwen3 32B,
+  Default: openai-gpt-5.5 (GPT-5.5)
+  Also available: GPT-5.2, GPT-5.1 Codex Max, GPT-5, GPT-4.1, o3, DeepSeek R1 70B, Qwen3 32B,
   Llama 3.3 70B, Kimi K2.5, glm-5, MiniMax M2.5, Claude Opus/Sonnet models
 
 NEXT STEPS:
 
-1. The setup wizard will run on first login to configure your
-   Gradient model access key. To create one:
+1. Configure your Gradient model access key using one of:
+   - Set GRADIENT_KEY (and optional GRADIENT_MODEL) as droplet environment
+     variables at create time, or edit /opt/codex-cli.env and reboot
+   - Run the setup wizard on first login (prompts for your key)
+
+   To create a key:
      https://cloud.digitalocean.com/gen-ai
      Navigate to API Keys > Model Access Keys
 
@@ -48,7 +107,7 @@ NEXT STEPS:
    Update Codex CLI: /opt/update-codex-cli.sh
    Re-run setup:     /opt/setup-codex-cli.sh
 
-Switch models:  codex -m "openai-gpt-5.2"  or use /model inside Codex
+Switch models:  codex -m "openai-gpt-5.1-codex-max"  or use /model inside Codex
 
 Configuration:  /root/.codex/config.toml
 API key:        /root/.codex/env (MODEL_ACCESS_KEY)
@@ -59,6 +118,7 @@ For documentation: https://developers.openai.com/codex/cli
 
 ================================================================================
 EOF
+fi
 
 chmod 600 /root/codex_cli_info.txt
 

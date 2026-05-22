@@ -21,10 +21,13 @@ BWRAP_URL="https://github.com/openai/codex/releases/download/${LATEST_TAG}/bwrap
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
 
+CODEX_LIB_DIR=/usr/local/lib/codex
+mkdir -p "$CODEX_LIB_DIR"
+
 echo "Updating Codex CLI to ${VERSION}..."
 curl -fsSL "$CODEX_URL" -o "${tmpdir}/codex.tar.gz"
 tar -xzf "${tmpdir}/codex.tar.gz" -C "${tmpdir}"
-install -m 0755 "${tmpdir}/codex-${ARCH}" /usr/local/bin/codex
+install -m 0755 "${tmpdir}/codex-${ARCH}" "${CODEX_LIB_DIR}/codex"
 
 curl -fsSL "$BWRAP_URL" -o "${tmpdir}/bwrap.tar.gz"
 tar -xzf "${tmpdir}/bwrap.tar.gz" -C "${tmpdir}"

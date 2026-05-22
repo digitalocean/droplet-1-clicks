@@ -12,15 +12,17 @@ write, debug, and refactor code. This droplet is pre-configured to use
 DigitalOcean Gradient AI for inference.
 
 PRE-CONFIGURED MODELS (via DigitalOcean Gradient):
-  Default: GPT-5.1 Codex Max
-  Also available: GPT-5.2, GPT-5, GPT-4.1, o3, DeepSeek R1 70B, Qwen3 32B,
+  Default: GPT-5.5
+  Also available: GPT-5.2, GPT-5.1 Codex Max, GPT-5, GPT-4.1, o3, DeepSeek R1 70B, Qwen3 32B,
   Llama 3.3 70B, Kimi K2.5, glm-5, MiniMax M2.5, Claude Opus/Sonnet models
 
 GETTING STARTED:
 
-  1. On first login, the setup wizard will prompt for your Gradient
-     model access key. Create one at:
-     https://cloud.digitalocean.com/gen-ai
+  1. Configure your Gradient model access key:
+     - Set GRADIENT_KEY (optional GRADIENT_MODEL) as droplet env vars, or
+     - Edit /opt/codex-cli.env and reboot, or
+     - On first login, run the setup wizard when prompted
+     Create a key at: https://cloud.digitalocean.com/gen-ai
      (API Keys > Model Access Keys)
 
   2. Run Codex CLI:
