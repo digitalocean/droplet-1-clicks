@@ -1,0 +1,178 @@
+#!/bin/bash
+
+export DEBIAN_FRONTEND=noninteractive
+export LC_ALL=C
+export LANG=en_US.UTF-8
+export LC_CTYPE=en_US.UTF-8
+
+# Generate MySQL/phpMyAdmin credentials.
+root_mysql_pass=$(openssl rand -hex 24)
+admin_mysql_pass=$(openssl rand -hex 24)
+app_mysql_pass=$(openssl rand -hex 24)
+debian_sys_maint_mysql_pass=$(openssl rand -hex 24)
+blowfish_secret=$(openssl rand -hex 48)
+
+cat > /root/.digitalocean_password <<EOM
+root_mysql_pass="${root_mysql_pass}"
+admin_mysql_pass="${admin_mysql_pass}"
+app_mysql_pass="${app_mysql_pass}"
+EOM
+
+# Configure MySQL root/admin users.
+mysqladmin -u root -h localhost create phpmyadmin
+mysqladmin -u root -h localhost password "${root_mysql_pass}"
+
+mysql -uroot -p"${root_mysql_pass}" \
+      -e "CREATE USER 'admin'@'localhost' IDENTIFIED BY '${admin_mysql_pass}'"
+mysql -uroot -p"${root_mysql_pass}" \
+      -e "GRANT ALL PRIVILEGES ON *.* TO 'admin'@'localhost' WITH GRANT OPTION"
+mysql -uroot -p"${root_mysql_pass}" \
+      -e "CREATE USER 'phpmyadminapp'@'localhost' IDENTIFIED BY '${app_mysql_pass}'"
+mysql -uroot -p"${root_mysql_pass}" \
+      -e "GRANT ALL PRIVILEGES ON phpmyadmin.* TO 'phpmyadminapp'@'localhost'"
+mysql -uroot -p"${root_mysql_pass}" \
+      -e "ALTER USER 'debian-sys-maint'@'localhost' IDENTIFIED BY '${debian_sys_maint_mysql_pass}'"
+
+cat >> /etc/mysql/mysql.conf.d/mysqld.cnf <<EOM
+bind-address = 0.0.0.0
+EOM
+
+MYSQL_ROOT_PASSWORD=${root_mysql_pass}
+expect -c "
+set timeout 10
+spawn mysql_secure_installation
+expect \"Enter current password for root (enter for none):\"
+send \"$MYSQL_ROOT_PASSWORD\r\"
+expect \"Change the root password?\"
+send \"n\r\"
+expect \"Remove anonymous users?\"
+send \"y\r\"
+expect \"Disallow root login remotely?\"
+send \"y\r\"
+expect \"Remove test database and access to it?\"
+send \"y\r\"
+expect \"Reload privilege tables now?\"
+send \"y\r\"
+expect eof
+"
+
+cat > /etc/mysql/debian.cnf <<EOM
+# Automatically generated for Debian scripts. DO NOT TOUCH!
+[client]
+host     = localhost
+user     = debian-sys-maint
+password = ${debian_sys_maint_mysql_pass}
+socket   = /var/run/mysqld/mysqld.sock
+[mysql_upgrade]
+host     = localhost
+user     = debian-sys-maint
+password = ${debian_sys_maint_mysql_pass}
+socket   = /var/run/mysqld/mysqld.sock
+EOM
+
+systemctl restart mysql
+
+# Reconfigure phpMyAdmin package with generated credentials.
+printf "%s\t%s\t%s\t%s\n" \
+    phpmyadmin phpmyadmin/db/app-user string phpmyadminapp \
+    | debconf-set-selections
+printf "%s\t%s\t%s\t%s\n" \
+    phpmyadmin phpmyadmin/mysql/admin-user string admin \
+    | debconf-set-selections
+printf "%s\t%s\t%s\t%s\n" \
+    phpmyadmin phpmyadmin/mysql/app-pass password "${app_mysql_pass}" \
+    | debconf-set-selections
+printf "%s\t%s\t%s\t%s\n" \
+    phpmyadmin phpmyadmin/mysql/admin-pass password "${admin_mysql_pass}" \
+    | debconf-set-selections
+printf "%s\t%s\t%s\t%s\n" \
+    phpmyadmin phpmyadmin/reconfigure-webserver string apache2 \
+    | debconf-set-selections
+printf "%s\t%s\t%s\t%s\n" \
+    phpmyadmin phpmyadmin/dbconfig-reinstall boolean true \
+    | debconf-set-selections
+
+dpkg-reconfigure --force phpmyadmin
+ln -sf /etc/phpmyadmin/apache.conf /etc/apache2/conf-enabled/phpmyadmin.conf
+
+echo "\$cfg['blowfish_secret'] = '${blowfish_secret}';" >> /etc/phpmyadmin/config.inc.php
+mkdir -p /usr/share/phpmyadmin/tmp
+chown www-data:www-data /usr/share/phpmyadmin/tmp
+echo "\$cfg['TempDir'] = '/usr/share/phpmyadmin/tmp';" >> /etc/phpmyadmin/config.inc.php
+
+systemctl restart apache2
+
+# Enable HTTPS over Droplet IP using Let's Encrypt short-lived IP certs.
+meta() { curl -fsS --retry 5 --retry-connrefused --max-time 3 "$1" 2>/dev/null || true; }
+public_ip="$(meta http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address)"
+private_ip="$(hostname -I | awk '{print $1}')"
+droplet_ip="${public_ip:-$private_ip}"
+webroot="/var/www/html"
+mkdir -p "${webroot}/.well-known/acme-challenge"
+
+certbot_cmd="/opt/certbot-venv/bin/certbot"
+if [ ! -x "$certbot_cmd" ]; then
+    certbot_cmd="certbot"
+fi
+
+cert_status=1
+if [ -n "$public_ip" ]; then
+    "$certbot_cmd" certonly \
+        --webroot -w "${webroot}" \
+        --preferred-profile shortlived \
+        --agree-tos --register-unsafely-without-email \
+        --non-interactive \
+        --ip-address "${public_ip}" || cert_status=$?
+else
+    echo "No public metadata IP available; skipping Let's Encrypt IP certificate setup."
+fi
+
+cert_dir="/etc/letsencrypt/live/${public_ip}"
+if [ "$cert_status" -eq 0 ] && [ ! -f "${cert_dir}/fullchain.pem" ]; then
+    cert_dir=""
+    newest=""
+    for d in /etc/letsencrypt/live/*/; do
+        [ -f "${d}fullchain.pem" ] || continue
+        ts=$(stat -c %Y "${d}fullchain.pem" 2>/dev/null || stat -f %m "${d}fullchain.pem" 2>/dev/null || echo 0)
+        if [ -z "$newest" ] || [ "$ts" -gt "$newest" ]; then
+            newest=$ts
+            cert_dir=$(dirname "${d}fullchain.pem")
+        fi
+    done
+fi
+
+if [ -n "$cert_dir" ] && [ -f "${cert_dir}/fullchain.pem" ] && [ -f "${cert_dir}/privkey.pem" ]; then
+    a2enmod ssl >/dev/null
+    cat > /etc/apache2/sites-available/phpmyadmin-ip-ssl.conf <<EOF
+<IfModule mod_ssl.c>
+<VirtualHost *:443>
+    ServerName ${droplet_ip}
+    DocumentRoot /var/www/html
+
+    SSLEngine on
+    SSLCertificateFile ${cert_dir}/fullchain.pem
+    SSLCertificateKeyFile ${cert_dir}/privkey.pem
+
+    ErrorLog \${APACHE_LOG_DIR}/error.log
+    CustomLog \${APACHE_LOG_DIR}/access.log combined
+</VirtualHost>
+</IfModule>
+EOF
+    a2ensite phpmyadmin-ip-ssl.conf >/dev/null
+    systemctl reload apache2
+    cat > /etc/cron.d/phpmyadmin-certbot-renew <<CRON
+# Renew Let's Encrypt IP certificate and reload Apache.
+0 2,14 * * * root ${certbot_cmd} renew -q --deploy-hook "systemctl reload apache2" >>/var/log/phpmyadmin-certbot.log 2>&1
+CRON
+    chmod 644 /etc/cron.d/phpmyadmin-certbot-renew
+    echo "HTTPS enabled for phpMyAdmin at https://${droplet_ip}/phpmyadmin"
+else
+    echo "Let's Encrypt IP certificate setup failed; phpMyAdmin remains on HTTP."
+fi
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh

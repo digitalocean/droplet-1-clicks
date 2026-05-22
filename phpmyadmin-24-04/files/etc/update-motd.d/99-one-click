@@ -1,0 +1,39 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+. /root/.digitalocean_password
+
+pub=$(curl -fsS --retry 3 --retry-connrefused --max-time 3 \
+  http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)
+myip="${pub:-$(hostname -I | awk '{print$1}')}"
+
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's 1-Click MySQL/phpMyAdmin Droplet.
+To keep this Droplet secure, the UFW firewall is enabled.
+All ports are BLOCKED except 22 (SSH), 80 (HTTP), 443 (HTTPS), and 3306 (MySQL).
+
+In a web browser, you can view:
+ * The MySQL/phpMyAdmin 1-Click Quickstart guide
+    MySQL: https://do.co/3lAhrFF#start
+    PhpMyAdmin: https://do.co/30ZWR9H#start
+
+ * phpMyAdmin:
+    HTTPS: https://$myip/phpmyadmin
+    HTTP:  http://$myip/phpmyadmin
+    Username: admin
+    Password: $admin_mysql_pass
+
+On the server:
+ * The MySQL root password is saved in /root/.digitalocean_password
+ * Let's Encrypt IP certificate renewal logs: /var/log/phpmyadmin-certbot.log
+ * Certbot command path: /opt/certbot-venv/bin/certbot
+ * A default HTML page is located at /var/www/html/index.html and can be removed or replaced.
+
+For help and more information, visit https://do.co/3lAhrFF
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
