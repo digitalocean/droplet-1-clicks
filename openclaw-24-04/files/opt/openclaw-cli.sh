@@ -9,7 +9,11 @@ read_gateway_token_from_env() {
     local line val
     [ -f /opt/openclaw.env ] || return 1
     line=$(grep -E '^OPENCLAW_GATEWAY_TOKEN=' /opt/openclaw.env 2>/dev/null | tail -n 1) || return 1
-    eval "val=${line#OPENCLAW_GATEWAY_TOKEN=}"
+    val="${line#OPENCLAW_GATEWAY_TOKEN=}"
+    val="${val#\"}"
+    val="${val%\"}"
+    val="${val#\'}"
+    val="${val%\'}"
     case "$val" in
         ''|*'${'*|PLACEHOLDER*) return 1 ;;
     esac
