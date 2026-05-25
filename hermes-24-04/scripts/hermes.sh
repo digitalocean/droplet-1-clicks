@@ -20,15 +20,16 @@ systemctl enable fail2ban
 systemctl restart fail2ban
 
 rm -f "$INSTALLER"
-curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh -o "$INSTALLER"
-chmod 0755 "$INSTALLER"
 
 case "$APP_VERSION" in
-    *[!A-Za-z0-9._/-]*)
+    *[!A-Za-z0-9._-]*)
         echo "ERROR: unsupported Hermes version/branch: $APP_VERSION" >&2
         exit 1
         ;;
 esac
+
+curl -fsSL "https://raw.githubusercontent.com/NousResearch/hermes-agent/${APP_VERSION}/scripts/install.sh" -o "$INSTALLER"
+chmod 0755 "$INSTALLER"
 
 su - "$HERMES_USER" -c "HERMES_HOME=$HERMES_HOME bash $INSTALLER --skip-setup --skip-browser --branch $APP_VERSION"
 rm -f "$INSTALLER"
