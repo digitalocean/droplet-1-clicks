@@ -3,9 +3,40 @@
 # ZeroClaw Provider Setup Script
 # Run this script to configure ZeroClaw with an AI API key
 
-DROPL_IP=$(hostname -I | awk '{print$1}')
+SETUP_MARKER=/home/zeroclaw/.zeroclaw/gradient-configured
 CONFIG_DIR="/home/zeroclaw/.zeroclaw"
 CONFIG_FILE="${CONFIG_DIR}/config.toml"
+
+remove_first_login_hook() {
+  if [ -f /root/.bashrc ]; then
+    sed -i '/chmod +x \/etc\/setup_wizard\.sh/d' /root/.bashrc
+    sed -i '/\/etc\/setup_wizard\.sh/d' /root/.bashrc
+  fi
+}
+
+gradient_already_configured() {
+  local api_key
+  [ -f "$CONFIG_FILE" ] || return 1
+  api_key=$(grep -E '^api_key\s*=' "$CONFIG_FILE" 2>/dev/null | tail -n 1 | sed 's/^api_key\s*=\s*"\?\([^"]*\)"\?.*/\1/') || return 1
+  case "$api_key" in
+    ''|PLACEHOLDER|*'${'*) return 1 ;;
+  esac
+  return 0
+}
+
+DROPL_IP=$(hostname -I | awk '{print$1}')
+
+if [ "$1" != "--force" ]; then
+  if [ -f "$SETUP_MARKER" ] || gradient_already_configured; then
+    echo "ZeroClaw provider is already configured. Skipping setup."
+    remove_first_login_hook
+    exit 0
+  fi
+  if [ -x /opt/apply-gradient-from-env.sh ] && /opt/apply-gradient-from-env.sh; then
+    remove_first_login_hook
+    exit 0
+  fi
+fi
 
 PS3="Select a provider (1-4): "
 options=("DigitalOcean Gradient" "OpenAI" "Anthropic" "OpenRouter")
@@ -104,6 +135,13 @@ sed -i 's/^port = .*/port = 42617/' "${CONFIG_FILE}"
 
 chown zeroclaw:zeroclaw "${CONFIG_FILE}"
 chmod 0600 "${CONFIG_FILE}"
+
+if [[ "$onboard_provider" == "custom:https://inference.do-ai.run/v1" ]]; then
+  touch "$SETUP_MARKER"
+  chown zeroclaw:zeroclaw "$SETUP_MARKER" 2>/dev/null || true
+fi
+
+remove_first_login_hook
 
 echo ""
 echo "${selected_provider} key configured successfully."

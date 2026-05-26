@@ -1,4 +1,8 @@
-#!/bin/sh
+#!/bin/bash
+
+set -a
+source /etc/environment 2>/dev/null || true
+set +a
 
 DROPL_IP=$(hostname -I | awk '{print$1}')
 sed "s/PLACEHOLDER_IP/${DROPL_IP}/" /etc/caddy/Caddyfile.tmp > /etc/caddy/Caddyfile
@@ -6,10 +10,18 @@ sed "s/PLACEHOLDER_IP/${DROPL_IP}/" /etc/caddy/Caddyfile.tmp > /etc/caddy/Caddyf
 # Remove the ssh force logout command
 sed -e '/Match User root/d' -e '/.*ForceCommand.*droplet.*/d' -i /etc/ssh/sshd_config
 
-cat >> /root/.bashrc <<EOM
+chmod +x /opt/apply-gradient-from-env.sh
+
+GRADIENT_APPLIED=0
+if /opt/apply-gradient-from-env.sh; then
+    GRADIENT_APPLIED=1
+    echo "Gradient pre-configured from droplet environment."
+elif ! grep -q 'setup_wizard.sh' /root/.bashrc 2>/dev/null; then
+    cat >> /root/.bashrc <<EOM
 chmod +x /etc/setup_wizard.sh
 /etc/setup_wizard.sh
 EOM
+fi
 
 systemctl restart ssh
 systemctl enable caddy

@@ -18,8 +18,10 @@ anywhere. Uses <5MB RAM and starts in <10ms.
 
   Configuration:
     Config file:    /home/zeroclaw/.zeroclaw/config.toml
-    Environment:    /opt/zeroclaw.env
-    Gradient default model: Kimi K2.5 — change via: sudo /etc/setup_wizard.sh
+    Environment:    /opt/zeroclaw.env (GRADIENT_KEY, GRADIENT_MODEL)
+    Gradient:       set GRADIENT_KEY at create time or in /opt/zeroclaw.env
+                    then: sudo /opt/apply-gradient-from-env.sh
+    Default model:  Kimi K2.5 (kimi-k2.5) — or: sudo /etc/setup_wizard.sh
 
   Management Commands:
     Restart service:  systemctl restart zeroclaw

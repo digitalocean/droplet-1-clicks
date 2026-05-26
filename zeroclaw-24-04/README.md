@@ -12,13 +12,26 @@ This Packer template builds a DigitalOcean Marketplace 1-Click image for [ZeroCl
 
 ## How It Works
 
-ZeroClaw is installed as a pre-built binary at `/usr/local/bin/zeroclaw`. It runs as a systemd service under a dedicated `zeroclaw` user. On first SSH login, an interactive setup wizard prompts you to select an AI provider (DigitalOcean Gradient, OpenAI, Anthropic, or OpenRouter), choose a Gradient inference model when applicable, and enter your API key.
+ZeroClaw is installed as a pre-built binary at `/usr/local/bin/zeroclaw`. It runs as a systemd service under a dedicated `zeroclaw` user.
+
+On first boot, `001_onboot` sources `/etc/environment` and runs `/opt/apply-gradient-from-env.sh`. If `GRADIENT_KEY` is set (droplet environment variables or `/opt/zeroclaw.env`), Gradient is configured automatically and the interactive wizard is skipped. Otherwise, on first SSH login, an interactive setup wizard prompts you to select an AI provider (DigitalOcean Gradient, OpenAI, Anthropic, or OpenRouter), choose a Gradient inference model when applicable, and enter your API key.
 
 Caddy provides HTTPS via IP-based TLS certificates from Let's Encrypt, reverse-proxying to ZeroClaw's gateway on port 42617.
 
 ### DigitalOcean Gradient
 
-When you choose **DigitalOcean Gradient** in the setup wizard, inference uses `https://inference.do-ai.run/v1` with a Gradient model access key. The default model is **Kimi K2.5** (`kimi-k2.5`). You can pick another model during setup or change `default_model` in `/home/zeroclaw/.zeroclaw/config.toml` later.
+When you choose **DigitalOcean Gradient** in the setup wizard (or pre-configure via env), inference uses `https://inference.do-ai.run/v1` with a Gradient model access key. The default model is **Kimi K2.5** (`kimi-k2.5`). You can pick another model during setup or change `default_model` in `/home/zeroclaw/.zeroclaw/config.toml` later.
+
+| Variable | Purpose |
+|----------|---------|
+| `GRADIENT_KEY` | DigitalOcean Gradient model access key |
+| `GRADIENT_MODEL` | Optional model id (default: `kimi-k2.5`) |
+
+Set these as droplet environment variables at create time, or edit `/opt/zeroclaw.env`, then reboot or run:
+
+```bash
+sudo /opt/apply-gradient-from-env.sh
+```
 
 | Model | Model ID |
 |-------|----------|
@@ -50,6 +63,7 @@ ZeroClaw is extremely lightweight (<5MB RAM, ~8.8MB binary). The minimum `s-1vcp
 | `files/etc/systemd/system/zeroclaw.service` | Systemd unit file |
 | `files/etc/caddy/Caddyfile.tmp` | Caddy config template |
 | `files/etc/update-motd.d/99-one-click` | MOTD with usage instructions |
-| `files/opt/zeroclaw.env` | Environment configuration |
+| `files/opt/zeroclaw.env` | Environment configuration (`GRADIENT_KEY`, `GRADIENT_MODEL`) |
+| `files/opt/apply-gradient-from-env.sh` | Apply Gradient key from env on boot |
 | `files/opt/*.sh` | Helper scripts (restart, status, update, domain, cli) |
 | `files/var/lib/cloud/scripts/per-instance/001_onboot` | First-boot initialization |
