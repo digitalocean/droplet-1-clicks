@@ -60,6 +60,9 @@ chmod +x /opt/status-zeroclaw.sh
 chmod +x /opt/update-zeroclaw.sh
 chmod +x /opt/zeroclaw-cli.sh
 chmod +x /opt/setup-zeroclaw-domain.sh
+chmod +x /opt/apply-gradient-from-env.sh
+chmod +x /opt/zeroclaw-run-onboard.sh
+chmod 600 /opt/zeroclaw.env
 chmod +x /etc/setup_wizard.sh
 chmod +x /etc/update-motd.d/99-one-click
 chmod +x /var/lib/cloud/scripts/per-instance/001_onboot

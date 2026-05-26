@@ -3,9 +3,52 @@
 # ZeroClaw Provider Setup Script
 # Run this script to configure ZeroClaw with an AI API key
 
-DROPL_IP=$(hostname -I | awk '{print$1}')
+ENV_FILE=/opt/zeroclaw.env
+SETUP_MARKER=/root/.zeroclaw_setup_complete
 CONFIG_DIR="/home/zeroclaw/.zeroclaw"
 CONFIG_FILE="${CONFIG_DIR}/config.toml"
+
+remove_first_login_hook() {
+  if [ -f /root/.bashrc ]; then
+    sed -i '/chmod +x \/etc\/setup_wizard\.sh/d' /root/.bashrc
+    sed -i '/\/etc\/setup_wizard\.sh/d' /root/.bashrc
+  fi
+}
+
+gradient_already_configured() {
+  local api_key
+  [ -f "$CONFIG_FILE" ] || return 1
+  api_key=$(grep -E '^api_key\s*=' "$CONFIG_FILE" 2>/dev/null | tail -n 1 | sed 's/^api_key\s*=\s*"\?\([^"]*\)"\?.*/\1/') || return 1
+  case "$api_key" in
+    ''|PLACEHOLDER|*'${'*) return 1 ;;
+  esac
+  return 0
+}
+
+write_gradient_env_key() {
+  local key="$1" model="$2"
+  umask 077
+  touch "$ENV_FILE"
+  grep -Ev '^(GRADIENT_KEY|GRADIENT_MODEL)=' "$ENV_FILE" >"${ENV_FILE}.tmp" 2>/dev/null || : >"${ENV_FILE}.tmp"
+  printf 'GRADIENT_KEY=%q\n' "$key" >>"${ENV_FILE}.tmp"
+  printf 'GRADIENT_MODEL=%q\n' "$model" >>"${ENV_FILE}.tmp"
+  mv "${ENV_FILE}.tmp" "$ENV_FILE"
+  chmod 600 "$ENV_FILE"
+}
+
+DROPL_IP=$(hostname -I | awk '{print$1}')
+
+if [ "$1" != "--force" ]; then
+  if [ -f "$SETUP_MARKER" ] || gradient_already_configured; then
+    echo "ZeroClaw provider is already configured. Skipping setup."
+    remove_first_login_hook
+    exit 0
+  fi
+  if [ -x /opt/apply-gradient-from-env.sh ] && /opt/apply-gradient-from-env.sh; then
+    remove_first_login_hook
+    exit 0
+  fi
+fi
 
 PS3="Select a provider (1-4): "
 options=("DigitalOcean Gradient" "OpenAI" "Anthropic" "OpenRouter")
@@ -92,24 +135,31 @@ echo "${selected_provider} Configuration Setup"
 echo "=============================="
 echo ""
 
-while [ -z "$model_access_key" ]
-do
-  read -p "Enter ${selected_provider} API key: " model_access_key
+old_histfile="${HISTFILE-}"
+unset HISTFILE
+while [ -z "${model_access_key:-}" ]; do
+  read -rsp "Enter ${selected_provider} API key: " model_access_key
+  echo ""
 done
+[ -n "${old_histfile:-}" ] && export HISTFILE="$old_histfile"
 
-su - zeroclaw -c "/usr/local/bin/zeroclaw onboard --force --api-key '${model_access_key}' --provider '${onboard_provider}' --model '${onboard_model}'" > /dev/null 2>&1
+if [[ "$onboard_provider" == "custom:https://inference.do-ai.run/v1" ]]; then
+  write_gradient_env_key "$model_access_key" "$onboard_model"
+  /opt/apply-gradient-from-env.sh
+else
+  /opt/zeroclaw-run-onboard.sh "$model_access_key" "$onboard_provider" "$onboard_model"
+  umask 077
+  touch "$SETUP_MARKER"
+  chmod 600 "$SETUP_MARKER"
+  systemctl enable zeroclaw
+  systemctl restart zeroclaw
+fi
 
-# Override gateway port to match systemd service expectation
-sed -i 's/^port = .*/port = 42617/' "${CONFIG_FILE}"
-
-chown zeroclaw:zeroclaw "${CONFIG_FILE}"
-chmod 0600 "${CONFIG_FILE}"
+remove_first_login_hook
 
 echo ""
 echo "${selected_provider} key configured successfully."
 echo "Starting ZeroClaw service..."
-systemctl enable zeroclaw
-systemctl restart zeroclaw
 
 sleep 3
 
