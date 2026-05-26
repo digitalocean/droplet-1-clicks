@@ -1,0 +1,22 @@
+# Pre-configured for DigitalOcean Gradient AI inference.
+# Set GRADIENT_KEY via droplet env, /opt/codex-cli.env, or /opt/setup-codex-cli.sh.
+
+model_provider = "openai_custom"
+model = "openai-gpt-5.5"
+model_catalog_json = "/root/.codex/gradient-models.json"
+preferred_auth_method = "apikey"
+model_reasoning_effort = "high"
+web_search = "disabled"
+
+# Gradient only accepts function tools over the Responses API (not tool_search
+# or namespace-wrapped tools such as multi_agent).
+[features]
+tool_search = false
+multi_agent = false
+
+[model_providers.openai_custom]
+name = "DigitalOcean Gradient"
+base_url = "https://inference.do-ai.run/v1"
+env_key = "MODEL_ACCESS_KEY"
+wire_api = "responses"
+query_params = {}
