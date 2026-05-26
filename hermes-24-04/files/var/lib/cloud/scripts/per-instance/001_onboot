@@ -6,13 +6,20 @@ chmod +x /opt/hermes/hermes-cli.sh
 chmod +x /opt/hermes/status-hermes.sh
 chmod +x /opt/hermes/update-hermes.sh
 chmod +x /opt/hermes/doctor-hermes.sh
+chmod +x /opt/hermes/apply-gradient-from-env.sh
 
 # Remove the ssh force logout command added during image build.
 sed -e '/Match User root/d' \
     -e '/.*ForceCommand.*droplet.*/d' \
     -i /etc/ssh/sshd_config
 
-if ! grep -q 'setup_wizard.sh' /root/.bashrc 2>/dev/null; then
+set -a
+source /etc/environment 2>/dev/null || true
+set +a
+
+if /opt/hermes/apply-gradient-from-env.sh; then
+    echo "Hermes Gradient preconfigured from droplet environment."
+elif ! grep -q 'setup_wizard.sh' /root/.bashrc 2>/dev/null; then
     cat >>/root/.bashrc <<'EOM'
 
 chmod +x /etc/setup_wizard.sh

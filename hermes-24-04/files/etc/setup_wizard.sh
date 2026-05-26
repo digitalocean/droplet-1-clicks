@@ -16,6 +16,12 @@ if [ -f "$SETUP_DONE_MARKER" ]; then
   exit 0
 fi
 
+if [ -x /opt/hermes/apply-gradient-from-env.sh ] && /opt/hermes/apply-gradient-from-env.sh; then
+  echo "Hermes Agent is already configured for DigitalOcean Gradient. Skipping first-login setup."
+  remove_first_login_hook
+  exit 0
+fi
+
 if [ ! -x /home/hermes/.local/bin/hermes ]; then
   echo "ERROR: Hermes CLI is not installed at /home/hermes/.local/bin/hermes." >&2
   exit 1
