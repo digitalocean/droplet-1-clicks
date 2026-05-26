@@ -3,7 +3,8 @@
 # ZeroClaw Provider Setup Script
 # Run this script to configure ZeroClaw with an AI API key
 
-SETUP_MARKER=/home/zeroclaw/.zeroclaw/gradient-configured
+ENV_FILE=/opt/zeroclaw.env
+SETUP_MARKER=/root/.zeroclaw_setup_complete
 CONFIG_DIR="/home/zeroclaw/.zeroclaw"
 CONFIG_FILE="${CONFIG_DIR}/config.toml"
 
@@ -22,6 +23,17 @@ gradient_already_configured() {
     ''|PLACEHOLDER|*'${'*) return 1 ;;
   esac
   return 0
+}
+
+write_gradient_env_key() {
+  local key="$1" model="$2"
+  umask 077
+  touch "$ENV_FILE"
+  grep -Ev '^(GRADIENT_KEY|GRADIENT_MODEL)=' "$ENV_FILE" >"${ENV_FILE}.tmp" 2>/dev/null || : >"${ENV_FILE}.tmp"
+  printf 'GRADIENT_KEY=%q\n' "$key" >>"${ENV_FILE}.tmp"
+  printf 'GRADIENT_MODEL=%q\n' "$model" >>"${ENV_FILE}.tmp"
+  mv "${ENV_FILE}.tmp" "$ENV_FILE"
+  chmod 600 "$ENV_FILE"
 }
 
 DROPL_IP=$(hostname -I | awk '{print$1}')
@@ -123,22 +135,24 @@ echo "${selected_provider} Configuration Setup"
 echo "=============================="
 echo ""
 
-while [ -z "$model_access_key" ]
-do
-  read -p "Enter ${selected_provider} API key: " model_access_key
+old_histfile="${HISTFILE-}"
+unset HISTFILE
+while [ -z "${model_access_key:-}" ]; do
+  read -rsp "Enter ${selected_provider} API key: " model_access_key
+  echo ""
 done
-
-su - zeroclaw -c "/usr/local/bin/zeroclaw onboard --force --api-key '${model_access_key}' --provider '${onboard_provider}' --model '${onboard_model}'" > /dev/null 2>&1
-
-# Override gateway port to match systemd service expectation
-sed -i 's/^port = .*/port = 42617/' "${CONFIG_FILE}"
-
-chown zeroclaw:zeroclaw "${CONFIG_FILE}"
-chmod 0600 "${CONFIG_FILE}"
+[ -n "${old_histfile:-}" ] && export HISTFILE="$old_histfile"
 
 if [[ "$onboard_provider" == "custom:https://inference.do-ai.run/v1" ]]; then
+  write_gradient_env_key "$model_access_key" "$onboard_model"
+  /opt/apply-gradient-from-env.sh
+else
+  /opt/zeroclaw-run-onboard.sh "$model_access_key" "$onboard_provider" "$onboard_model"
+  umask 077
   touch "$SETUP_MARKER"
-  chown zeroclaw:zeroclaw "$SETUP_MARKER" 2>/dev/null || true
+  chmod 600 "$SETUP_MARKER"
+  systemctl enable zeroclaw
+  systemctl restart zeroclaw
 fi
 
 remove_first_login_hook
@@ -146,8 +160,6 @@ remove_first_login_hook
 echo ""
 echo "${selected_provider} key configured successfully."
 echo "Starting ZeroClaw service..."
-systemctl enable zeroclaw
-systemctl restart zeroclaw
 
 sleep 3
 

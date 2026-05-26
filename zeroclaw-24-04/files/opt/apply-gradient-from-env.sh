@@ -4,10 +4,10 @@
 set -euo pipefail
 
 ENV_FILE=/opt/zeroclaw.env
-CONFIG_FILE=/home/zeroclaw/.zeroclaw/config.toml
-SETUP_MARKER=/home/zeroclaw/.zeroclaw/gradient-configured
+SETUP_MARKER=/root/.zeroclaw_setup_complete
 DEFAULT_MODEL=kimi-k2.5
 GRADIENT_PROVIDER=custom:https://inference.do-ai.run/v1
+ALLOWED_MODELS="kimi-k2.5 minimax-m2.5 glm-5 anthropic-claude-4.5-sonnet"
 
 remove_setup_wizard_bashrc_hook() {
     [ -f /root/.bashrc ] || return 0
@@ -39,6 +39,7 @@ read_config_value() {
 
 write_env_file_kv() {
     local key="$1" val="$2" tmp="${ENV_FILE}.tmp"
+    umask 077
     touch "$ENV_FILE"
     grep -v "^${key}=" "$ENV_FILE" >"$tmp" 2>/dev/null || : >"$tmp"
     printf '%s=%q\n' "$key" "$val" >>"$tmp"
@@ -55,13 +56,25 @@ env_value_usable() {
     return 0
 }
 
+gradient_model_allowed() {
+    local m="$1" allowed
+    for allowed in $ALLOWED_MODELS; do
+        [ "$m" = "$allowed" ] && return 0
+    done
+    return 1
+}
+
 normalize_gradient_model() {
     local m="$1"
     m="${m#gradient/}"
     case "$m" in
-        '') printf '%s' "$DEFAULT_MODEL" ;;
-        *) printf '%s' "$m" ;;
+        '') m="$DEFAULT_MODEL" ;;
     esac
+    if ! gradient_model_allowed "$m"; then
+        echo "Warning: Unknown GRADIENT_MODEL '${m}'; using ${DEFAULT_MODEL}." >&2
+        m="$DEFAULT_MODEL"
+    fi
+    printf '%s' "$m"
 }
 
 redact_gradient_secrets_from_system_environment() {
@@ -87,27 +100,16 @@ PRIMARY_MODEL=$(normalize_gradient_model "$GRADIENT_MODEL")
 write_env_file_kv GRADIENT_KEY "$GRADIENT_KEY"
 write_env_file_kv GRADIENT_MODEL "$PRIMARY_MODEL"
 
-mkdir -p /home/zeroclaw/.zeroclaw
-chown zeroclaw:zeroclaw /home/zeroclaw/.zeroclaw
-
-su - zeroclaw -c "/usr/local/bin/zeroclaw onboard --force \
-  --api-key '${GRADIENT_KEY}' \
-  --provider '${GRADIENT_PROVIDER}' \
-  --model '${PRIMARY_MODEL}'" > /dev/null 2>&1
-
-if [ -f "$CONFIG_FILE" ]; then
-    sed -i 's/^port = .*/port = 42617/' "$CONFIG_FILE"
-    chown zeroclaw:zeroclaw "$CONFIG_FILE"
-    chmod 600 "$CONFIG_FILE"
-fi
+/opt/zeroclaw-run-onboard.sh "$GRADIENT_KEY" "$GRADIENT_PROVIDER" "$PRIMARY_MODEL"
 
 systemctl enable zeroclaw
 systemctl restart zeroclaw
 
 remove_setup_wizard_bashrc_hook
 redact_gradient_secrets_from_system_environment
+umask 077
 touch "$SETUP_MARKER"
-chown zeroclaw:zeroclaw "$SETUP_MARKER" 2>/dev/null || true
+chmod 600 "$SETUP_MARKER"
 
 echo "Testing connection to DigitalOcean Gradient..."
 HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
