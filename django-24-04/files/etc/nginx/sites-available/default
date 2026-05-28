@@ -19,14 +19,9 @@ server {
         alias /home/django/django_project/django_project/media;
     }
 
-    # your Django project's static files - amend as required
-    location /static {
-        alias /home/django/django_project/django_project/static;
-    }
-
-    # Proxy the static assests for the Django Admin panel
-    location /static/admin {
-       alias /usr/local/lib/python3.10/dist-packages/django/contrib/admin/static/admin/;
+    # Django static files, including admin assets collected at first boot.
+    location /static/ {
+        alias /home/django/django_project/staticfiles/;
     }
 
     location / {

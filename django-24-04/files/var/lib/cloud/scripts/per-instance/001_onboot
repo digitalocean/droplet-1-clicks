@@ -1,5 +1,6 @@
 #!/bin/bash -x
 exec > >(tee /var/log/one_click_setup.log) 2>&1
+set -e
 
 # Create the example project
 (cd /home/django &&
@@ -93,7 +94,8 @@ if [ -f "/root/.digitalocean_dbaas_credentials" ] && [ "$(sed -n "s/^db_protocol
   # If no dbaas - set local database
 else
   setuid postgres psql -U postgres -d postgres -c "CREATE USER ${DJANGO_USER} PASSWORD '${DJANGO_POSTGRESS_PASS}';"
-  setuid postgres createdb django
+  setuid postgres createdb --owner="${DJANGO_USER}" django
+  setuid postgres psql -U postgres -d django -c "GRANT ALL ON SCHEMA public TO ${DJANGO_USER};"
 fi
 
 sed -e "s/@DBPASSWORD@/${DJANGO_POSTGRESS_PASS}/" \
@@ -106,6 +108,10 @@ sed -e "s/@DBPASSWORD@/${DJANGO_POSTGRESS_PASS}/" \
 python3 "${PROJECT_DIR}/manage.py" migrate --noinput
 
 echo "from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.create_superuser('$DJANGO_USER', 'temp@example.com', '$DJANGO_USER_PASSWORD')" | python3 "${PROJECT_DIR}/manage.py" shell
+
+# Collect app and Django admin static assets into the nginx-served directory.
+python3 "${PROJECT_DIR}/manage.py" collectstatic --noinput
+chown -R django:django "${PROJECT_DIR}"
 
 # Now start up gunicorn
 systemctl enable gunicorn
