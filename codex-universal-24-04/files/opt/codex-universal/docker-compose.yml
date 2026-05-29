@@ -1,0 +1,17 @@
+name: codex-universal
+
+services:
+  dev:
+    image: ${IMAGE}
+    container_name: codex-universal
+    env_file: /opt/codex-universal/.env
+    volumes:
+      - /root/workspace:/workspace
+      - /opt/codex-universal/entrypoint-wrapper.sh:/opt/codex-universal/entrypoint-wrapper.sh:ro
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
+    security_opt:
+      - no-new-privileges:true
+    entrypoint: ["/opt/codex-universal/entrypoint-wrapper.sh"]
+    restart: unless-stopped

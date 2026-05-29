@@ -1,0 +1,81 @@
+#!/bin/bash
+
+set -e
+
+set -a
+source /etc/environment 2>/dev/null || true
+set +a
+
+echo "Configuring Codex Universal on first boot..."
+
+if [ ! -f /opt/codex-universal/.env ]; then
+    cp /opt/codex-universal/codex-universal.env /opt/codex-universal/.env
+fi
+
+chmod +x /opt/codex-universal/validate-codex-universal-env.sh
+# shellcheck source=/dev/null
+source /opt/codex-universal/validate-codex-universal-env.sh
+apply_droplet_env_overrides /opt/codex-universal/.env
+
+chmod 600 /opt/codex-universal/.env
+chmod 600 /opt/codex-universal/codex-universal.env
+mkdir -p /root/workspace
+chmod 755 /root/workspace
+
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
+
+systemctl enable codex-universal
+
+echo "Starting Codex Universal dev container (language setup may take a few minutes on first boot)..."
+if systemctl start codex-universal; then
+    echo "Codex Universal is ready."
+else
+    echo "WARNING: codex-universal.service did not start cleanly. Try: /opt/codex-universal/start-codex-universal.sh"
+fi
+
+cat > /root/codex_universal_info.txt << 'EOF'
+================================================================================
+Codex Universal 1-Click Droplet - Getting Started
+================================================================================
+
+This droplet runs OpenAI's codex-universal Docker image — a multi-language
+development environment similar to the base image used in OpenAI Codex.
+
+WORKSPACE:
+  Host path:      /root/workspace
+  Container path: /workspace
+
+ENTER THE ENVIRONMENT:
+  /opt/codex-universal/shell-codex-universal.sh
+
+HELPER COMMANDS:
+  Start:   /opt/codex-universal/start-codex-universal.sh
+  Stop:    /opt/codex-universal/stop-codex-universal.sh
+  Restart: /opt/codex-universal/restart-codex-universal.sh
+  Update:  /opt/codex-universal/update-codex-universal.sh
+  Status:  /opt/codex-universal/status-codex-universal.sh
+  Version: /opt/codex-universal/codex-universal-version.sh
+  Test:    /opt/codex-universal/test-codex-universal.sh
+
+CONFIGURE LANGUAGE RUNTIMES:
+  Edit /opt/codex-universal/.env (CODEX_ENV_* variables), then restart.
+
+  Or set droplet environment variables at create time, for example:
+    CODEX_ENV_PYTHON_VERSION=3.13
+    CODEX_ENV_NODE_VERSION=22
+
+DOCUMENTATION:
+  https://github.com/openai/codex-universal
+  https://platform.openai.com/docs/codex
+
+================================================================================
+EOF
+
+chmod 600 /root/codex_universal_info.txt
+
+echo "Codex Universal first-boot initialization complete!"
+echo "Getting started info saved to /root/codex_universal_info.txt"
