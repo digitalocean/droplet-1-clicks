@@ -55,7 +55,9 @@ ssh root@your-droplet-ip
 
 ### 3. Complete the Setup Wizard
 
-On first login, the setup wizard will prompt for your DigitalOcean Gradient model access key. To create one:
+If you passed `GRADIENT_KEY` as a droplet environment variable, OpenCode is already configured — skip to step 4.
+
+Otherwise, on first login the setup wizard will prompt for your DigitalOcean Gradient model access key. To create one:
 
 1. Go to https://cloud.digitalocean.com/gen-ai/model-access-keys
 2. Click **Create Model Access Key**
@@ -82,11 +84,13 @@ The default model is **Kimi K2.5** (`digitalocean/kimi-k2.5` via DigitalOcean Gr
 | Check version | `/opt/opencode-version.sh` |
 | Update to latest | `/opt/update-opencode.sh` |
 | Re-run setup wizard | `/opt/setup-opencode.sh` |
+| Apply Gradient from env | `/opt/apply-gradient-from-env.sh` |
 
 ### Configuration
 
 - **OpenCode config**: `/root/.config/opencode/opencode.json`
 - **Auth / API key**: `/root/.local/share/opencode/auth.json`
+- **Gradient env vars**: `/opt/opencode.env` (`GRADIENT_KEY`, `GRADIENT_MODEL`)
 - **Getting started guide**: `cat /root/opencode_info.txt`
 
 ### Inference usage (Gradient)

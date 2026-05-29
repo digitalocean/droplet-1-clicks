@@ -20,6 +20,8 @@ opencode-24-04/
     │   └── update-motd.d/
     │       └── 99-one-click         # Message of the Day
     ├── opt/
+    │   ├── apply-gradient-from-env.sh # Auto-config from GRADIENT_KEY / GRADIENT_MODEL
+    │   ├── opencode.env              # Optional Gradient env vars (see 001_onboot)
     │   ├── setup-opencode.sh       # First-login setup wizard (Gradient key)
     │   ├── update-opencode.sh      # Update to latest version
     │   └── opencode-version.sh     # Display installed version
@@ -79,15 +81,27 @@ Field testing shows **cache-related usage fields are often zero** on `https://in
 
 1. Removes SSH force-logout (allows normal login)
 2. Creates `/root/opencode_info.txt` with getting-started instructions
-3. Hooks the Gradient setup wizard (`/opt/setup-opencode.sh`) into `.bashrc` for first login
+3. If `GRADIENT_KEY` is set in droplet environment (`/etc/environment`) or `/opt/opencode.env`, applies Gradient config automatically and skips the setup wizard
+4. Otherwise hooks the Gradient setup wizard (`/opt/setup-opencode.sh`) into `.bashrc` for first login
 
 ## First Login Experience
 
-On first SSH login, the setup wizard runs and:
+If `GRADIENT_KEY` was not passed at droplet creation, on first SSH login the setup wizard runs and:
 1. Prompts the user for their DigitalOcean Gradient model access key
 2. Writes the key to `/root/.local/share/opencode/auth.json` under **`digitalocean`**
 3. Tests the connection to `https://inference.do-ai.run/v1/models`
 4. Self-removes from `.bashrc` (one-time only)
+
+### Auto-configuration from droplet environment
+
+Pass these environment variables when creating the droplet (or set them in `/opt/opencode.env` before first boot):
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `GRADIENT_KEY` | Yes | Gradient model access key from the control panel |
+| `GRADIENT_MODEL` | No | Model id, e.g. `minimax-m2.5`, `kimi-k2.5` (default: `minimax-m2.5`) |
+
+On first boot, `/opt/apply-gradient-from-env.sh` writes `/root/.local/share/opencode/auth.json`, sets the default model in `opencode.json`, and skips the interactive wizard.
 
 Pre-configured models (no separate provider key needed, all via Gradient):
 - **`digitalocean/`** (OpenAI-compatible): GPT-5.2, GPT-5, GPT-5.1 Codex Max, GPT-4.1, o3, DeepSeek R1 70B, Qwen3 32B, Llama 3.3 70B, **Kimi K2.5 (default)**, glm-5, MiniMax M2.5, Claude Opus 4.6, Opus 4.5, Sonnet 4.5, Sonnet 4

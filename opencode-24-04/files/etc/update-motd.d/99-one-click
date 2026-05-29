@@ -19,8 +19,9 @@ PRE-CONFIGURED MODELS (via DigitalOcean Gradient):
 
 GETTING STARTED:
 
-  1. On first login, the setup wizard will prompt for your Gradient
-     model access key. Create one at:
+  1. If GRADIENT_KEY was passed as a droplet environment variable, Gradient
+     is configured automatically. Otherwise, on first login the setup wizard
+     will prompt for your Gradient model access key. Create one at:
      https://cloud.digitalocean.com/gen-ai
      (API Keys > Model Access Keys)
 
