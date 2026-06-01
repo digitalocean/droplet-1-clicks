@@ -44,10 +44,16 @@ else
     fail "UFW firewall is not active"
 fi
 
-if ufw status 2>/dev/null | grep -qE '22/tcp.*LIMIT'; then
-    pass "SSH is rate-limited via UFW"
+if ufw status 2>/dev/null | grep -qE '22/tcp.*ALLOW'; then
+    pass "SSH is allowed via UFW"
 else
-    fail "SSH rate-limit rule not found in UFW"
+    fail "SSH allow rule not found in UFW"
+fi
+
+if command -v codex >/dev/null 2>&1; then
+    pass "Codex CLI is installed on the host"
+else
+    fail "Codex CLI is not installed on the host"
 fi
 
 if [ -f "$ENV_FILE" ]; then

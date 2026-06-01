@@ -6,9 +6,21 @@ APP_VERSION="${application_version:-latest}"
 IMAGE_DIGEST="${image_digest:?image_digest is required}"
 
 # SSH only — codex-universal is a terminal dev environment, not a web app
-ufw limit ssh/tcp
+ufw allow 22/tcp
 ufw --force enable
 echo "Firewall configured successfully."
+
+echo "Installing Codex CLI..."
+curl -fsSL https://chatgpt.com/codex/install.sh | sh
+
+CODEX_BIN="/root/.local/bin/codex"
+if [ -x "$CODEX_BIN" ]; then
+    ln -sf "$CODEX_BIN" /usr/local/bin/codex
+    echo "Codex CLI installed successfully: $(codex --version 2>/dev/null || echo 'version check skipped')"
+else
+    echo "Error: Codex CLI installation failed"
+    exit 1
+fi
 
 systemctl enable docker
 systemctl start docker
