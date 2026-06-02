@@ -1,0 +1,37 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's One-Click Codex Universal Droplet.
+
+This droplet runs OpenAI's codex-universal Docker image — a multi-language
+development environment with Python, Node.js, Rust, Go, Ruby, PHP, Java,
+Swift, and more. Use it to mirror the Codex cloud dev environment locally.
+
+GETTING STARTED:
+
+  1. Enter the development environment:
+     /opt/codex-universal/shell-codex-universal.sh
+
+  2. Your workspace is at /root/workspace (mounted at /workspace in the container)
+
+  3. Clone or copy your project into /root/workspace, then work inside the shell
+
+Helper Commands:
+  Start:   /opt/codex-universal/start-codex-universal.sh
+  Stop:    /opt/codex-universal/stop-codex-universal.sh
+  Restart: /opt/codex-universal/restart-codex-universal.sh
+  Update:  /opt/codex-universal/update-codex-universal.sh
+  Status:  /opt/codex-universal/status-codex-universal.sh
+  Version: /opt/codex-universal/codex-universal-version.sh
+  Test:    /opt/codex-universal/test-codex-universal.sh
+
+Configuration:  /opt/codex-universal/.env
+Documentation:  https://github.com/openai/codex-universal
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
