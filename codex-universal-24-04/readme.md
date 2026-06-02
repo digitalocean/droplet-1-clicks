@@ -13,7 +13,6 @@ codex-universal-24-04/
 ├── template.json                    # Packer build configuration
 ├── readme.md                        # This file
 ├── listing.md                       # Marketplace catalog copy
-├── SECURITY.md                      # Security audit and hardening notes
 ├── scripts/
 │   └── 010-codex-universal.sh      # Main installation script
 └── files/
@@ -91,8 +90,6 @@ Update `image_digest` in `template.json` and `IMAGE` / `IMAGE_DIGEST` in `codex-
 3. **Usage** — User runs `/opt/codex-universal/shell-codex-universal.sh` to `docker exec` into the running container
 
 ## Security
-
-See [SECURITY.md](SECURITY.md) for the full audit. Summary:
 
 - SSH-only UFW firewall
 - Image pinned by digest

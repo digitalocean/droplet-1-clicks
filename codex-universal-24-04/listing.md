@@ -146,8 +146,6 @@ The image is pinned by digest (`IMAGE` and `IMAGE_DIGEST` in `/opt/codex-univers
 - **Docker/UFW caveat:** If you add `ports:` to `docker-compose.yml`, Docker may expose those ports regardless of UFW. Keep the default compose file unchanged unless you understand the exposure.
 - Run `/opt/codex-universal/test-codex-universal.sh` to verify runtime and security checks
 
-See [SECURITY.md](SECURITY.md) for the full security audit.
-
 ## Resources
 
 - [codex-universal on GitHub](https://github.com/openai/codex-universal)
