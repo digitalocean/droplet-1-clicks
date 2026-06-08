@@ -63,6 +63,16 @@ until docker exec codex-universal ps aux 2>/dev/null | grep -q '[s]leep infinity
 done
 echo "Language runtime setup complete."
 
+echo "Cleaning package manager caches from container writable layer..."
+docker exec codex-universal bash -c '
+    rm -rf /root/.cache/pip
+    rm -rf /root/.npm/_cacache
+    rm -rf /root/.cache/go-build
+    rm -rf /root/.cargo/registry/cache
+    gem cleanup --silent 2>/dev/null || true
+    composer clear-cache 2>/dev/null || true
+'
+
 # Stop (not down) to preserve the container's writable layer in the snapshot.
 # On first boot, docker compose up restarts this stopped container rather than
 # creating a fresh one, so runtimes are already in place.
