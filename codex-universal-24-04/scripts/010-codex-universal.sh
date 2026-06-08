@@ -46,15 +46,34 @@ chmod +x /opt/codex-universal/test-codex-universal.sh
 chmod +x /etc/update-motd.d/99-one-click
 chmod +x /var/lib/cloud/scripts/per-instance/001_onboot
 
-# Temporary env for pre-pulling the pinned image during build (not shipped in snapshot)
 cp /opt/codex-universal/codex-universal.env /opt/codex-universal/.env
 chmod 600 /opt/codex-universal/.env
 
 echo "Pre-pulling ghcr.io/openai/codex-universal@${IMAGE_DIGEST} (this may take several minutes)..."
 cd /opt/codex-universal
 docker compose pull
+
+echo "Pre-warming container: running setup_universal.sh to bake language runtimes into snapshot..."
+docker compose up -d
+
+echo "Waiting for setup_universal.sh to complete (this may take several minutes)..."
+until docker exec codex-universal ps aux 2>/dev/null | grep -q '[s]leep infinity'; do
+    echo "  Still setting up language runtimes..."
+    sleep 30
+done
+echo "Language runtime setup complete."
+
+# Stop (not down) to preserve the container's writable layer in the snapshot.
+# On first boot, docker compose up restarts this stopped container rather than
+# creating a fresh one, so runtimes are already in place.
+docker compose stop
+
+# .env is not shipped in the snapshot — 001_onboot recreates it from the template.
+# Docker Compose compares env values at up-time: if the user provides no
+# CODEX_ENV_* overrides, the recreated .env is identical and the stopped
+# container is reused; if overrides differ, Compose correctly recreates it.
 rm -f /opt/codex-universal/.env
 
 systemctl enable codex-universal
 
-echo "Codex Universal installation complete. The dev container starts on first boot."
+echo "Codex Universal installation complete. Language runtimes are pre-warmed in the snapshot."
