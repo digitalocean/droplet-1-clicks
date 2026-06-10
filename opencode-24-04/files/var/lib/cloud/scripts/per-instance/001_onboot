@@ -26,6 +26,35 @@ elif ! grep -q '/opt/setup-opencode.sh' /root/.bashrc 2>/dev/null; then
     cat >> /root/.bashrc <<EOM
 /opt/setup-opencode.sh
 EOM
+
+    # Startup scripts can write GRADIENT_KEY after this script; retry after cloud-init.
+    cat > /opt/retry-apply-gradient-after-cloud-init.sh <<'EOF'
+#!/bin/bash
+set -a
+source /etc/environment 2>/dev/null || true
+set +a
+if /opt/apply-gradient-from-env.sh; then
+    sed -i '/\/opt\/setup-opencode\.sh/d' /root/.bashrc 2>/dev/null || true
+fi
+EOF
+    chmod +x /opt/retry-apply-gradient-after-cloud-init.sh
+
+    cat > /etc/systemd/system/opencode-apply-gradient.service <<'EOF'
+[Unit]
+Description=Apply OpenCode Gradient config after cloud-init user-data
+After=cloud-init.service
+ConditionPathExists=!/root/.opencode_setup_complete
+
+[Service]
+Type=oneshot
+ExecStart=/opt/retry-apply-gradient-after-cloud-init.sh
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    systemctl daemon-reload
+    systemctl enable opencode-apply-gradient.service
+    systemctl start opencode-apply-gradient.service || true
 fi
 
 # Create a getting started file for first-time users

@@ -11,6 +11,26 @@ remove_first_login_hook() {
   sed -i '/\/opt\/setup-opencode\.sh/d' /root/.bashrc 2>/dev/null || true
 }
 
+try_apply_gradient_from_env() {
+  set -a
+  # shellcheck source=/dev/null
+  source /etc/environment 2>/dev/null || true
+  set +a
+
+  if [ -x /opt/apply-gradient-from-env.sh ] && /opt/apply-gradient-from-env.sh; then
+    echo "Gradient configured from droplet environment."
+    remove_first_login_hook
+    return 0
+  fi
+
+  return 1
+}
+
+# Startup scripts may land in /etc/environment after 001_onboot; retry before prompting.
+if [ "$1" != "--force" ] && try_apply_gradient_from_env; then
+  exit 0
+fi
+
 gradient_already_configured() {
   local configured_key
 
