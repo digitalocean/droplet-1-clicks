@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 
 # Create the mean user
 useradd --home-dir /home/mean \
@@ -16,7 +17,7 @@ chown -R mean: /var/www/html
 usermod -aG sudo mean
 
 # Create mean folder
-mkdir /home/mean
+mkdir -p /home/mean
 cd /home/mean
 
 # Create express application
@@ -34,8 +35,17 @@ rm -r /etc/sample-project
 
 cd /home/mean/client && npx ng build client
 
+ANGULAR_DIST=/home/mean/client/dist/client/browser
+if [ ! -f "${ANGULAR_DIST}/index.html" ]; then
+    ANGULAR_DIST=/home/mean/client/dist/client
+fi
+if [ ! -f "${ANGULAR_DIST}/index.html" ]; then
+    echo "ERROR: Angular build output not found under /home/mean/client/dist/client" >&2
+    exit 1
+fi
+
 sudo npm install pm2@latest -g --no-optional
 
-su - mean -c "pm2 serve /home/mean/client/dist/client 3000 --name \"sample_mean_app\" "
+su - mean -c "pm2 serve ${ANGULAR_DIST} 3000 --name \"sample_mean_app\" --spa"
 sudo env "PATH=$PATH:/usr/bin" /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u mean --hp /home/mean
 su - mean -c "pm2 save"

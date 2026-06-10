@@ -34,7 +34,7 @@ On the server:
 For help and more information, visit link to 1-click
 
 ********************************************************************************
-NOTE:  This image includes version 6.0.4 of MongoDB.
+NOTE:  This image includes version 8.0.17 of MongoDB.
 To upgrade to a newer release run the following commands:
 
 sudo mv /etc/apt/sources.list.d/mongodb.list.disabled /etc/apt/sources.list.d/mongodb.list

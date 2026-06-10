@@ -2,20 +2,20 @@
 {
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
-    "image_name": "mean-22-04-snapshot-{{timestamp}}",
+    "image_name": "mean-24-04-snapshot-{{timestamp}}",
     "apt_packages": "apt-transport-https gnupg2 nginx wget curl unzip git python3-certbot-nginx",
     "application_name": "MEAN",
-    "mongo_version": "6.0.4",
-    "mongo_repo_version": "6.0",
-    "node_version": "node_19.x",
-    "application_version": ""
+    "mongo_version": "8.0.17",
+    "mongo_repo_version": "8.0",
+    "node_version": "22.x",
+    "application_version": "8.0.17"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
     {
       "type": "digitalocean",
       "api_token": "{{user `do_api_token`}}",
-      "image": "ubuntu-22-04-x64",
+      "image": "ubuntu-24-04-x64",
       "region": "nyc3",
       "size": "s-1vcpu-1gb",
       "ssh_username": "root",
@@ -36,12 +36,12 @@
     },
     {
       "type": "file",
-      "source": "mean-22-04/files/etc/",
+      "source": "mean-24-04/files/etc/",
       "destination": "/etc/"
     },
     {
       "type": "file",
-      "source": "mean-22-04/files/var/",
+      "source": "mean-24-04/files/var/",
       "destination": "/var/"
     },
     {
@@ -74,8 +74,8 @@
       ],
       "scripts": [
         "common/scripts/010-nodejs.sh",
-        "mean-22-04/scripts/011-mongodb.sh",
-        "mean-22-04/scripts/012-mean.sh",
+        "mean-24-04/scripts/011-mongodb.sh",
+        "mean-24-04/scripts/012-mean.sh",
         "common/scripts/014-ufw-http.sh",
         "common/scripts/018-force-ssh-logout.sh",
         "common/scripts/020-application-tag.sh",
