@@ -32,6 +32,11 @@
     },
     {
       "type": "file",
+      "source": "ubuntu-desktop-24-04/files/var/",
+      "destination": "/var/"
+    },
+    {
+      "type": "file",
       "source": "ubuntu-desktop-24-04/files/etc/",
       "destination": "/etc/"
     },
@@ -67,6 +72,10 @@
         "swapon /swapfile",
         "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' install {{user `apt_packages`}}",
         "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' install ubuntu-gnome-desktop",
+        "printf 'network:\\n  version: 2\\n  renderer: networkd\\n' > /etc/netplan/00-network-manager-all.yaml",
+        "chmod 600 /etc/netplan/00-network-manager-all.yaml",
+        "netplan generate",
+        "systemctl enable systemd-networkd",
         "swapoff /swapfile",
         "rm -f /swapfile",
         "apt-get -qqy clean"
