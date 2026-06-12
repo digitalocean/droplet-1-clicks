@@ -15,10 +15,3 @@ ufw allow 3389
 cat >> /root/.bashrc <<EOM
 /opt/digitalocean_desktop/setup_vnc.sh
 EOM
-
-chmod +x /var/lib/cloud/scripts/per-instance/001_onboot
-
-# Reinstall droplet-agent at boot (it is purged by the cleanup script and
-# cloud-init's reinstall is unreliable on the desktop image)
-chmod +x /opt/digitalocean_desktop/install_droplet_agent.sh
-systemctl enable droplet-agent-install
