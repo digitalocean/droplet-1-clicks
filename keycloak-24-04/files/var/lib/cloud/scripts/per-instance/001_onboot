@@ -1,0 +1,85 @@
+#!/bin/bash
+
+DB_USER=keycloak
+DB_TYPE=postgres
+DB_HOST=localhost
+DB_PORT=5432
+
+KEYSTORE_PASSWORD=$(openssl rand -hex 16)
+KEYCLOAK_ADMIN_PASSWD=$(openssl rand -hex 16)
+DB_PASS=$(openssl rand -hex 16)
+
+cat > /root/.digitalocean_passwords <<EOM
+KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWD}
+KEYCLOAK_DATABASE_PASSWORD=${DB_PASS}
+KEYSTORE_PASSWORD=${KEYSTORE_PASSWORD}
+EOM
+
+DROPLET_IP=$(hostname -I | awk '{print$1}')
+
+if [ -f "/root/.digitalocean_dbaas_credentials" ]; then
+  DB_HOST=$(sed -n "s/^db_host=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+  DB_PORT=$(sed -n "s/^db_port=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+  DB_TYPE=$(sed -n "s/^db_protocol=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+
+  DBAAS_DB_USER=$(sed -n "s/^db_username=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+  DBAAS_DB_NAME=$(sed -n "s/^db_database=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+  DBAAS_DB_PASS=$(sed -n "s/^db_password=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
+
+  # Convert postgresql into postgres
+  if [ "${DB_TYPE}" == "postgresql" ]; then
+    DB_TYPE=postgres
+  fi
+
+  # Wait for db to become available
+  while ! pg_isready -h "$DB_HOST" -p "$DB_PORT"; do
+     printf .
+     sleep 2
+  done
+
+  PGPASSWORD=${DBAAS_DB_PASS} psql -h ${DB_HOST} -p ${DB_PORT} -U ${DBAAS_DB_USER} -d ${DBAAS_DB_NAME} -c "CREATE USER keycloak PASSWORD '${DB_PASS}';" --set=sslmode=require
+  PGPASSWORD=${DBAAS_DB_PASS} psql -h ${DB_HOST} -p ${DB_PORT} -U ${DBAAS_DB_USER} -d ${DBAAS_DB_NAME} -c "CREATE DATABASE keycloak WITH ENCODING 'UTF8';" --set=sslmode=require
+  PGPASSWORD=${DBAAS_DB_PASS} psql -h ${DB_HOST} -p ${DB_PORT} -U ${DBAAS_DB_USER} -d ${DBAAS_DB_NAME} -c "GRANT ALL PRIVILEGES ON DATABASE keycloak TO keycloak;" --set=sslmode=require
+  PGPASSWORD=${DBAAS_DB_PASS} psql -h ${DB_HOST} -p ${DB_PORT} -U ${DBAAS_DB_USER} -d keycloak -c "GRANT ALL ON SCHEMA public TO keycloak;" --set=sslmode=require
+
+  systemctl stop postgresql.service
+  systemctl disable postgresql.service
+  rm -rf /etc/postgresql
+
+else
+  setuid postgres psql -U postgres -d postgres -c "CREATE USER keycloak PASSWORD '${DB_PASS}';"
+  setuid postgres createdb keycloak
+  setuid postgres psql -U postgres -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE keycloak TO keycloak;"
+  setuid postgres psql -U postgres -d keycloak -c "GRANT ALL ON SCHEMA public TO keycloak;"
+fi
+
+# Build keycloak image with randomized keystore password
+docker build --build-arg="STORE_PASS=${KEYSTORE_PASSWORD}" /var/digitalocean/. -t local-keycloak >> /var/temp.log
+
+# Run keycloak image with network mode set to host,
+# so Keycloak connects to the Postgres as localhost, not docker internal host
+docker run -d --network=host \
+  --name keycloak \
+  -e KEYCLOAK_ADMIN=admin \
+  -e KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWD} \
+  -e KC_DB=${DB_TYPE} \
+  -e KC_DB_URL=jdbc:postgresql://${DB_HOST}:${DB_PORT}/keycloak \
+  -e KC_DB_USERNAME=${DB_USER} \
+  -e KC_DB_PASSWORD=${DB_PASS} \
+  -e KC_HOSTNAME=${DROPLET_IP} \
+  local-keycloak \
+  start \
+  --https-key-store-password=${KEYSTORE_PASSWORD} \
+  --optimized >> /var/temp.log
+
+
+# Allow ports used by keycloak for redirecting
+ufw allow 8443
+ufw allow 9000
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
