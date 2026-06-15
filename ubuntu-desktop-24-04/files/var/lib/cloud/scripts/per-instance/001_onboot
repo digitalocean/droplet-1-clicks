@@ -1,8 +1,0 @@
-#!/bin/bash
-
-# Install droplet-agent if it was purged during image build.
-# The droplet-agent-install systemd service is the primary mechanism;
-# this is a fallback in case the service was not enabled.
-if [ ! -x /opt/digitalocean/bin/droplet-agent ]; then
-    /opt/digitalocean_desktop/install_droplet_agent.sh
-fi
