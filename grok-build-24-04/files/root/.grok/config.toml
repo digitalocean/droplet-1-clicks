@@ -1,0 +1,220 @@
+# Grok Build configuration
+#
+# Pre-configured for DigitalOcean Gradient serverless inference
+# (https://inference.do-ai.run/v1, OpenAI-compatible). Every Gradient model
+# entry authenticates with a single Gradient model access key exported as the
+# MODEL_ACCESS_KEY environment variable.
+#
+# Provide the key via the droplet environment (GRADIENT_KEY), /opt/grok-build.env,
+# or the first-login setup wizard (/opt/setup-grok-build.sh). The wizard also
+# lets you pick the default model from a list. Switch any time in the TUI with
+# /model, or headlessly with: grok -p "..." -m <alias>
+#
+# The default model is set by /opt/apply-gradient-from-env.sh from
+# GRADIENT_MODEL / GRADIENT_ROUTER. The static default below is gpt-5-5.
+#
+# Model IDs reflect the DigitalOcean serverless catalog. List the live catalog:
+#   curl -s -H "Authorization: Bearer $MODEL_ACCESS_KEY" \
+#     https://inference.do-ai.run/v1/models | jq -r '.data[].id'
+
+[models]
+default = "gpt-5-5"
+
+# --- xAI native model (used when you sign in with an xAI account or set
+# XAI_API_KEY instead of a Gradient key). The setup wizard switches the default
+# to this entry when you pick the xAI path. ---
+[model.grok-build]
+model = "grok-build-0.1"
+base_url = "https://api.x.ai/v1"
+name = "Grok Build 0.1 (xAI)"
+env_key = "XAI_API_KEY"
+
+# === DigitalOcean Gradient: OpenAI models ===
+
+[model.gpt-5-5]
+model = "openai-gpt-5.5"
+base_url = "https://inference.do-ai.run/v1"
+name = "GPT-5.5 (DigitalOcean Gradient)"
+env_key = "MODEL_ACCESS_KEY"
+
+[model.gpt-5-4]
+model = "openai-gpt-5.4"
+base_url = "https://inference.do-ai.run/v1"
+name = "GPT-5.4 (DigitalOcean Gradient)"
+env_key = "MODEL_ACCESS_KEY"
+
+[model.gpt-5-3-codex]
+model = "openai-gpt-5.3-codex"
+base_url = "https://inference.do-ai.run/v1"
+name = "GPT-5.3 Codex (DigitalOcean Gradient)"
+env_key = "MODEL_ACCESS_KEY"
+
+[model.gpt-5-2]
+model = "openai-gpt-5.2"
+base_url = "https://inference.do-ai.run/v1"
+name = "GPT-5.2 (DigitalOcean Gradient)"
+env_key = "MODEL_ACCESS_KEY"
+
+[model.gpt-5-1-codex-max]
+model = "openai-gpt-5.1-codex-max"
+base_url = "https://inference.do-ai.run/v1"
+name = "GPT-5.1 Codex Max (DigitalOcean Gradient)"
+env_key = "MODEL_ACCESS_KEY"
+
+[model.gpt-5]
+model = "openai-gpt-5"
+base_url = "https://inference.do-ai.run/v1"
+name = "GPT-5 (DigitalOcean Gradient)"
+env_key = "MODEL_ACCESS_KEY"
+
+[model.gpt-4-1]
+model = "openai-gpt-4.1"
+base_url = "https://inference.do-ai.run/v1"
+name = "GPT-4.1 (DigitalOcean Gradient)"
+env_key = "MODEL_ACCESS_KEY"
+
+# === DigitalOcean Gradient: Anthropic models ===
+
+[model.claude-opus-4-8]
+model = "anthropic-claude-opus-4.8"
+base_url = "https://inference.do-ai.run/v1"
+name = "Claude Opus 4.8 (DigitalOcean Gradient)"
+env_key = "MODEL_ACCESS_KEY"
+
+[model.claude-opus-4-6]
+model = "anthropic-claude-opus-4.6"
+base_url = "https://inference.do-ai.run/v1"
+name = "Claude Opus 4.6 (DigitalOcean Gradient)"
+env_key = "MODEL_ACCESS_KEY"
+
+[model.claude-sonnet-4-6]
+model = "anthropic-claude-4.6-sonnet"
+base_url = "https://inference.do-ai.run/v1"
+name = "Claude Sonnet 4.6 (DigitalOcean Gradient)"
+env_key = "MODEL_ACCESS_KEY"
+
+[model.claude-sonnet-4-5]
+model = "anthropic-claude-4.5-sonnet"
+base_url = "https://inference.do-ai.run/v1"
+name = "Claude Sonnet 4.5 (DigitalOcean Gradient)"
+env_key = "MODEL_ACCESS_KEY"
+
+[model.claude-haiku-4-5]
+model = "anthropic-claude-haiku-4.5"
+base_url = "https://inference.do-ai.run/v1"
+name = "Claude Haiku 4.5 (DigitalOcean Gradient)"
+env_key = "MODEL_ACCESS_KEY"
+
+# === DigitalOcean Gradient: open / DO-hosted models ===
+
+[model.deepseek-v4-pro]
+model = "deepseek-v4-pro"
+base_url = "https://inference.do-ai.run/v1"
+name = "DeepSeek V4 Pro (DigitalOcean Gradient)"
+env_key = "MODEL_ACCESS_KEY"
+
+[model.deepseek-4-flash]
+model = "deepseek-4-flash"
+base_url = "https://inference.do-ai.run/v1"
+name = "DeepSeek 4 Flash (DigitalOcean Gradient)"
+env_key = "MODEL_ACCESS_KEY"
+
+[model.kimi-k2-6]
+model = "kimi-k2.6"
+base_url = "https://inference.do-ai.run/v1"
+name = "Kimi K2.6 (DigitalOcean Gradient)"
+env_key = "MODEL_ACCESS_KEY"
+
+[model.minimax-m2-5]
+model = "minimax-m2.5"
+base_url = "https://inference.do-ai.run/v1"
+name = "MiniMax M2.5 (DigitalOcean Gradient)"
+env_key = "MODEL_ACCESS_KEY"
+
+[model.glm-5]
+model = "glm-5"
+base_url = "https://inference.do-ai.run/v1"
+name = "GLM-5 (DigitalOcean Gradient)"
+env_key = "MODEL_ACCESS_KEY"
+
+[model.qwen3-coder-flash]
+model = "qwen3-coder-flash"
+base_url = "https://inference.do-ai.run/v1"
+name = "Qwen3 Coder Flash (DigitalOcean Gradient)"
+env_key = "MODEL_ACCESS_KEY"
+
+[model.qwen3-5]
+model = "qwen3.5-397b-a17b"
+base_url = "https://inference.do-ai.run/v1"
+name = "Qwen3.5 397B (DigitalOcean Gradient)"
+env_key = "MODEL_ACCESS_KEY"
+
+[model.llama-4-maverick]
+model = "llama-4-maverick"
+base_url = "https://inference.do-ai.run/v1"
+name = "Llama 4 Maverick (DigitalOcean Gradient)"
+env_key = "MODEL_ACCESS_KEY"
+
+[model.nemotron-3-super-120b]
+model = "nvidia-nemotron-3-super-120b"
+base_url = "https://inference.do-ai.run/v1"
+name = "NVIDIA Nemotron 3 Super 120B (DigitalOcean Gradient)"
+env_key = "MODEL_ACCESS_KEY"
+
+# === DigitalOcean Intelligent Inference Router ===
+# Create a router in the DigitalOcean control panel (Gradient > Inference >
+# Routers) and attach it to the SAME model access key you use for the serverless
+# models above. The router then authenticates with that same MODEL_ACCESS_KEY --
+# you only need to supply the router's NAME. Set GRADIENT_ROUTER=<router-name> in
+# the droplet environment / /opt/grok-build.env, or pick the router option in the
+# setup wizard. That rewrites the "model" below to "router:<router-name>" and
+# makes this the default. The router classifies each prompt and picks the
+# best-fit model.
+[model.router]
+model = "router:REPLACE_WITH_ROUTER_NAME"
+base_url = "https://inference.do-ai.run/v1"
+name = "DigitalOcean Intelligent Inference Router"
+env_key = "MODEL_ACCESS_KEY"
+
+# ============================================================================
+# Bring your own model provider
+# ----------------------------------------------------------------------------
+# Grok Build works with any OpenAI-compatible endpoint. To add one yourself:
+#
+#   1. Uncomment one of the [model.<alias>] blocks below (or add your own).
+#      Each entry needs: model (the provider's model id), base_url (the
+#      provider's OpenAI-compatible URL), name (display label), and env_key
+#      (the environment variable Grok reads the API key from).
+#
+#   2. Export the API key named by env_key so every login shell sees it, e.g.:
+#        echo 'export OPENAI_API_KEY="sk-..."' >> /etc/profile.d/grok-build-key.sh
+#        chmod 600 /etc/profile.d/grok-build-key.sh
+#      (then re-login, or `source /etc/profile.d/grok-build-key.sh`)
+#
+#   3. Use it without changing the default:   grok -m <alias>
+#      ...or make it the default by setting `default = "<alias>"` under [models]
+#      at the top of this file.
+#
+#   Verify what Grok loaded with:  grok inspect
+#
+# --- OpenAI (direct) ---
+# [model.openai-gpt-5-5]
+# model = "gpt-5.5"
+# base_url = "https://api.openai.com/v1"
+# name = "GPT-5.5 (OpenAI)"
+# env_key = "OPENAI_API_KEY"
+#
+# --- xAI (direct, your own xAI API key) ---
+# [model.xai-grok-build]
+# model = "grok-build-0.1"
+# base_url = "https://api.x.ai/v1"
+# name = "Grok Build 0.1 (xAI direct)"
+# env_key = "XAI_API_KEY"
+#
+# --- Anthropic (via its OpenAI-compatible endpoint) ---
+# [model.anthropic-opus]
+# model = "claude-opus-4-6"
+# base_url = "https://api.anthropic.com/v1"
+# name = "Claude Opus 4.6 (Anthropic)"
+# env_key = "ANTHROPIC_API_KEY"
+# ============================================================================

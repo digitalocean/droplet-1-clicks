@@ -1,0 +1,157 @@
+#!/bin/bash
+
+set -e
+
+set -a
+source /etc/environment 2>/dev/null || true
+set +a
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
+
+# Ensure Grok Build directory exists
+mkdir -p /root/.grok
+
+chmod +x /opt/apply-gradient-from-env.sh
+
+CONFIGURED=0
+if /opt/apply-gradient-from-env.sh; then
+    CONFIGURED=1
+    echo "Grok Build pre-configured from droplet environment."
+else
+    # Hook the setup wizard + a permanent key loader into .bashrc. Both lines
+    # are present from the start, so on first login the shell runs the wizard
+    # (which writes the key to /etc/profile.d/grok-build-key.sh), then the very
+    # next line sources that key into the live session -- so `grok` works
+    # immediately after setup, and in every future shell (login + non-login).
+    if ! grep -q '/opt/setup-grok-build.sh' /root/.bashrc 2>/dev/null; then
+        cat >> /root/.bashrc <<'EOM'
+
+/opt/setup-grok-build.sh --autostart
+# grok-build-24-04-key-env BEGIN
+[ -f /etc/profile.d/grok-build-key.sh ] && . /etc/profile.d/grok-build-key.sh
+# grok-build-24-04-key-env END
+EOM
+    fi
+fi
+
+# Create a getting started file for first-time users
+if [ "$CONFIGURED" -eq 1 ]; then
+    cat > /root/grok_build_info.txt << 'EOF'
+================================================================================
+Grok Build 1-Click Droplet - Getting Started
+================================================================================
+
+Grok Build is xAI's terminal-based coding agent, pre-configured to run on
+DigitalOcean Gradient serverless inference (https://inference.do-ai.run/v1).
+
+Authentication was configured automatically from the droplet environment
+(GRADIENT_KEY / XAI_API_KEY) or /opt/grok-build.env.
+
+PRE-CONFIGURED MODELS (DigitalOcean Gradient, default GPT-5.5):
+
+  gpt-5-5 (default), gpt-5-4, gpt-5-3-codex, gpt-5-2, gpt-5-1-codex-max,
+  gpt-5, gpt-4-1, claude-opus-4-8, claude-opus-4-6, claude-sonnet-4-6,
+  claude-haiku-4-5, deepseek-v4-pro, deepseek-4-flash, kimi-k2-6,
+  minimax-m2-5, glm-5, qwen3-coder-flash, qwen3-5, llama-4-maverick,
+  nemotron-3-super-120b, router
+
+  List the live catalog:
+    curl -s -H "Authorization: Bearer $MODEL_ACCESS_KEY" \
+      https://inference.do-ai.run/v1/models | jq -r '.data[].id'
+
+NEXT STEPS:
+
+1. Run Grok Build:
+   cd /path/to/your/project
+   grok
+
+2. Headless / scripting:
+   grok -p "Explain this codebase"
+   grok -p "Review this diff" --output-format json --always-approve
+
+3. Switch models:
+   /model inside the TUI, or:  grok -p "..." -m claude-opus-4-6
+
+4. Intelligent Inference Router:
+   Create a router under Gradient > Inference > Routers attached to your
+   Gradient key, set GRADIENT_ROUTER=<name> in /opt/grok-build.env, then run
+   /opt/apply-gradient-from-env.sh (routes via model "router:<name>", same key).
+
+Helper commands:
+   Check version:     /opt/grok-build-version.sh
+   Update Grok Build: /opt/update-grok-build.sh
+   Re-run setup:      /opt/setup-grok-build.sh
+   xAI device login:  /opt/grok-login.sh   (browser-free)
+
+Configuration: /root/.grok/config.toml
+Documentation: https://docs.x.ai/build/overview
+
+================================================================================
+EOF
+else
+    cat > /root/grok_build_info.txt << 'EOF'
+================================================================================
+Grok Build 1-Click Droplet - Getting Started
+================================================================================
+
+Grok Build is xAI's terminal-based coding agent, pre-configured to run on
+DigitalOcean Gradient serverless inference (https://inference.do-ai.run/v1).
+
+PRE-CONFIGURED MODELS (DigitalOcean Gradient, default GPT-5.5):
+
+  gpt-5-5 (default), gpt-5-4, gpt-5-3-codex, gpt-5-2, gpt-5-1-codex-max,
+  gpt-5, gpt-4-1, claude-opus-4-8, claude-opus-4-6, claude-sonnet-4-6,
+  claude-haiku-4-5, deepseek-v4-pro, deepseek-4-flash, kimi-k2-6,
+  minimax-m2-5, glm-5, qwen3-coder-flash, qwen3-5, llama-4-maverick,
+  nemotron-3-super-120b, router
+
+NEXT STEPS:
+
+1. Authenticate. The setup wizard runs automatically on first login,
+   prompts for a DigitalOcean Gradient model access key, and lets you pick
+   a default model from a list (or a router). Create a key at:
+     https://cloud.digitalocean.com/gen-ai
+     (API Keys > Model Access Keys)
+
+   With a Gradient key, Grok uses the API directly - no browser sign-in.
+
+   Or pre-configure via environment / /opt/grok-build.env:
+     - GRADIENT_KEY + optional GRADIENT_MODEL / GRADIENT_ROUTER
+     - or XAI_API_KEY (xAI native)
+   Prefer your own xAI account? No browser here - use device-code auth:
+     /opt/grok-login.sh   (or: grok login --device-auth)
+
+2. Run Grok Build:
+   cd /path/to/your/project
+   grok
+
+3. Switch models:
+   /model inside the TUI, or:  grok -p "..." -m claude-opus-4-6
+
+4. Intelligent Inference Router:
+   Create a router under Gradient > Inference > Routers attached to your
+   Gradient key, set GRADIENT_ROUTER=<name>, and re-run /opt/setup-grok-build.sh
+   (the router uses the same model access key).
+
+Helper commands:
+   Check version:     /opt/grok-build-version.sh
+   Update Grok Build: /opt/update-grok-build.sh
+   Re-run setup:      /opt/setup-grok-build.sh
+   xAI device login:  /opt/grok-login.sh   (browser-free)
+
+Configuration: /root/.grok/config.toml
+Documentation: https://docs.x.ai/build/overview
+
+================================================================================
+EOF
+fi
+
+chmod 600 /root/grok_build_info.txt
+
+echo "Grok Build first-boot initialization complete!"
+echo "Getting started info saved to /root/grok_build_info.txt"
