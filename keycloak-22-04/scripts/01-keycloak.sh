@@ -1,9 +1,7 @@
 #!/bin/bash
 
-# non-interactive install
 export DEBIAN_FRONTEND=noninteractive
 
-sudo apt -y install postgresql docker.io docker-compose super
 systemctl start docker
 systemctl enable docker
 
