@@ -5,16 +5,56 @@
 
 SETUP_MARKER="/root/.opencode_setup_complete"
 CONFIG_FILE="/root/.config/opencode/opencode.json"
+AUTH_FILE="/root/.local/share/opencode/auth.json"
 
-# Allow re-running manually; only auto-skip when called from .bashrc
-if [ -f "$SETUP_MARKER" ] && [ "$1" != "--force" ]; then
-  # Check if we were invoked from .bashrc (non-interactive re-trigger)
-  # If the user ran this script directly, always allow it
-  if grep -q '/opt/setup-opencode.sh' /root/.bashrc 2>/dev/null; then
-    exit 0
+remove_first_login_hook() {
+  sed -i '/\/opt\/setup-opencode\.sh/d' /root/.bashrc 2>/dev/null || true
+}
+
+try_apply_gradient_from_env() {
+  set -a
+  # shellcheck source=/dev/null
+  source /etc/environment 2>/dev/null || true
+  set +a
+
+  if [ -x /opt/apply-gradient-from-env.sh ] && /opt/apply-gradient-from-env.sh; then
+    echo "Gradient configured from droplet environment."
+    remove_first_login_hook
+    return 0
   fi
-  # Script was run manually -- remove the marker and continue
-  rm -f "$SETUP_MARKER"
+
+  return 1
+}
+
+# Startup scripts may land in /etc/environment after 001_onboot; retry before prompting.
+if [ "$1" != "--force" ] && try_apply_gradient_from_env; then
+  exit 0
+fi
+
+gradient_already_configured() {
+  local configured_key
+
+  if [ -f "$SETUP_MARKER" ]; then
+    echo "OpenCode setup is already complete"
+    return 0
+  fi
+
+  if [ -f "$AUTH_FILE" ]; then
+    configured_key=$(jq -r '.digitalocean.key // empty' "$AUTH_FILE" 2>/dev/null || true)
+    if [ -n "$configured_key" ] && [ "$configured_key" != "null" ]; then
+      echo "DigitalOcean Gradient is already configured"
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
+configured_reason=$(gradient_already_configured || true)
+if [ -n "$configured_reason" ] && [ "$1" != "--force" ]; then
+  echo "${configured_reason}. Skipping setup wizard."
+  remove_first_login_hook
+  exit 0
 fi
 
 echo ""
@@ -86,8 +126,7 @@ fi
 # Mark setup as complete
 touch "$SETUP_MARKER"
 
-# Remove setup hook from .bashrc
-sed -i '/\/opt\/setup-opencode.sh/d' /root/.bashrc
+remove_first_login_hook
 
 echo ""
 echo "========================================================================"

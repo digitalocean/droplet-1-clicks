@@ -2,6 +2,10 @@
 
 set -e
 
+set -a
+source /etc/environment 2>/dev/null || true
+set +a
+
 # Remove the ssh force logout command
 sed -e '/Match User root/d' \
     -e '/.*ForceCommand.*droplet.*/d' \
@@ -13,10 +17,45 @@ systemctl restart ssh
 mkdir -p /root/.config/opencode
 mkdir -p /root/.local/share/opencode
 
-# Hook setup wizard to run on first SSH login
-cat >> /root/.bashrc <<EOM
+chmod +x /opt/apply-gradient-from-env.sh
+
+if /opt/apply-gradient-from-env.sh; then
+    echo "Gradient pre-configured from droplet environment."
+    echo "Skipping setup wizard on first login."
+elif ! grep -q '/opt/setup-opencode.sh' /root/.bashrc 2>/dev/null; then
+    cat >> /root/.bashrc <<EOM
 /opt/setup-opencode.sh
 EOM
+
+    # Startup scripts can write GRADIENT_KEY after this script; retry after cloud-init.
+    cat > /opt/retry-apply-gradient-after-cloud-init.sh <<'EOF'
+#!/bin/bash
+set -a
+source /etc/environment 2>/dev/null || true
+set +a
+if /opt/apply-gradient-from-env.sh; then
+    sed -i '/\/opt\/setup-opencode\.sh/d' /root/.bashrc 2>/dev/null || true
+fi
+EOF
+    chmod +x /opt/retry-apply-gradient-after-cloud-init.sh
+
+    cat > /etc/systemd/system/opencode-apply-gradient.service <<'EOF'
+[Unit]
+Description=Apply OpenCode Gradient config after cloud-init user-data
+After=cloud-init.service
+ConditionPathExists=!/root/.opencode_setup_complete
+
+[Service]
+Type=oneshot
+ExecStart=/opt/retry-apply-gradient-after-cloud-init.sh
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    systemctl daemon-reload
+    systemctl enable opencode-apply-gradient.service
+    systemctl start opencode-apply-gradient.service || true
+fi
 
 # Create a getting started file for first-time users
 cat > /root/opencode_info.txt << 'EOF'
@@ -29,15 +68,21 @@ use DigitalOcean Gradient AI for inference.
 
 PRE-CONFIGURED MODELS (via DigitalOcean Gradient):
 
-  digitalocean/ (default: Kimi K2.5):
+  digitalocean/ (default: MiniMax M2.5):
     GPT-5.2, GPT-5, GPT-5.1 Codex Max, GPT-4.1, o3, DeepSeek R1 70B, Qwen3 32B,
     Llama 3.3 70B, Kimi K2.5, glm-5, MiniMax M2.5,
     Claude Opus 4.6, Opus 4.5, Sonnet 4.5, Sonnet 4
 
+AUTO-CONFIGURATION (optional):
+
+  If GRADIENT_KEY (and optionally GRADIENT_MODEL) are passed as droplet
+  environment variables, OpenCode configures Gradient automatically on first
+  boot and skips the interactive setup wizard.
+
 NEXT STEPS:
 
-1. The setup wizard will run on first login to configure your
-   Gradient model access key. To create one:
+1. If Gradient was not auto-configured, the setup wizard runs on first login
+   to configure your Gradient model access key. To create one:
      https://cloud.digitalocean.com/gen-ai
      Navigate to API Keys > Model Access Keys
 
@@ -55,6 +100,7 @@ Other providers: use /connect inside OpenCode to add your own API keys
 
 Configuration:  /root/.config/opencode/opencode.json
 Auth:           /root/.local/share/opencode/auth.json
+Gradient env:   /opt/opencode.env
 
 For documentation: https://opencode.ai/docs
 
