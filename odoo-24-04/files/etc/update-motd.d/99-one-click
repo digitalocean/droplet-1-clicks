@@ -5,6 +5,9 @@
 if [ -f /root/.digitalocean_passwords ]; then
     . /root/.digitalocean_passwords
 fi
+if [ -f /etc/default/odoo-1click ]; then
+    . /etc/default/odoo-1click
+fi
 
 myip=$(hostname -I | awk '{print$1}')
 cat <<EOF
@@ -22,7 +25,8 @@ In a web browser, you can view:
 
 On the server:
   * The passwords are saved in /root/.digitalocean_passwords
-  * The config for Odoo is saved in /etc/odoo18.conf
+  * The config for Odoo is saved in ${ODOO_CONFIG}
+  * Odoo version: ${ODOO_VERSION}
 
 For help and more information, visit https://marketplace.digitalocean.com/apps/erp-odoo
 

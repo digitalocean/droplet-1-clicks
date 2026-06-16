@@ -1,0 +1,13 @@
+[Unit]
+Description=Odoo
+Requires=postgresql.service
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+SyslogIdentifier=__ODOO_USER__
+PermissionsStartOnly=true
+User=__ODOO_USER__
+Group=__ODOO_USER__
+ExecStart=__ODOO_VENV__/bin/python3 __ODOO_SOURCE__/odoo-bin -c __ODOO_CONFIG__
+StandardOutput=journal+console

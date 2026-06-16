@@ -1,0 +1,7 @@
+[options]
+db_host = False
+db_port = False
+db_user = __ODOO_USER__
+db_password = False
+addons_path = __ODOO_SOURCE__/addons,__ODOO_CUSTOM_ADDONS__
+http_port = 8069
