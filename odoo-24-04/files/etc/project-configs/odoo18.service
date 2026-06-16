@@ -1,0 +1,13 @@
+[Unit]
+Description=Odoo18
+Requires=postgresql.service
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+SyslogIdentifier=odoo18
+PermissionsStartOnly=true
+User=odoo18
+Group=odoo18
+ExecStart=/opt/odoo18/odoo18-venv/bin/python3 /opt/odoo18/odoo18/odoo-bin -c /etc/odoo18.conf
+StandardOutput=journal+console
