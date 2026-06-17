@@ -1,7 +1,7 @@
 .PHONY: build-% update-scripts validate-%
 
 %:
-	./scripts/create-1-click.sh $* $*-20-04
+	./scripts/create-1-click.sh $* $*
 
 build-%:
 	packer build $*/template.json
