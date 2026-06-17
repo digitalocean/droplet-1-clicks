@@ -8,7 +8,7 @@
     {
       "type": "digitalocean",
       "api_token": "{{user `token`}}",
-      "image": "ubuntu-18-04-x64",
+      "image": "ubuntu-24-04-x64",
       "region": "nyc3",
       "size": "s-1vcpu-1gb",
       "ssh_username": "root",
@@ -18,12 +18,17 @@
   "provisioners": [
     {
       "type": "file",
-      "source": "files/etc/",
+      "source": "folding-at-home-24-04/files/etc/",
       "destination": "/etc/"
     },
     {
       "type": "file",
-      "source": "files/var/",
+      "source": "folding-at-home-24-04/files/var/",
+      "destination": "/var/"
+    },
+    {
+      "type": "file",
+      "source": "common/files/var/",
       "destination": "/var/"
     },
     {
@@ -48,16 +53,17 @@
         "echo \"fahclient fahclient/team string $TEAM\" | sudo debconf-set-selections",
         "echo \"fahclient fahclient/passkey string $PASSKEY\" | sudo debconf-set-selections",
         "echo \"fahclient fahclient/user string $USER\" | sudo debconf-set-selections",
-        "wget https://download.foldingathome.org/releases/public/release/fahclient/debian-testing-64bit/v7.4/fahclient_7.4.4_amd64.deb",
-        "dpkg -i --force-depends fahclient_7.4.4_amd64.deb",
-        "rm fahclient_7.4.4_amd64.deb"
+        "wget https://download.foldingathome.org/releases/public/fah-client/debian-10-64bit/release/fah-client_8.5.5_amd64.deb",
+        "dpkg -i --force-depends fah-client_8.5.5_amd64.deb",
+        "rm fah-client_8.5.5_amd64.deb"
       ]
     },
     {
       "type": "shell",
-      "scripts": [
-        "scripts/90-cleanup.sh",
-        "scripts/99-img_check.sh"
+      "scripts": [        
+        "common/scripts/018-force-ssh-logout.sh",
+        "common/scripts/020-application-tag.sh",
+        "common/scripts/900-cleanup.sh"
       ]
     }
   ]
