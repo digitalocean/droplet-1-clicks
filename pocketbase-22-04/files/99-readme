@@ -1,0 +1,23 @@
+#!/bin/sh
+cat <<EOF
+-----------------------------------------------------------
+Welcome to PocketBase!
+
+Access the PocketBase web UI with http(s)://your.ip.address/_/
+
+This installation of PocketBase uses a reverse proxy from Caddy to PB, 
+and is managed with systemctl:
+
+systemctl restart pocketbase  # Restart PocketBase
+systemctl stop pocketbase     # Stop the PocketBase server
+systemctl start pocketbase    # Start the PocketBase server
+
+To add a custom domain, update the reverse proxy here:
+/etc/caddy/Caddyfile
+
+Getting Help:
+
+PocketBase on GitHub: https://github.com/pocketbase/pocketbase
+PocketBase Support: https://github.com/pocketbase/pocketbase/discussions
+
+EOF

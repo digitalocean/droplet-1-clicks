@@ -1,0 +1,30 @@
+#!/bin/bash
+
+# generate secrets unless they exist
+if [ ! -f /root/.matrix-secrets ]; then
+  synapse_postgres_pass=$(openssl rand -hex 24)
+  registration_shared_secret=$(openssl rand -hex 24)
+  macaroon_secret_key=$(openssl rand -hex 24)
+  cat > /root/.matrix-secrets <<EOF
+synapse_postgres_pass: ${synapse_postgres_pass}
+registration_shared_secret: ${registration_shared_secret}
+macaroon_secret_key: ${macaroon_secret_key}
+EOF
+fi
+
+# configure postgres
+sudo -u postgres psql -c "ALTER USER synapse_user PASSWORD '$synapse_postgres_pass';"
+
+# configure synapse
+sed "s/POSTGRES_PASSWORD/$synapse_postgres_pass/g" -i /etc/matrix-synapse/homeserver.yaml
+sed "s/REGISTRATION_SHARED_SECRET/$registration_shared_secret/g" -i /etc/matrix-synapse/homeserver.yaml
+sed "s/MACAROON_SECRET_KEY/$macaroon_secret_key/g" -i /etc/matrix-synapse/homeserver.yaml
+
+# 
+
+# remove ssh lockout
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh

@@ -1,0 +1,20 @@
+matrix.USERDOMAIN {
+  reverse_proxy /_matrix/* http://localhost:8008
+  reverse_proxy /_synapse/client/* http://localhost:8008
+}
+
+USERDOMAIN:8448 {
+  reverse_proxy http://localhost:8008
+}
+
+chat.USERDOMAIN {
+  header {
+        X-Frame-Options "SAMEORIGIN"
+        X-XSS-Protection "1; mode=block"
+        X-Content-Type-Options "nosniff"
+        X-Robots-Tag "noindex, noarchive, nofollow"
+  }
+
+  root * /opt/element
+  file_server
+}

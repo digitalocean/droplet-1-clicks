@@ -1,0 +1,64 @@
+{
+  "variables": {
+    "token": "{{env `DIGITALOCEAN_TOKEN`}}",
+    "image_name": "folding-at-home-{{timestamp}}",
+    "apt_packages": ""
+  },
+  "builders": [
+    {
+      "type": "digitalocean",
+      "api_token": "{{user `token`}}",
+      "image": "ubuntu-18-04-x64",
+      "region": "nyc3",
+      "size": "s-1vcpu-1gb",
+      "ssh_username": "root",
+      "snapshot_name": "{{user `image_name`}}"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "file",
+      "source": "files/etc/",
+      "destination": "/etc/"
+    },
+    {
+      "type": "file",
+      "source": "files/var/",
+      "destination": "/var/"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "cloud-init status --wait",
+        "apt -qqy update",
+        "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' full-upgrade",
+        "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' install {{user `apt_packages`}}"
+      ]
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "export USER=Anonymous",
+        "export TEAM=0",
+        "export PASSKEY=",
+        "export POWER=medium",
+        "export AUTOSTART=true",
+        "echo \"fahclient fahclient/autostart boolean $AUTOSTART\" | sudo debconf-set-selections",
+        "echo \"fahclient fahclient/power select $POWER\" | sudo debconf-set-selections",
+        "echo \"fahclient fahclient/team string $TEAM\" | sudo debconf-set-selections",
+        "echo \"fahclient fahclient/passkey string $PASSKEY\" | sudo debconf-set-selections",
+        "echo \"fahclient fahclient/user string $USER\" | sudo debconf-set-selections",
+        "wget https://download.foldingathome.org/releases/public/release/fahclient/debian-testing-64bit/v7.4/fahclient_7.4.4_amd64.deb",
+        "dpkg -i --force-depends fahclient_7.4.4_amd64.deb",
+        "rm fahclient_7.4.4_amd64.deb"
+      ]
+    },
+    {
+      "type": "shell",
+      "scripts": [
+        "scripts/90-cleanup.sh",
+        "scripts/99-img_check.sh"
+      ]
+    }
+  ]
+}
