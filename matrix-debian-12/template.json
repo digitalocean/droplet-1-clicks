@@ -49,34 +49,34 @@
         "ELEMENT_VERSION={{user `element_version`}}"
       ],
       "scripts": [
-        "scripts/0-postgres",
-        "scripts/1-matrix",
-        "scripts/2-firewall",
-        "scripts/3-ssh",
-        "scripts/4-caddy",
-        "scripts/5-element",
-        "scripts/8-cleanup",
-        "scripts/9-check"
+        "matrix-debian-12/scripts/0-postgres",
+        "matrix-debian-12/scripts/1-matrix",
+        "matrix-debian-12/scripts/2-firewall",
+        "matrix-debian-12/scripts/3-ssh",
+        "matrix-debian-12/scripts/4-caddy",
+        "matrix-debian-12/scripts/5-element",
+        "matrix-debian-12/scripts/8-cleanup",
+        "matrix-debian-12/scripts/9-check"
       ]
     },
     {
       "type": "file",
-      "source": "files/etc/",
+      "source": "matrix-debian-12/files/etc/",
       "destination": "/etc/"
     },
     {
       "type": "file",
-      "source": "files/var/",
+      "source": "matrix-debian-12/files/var/",
       "destination": "/var/"
     },
     {
       "type": "file",
-      "source": "files/root/",
+      "source": "matrix-debian-12/files/root/",
       "destination": "/root/"
     },
     {
       "type": "file",
-      "source": "files/opt/",
+      "source": "matrix-debian-12/files/opt/",
       "destination": "/opt/"
     }
   ]
