@@ -8,9 +8,9 @@ cat <<EOF
 
 Welcome to your new folding@home droplet! For information on how to use the
 client, check out:
-https://foldingathome.org/support/faq/installation-guides/linux/
-https://foldingathome.org/support/faq/installation-guides/linux/command-line-options/
-https://foldingathome.org/support/faq/installation-guides/configuration-guide/
+https://foldingathome.org/faq
+https://github.com/FoldingAtHome/fah-client-bastet
+https://foldingforum.org/
 
 Currently, folding@home is running as an anonymous donor (Anonymous), for the
 default team (0), with no passkey, and at medium power. To configure this:
