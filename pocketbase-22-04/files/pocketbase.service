@@ -1,0 +1,17 @@
+
+[Unit]
+Description = pocketbase
+
+[Service]
+Type           = simple
+User           = root
+Group          = root
+LimitNOFILE    = 4096
+Restart        = always
+RestartSec     = 5s
+StandardOutput = append:/var/log/errors.log
+StandardError  = append:/var/log/errors.log
+ExecStart      = /opt/pocketbase/pocketbase serve
+
+[Install]
+WantedBy = multi-user.target
