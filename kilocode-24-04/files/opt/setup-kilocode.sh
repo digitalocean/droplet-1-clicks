@@ -35,8 +35,7 @@ echo ""
 
 old_histfile="${HISTFILE-}"
 unset HISTFILE
-read -rsp "Enter DIGITALOCEAN_ACCESS_TOKEN (or press Enter to skip): " MODEL_KEY
-echo ""
+read -rp "Enter DIGITALOCEAN_ACCESS_TOKEN (or press Enter to skip): " MODEL_KEY
 [ -n "${old_histfile:-}" ] && export HISTFILE="$old_histfile"
 
 if [ -z "$MODEL_KEY" ]; then
