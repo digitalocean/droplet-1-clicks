@@ -78,7 +78,7 @@ echo ""
 
 old_histfile="${HISTFILE-}"
 unset HISTFILE
-read -rsp "Enter your DigitalOcean model access key (or press Enter for xAI options): " DO_MODEL_ACCESS_KEY
+read -rsp "Enter your DigitalOcean model access key (or press Enter for xAI options): " MODEL_ACCESS_KEY
 echo ""
 [ -n "${old_histfile:-}" ] && export HISTFILE="$old_histfile"
 
@@ -94,8 +94,8 @@ MENU_LABELS=(
   "DeepSeek V4 Pro" "Kimi K2.6" "Qwen3 Coder Flash" "GLM-5"
 )
 
-if [ -n "$DO_MODEL_ACCESS_KEY" ]; then
-  save_env_kv DO_MODEL_ACCESS_KEY "$DO_MODEL_ACCESS_KEY"
+if [ -n "$MODEL_ACCESS_KEY" ]; then
+  save_env_kv MODEL_ACCESS_KEY "$MODEL_ACCESS_KEY"
 
   echo ""
   echo "Choose a default model (you can switch later with /model or -m <alias>):"
@@ -129,12 +129,12 @@ if [ -n "$DO_MODEL_ACCESS_KEY" ]; then
   fi
 
   /opt/apply-inference-from-env.sh
-  export MODEL_ACCESS_KEY="$DO_MODEL_ACCESS_KEY"
+  export MODEL_ACCESS_KEY="$MODEL_ACCESS_KEY"
 
   echo ""
   echo "Testing connection to DigitalOcean Serverless Inference..."
   HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-    -H "Authorization: Bearer ${DO_MODEL_ACCESS_KEY}" \
+    -H "Authorization: Bearer ${MODEL_ACCESS_KEY}" \
     https://inference.do-ai.run/v1/models 2>/dev/null)
   if [ "$HTTP_STATUS" = "200" ]; then
     echo "Connection successful! Your key is valid."

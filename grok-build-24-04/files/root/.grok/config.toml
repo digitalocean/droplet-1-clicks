@@ -5,7 +5,7 @@
 # entry authenticates with a single model access key exported as the
 # MODEL_ACCESS_KEY environment variable.
 #
-# Provide the key via the droplet environment (DO_MODEL_ACCESS_KEY), /opt/grok-build.env,
+# Provide the key via the droplet environment (MODEL_ACCESS_KEY), /opt/grok-build.env,
 # or the first-login setup wizard (/opt/setup-grok-build.sh). The wizard also
 # lets you pick the default model from a list. Switch any time in the TUI with
 # /model, or headlessly with: grok -p "..." -m <alias>

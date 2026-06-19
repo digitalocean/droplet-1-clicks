@@ -20,7 +20,7 @@ grok-build-24-04/
     │   └── update-motd.d/
     │       └── 99-one-click         # Message of the Day
     ├── opt/
-    │   ├── apply-inference-from-env.sh  # Apply DO_MODEL_ACCESS_KEY/XAI_API_KEY on boot
+    │   ├── apply-inference-from-env.sh  # Apply MODEL_ACCESS_KEY/XAI_API_KEY on boot
     │   ├── grok-build.env           # Droplet env template
     │   ├── setup-grok-build.sh      # First-login setup wizard (+ model picker)
     │   ├── grok-login.sh            # Browser-free xAI device-code sign-in
@@ -82,7 +82,7 @@ Grok Build supports any OpenAI-compatible provider through per-model entries in 
 
 | Method | How | env var |
 |--------|-----|---------|
-| DigitalOcean Serverless Inference (default) | `DO_MODEL_ACCESS_KEY`, `/opt/grok-build.env`, or wizard | `MODEL_ACCESS_KEY` |
+| DigitalOcean Serverless Inference (default) | `MODEL_ACCESS_KEY`, `/opt/grok-build.env`, or wizard | `MODEL_ACCESS_KEY` |
 | xAI API key | `XAI_API_KEY`, `/opt/grok-build.env`, or wizard | `XAI_API_KEY` |
 | xAI account sign-in | `/opt/grok-login.sh` or `grok login --device-auth` (wizard option 1) | `~/.grok/auth.json` |
 
@@ -100,7 +100,7 @@ Grok resolves credentials per model as `model.api_key` > `model.env_key` > activ
 
 1. Removes SSH force-logout (allows normal login)
 2. Sources `/etc/environment` and runs `/opt/apply-inference-from-env.sh`
-3. If `DO_MODEL_ACCESS_KEY` (or `XAI_API_KEY`) is set, configures Grok Build and skips the wizard
+3. If `MODEL_ACCESS_KEY` (or `XAI_API_KEY`) is set, configures Grok Build and skips the wizard
 4. Otherwise hooks the setup wizard (`/opt/setup-grok-build.sh`) into `.bashrc` for first login, followed by a permanent key-loader block so the key reaches the live shell right after setup
 5. Creates `/root/grok_build_info.txt` with getting-started instructions
 
@@ -108,7 +108,7 @@ Grok resolves credentials per model as `model.api_key` > `model.env_key` > activ
 
 | Variable | Description |
 |----------|-------------|
-| `DO_MODEL_ACCESS_KEY` | DigitalOcean model access key (default provider) |
+| `MODEL_ACCESS_KEY` | DigitalOcean model access key (default provider) |
 | `DO_INFERENCE_MODEL` | Optional default model alias (default `gpt-5-5`) |
 | `DO_INFERENCE_ROUTER` | Optional Intelligent Inference Router name (`router:<name>`) |
 | `XAI_API_KEY` | xAI API key (`xai-...`) for the xAI native provider |

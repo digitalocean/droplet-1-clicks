@@ -50,7 +50,7 @@ Grok Build is xAI's terminal-based coding agent, pre-configured to run on
 DigitalOcean Serverless Inference (https://inference.do-ai.run/v1).
 
 Authentication was configured automatically from the droplet environment
-(DO_MODEL_ACCESS_KEY / XAI_API_KEY) or /opt/grok-build.env.
+(MODEL_ACCESS_KEY / XAI_API_KEY) or /opt/grok-build.env.
 
 PRE-CONFIGURED MODELS (DigitalOcean Serverless Inference, default GPT-5.5):
 
@@ -121,7 +121,7 @@ NEXT STEPS:
    With a model access key, Grok uses the API directly - no browser sign-in.
 
    Or pre-configure via environment / /opt/grok-build.env:
-     - DO_MODEL_ACCESS_KEY + optional DO_INFERENCE_MODEL / DO_INFERENCE_ROUTER
+     - MODEL_ACCESS_KEY + optional DO_INFERENCE_MODEL / DO_INFERENCE_ROUTER
      - or XAI_API_KEY (xAI native)
    Prefer your own xAI account? No browser here - use device-code auth:
      /opt/grok-login.sh   (or: grok login --device-auth)
