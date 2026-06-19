@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Grok Build First-Login Setup Wizard
-# Primary path: DigitalOcean Gradient serverless inference (model access key).
+# Primary path: DigitalOcean Serverless Inference (model access key).
 # Fallback: sign in with an xAI account (device-code auth) or an xAI API key.
 
 # This script must be EXECUTED, not sourced. It calls `exit` in several places;
@@ -23,7 +23,7 @@ CONFIG_FILE="/root/.grok/config.toml"
 # alias for a manual run.
 if [ "${1:-}" = "--autostart" ]; then
   [ -f "$SETUP_MARKER" ] && exit 0
-  if [ -x /opt/apply-gradient-from-env.sh ] && /opt/apply-gradient-from-env.sh >/dev/null 2>&1; then
+  if [ -x /opt/apply-inference-from-env.sh ] && /opt/apply-inference-from-env.sh >/dev/null 2>&1; then
     exit 0
   fi
 fi
@@ -62,12 +62,12 @@ finish() {
 
 echo ""
 echo "========================================================================"
-echo "  Grok Build Setup - DigitalOcean Gradient AI"
+echo "  Grok Build Setup - DigitalOcean Serverless Inference"
 echo "========================================================================"
 echo ""
-echo "This droplet is pre-configured to run Grok Build on DigitalOcean Gradient"
-echo "serverless inference (https://inference.do-ai.run/v1). A single Gradient"
-echo "model access key unlocks GPT-5.5 (default), Claude, Llama, Kimi, GLM,"
+echo "This droplet is pre-configured to run Grok Build on DigitalOcean Serverless"
+echo "Inference (https://inference.do-ai.run/v1). A single DigitalOcean model"
+echo "access key unlocks GPT-5.5 (default), Claude, Llama, Kimi, GLM,"
 echo "DeepSeek, Qwen, MiniMax and more, plus the Intelligent Inference Router."
 echo ""
 echo "To create a DigitalOcean model access key:"
@@ -78,11 +78,11 @@ echo ""
 
 old_histfile="${HISTFILE-}"
 unset HISTFILE
-read -rsp "Enter your Gradient model access key (or press Enter for xAI options): " GRADIENT_KEY
+read -rsp "Enter your DigitalOcean model access key (or press Enter for xAI options): " DO_MODEL_ACCESS_KEY
 echo ""
 [ -n "${old_histfile:-}" ] && export HISTFILE="$old_histfile"
 
-# DigitalOcean Gradient model menu (alias -> label): a short list of the latest,
+# DigitalOcean Serverless Inference model menu (alias -> label): a short list of the latest,
 # most popular coding models. The full catalog lives in /root/.grok/config.toml
 # and can be selected any time with /model or -m <alias>.
 MENU_ALIASES=(
@@ -94,8 +94,8 @@ MENU_LABELS=(
   "DeepSeek V4 Pro" "Kimi K2.6" "Qwen3 Coder Flash" "GLM-5"
 )
 
-if [ -n "$GRADIENT_KEY" ]; then
-  save_env_kv GRADIENT_KEY "$GRADIENT_KEY"
+if [ -n "$DO_MODEL_ACCESS_KEY" ]; then
+  save_env_kv DO_MODEL_ACCESS_KEY "$DO_MODEL_ACCESS_KEY"
 
   echo ""
   echo "Choose a default model (you can switch later with /model or -m <alias>):"
@@ -109,37 +109,37 @@ if [ -n "$GRADIENT_KEY" ]; then
 
   if [ "$SEL" = "R" ] || [ "$SEL" = "r" ]; then
     echo ""
-    echo "Create a router under Gradient > Inference > Routers, then enter its name."
+    echo "Create a router under Inference > Routers, then enter its name."
     read -rp "Router name: " ROUTER_NAME
     if [ -n "$ROUTER_NAME" ]; then
-      save_env_kv GRADIENT_ROUTER "$ROUTER_NAME"
+      save_env_kv DO_INFERENCE_ROUTER "$ROUTER_NAME"
     else
       echo "No router name entered; keeping the GPT-5.5 default."
-      save_env_kv GRADIENT_MODEL "gpt-5-5"
+      save_env_kv DO_INFERENCE_MODEL "gpt-5-5"
     fi
   elif [ -n "$SEL" ] && [ "$SEL" -ge 1 ] 2>/dev/null && [ "$SEL" -le "${#MENU_ALIASES[@]}" ] 2>/dev/null; then
     CHOSEN="${MENU_ALIASES[$((SEL - 1))]}"
-    save_env_kv GRADIENT_MODEL "$CHOSEN"
-    save_env_kv GRADIENT_ROUTER ""
+    save_env_kv DO_INFERENCE_MODEL "$CHOSEN"
+    save_env_kv DO_INFERENCE_ROUTER ""
     echo "Default model set to: $CHOSEN"
   else
-    save_env_kv GRADIENT_MODEL "gpt-5-5"
-    save_env_kv GRADIENT_ROUTER ""
+    save_env_kv DO_INFERENCE_MODEL "gpt-5-5"
+    save_env_kv DO_INFERENCE_ROUTER ""
     echo "Default model set to: gpt-5-5 (GPT-5.5)"
   fi
 
-  /opt/apply-gradient-from-env.sh
-  export MODEL_ACCESS_KEY="$GRADIENT_KEY"
+  /opt/apply-inference-from-env.sh
+  export MODEL_ACCESS_KEY="$DO_MODEL_ACCESS_KEY"
 
   echo ""
-  echo "Testing connection to DigitalOcean Gradient..."
+  echo "Testing connection to DigitalOcean Serverless Inference..."
   HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-    -H "Authorization: Bearer ${GRADIENT_KEY}" \
+    -H "Authorization: Bearer ${DO_MODEL_ACCESS_KEY}" \
     https://inference.do-ai.run/v1/models 2>/dev/null)
   if [ "$HTTP_STATUS" = "200" ]; then
     echo "Connection successful! Your key is valid."
   else
-    echo "Warning: received HTTP $HTTP_STATUS from the Gradient API."
+    echo "Warning: received HTTP $HTTP_STATUS from the DigitalOcean inference API."
     echo "Your key was saved. If it's wrong, re-run: /opt/setup-grok-build.sh"
   fi
   finish
@@ -147,7 +147,7 @@ fi
 
 # --- xAI account / API key fallback ---
 echo ""
-echo "No Gradient key entered. You can instead use an xAI account:"
+echo "No DigitalOcean model access key entered. You can instead use an xAI account:"
 echo ""
 echo "  1) Sign in with your xAI account (device-code auth)"
 echo "     For SuperGrok / X Premium+ subscribers. You'll get a code + URL."
@@ -183,7 +183,7 @@ case "$CHOICE" in
       exit 0
     fi
     save_env_kv XAI_API_KEY "$API_KEY"
-    /opt/apply-gradient-from-env.sh
+    /opt/apply-inference-from-env.sh
     export XAI_API_KEY="$API_KEY"
     echo "xAI API key saved. Default model set to grok-build-0.1."
     finish

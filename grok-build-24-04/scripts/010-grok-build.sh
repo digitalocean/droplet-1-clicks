@@ -43,8 +43,9 @@ else
   exit 1
 fi
 
-# Ensure the Grok config directory exists with the pre-configured Gradient
-# provider (copied by Packer). The installer appends a [cli] block to it.
+# Ensure the Grok config directory exists with the pre-configured DigitalOcean
+# Serverless Inference provider (copied by Packer). The installer appends a
+# [cli] block to it.
 mkdir -p /root/.grok
 chmod 600 /root/.grok/config.toml
 
@@ -52,7 +53,7 @@ chmod 600 /root/.grok/config.toml
 chmod +x /opt/setup-grok-build.sh
 chmod +x /opt/update-grok-build.sh
 chmod +x /opt/grok-login.sh
-chmod +x /opt/apply-gradient-from-env.sh
+chmod +x /opt/apply-inference-from-env.sh
 chmod 600 /opt/grok-build.env
 chmod +x /etc/update-motd.d/99-one-click
 chmod +x /var/lib/cloud/scripts/per-instance/001_onboot

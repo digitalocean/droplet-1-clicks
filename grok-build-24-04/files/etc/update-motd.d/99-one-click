@@ -21,7 +21,7 @@ GETTING STARTED:
 
   1. On first login, the setup wizard prompts for your DigitalOcean model
      access key and lets you pick a default model from a list. Create a key:
-       https://cloud.digitalocean.com/model-studio/manage-keys (Inference > Manage)
+       https://cloud.digitalocean.com/model-studio/manage-keys  (Inference > Manage)
      With a model access key, Grok uses the API directly - no browser sign-in.
 
      Prefer your own xAI account? This droplet has no browser, so use the
@@ -40,7 +40,7 @@ setup wizard, or in a non-login shell), load it with:
   source /etc/profile.d/grok-build-key.sh
 
 Intelligent Inference Router: create a router in the control panel attached to
-your model access key, set GRADIENT_ROUTER=<name>, and re-run the setup wizard to
+your model access key, set DO_INFERENCE_ROUTER=<name>, and re-run the setup wizard to
 route each prompt to the best-fit model (uses the same key, model "router:<name>").
 
 Helper Commands:

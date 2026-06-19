@@ -1,13 +1,13 @@
 # Grok Build 1-Click Application
 
-Deploy Grok Build, xAI's terminal-native AI coding agent, pre-configured to run on **DigitalOcean Gradient serverless inference**. SSH in and run `grok` to plan, write, review, and refactor code directly from your shell — no IDE required, and no separate model subscription needed.
+Deploy Grok Build, xAI's terminal-native AI coding agent, pre-configured to run on **DigitalOcean Serverless Inference**. SSH in and run `grok` to plan, write, review, and refactor code directly from your shell — no IDE required, and no separate model subscription needed.
 
 ## What is Grok Build?
 
-Grok Build is a command-line coding agent (with an interactive terminal UI) from xAI. Describe what you want in natural language and Grok plans the work, edits files, runs commands, and shows clean diffs for review. This image wires Grok Build to DigitalOcean Gradient's OpenAI-compatible inference endpoint, so a single Gradient model access key unlocks GPT-5.5, Claude, Llama, Kimi, GLM, DeepSeek, Qwen, MiniMax and more — plus DigitalOcean's Intelligent Inference Router.
+Grok Build is a command-line coding agent (with an interactive terminal UI) from xAI. Describe what you want in natural language and Grok plans the work, edits files, runs commands, and shows clean diffs for review. This image wires Grok Build to DigitalOcean's OpenAI-compatible serverless inference endpoint, so a single model access key unlocks GPT-5.5, Claude, Llama, Kimi, GLM, DeepSeek, Qwen, MiniMax and more — plus DigitalOcean's Intelligent Inference Router.
 
 - **Terminal-first** – Works natively in your shell; no web interface required
-- **DigitalOcean Gradient AI** – Pre-configured inference with one model access key
+- **DigitalOcean Serverless Inference** – Pre-configured inference with one model access key
 - **Intelligent Inference Router** – Optionally route each prompt to the best-fit model
 - **Plan mode** – Generate a plan, comment on or rewrite steps, then approve before changes
 - **Parallel subagents** – Delegate large tasks to subagents that run in parallel
@@ -17,7 +17,7 @@ Grok Build is a command-line coding agent (with an interactive terminal UI) from
 ## Key Features
 
 - Natural-language, agentic coding assistance in the terminal
-- Pre-configured with DigitalOcean Gradient AI (GPT, Claude, Llama, DeepSeek, and more)
+- Pre-configured with DigitalOcean Serverless Inference (GPT, Claude, Llama, DeepSeek, and more)
 - Optional DigitalOcean Intelligent Inference Router (`router:<name>`)
 - Plan / review / approve workflow with clean diffs
 - Headless scripting (`-p`) with `plain`, `json`, and `streaming-json` output
@@ -36,7 +36,7 @@ Grok Build is lightweight; most compute happens at the inference service.
 
 - **Ubuntu 24.04 LTS** – Base operating system
 - **Grok Build** – xAI terminal coding agent (version 0.2.51)
-- **DigitalOcean Gradient AI** – Pre-configured inference provider
+- **DigitalOcean Serverless Inference** – Pre-configured inference provider
 - **Git** – Version control
 - **curl**, **jq**, **unzip** – Utilities
 - **UFW Firewall** – SSH only (rate-limited)
@@ -58,7 +58,7 @@ ssh root@your-droplet-ip
 
 ### 3. Complete the Setup Wizard
 
-On first login, the setup wizard prompts for your **DigitalOcean Gradient model access key**. To create one:
+On first login, the setup wizard prompts for your **DigitalOcean model access key**. To create one:
 
 1. Go to <https://cloud.digitalocean.com/model-studio/manage-keys>
 2. Or from the cloud console, navigate to **Inference > Manage**
@@ -67,9 +67,9 @@ On first login, the setup wizard prompts for your **DigitalOcean Gradient model 
 
 The wizard verifies the key against `https://inference.do-ai.run/v1` and configures Grok Build automatically. You can change the model later with `/model` in the TUI or `-m <alias>`.
 
-Prefer to use xAI directly? Press Enter at the Gradient prompt to choose **xAI account sign-in** or to enter an **xAI API key**.
+Prefer to use xAI directly? Press Enter at the model-access-key prompt to choose **xAI account sign-in** or to enter an **xAI API key**.
 
-> **No browser needed.** With a Gradient key (or any API key), Grok authenticates with the API directly — there is no OAuth browser step. Because the droplet has no desktop browser, the xAI account path uses **device-code sign-in** (`/opt/grok-login.sh`), which shows a short URL and code to open on your laptop or phone. Avoid running a bare `grok login`, which would try to launch a local browser.
+> **No browser needed.** With a model access key (or any API key), Grok authenticates with the API directly — there is no OAuth browser step. Because the droplet has no desktop browser, the xAI account path uses **device-code sign-in** (`/opt/grok-login.sh`), which shows a short URL and code to open on your laptop or phone. Avoid running a bare `grok login`, which would try to launch a local browser.
 
 ### 4. Run Grok Build
 
@@ -85,11 +85,11 @@ grok -p "Explain this codebase"
 grok -p "Review this diff" --output-format json --always-approve
 ```
 
-The default model is **GPT-5.5** (`gpt-5-5` via DigitalOcean Gradient). Switch with `/model` in the TUI or `-m <alias>` headlessly.
+The default model is **GPT-5.5** (`gpt-5-5` via DigitalOcean Serverless Inference). Switch with `/model` in the TUI or `-m <alias>` headlessly.
 
 ## Pre-Configured Models
 
-All models below are available via DigitalOcean Gradient with just a model access key. The setup wizard lets you pick the default from this list (or a router). Switch any time with the alias via `-m` or `/model`; configuration lives in `/root/.grok/config.toml`.
+All models below are available via DigitalOcean Serverless Inference with just a model access key. The setup wizard lets you pick the default from this list (or a router). Switch any time with the alias via `-m` or `/model`; configuration lives in `/root/.grok/config.toml`.
 
 | Alias | Model | ID |
 |-------|-------|----|
@@ -123,14 +123,14 @@ curl -s -H "Authorization: Bearer $MODEL_ACCESS_KEY" \
   https://inference.do-ai.run/v1/models | jq -r '.data[].id'
 ```
 
-To use a model that isn't pre-configured, add a `[model.<alias>]` block to `/root/.grok/config.toml` (copy an existing Gradient entry and change `model` to the catalog ID).
+To use a model that isn't pre-configured, add a `[model.<alias>]` block to `/root/.grok/config.toml` (copy an existing DigitalOcean entry and change `model` to the catalog ID).
 
 ## Intelligent Inference Router
 
 DigitalOcean's Inference Router classifies each prompt and sends it to the best-fit model based on rules you define (optimizing for cost or latency).
 
-1. Create a router under **Gradient > Inference > Routers** in the control panel (or via the API) and attach it to the same model access key you use for the droplet.
-2. Set `GRADIENT_ROUTER=<router-name>` in `/opt/grok-build.env` (or as a droplet env var) and run `/opt/apply-gradient-from-env.sh`, **or** enter the router name in the setup wizard.
+1. Create a router under **Inference > Routers** in the control panel (or via the API) and attach it to the same model access key you use for the droplet.
+2. Set `DO_INFERENCE_ROUTER=<router-name>` in `/opt/grok-build.env` (or as a droplet env var) and run `/opt/apply-inference-from-env.sh`, **or** enter the router name in the setup wizard.
 
 This points the `router` alias at `router:<router-name>` on `https://inference.do-ai.run/v1` and makes it the default. The router authenticates with the same `MODEL_ACCESS_KEY` as the direct models — no extra key needed. Using the router is a drop-in replacement for a specific model.
 
@@ -173,7 +173,7 @@ Ensure you're in a login shell (SSH session) where PATH is set, or run directly:
 
 ### AI features not working
 
-Re-run the setup wizard to reconfigure your Gradient model access key:
+Re-run the setup wizard to reconfigure your DigitalOcean model access key:
 
 ```bash
 /opt/setup-grok-build.sh
@@ -207,4 +207,4 @@ For DigitalOcean Droplet issues:
 
 ---
 
-**Note**: This 1-Click installs Grok Build via the official xAI installer and pre-configures DigitalOcean Gradient AI as the inference provider. SSH is the only exposed port; there is no web interface. You can alternatively authenticate with an xAI account (SuperGrok / X Premium+) or an xAI API key.
+**Note**: This 1-Click installs Grok Build via the official xAI installer and pre-configures DigitalOcean Serverless Inference as the inference provider. SSH is the only exposed port; there is no web interface. You can alternatively authenticate with an xAI account (SuperGrok / X Premium+) or an xAI API key.

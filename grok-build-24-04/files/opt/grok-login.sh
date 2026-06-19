@@ -8,8 +8,8 @@
 # authorize. The session token is then saved to ~/.grok/auth.json and refreshed
 # automatically.
 #
-# Note: if this droplet is configured with a DigitalOcean Gradient model access
-# key (the default), you do NOT need to sign in at all — Grok uses the API key.
+# Note: if this droplet is configured with a DigitalOcean model access key
+# (the default), you do NOT need to sign in at all — Grok uses the API key.
 
 [ -d /root/.grok/bin ] && export PATH="/root/.grok/bin:$PATH"
 

@@ -16,10 +16,10 @@ systemctl restart ssh
 # Ensure Grok Build directory exists
 mkdir -p /root/.grok
 
-chmod +x /opt/apply-gradient-from-env.sh
+chmod +x /opt/apply-inference-from-env.sh
 
 CONFIGURED=0
-if /opt/apply-gradient-from-env.sh; then
+if /opt/apply-inference-from-env.sh; then
     CONFIGURED=1
     echo "Grok Build pre-configured from droplet environment."
 else
@@ -47,12 +47,12 @@ Grok Build 1-Click Droplet - Getting Started
 ================================================================================
 
 Grok Build is xAI's terminal-based coding agent, pre-configured to run on
-DigitalOcean Gradient serverless inference (https://inference.do-ai.run/v1).
+DigitalOcean Serverless Inference (https://inference.do-ai.run/v1).
 
 Authentication was configured automatically from the droplet environment
-(GRADIENT_KEY / XAI_API_KEY) or /opt/grok-build.env.
+(DO_MODEL_ACCESS_KEY / XAI_API_KEY) or /opt/grok-build.env.
 
-PRE-CONFIGURED MODELS (DigitalOcean Gradient, default GPT-5.5):
+PRE-CONFIGURED MODELS (DigitalOcean Serverless Inference, default GPT-5.5):
 
   gpt-5-5 (default), gpt-5-4, gpt-5-3-codex, gpt-5-2, gpt-5-1-codex-max,
   gpt-5, gpt-4-1, claude-opus-4-8, claude-opus-4-6, claude-sonnet-4-6,
@@ -78,9 +78,9 @@ NEXT STEPS:
    /model inside the TUI, or:  grok -p "..." -m claude-opus-4-6
 
 4. Intelligent Inference Router:
-   Create a router under Gradient > Inference > Routers attached to your
-   Gradient key, set GRADIENT_ROUTER=<name> in /opt/grok-build.env, then run
-   /opt/apply-gradient-from-env.sh (routes via model "router:<name>", same key).
+   Create a router under Inference > Routers attached to your model access
+   key, set DO_INFERENCE_ROUTER=<name> in /opt/grok-build.env, then run
+   /opt/apply-inference-from-env.sh (routes via model "router:<name>", same key).
 
 Helper commands:
    Check version:     grok --version
@@ -100,9 +100,9 @@ Grok Build 1-Click Droplet - Getting Started
 ================================================================================
 
 Grok Build is xAI's terminal-based coding agent, pre-configured to run on
-DigitalOcean Gradient serverless inference (https://inference.do-ai.run/v1).
+DigitalOcean Serverless Inference (https://inference.do-ai.run/v1).
 
-PRE-CONFIGURED MODELS (DigitalOcean Gradient, default GPT-5.5):
+PRE-CONFIGURED MODELS (DigitalOcean Serverless Inference, default GPT-5.5):
 
   gpt-5-5 (default), gpt-5-4, gpt-5-3-codex, gpt-5-2, gpt-5-1-codex-max,
   gpt-5, gpt-4-1, claude-opus-4-8, claude-opus-4-6, claude-sonnet-4-6,
@@ -113,15 +113,15 @@ PRE-CONFIGURED MODELS (DigitalOcean Gradient, default GPT-5.5):
 NEXT STEPS:
 
 1. Authenticate. The setup wizard runs automatically on first login,
-   prompts for a DigitalOcean Gradient model access key, and lets you pick
+   prompts for a DigitalOcean model access key, and lets you pick
    a default model from a list (or a router). Create a key at:
      https://cloud.digitalocean.com/model-studio/manage-keys
-     (inference > Manage)
+     (Inference > Manage)
 
    With a model access key, Grok uses the API directly - no browser sign-in.
 
    Or pre-configure via environment / /opt/grok-build.env:
-     - GRADIENT_KEY + optional GRADIENT_MODEL / GRADIENT_ROUTER
+     - DO_MODEL_ACCESS_KEY + optional DO_INFERENCE_MODEL / DO_INFERENCE_ROUTER
      - or XAI_API_KEY (xAI native)
    Prefer your own xAI account? No browser here - use device-code auth:
      /opt/grok-login.sh   (or: grok login --device-auth)
@@ -134,8 +134,8 @@ NEXT STEPS:
    /model inside the TUI, or:  grok -p "..." -m claude-opus-4-6
 
 4. Intelligent Inference Router:
-   Create a router under Gradient > Inference > Routers attached to your
-   Gradient key, set GRADIENT_ROUTER=<name>, and re-run /opt/setup-grok-build.sh
+   Create a router under Inference > Routers attached to your model access
+   key, set DO_INFERENCE_ROUTER=<name>, and re-run /opt/setup-grok-build.sh
    (the router uses the same model access key).
 
 Helper commands:
