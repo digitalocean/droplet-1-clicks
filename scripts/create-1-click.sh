@@ -17,7 +17,8 @@ create() {
   fi
 
   name=$1
-  image_label=$2
+  label=$2
+  image_label="${name}-${label}"
 
   if [ -d "$image_label" ]
   then
@@ -30,7 +31,7 @@ create() {
 
   < "$template_dir/$build_template" \
   sed \
-    -e "s#{{NAME}}#${name}#g;" \
+    -e "s#{{OS_VERSION}}#${label}#g;" \
     -e "s#{{IMAGE_LABEL}}#${image_label}#g;" \
   > "$image_label/template.json"
 }
