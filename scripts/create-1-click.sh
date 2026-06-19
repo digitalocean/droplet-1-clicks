@@ -17,7 +17,8 @@ create() {
   fi
 
   name=$1
-  image_label=$2
+  label=$2
+  image_label="${name}-${label}"
 
   if [ -d "$image_label" ]
   then
