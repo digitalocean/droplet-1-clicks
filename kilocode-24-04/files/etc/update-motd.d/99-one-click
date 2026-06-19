@@ -1,0 +1,42 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's One-Click Kilo Code CLI Droplet.
+
+Kilo Code is an open-source AI coding agent CLI. Use natural language to plan,
+write, debug, and refactor code directly from your terminal.
+
+GETTING STARTED:
+
+  Optional DigitalOcean model access key setup:
+
+     The first-login setup helper will ask for DIGITALOCEAN_ACCESS_TOKEN.
+     If you do not have one, press Enter to skip setup; Kilo will start
+     automatically.
+
+     To configure it later, export your model access key as
+     DIGITALOCEAN_ACCESS_TOKEN and apply it:
+
+       export DIGITALOCEAN_ACCESS_TOKEN=your_token_here
+       /opt/apply-digitalocean-token.sh
+
+     Create or manage keys at:
+     https://cloud.digitalocean.com/model-studio/manage-keys
+
+  Kilo Code starts automatically after the first-login setup prompt.
+  To run it again later:
+     kilo
+
+Helper Commands:
+  Update Kilo Code:   /opt/update-kilocode.sh
+  Re-run setup:       /opt/setup-kilocode.sh --force
+
+Documentation:  https://kilo.ai/docs/code-with-ai/platforms/cli
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
