@@ -51,7 +51,6 @@ chmod 600 /root/.grok/config.toml
 # Make helper scripts, MOTD, and onboot script executable (copied by Packer)
 chmod +x /opt/setup-grok-build.sh
 chmod +x /opt/update-grok-build.sh
-chmod +x /opt/grok-build-version.sh
 chmod +x /opt/grok-login.sh
 chmod +x /opt/apply-gradient-from-env.sh
 chmod 600 /opt/grok-build.env

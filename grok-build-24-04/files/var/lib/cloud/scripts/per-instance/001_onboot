@@ -83,7 +83,7 @@ NEXT STEPS:
    /opt/apply-gradient-from-env.sh (routes via model "router:<name>", same key).
 
 Helper commands:
-   Check version:     /opt/grok-build-version.sh
+   Check version:     grok --version
    Update Grok Build: /opt/update-grok-build.sh
    Re-run setup:      /opt/setup-grok-build.sh
    xAI device login:  /opt/grok-login.sh   (browser-free)
@@ -115,10 +115,10 @@ NEXT STEPS:
 1. Authenticate. The setup wizard runs automatically on first login,
    prompts for a DigitalOcean Gradient model access key, and lets you pick
    a default model from a list (or a router). Create a key at:
-     https://cloud.digitalocean.com/gen-ai
-     (API Keys > Model Access Keys)
+     https://cloud.digitalocean.com/model-studio/manage-keys
+     (inference > Manage)
 
-   With a Gradient key, Grok uses the API directly - no browser sign-in.
+   With a model access key, Grok uses the API directly - no browser sign-in.
 
    Or pre-configure via environment / /opt/grok-build.env:
      - GRADIENT_KEY + optional GRADIENT_MODEL / GRADIENT_ROUTER
@@ -139,7 +139,7 @@ NEXT STEPS:
    (the router uses the same model access key).
 
 Helper commands:
-   Check version:     /opt/grok-build-version.sh
+   Check version:     grok --version
    Update Grok Build: /opt/update-grok-build.sh
    Re-run setup:      /opt/setup-grok-build.sh
    xAI device login:  /opt/grok-login.sh   (browser-free)

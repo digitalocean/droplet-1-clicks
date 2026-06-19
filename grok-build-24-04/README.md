@@ -24,8 +24,7 @@ grok-build-24-04/
     │   ├── grok-build.env           # Droplet env template
     │   ├── setup-grok-build.sh      # First-login setup wizard (+ model picker)
     │   ├── grok-login.sh            # Browser-free xAI device-code sign-in
-    │   ├── update-grok-build.sh     # Update to latest version
-    │   └── grok-build-version.sh    # Display installed version
+    │   └── update-grok-build.sh     # Update to latest version
     ├── root/
     │   └── .grok/
     │       └── config.toml          # Pre-configured Gradient provider + router

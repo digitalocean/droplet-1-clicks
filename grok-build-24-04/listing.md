@@ -60,8 +60,8 @@ ssh root@your-droplet-ip
 
 On first login, the setup wizard prompts for your **DigitalOcean Gradient model access key**. To create one:
 
-1. Go to <https://cloud.digitalocean.com/gen-ai>
-2. Navigate to **API Keys > Model Access Keys**
+1. Go to <https://cloud.digitalocean.com/model-studio/manage-keys>
+2. Or from the cloud console, navigate to **Inference > Manage**
 3. Click **Create Model Access Key** and copy it
 4. Paste it when prompted, then **pick your default model from the list** (or choose the Intelligent Inference Router)
 
@@ -140,7 +140,7 @@ This points the `router` alias at `router:<router-name>` on `https://inference.d
 
 | Action | Command |
 |--------|---------|
-| Check version | `/opt/grok-build-version.sh` |
+| Check version | `grok --version` |
 | Update to latest | `/opt/update-grok-build.sh` |
 | Re-run setup wizard | `/opt/setup-grok-build.sh` |
 | Sign in with xAI account (no browser) | `/opt/grok-login.sh` |
@@ -186,7 +186,7 @@ echo 'export MODEL_ACCESS_KEY="<your key>"' > /etc/profile.d/grok-build-key.sh
 chmod 600 /etc/profile.d/grok-build-key.sh
 ```
 
-Create keys at <https://cloud.digitalocean.com/gen-ai> (API Keys > Model Access Keys).
+Create keys at <https://cloud.digitalocean.com/model-studio/manage-keys> (Inference > Manage).
 
 ## Additional Resources
 

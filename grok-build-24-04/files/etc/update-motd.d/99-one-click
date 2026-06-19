@@ -9,9 +9,9 @@ Welcome to DigitalOcean's One-Click Grok Build Droplet.
 
 Grok Build is xAI's terminal-based coding agent. Use natural language to plan,
 write, review, and refactor code. This droplet is pre-configured to run Grok
-Build on DigitalOcean Gradient serverless inference.
+Build on DigitalOcean Serverless Inference.
 
-PRE-CONFIGURED MODELS (via DigitalOcean Gradient, default GPT-5.5):
+PRE-CONFIGURED MODELS (via DigitalOcean Serverless Inference, default GPT-5.5):
   gpt-5-5 (default), gpt-5-4, gpt-5-3-codex, gpt-5-2, gpt-5-1-codex-max,
   gpt-5, gpt-4-1, claude-opus-4-8, claude-opus-4-6, claude-sonnet-4-6,
   claude-haiku-4-5, deepseek-v4-pro, kimi-k2-6, minimax-m2-5, glm-5,
@@ -19,10 +19,10 @@ PRE-CONFIGURED MODELS (via DigitalOcean Gradient, default GPT-5.5):
 
 GETTING STARTED:
 
-  1. On first login, the setup wizard prompts for your Gradient model
+  1. On first login, the setup wizard prompts for your DigitalOcean model
      access key and lets you pick a default model from a list. Create a key:
-       https://cloud.digitalocean.com/gen-ai  (API Keys > Model Access Keys)
-     With a Gradient key, Grok uses the API directly - no browser sign-in.
+       https://cloud.digitalocean.com/model-studio/manage-keys (Inference > Manage)
+     With a model access key, Grok uses the API directly - no browser sign-in.
 
      Prefer your own xAI account? This droplet has no browser, so use the
      device-code flow (shows a URL + code to open on any device):
@@ -40,11 +40,11 @@ setup wizard, or in a non-login shell), load it with:
   source /etc/profile.d/grok-build-key.sh
 
 Intelligent Inference Router: create a router in the control panel attached to
-your Gradient key, set GRADIENT_ROUTER=<name>, and re-run the setup wizard to
+your model access key, set GRADIENT_ROUTER=<name>, and re-run the setup wizard to
 route each prompt to the best-fit model (uses the same key, model "router:<name>").
 
 Helper Commands:
-  Check version:     /opt/grok-build-version.sh
+  Check version:     grok --version
   Update Grok Build: /opt/update-grok-build.sh
   Re-run setup:      /opt/setup-grok-build.sh
   xAI device login:  /opt/grok-login.sh
