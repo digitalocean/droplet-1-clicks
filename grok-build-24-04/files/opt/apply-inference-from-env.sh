@@ -3,7 +3,7 @@
 # /opt/grok-build.env.
 #
 # Priority:
-#   1. GRADIENT_KEY  -> DigitalOcean Gradient serverless inference (default).
+#   1. DO_MODEL_ACCESS_KEY -> DigitalOcean Serverless Inference (default).
 #                       Sets the default model / router in config.toml.
 #   2. XAI_API_KEY   -> xAI native model (the grok-build entry).
 #
@@ -80,23 +80,23 @@ ensure_key_sourced_in_bashrc() {
     fi
 }
 
-GRADIENT_KEY_VAL="$(read_value GRADIENT_KEY)"
-GRADIENT_MODEL_VAL="$(read_value GRADIENT_MODEL)"
-GRADIENT_ROUTER_VAL="$(read_value GRADIENT_ROUTER)"
+DO_MODEL_ACCESS_KEY_VAL="$(read_value DO_MODEL_ACCESS_KEY)"
+DO_INFERENCE_MODEL_VAL="$(read_value DO_INFERENCE_MODEL)"
+DO_INFERENCE_ROUTER_VAL="$(read_value DO_INFERENCE_ROUTER)"
 XAI_API_KEY_VAL="$(read_value XAI_API_KEY)"
 
-if [ -n "$GRADIENT_KEY_VAL" ]; then
-    write_profiled MODEL_ACCESS_KEY "$GRADIENT_KEY_VAL"
+if [ -n "$DO_MODEL_ACCESS_KEY_VAL" ]; then
+    write_profiled MODEL_ACCESS_KEY "$DO_MODEL_ACCESS_KEY_VAL"
     ensure_key_sourced_in_bashrc
-    if [ -n "$GRADIENT_ROUTER_VAL" ]; then
-        set_router_name "$GRADIENT_ROUTER_VAL"
+    if [ -n "$DO_INFERENCE_ROUTER_VAL" ]; then
+        set_router_name "$DO_INFERENCE_ROUTER_VAL"
         set_default_model "router"
-    elif [ -n "$GRADIENT_MODEL_VAL" ]; then
-        set_default_model "$GRADIENT_MODEL_VAL"
+    elif [ -n "$DO_INFERENCE_MODEL_VAL" ]; then
+        set_default_model "$DO_INFERENCE_MODEL_VAL"
     else
         set_default_model "gpt-5-5"
     fi
-    echo "DigitalOcean Gradient configured (MODEL_ACCESS_KEY)."
+    echo "DigitalOcean Serverless Inference configured (MODEL_ACCESS_KEY)."
     exit 0
 fi
 
