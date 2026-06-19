@@ -53,7 +53,19 @@ Running `packer build {{image-name}}/template.json` without any other modificati
 
 ### Creating a new 1-Click
 
-To start adopting this configuration for your image, you can create a scaffold using the command `make {{image-name}}` which will create a directory `{{image-name}}` with a basic Packer build config.
+To start adopting this configuration for your image, create a scaffold with the 1-Click name and optional OS version:
+
+```sh
+make app NAME={{1-click-name}}
+```
+
+This creates a directory named `{{1-click-name}}-24-04` with a basic Packer build config. To use a different OS version suffix, pass `OS_VERSION`:
+
+```sh
+make app NAME={{1-click-name}} OS_VERSION=22-04
+```
+
+This creates a directory named `{{1-click-name}}-22-04`.
 
 The following variables are required.
 
