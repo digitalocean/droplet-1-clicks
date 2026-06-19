@@ -31,7 +31,6 @@ create() {
 
   < "$template_dir/$build_template" \
   sed \
-    -e "s#{{NAME}}#${name}#g;" \
     -e "s#{{IMAGE_LABEL}}#${image_label}#g;" \
   > "$image_label/template.json"
 }
