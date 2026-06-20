@@ -1,0 +1,11 @@
+stackstorm_roles:
+  - ansible-st2/roles/StackStorm.mongodb
+  - ansible-st2/roles/StackStorm.rabbitmq
+  - ansible-st2/roles/StackStorm.redis
+  - ansible-st2/roles/StackStorm.st2repo
+  - ansible-st2/roles/StackStorm.st2
+  - ansible-st2/roles/StackStorm.nginx
+  - ansible-st2/roles/StackStorm.st2web
+  - ansible-st2/roles/StackStorm.nodejs
+  - ansible-st2/roles/StackStorm.st2chatops
+  - ansible-st2/roles/StackStorm.st2smoketests
