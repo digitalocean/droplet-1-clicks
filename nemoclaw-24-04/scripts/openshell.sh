@@ -24,9 +24,13 @@ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
-echo 'export NVM_DIR="$HOME/.nvm"' >> ~/.bashrc
-echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> ~/.bashrc
-
 nvm install node
 nvm use node
-npm install -g git+ssh://git@github.com/nvidia/NemoClaw.git
+# NemoClaw install script runs both install and onboard, and onboard will fail without API keys.
+# Catch the error and continue.
+curl -fsSL https://www.nvidia.com/nemoclaw.sh -o /tmp/nemoclaw-install.sh
+NEMOCLAW_NON_INTERACTIVE=1 NEMOCLAW_ACCEPT_THIRD_PARTY_SOFTWARE=1 bash /tmp/nemoclaw-install.sh
+EXIT_CODE=$?
+if [ $EXIT_CODE -ne 0 ]; then
+    echo "Install completed with exit code $EXIT_CODE"
+fi
