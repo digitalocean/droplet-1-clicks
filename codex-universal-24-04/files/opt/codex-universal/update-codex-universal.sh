@@ -9,7 +9,6 @@ if [ ! -f "$ENV_FILE" ]; then
 fi
 
 IMAGE_REF="$(grep -E '^IMAGE=' "$ENV_FILE" | cut -d= -f2- || true)"
-IMAGE_DIGEST="$(grep -E '^IMAGE_DIGEST=' "$ENV_FILE" | cut -d= -f2- || true)"
 
 if [ -z "$IMAGE_REF" ]; then
     echo "ERROR: IMAGE is not set in $ENV_FILE." >&2
@@ -27,5 +26,4 @@ systemctl restart codex-universal
 
 echo "Codex Universal updated successfully."
 echo ""
-echo "To pin a new digest, update IMAGE and IMAGE_DIGEST in $ENV_FILE"
-echo "and in template.json (image_digest), then rebuild the 1-click snapshot."
+echo "To change the image tag, update IMAGE in $ENV_FILE, then rerun this script."
