@@ -4,8 +4,7 @@
     "image_name": "codex-universal-24-04-snapshot-{{timestamp}}",
     "apt_packages": "apt-transport-https ca-certificates curl software-properties-common git jq unzip ufw",
     "application_name": "Codex Universal",
-    "application_version": "latest",
-    "image_digest": "sha256:905e512f36460e1be4cfedb30928a8a28299edb0fcd5de7998ceaa72d27fe304"
+    "application_version": "latest"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
@@ -40,7 +39,6 @@
       "environment_vars": [
         "application_name={{user `application_name`}}",
         "application_version={{user `application_version`}}",
-        "image_digest={{user `image_digest`}}",
         "DEBIAN_FRONTEND=noninteractive",
         "LC_ALL=C",
         "LANG=en_US.UTF-8",

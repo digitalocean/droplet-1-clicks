@@ -30,6 +30,13 @@ systemctl restart ssh
 
 systemctl enable codex-universal
 
+echo "Updating Codex Universal before first start..."
+if /opt/codex-universal/update-codex-universal.sh; then
+    echo "Codex Universal update complete."
+else
+    echo "WARNING: Codex Universal update failed. Continuing with the installed image."
+fi
+
 echo "Starting Codex Universal dev container (language setup may take a few minutes on first boot)..."
 if systemctl start codex-universal; then
     echo "Codex Universal is ready."

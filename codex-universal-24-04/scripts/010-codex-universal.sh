@@ -3,7 +3,6 @@
 set -e
 
 APP_VERSION="${application_version:-latest}"
-IMAGE_DIGEST="${image_digest:?image_digest is required}"
 
 # SSH only — codex-universal is a terminal dev environment, not a web app
 ufw allow 22/tcp
@@ -27,9 +26,6 @@ systemctl start docker
 
 mkdir -p /root/workspace
 
-# Pin image digest from packer variable
-sed -i "s|IMAGE_DIGEST=sha256:.*|IMAGE_DIGEST=${IMAGE_DIGEST}|g" /opt/codex-universal/codex-universal.env
-sed -i "s|IMAGE=ghcr.io/openai/codex-universal@sha256:.*|IMAGE=ghcr.io/openai/codex-universal@${IMAGE_DIGEST}|g" /opt/codex-universal/codex-universal.env
 sed -i "s|TAG=.*|TAG=${APP_VERSION}|g" /opt/codex-universal/codex-universal.env
 
 chmod 600 /opt/codex-universal/codex-universal.env
@@ -49,7 +45,7 @@ chmod +x /var/lib/cloud/scripts/per-instance/001_onboot
 cp /opt/codex-universal/codex-universal.env /opt/codex-universal/.env
 chmod 600 /opt/codex-universal/.env
 
-echo "Pre-pulling ghcr.io/openai/codex-universal@${IMAGE_DIGEST} (this may take several minutes)..."
+echo "Pre-pulling ghcr.io/openai/codex-universal:latest (this may take several minutes)..."
 cd /opt/codex-universal
 docker compose pull
 
