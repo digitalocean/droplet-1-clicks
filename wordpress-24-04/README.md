@@ -113,7 +113,7 @@ https://your-droplet-ip
 
 ### Using a DigitalOcean Managed Database (Optional)
 
-When creating your WordPress Droplet, you can select **Add a Database** to provision a DigitalOcean Managed MySQL database at the same time. This automates database setup so you do not need to manually create a DBaaS cluster or wire up connection details yourself.
+When creating your WordPress Droplet, you can select **Add a Database** to provision a DigitalOcean Managed MySQL database at the same time. A managed database replaces the local MySQL instance to better secure your data and gives you easy backups, connection pools, and metrics. The setup script handles configuration automatically — no manual DBaaS wiring required.
 
 #### What happens when you add a database
 
