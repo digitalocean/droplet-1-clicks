@@ -1,6 +1,6 @@
 # WordPress 1-Click with Easy Setup
 
-Deploy WordPress instantly with automatic configuration. Get started with HTTP immediately, then add HTTPS when you're ready with a custom domain.
+Deploy WordPress instantly with automatic configuration. HTTPS is enabled automatically on first login, and you can add a custom domain anytime with `/root/wp_setup_domain.sh`.
 
 ## What's New
 
@@ -8,8 +8,8 @@ This WordPress 1-Click now includes:
 
 - **Automatic Setup Wizard**: Creates your admin account and configures WordPress on first login
 - **Setup Pending Page**: Professional loading page displayed until you complete the initial setup
-- **Quick Start**: Get WordPress running in ~2 minutes with HTTP
-- **Easy HTTPS Migration**: Simple script to add a custom domain with Let's Encrypt SSL later
+- **Quick Start**: Get WordPress running in ~2 minutes with automatic HTTPS
+- **Easy Custom Domain Setup**: Simple script to switch from IP-based access to a custom domain with Let's Encrypt SSL
 
 ## What is WordPress?
 
@@ -59,6 +59,7 @@ This 1-Click installs and configures:
 - Choose a Droplet size (minimum 1GB RAM)
 - Select your preferred datacenter region
 - Add your SSH key for secure access
+- Optionally select **Add a Database** to provision a DigitalOcean Managed MySQL database alongside your Droplet (see [Using a DigitalOcean Managed Database](#using-a-digitalocean-managed-database-optional))
 - Create the Droplet
 
 ### 2. Initial Access
@@ -93,6 +94,8 @@ The setup script will launch automatically on first login. It will:
 
 The entire process takes about 2-3 minutes.
 
+If you added a Managed Database during deployment, the setup script also configures WordPress to use it instead of the local MySQL instance. The script waits for the database cluster to become available before continuing, which may add a few minutes to setup.
+
 ### 4. Access Your WordPress Site
 
 After setup completes, access your site at:
@@ -107,6 +110,41 @@ https://your-droplet-ip
 - Password: (the one you chose during setup)
 
 ## Post-Installation
+
+### Using a DigitalOcean Managed Database (Optional)
+
+When creating your WordPress Droplet, you can select **Add a Database** to provision a DigitalOcean Managed MySQL database at the same time. A managed database replaces the local MySQL instance to better secure your data and gives you easy backups, connection pools, and metrics. The setup script handles configuration automatically — no manual DBaaS wiring required.
+
+#### What happens when you add a database
+
+When you choose this option during Droplet creation, DigitalOcean:
+
+1. Provisions a Managed MySQL cluster in the same region as your Droplet
+2. Passes connection credentials to your Droplet at first boot (stored temporarily in `/root/.digitalocean_dbaas_credentials`)
+
+When you complete the first-login setup script, the Droplet automatically:
+
+1. Configures WordPress to connect to the Managed Database instead of the local MySQL instance
+2. Updates `/var/www/html/wp-config.php` with the database host, port, name, username, and password
+3. Enables SSL for the MySQL connection
+4. Waits for the database cluster to become available (this may take a few minutes during first setup)
+5. Stops and disables the local MySQL instance on the Droplet
+
+After setup completes, your database connection details are stored in `/var/www/html/wp-config.php`. The temporary credentials file is removed.
+
+#### Security: Trusted Sources
+
+Your Droplet is not automatically added to the Managed Database's trusted sources. For better security, add your Droplet's public IP address to the database cluster's **Trusted Sources** in the [DigitalOcean control panel](https://cloud.digitalocean.com/databases):
+
+1. Open your database cluster in the control panel
+2. Go to **Settings** → **Trusted Sources**
+3. Add your Droplet's public IP address
+
+#### Modifying database settings later
+
+- **Connection details**: View or update credentials in `/var/www/html/wp-config.php` (`DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`)
+- **Password rotation**: If you change the database password in the control panel, update `wp-config.php` to match
+- **Switching databases**: To point WordPress at a different Managed Database, update the `DB_*` values in `wp-config.php` and ensure the new cluster allows connections from your Droplet
 
 ### Adding a Custom Domain
 
@@ -140,11 +178,15 @@ journalctl -u caddy -n 50 --no-pager
 
 ### Database Credentials
 
-MySQL credentials are stored in:
+**Local MySQL** (default, when no Managed Database is added):
 
 ```bash
 cat /root/.digitalocean_password
 ```
+
+**DigitalOcean Managed Database** (when **Add a Database** was selected during deployment):
+
+After setup completes, connection details are in `/var/www/html/wp-config.php`. The local MySQL instance is stopped and disabled.
 
 ### Security Best Practices
 
@@ -232,6 +274,8 @@ Ensure ports 80 and 443 are open (`ufw status`). For a custom domain, run `/root
 
 ### Database Connection Errors
 
+**If using local MySQL:**
+
 1. Check MySQL status:
 
    ```bash
@@ -239,6 +283,16 @@ Ensure ports 80 and 443 are open (`ufw status`). For a custom domain, run `/root
    ```
 
 2. Verify credentials in `/var/www/html/wp-config.php` match those in `/root/.digitalocean_password`
+
+**If using a DigitalOcean Managed Database:**
+
+1. Confirm your Droplet's IP is listed under the database cluster's **Trusted Sources** in the [control panel](https://cloud.digitalocean.com/databases)
+2. Verify connection details in `/var/www/html/wp-config.php` match your Managed Database settings
+3. Test connectivity from the Droplet:
+
+   ```bash
+   mysqladmin ping -h "$(grep DB_HOST /var/www/html/wp-config.php | cut -d"'" -f4 | cut -d: -f1)" --silent
+   ```
 
 ## File Locations
 
