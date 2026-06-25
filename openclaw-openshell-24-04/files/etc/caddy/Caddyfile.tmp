@@ -1,0 +1,11 @@
+# Same as OpenClaw 1-Click: Caddy in front of OpenShell sandbox forward port 18789
+PLACEHOLDER_DOMAIN {
+    tls {
+        issuer acme {
+            dir https://acme-v02.api.letsencrypt.org/directory
+            profile shortlived
+        }
+    }
+    reverse_proxy localhost:18789
+    header X-DO-MARKETPLACE "openclaw-openshell"
+}
