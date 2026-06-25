@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="svnplus.ico" type="image/x-icon">
+  <title>SVNPlus Setup Complete</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in {
+      animation: fadeIn 0.6s ease-out forwards;
+    }
+    .bg-custom {
+      background-color: #4F56E0; /* Custom color */
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-b from-gray-50 to-white pt-16">
+  <header class="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-sm shadow-sm z-50">
+    <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center">
+      <div class="flex items-center space-x-2">
+        <img src="icon.svg" alt="SVNPlus Icon" class="h-6 w-6" />
+        <img src="SVNPlus.svg" alt="SVNPlus" class="h-[18px] w-auto cursor-pointer" onclick="window.scrollTo({ top: 0, behavior: 'smooth' });" />
+      </div>
+    </nav>
+  </header>
+
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 relative">
+    <div class="text-center animate-fade-in">
+      <h1 class="text-5xl font-bold text-gray-900 mb-6">
+        SVNPlus Installation Complete
+      </h1>
+      <p class="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+        The initial SVNPlus installation is done! To complete the setup, please log in using SSH.
+      </p>
+      <p class="text-lg text-gray-600 mb-8">
+        If you have any questions or need assistance, feel free to reach out at:
+      </p>
+      <div class="flex justify-center space-x-4">
+        <a href="https://svnplus.com" class="bg-custom text-white px-4 py-2 rounded-lg hover:bg-opacity-80 transition">
+          SVNPlus Support
+        </a>
+        <a href="https://www.digitalocean.com/community/questions/new" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition">
+          DigitalOcean Community
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="bg-gray-900 text-gray-300 py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <p class="text-sm">
+        © <script>document.write(new Date().getFullYear())</script> SVNPlus. All rights reserved.
+      </p>
+    </div>
+  </footer>
+</body>
+</html>
