@@ -7,7 +7,9 @@ set -euo pipefail
 
 BUILD_HOSTNAME="${JITSI_BUILD_HOSTNAME:-jitsi.localhost}"
 
-read -r -p "Enter the public DNS name for this Jitsi server (for example meet.example.com): " JITSI_HOSTNAME
+if [ -z "${JITSI_HOSTNAME:-}" ]; then
+    read -r -p "Enter the public DNS name for this Jitsi server (for example meet.example.com): " JITSI_HOSTNAME
+fi
 case "$JITSI_HOSTNAME" in
     ""|*"/"*|*" "*|.*|*.)
         echo "ERROR: enter a valid public DNS name, for example meet.example.com" >&2
