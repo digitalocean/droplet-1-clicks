@@ -2,17 +2,17 @@
 {
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
-    "image_name": "anaconda-22-04-snapshot-{{timestamp}}",
-    "apt_packages": "apt-transport-https ca-certificates curl jq linux-image-extra-virtual software-properties-common libgl1-mesa-glx libegl1-mesa libxrandr2 libxrandr2 libxss1 libxcursor1 libxcomposite1 libasound2 libxi6 libxtst6",
+    "image_name": "anaconda-24-04-snapshot-{{timestamp}}",
+    "apt_packages": "apt-transport-https ca-certificates curl jq software-properties-common libgl1 libegl1 libxrandr2 libxss1 libxcursor1 libxcomposite1 libasound2t64 libxi6 libxtst6",
     "application_name": "Anaconda",
-    "application_version": "2023.09-0"
+    "application_version": "2025.12-2"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
     {
       "type": "digitalocean",
       "api_token": "{{user `do_api_token`}}",
-      "image": "ubuntu-22-04-x64",
+      "image": "ubuntu-24-04-x64",
       "region": "nyc3",
       "size": "s-1vcpu-1gb",
       "ssh_username": "root",

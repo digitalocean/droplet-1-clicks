@@ -2,17 +2,17 @@
 {
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
-    "image_name": "gitlab-22-04-snapshot-{{timestamp}}",
+    "image_name": "gitlab-24-04-snapshot-{{timestamp}}",
     "apt_packages": "curl openssh-server ca-certificates tzdata perl postfix",
     "application_name": "Gitlab",
-    "application_version": "latest"
+    "application_version": "19.0.2"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
     {
       "type": "digitalocean",
       "api_token": "{{user `do_api_token`}}",
-      "image": "ubuntu-22-04-x64",
+      "image": "ubuntu-24-04-x64",
       "region": "nyc3",
       "size": "s-2vcpu-4gb",
       "ssh_username": "root",
