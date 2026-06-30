@@ -1,18 +1,17 @@
-
 {
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
-    "image_name": "anaconda-22-04-snapshot-{{timestamp}}",
-    "apt_packages": "apt-transport-https ca-certificates curl jq linux-image-extra-virtual software-properties-common libgl1-mesa-glx libegl1-mesa libxrandr2 libxrandr2 libxss1 libxcursor1 libxcomposite1 libasound2 libxi6 libxtst6",
-    "application_name": "Anaconda",
-    "application_version": "2023.09-0"
+    "image_name": "grok-build-24-04-snapshot-{{timestamp}}",
+    "apt_packages": "apt-transport-https ca-certificates curl software-properties-common git jq unzip ufw",
+    "application_name": "Grok Build",
+    "application_version": "0.2.51"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
     {
       "type": "digitalocean",
       "api_token": "{{user `do_api_token`}}",
-      "image": "ubuntu-22-04-x64",
+      "image": "ubuntu-24-04-x64",
       "region": "nyc3",
       "size": "s-1vcpu-1gb",
       "ssh_username": "root",
@@ -20,35 +19,15 @@
     }
   ],
   "provisioners": [
+    {"type": "shell", "inline": ["cloud-init status --wait"]},
+    {"type": "file", "source": "common/files/var/", "destination": "/var/"},
+    {"type": "file", "source": "grok-build-24-04/files/etc/", "destination": "/etc/"},
+    {"type": "file", "source": "grok-build-24-04/files/opt/", "destination": "/opt/"},
+    {"type": "file", "source": "grok-build-24-04/files/root/", "destination": "/root/"},
+    {"type": "file", "source": "grok-build-24-04/files/var/", "destination": "/var/"},
     {
       "type": "shell",
-      "inline": [
-        "cloud-init status --wait"
-      ]
-    },
-    {
-      "type": "file",
-      "source": "common/files/var/",
-      "destination": "/var/"
-    },
-    {
-      "type": "file",
-      "source": "anaconda-22-04/files/etc/",
-      "destination": "/etc/"
-    },
-    {
-      "type": "file",
-      "source": "anaconda-22-04/files/var/",
-      "destination": "/var/"
-    },
-    {
-      "type": "shell",
-      "environment_vars": [
-        "DEBIAN_FRONTEND=noninteractive",
-        "LC_ALL=C",
-        "LANG=en_US.UTF-8",
-        "LC_CTYPE=en_US.UTF-8"
-      ],
+      "environment_vars": ["DEBIAN_FRONTEND=noninteractive", "LC_ALL=C", "LANG=en_US.UTF-8", "LC_CTYPE=en_US.UTF-8"],
       "inline": [
         "apt -qqy update",
         "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' full-upgrade",
@@ -59,7 +38,6 @@
     {
       "type": "shell",
       "environment_vars": [
-        "ANACONDA_VERSION={{user `application_version`}}",
         "application_name={{user `application_name`}}",
         "application_version={{user `application_version`}}",
         "DEBIAN_FRONTEND=noninteractive",
@@ -68,7 +46,7 @@
         "LC_CTYPE=en_US.UTF-8"
       ],
       "scripts": [
-        "anaconda-22-04/scripts/010-anaconda.sh",
+        "grok-build-24-04/scripts/010-grok-build.sh",
         "common/scripts/018-force-ssh-logout.sh",
         "common/scripts/020-application-tag.sh",
         "common/scripts/900-cleanup.sh"
