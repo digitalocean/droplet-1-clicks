@@ -2,11 +2,10 @@
 {
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
-    "image_name": "code-server-24-04-snapshot-{{timestamp}}",
-    "apt_packages": "apt-transport-https ca-certificates curl nginx python3-certbot-nginx software-properties-common",
-    "application_name": "Code Server",
-    "application_version": "4.126.0",
-    "arch": "amd64"
+    "image_name": "gitlab-24-04-snapshot-{{timestamp}}",
+    "apt_packages": "curl openssh-server ca-certificates tzdata perl postfix",
+    "application_name": "Gitlab",
+    "application_version": "19.0.2"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
@@ -15,7 +14,7 @@
       "api_token": "{{user `do_api_token`}}",
       "image": "ubuntu-24-04-x64",
       "region": "nyc3",
-      "size": "s-1vcpu-1gb",
+      "size": "s-2vcpu-4gb",
       "ssh_username": "root",
       "snapshot_name": "{{user `image_name`}}"
     }
@@ -34,12 +33,12 @@
     },
     {
       "type": "file",
-      "source": "code-server-22-04/files/etc/",
+      "source": "gitlab-enterprise-edition-24-04/files/etc/",
       "destination": "/etc/"
     },
     {
       "type": "file",
-      "source": "code-server-22-04/files/var/",
+      "source": "gitlab-enterprise-edition-24-04/files/var/",
       "destination": "/var/"
     },
     {
@@ -53,7 +52,6 @@
       "inline": [
         "apt -qqy update",
         "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' full-upgrade",
-        "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' install software-properties-common",
         "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' install {{user `apt_packages`}}",
         "apt-get -qqy clean"
       ]
@@ -61,8 +59,6 @@
     {
       "type": "shell",
       "environment_vars": [
-        "CODE_SERVER_VERSION={{user `application_version`}}",
-        "ARCH={{user `arch`}}",
         "application_name={{user `application_name`}}",
         "application_version={{user `application_version`}}",
         "DEBIAN_FRONTEND=noninteractive",
@@ -71,8 +67,7 @@
         "LC_CTYPE=en_US.UTF-8"
       ],
       "scripts": [
-        "code-server-22-04/scripts/010-code-server.sh",
-        "common/scripts/014-ufw-nginx.sh",
+        "common/scripts/014-ufw-http.sh",
         "common/scripts/018-force-ssh-logout.sh",
         "common/scripts/020-application-tag.sh",
         "common/scripts/900-cleanup.sh"
