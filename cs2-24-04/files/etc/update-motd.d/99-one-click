@@ -1,0 +1,52 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's 1-Click Counter-Strike 2 Dedicated Server Droplet.
+To keep this Droplet secure, the UFW firewall is enabled.
+All ports are BLOCKED except:
+ - 22   (SSH)
+ - 27015/tcp (CS2 RCON)
+ - 27015/udp (CS2 Game port)
+ - 27020/udp (CS2 SourceTV/GOTV)
+
+* You can SSH to this Droplet as root: ssh root@$myip
+
+  [CS2 Server Management]
+  The CS2 server runs as the 'linuxgsm' user via LinuxGSM.
+  To manage the server, switch to the linuxgsm user:
+
+    $ sudo -u linuxgsm -s
+
+  LinuxGSM cs2server commands:
+    ./cs2server start        | Start the CS2 server
+    ./cs2server stop         | Stop the CS2 server
+    ./cs2server restart      | Restart the CS2 server
+    ./cs2server status       | Check server status
+    ./cs2server details      | Show server details (IP, ports, config)
+    ./cs2server update       | Update CS2 server to latest version
+    ./cs2server monitor      | Monitor server and auto-restart if crashed
+    ./cs2server console      | Attach to the server console (tmux)
+
+  [CS2 Server Configuration]
+  The server config is located at:
+    /home/linuxgsm/lgsm/config-lgsm/cs2server/cs2server.cfg
+
+  To set a Game Server Login Token (GSLT, required for public visibility):
+    Edit the config above and set: gslt="YOUR_TOKEN_HERE"
+    Generate a GSLT at: https://steamcommunity.com/dev/managegameservers
+
+  [Connecting to the Server]
+  Connect in CS2 using the in-game console:
+    connect $myip:27015
+
+For help and more information, visit https://linuxgsm.com/servers/cs2server/
+
+********************************************************************************
+
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
