@@ -1,0 +1,25 @@
+#!/bin/sh
+
+set -e
+
+. /etc/default/odoo-1click
+
+# Generate a per-Droplet Odoo master password.
+admin_odoo_pass=$(openssl rand -hex 24)
+
+cat > /root/.digitalocean_passwords << EOM
+admin_odoo_password="${admin_odoo_pass}"
+EOM
+
+config_line="admin_passwd = $admin_odoo_pass"
+printf '%s\n' "$config_line" >> "$ODOO_CONFIG"
+
+systemctl daemon-reload
+systemctl start "$ODOO_SERVICE"
+
+# Remove the ssh force logout command.
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh

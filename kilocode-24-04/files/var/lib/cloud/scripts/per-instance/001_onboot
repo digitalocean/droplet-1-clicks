@@ -1,0 +1,109 @@
+#!/bin/bash
+
+set -e
+
+set -a
+source /etc/environment 2>/dev/null || true
+set +a
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
+
+chmod +x /opt/apply-digitalocean-token.sh
+
+DIGITALOCEAN_APPLIED=0
+if /opt/apply-digitalocean-token.sh; then
+    DIGITALOCEAN_APPLIED=1
+    echo "DIGITALOCEAN_ACCESS_TOKEN saved for Kilo Code sessions."
+fi
+
+# On first SSH login, ask for the optional model access key, then start Kilo.
+if ! grep -q 'kilocode-24-04-first-login BEGIN' /root/.bashrc 2>/dev/null; then
+    cat >> /root/.bashrc <<'EOM'
+
+# kilocode-24-04-first-login BEGIN
+if [ ! -f /root/.kilocode_first_login_complete ]; then
+  [ -f /etc/profile.d/kilocode-digitalocean.sh ] && . /etc/profile.d/kilocode-digitalocean.sh
+  /opt/setup-kilocode.sh
+  [ -f /etc/profile.d/kilocode-digitalocean.sh ] && . /etc/profile.d/kilocode-digitalocean.sh
+  touch /root/.kilocode_first_login_complete
+  kilo
+fi
+# kilocode-24-04-first-login END
+EOM
+fi
+
+if [ "$DIGITALOCEAN_APPLIED" -eq 1 ]; then
+    cat > /root/kilocode_info.txt << 'EOF'
+================================================================================
+Kilo Code CLI 1-Click Droplet - Getting Started
+================================================================================
+
+Kilo Code is an open-source AI coding agent CLI. It is installed as `kilo`
+and can run from any project directory.
+
+DIGITALOCEAN_ACCESS_TOKEN was configured automatically from a DigitalOcean
+model access key.
+
+FIRST LOGIN:
+
+Kilo Code will start automatically after the first-login setup check.
+
+Helper commands:
+   Update Kilo Code:   /opt/update-kilocode.sh
+   Re-run setup:       /opt/setup-kilocode.sh --force
+
+Token env:      DIGITALOCEAN_ACCESS_TOKEN
+Provider env:   KILO_PROVIDER_TYPE=digitalocean
+Documentation:  https://kilo.ai/docs/code-with-ai/platforms/cli
+
+================================================================================
+EOF
+else
+    cat > /root/kilocode_info.txt << 'EOF'
+================================================================================
+Kilo Code CLI 1-Click Droplet - Getting Started
+================================================================================
+
+Kilo Code is an open-source AI coding agent CLI. It is installed as `kilo`
+and can run from any project directory.
+
+OPTIONAL DIGITALOCEAN MODEL ACCESS KEY SETUP:
+
+The first-login setup helper will ask for DIGITALOCEAN_ACCESS_TOKEN. If you
+do not have one, press Enter to skip setup; Kilo will start automatically.
+
+To configure a DigitalOcean model access key later, export it as
+DIGITALOCEAN_ACCESS_TOKEN and apply it:
+
+   export DIGITALOCEAN_ACCESS_TOKEN=your_token_here
+   /opt/apply-digitalocean-token.sh
+
+Create or manage keys at:
+   https://cloud.digitalocean.com/model-studio/manage-keys
+
+If you skip token setup, Kilo still starts automatically. Configure providers
+from inside the CLI when needed.
+
+FIRST LOGIN:
+
+Kilo Code will start automatically after the setup prompt.
+
+Helper commands:
+   Update Kilo Code:   /opt/update-kilocode.sh
+   Re-run setup:       /opt/setup-kilocode.sh --force
+
+Documentation:  https://kilo.ai/docs/code-with-ai/platforms/cli
+
+================================================================================
+EOF
+fi
+
+chmod 600 /root/kilocode_info.txt
+
+echo "Kilo Code CLI first-boot initialization complete!"
+echo "Getting started info saved to /root/kilocode_info.txt"

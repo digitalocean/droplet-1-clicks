@@ -127,19 +127,19 @@ journalctl -u codex-universal -f
 
 ## Updating
 
-Pull the pinned image and restart:
+Pull the latest configured image and restart:
 
 ```bash
 /opt/codex-universal/update-codex-universal.sh
 ```
 
-The image is pinned by digest (`IMAGE` and `IMAGE_DIGEST` in `/opt/codex-universal/.env`) for reproducible builds. To adopt a newer upstream release, update the digest in the env file and rebuild the 1-click snapshot, or edit `IMAGE` / `IMAGE_DIGEST` manually after verifying the new digest.
+The image defaults to `ghcr.io/openai/codex-universal:latest`. To use a different tag, edit `IMAGE` in `/opt/codex-universal/.env`, then rerun the update helper.
 
 ## Security Notes
 
 - Only SSH (port 22) is exposed by default; UFW rate-limits SSH connections
 - No web interface or HTTP ports are opened
-- Docker image is pinned by digest at build time (see `IMAGE_DIGEST` in `.env`)
+- Docker image is pulled from the upstream latest tag at build time and first boot
 - `CODEX_ENV_*` droplet environment variables are validated against upstream supported versions on first boot
 - Store secrets and API keys outside the image; configure them at runtime
 - The dev container runs as root — suitable for development, not for production

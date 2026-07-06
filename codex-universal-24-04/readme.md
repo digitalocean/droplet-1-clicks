@@ -4,7 +4,7 @@ This directory contains the Packer builder configuration for creating a Codex Un
 
 ## Overview
 
-[Codex Universal](https://github.com/openai/codex-universal) is OpenAI's reference Docker image for the multi-language development environment used in Codex. This builder pre-installs Docker, pulls the official image (pinned by digest), and configures a persistent dev container with a mounted workspace at `/root/workspace`.
+[Codex Universal](https://github.com/openai/codex-universal) is OpenAI's reference Docker image for the multi-language development environment used in Codex. This builder pre-installs Docker, pulls the official latest image, and configures a persistent dev container with a mounted workspace at `/root/workspace`.
 
 ## Directory Structure
 
@@ -70,29 +70,27 @@ The build uses an `s-2vcpu-4gb` Droplet because the codex-universal image is lar
 |----------|---------|-------------|
 | `application_name` | Codex Universal | Application tag name |
 | `application_version` | latest | Human-readable tag label (`TAG` in env file) |
-| `image_digest` | sha256:905e512f... | Pinned digest for `ghcr.io/openai/codex-universal` |
 
 Default language runtimes are set in `files/opt/codex-universal/codex-universal.env`. Users can override via droplet environment variables on first boot (validated against upstream supported versions).
 
-### Updating the pinned image digest
+### Updating the Codex Universal image
 
 ```bash
-docker pull ghcr.io/openai/codex-universal:latest
-docker inspect ghcr.io/openai/codex-universal:latest --format='{{index .RepoDigests 0}}'
+/opt/codex-universal/update-codex-universal.sh
 ```
 
-Update `image_digest` in `template.json` and `IMAGE` / `IMAGE_DIGEST` in `codex-universal.env`, then rebuild.
+The update helper pulls the configured image tag from `/opt/codex-universal/.env` and restarts the service. To use a different tag, update `IMAGE` in that file, then rerun the helper.
 
 ## Runtime Behavior
 
-1. **Packer build** — Installs Docker, pulls pinned image by digest, enables systemd unit; `.env` is not left in the snapshot
+1. **Packer build** — Installs Docker, pulls `ghcr.io/openai/codex-universal:latest`, enables systemd unit; `.env` is not left in the snapshot
 2. **First boot** — `001_onboot` creates `.env` from template, validates droplet env overrides, starts `codex-universal.service`
 3. **Usage** — User runs `/opt/codex-universal/shell-codex-universal.sh` to `docker exec` into the running container
 
 ## Security
 
 - SSH-only UFW firewall
-- Image pinned by digest
+- Codex Universal image pulled from the upstream latest tag
 - `CODEX_ENV_*` allowlist validation on boot
 - `security_opt: no-new-privileges:true` on the container
 - `/opt/codex-universal/test-codex-universal.sh` includes runtime security checks

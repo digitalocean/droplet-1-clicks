@@ -1,0 +1,95 @@
+#!/bin/sh -e
+#
+# finish the matrix installation
+
+glob() {
+    case $1 in $2) return 0; esac; return 1
+}
+
+yn() {
+    printf '%s [y/n]: ' "$1"
+    stty -icanon
+    answer=$(dd ibs=1 count=1 2>/dev/null)
+    stty icanon
+    printf '\n'
+    glob "$answer" '[yY]'
+}
+
+die() {
+    printf 'error: %s.\n' "$1" >&2
+    exit 1
+}
+
+print_dots() {
+    printf "."
+    sleep 1
+    printf "."
+    sleep 1
+    printf "."
+    sleep 1
+    printf "\n\n\n"
+}
+
+printf "Enter your custom domain name, like so: example.com\n"
+printf "> "
+read domain
+
+matrix_prefix="matrix.${domain}"
+chat_prefix="chat.${domain}"
+myip="$(hostname -I | awk '{print $1}')"
+
+printf "The domain you have entered is: $domain\n"
+yn "Is that correct?" || die "Exiting cowardly"
+
+sed "s/USERDOMAIN/$domain/g" -i /etc/matrix-synapse/conf.d/server_name.yaml
+printf "Starting matrix-synapse (Synapse)...\n"
+systemctl enable matrix-synapse
+systemctl start matrix-synapse
+
+printf "Matrix configuration complete.\n"
+print_dots
+
+sed "s/USERDOMAIN/$domain/g" -i /opt/element/config.json
+printf "Element configuration complete.\n"
+print_dots
+
+printf "Please create the following DNS A records:\n"
+printf "$domain -> $myip\n"
+printf "$matrix_prefix -> $myip\n"
+printf "$chat_prefix -> $myip\n"
+
+if yn "Did you finish configuring DNS?"; then
+    sed "s/USERDOMAIN/$domain/g" -i /etc/caddy/Caddyfile
+
+    printf "Waiting for $domain to resolve to $myip... (this could take 20+ minutes)\n"
+    until dig +short "$domain" | grep "$myip"; do
+        printf "."
+        sleep 30
+    done
+    printf "Waiting for $chat_prefix to resolve to $myip... (this could take 20+ minutes)\n"
+    until dig +short "$chat_prefix" | grep "$myip"; do
+        printf "."
+        sleep 30
+    done
+    printf "Waiting for $matrix_prefix to resolve to $myip... (this could take 20+ minutes)\n"
+    until dig +short "$matrix_prefix" | grep "$myip"; do
+        printf "."
+        sleep 30
+    done
+
+    printf "Starting caddy (Reverse Proxy)...\n"
+    systemctl enable caddy
+    systemctl start caddy
+else
+    die "Cannot proceed unless DNS is configured"
+fi
+printf "Caddy configuration complete.\n"
+print_dots
+
+yn "Would you like to generate a matrix user?" && {
+    printf "Username?\n> "
+    read username
+    /root/new-user "$username"
+}
+
+printf "Matrix configuration is complete! You should be able to login at https://$chat_prefix\n"
