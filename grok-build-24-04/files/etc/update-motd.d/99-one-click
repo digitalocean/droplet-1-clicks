@@ -1,0 +1,57 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's One-Click Grok Build Droplet.
+
+Grok Build is xAI's terminal-based coding agent. Use natural language to plan,
+write, review, and refactor code. This droplet is pre-configured to run Grok
+Build on DigitalOcean Serverless Inference.
+
+PRE-CONFIGURED MODELS (via DigitalOcean Serverless Inference, default GPT-5.5):
+  gpt-5-5 (default), gpt-5-4, gpt-5-3-codex, gpt-5-2, gpt-5-1-codex-max,
+  gpt-5, gpt-4-1, claude-opus-4-8, claude-opus-4-6, claude-sonnet-4-6,
+  claude-haiku-4-5, deepseek-v4-pro, kimi-k2-6, minimax-m2-5, glm-5,
+  qwen3-coder-flash, llama-4-maverick, nemotron-3-super-120b, router
+
+GETTING STARTED:
+
+  1. On first login, the setup wizard prompts for your DigitalOcean model
+     access key and lets you pick a default model from a list. Create a key:
+       https://cloud.digitalocean.com/model-studio/manage-keys  (Inference > Manage)
+     With a model access key, Grok uses the API directly - no browser sign-in.
+
+     Prefer your own xAI account? This droplet has no browser, so use the
+     device-code flow (shows a URL + code to open on any device):
+       /opt/grok-login.sh      (or: grok login --device-auth)
+
+  2. Run Grok Build:
+       cd /path/to/your/project
+       grok
+
+  3. Headless mode:  grok -p "Explain this codebase"
+     Switch models:  /model in the TUI, or  grok -p "..." -m claude-opus-4-6
+
+If grok reports no API key in your current shell (e.g. immediately after the
+setup wizard, or in a non-login shell), load it with:
+  source /etc/profile.d/grok-build-key.sh
+
+Intelligent Inference Router: create a router in the control panel attached to
+your model access key, set DO_INFERENCE_ROUTER=<name>, and re-run the setup wizard to
+route each prompt to the best-fit model (uses the same key, model "router:<name>").
+
+Helper Commands:
+  Check version:     grok --version
+  Update Grok Build: /opt/update-grok-build.sh
+  Re-run setup:      /opt/setup-grok-build.sh
+  xAI device login:  /opt/grok-login.sh
+
+Configuration:  /root/.grok/config.toml
+Documentation:  https://docs.x.ai/build/overview
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
