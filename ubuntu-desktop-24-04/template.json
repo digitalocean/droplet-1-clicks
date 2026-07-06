@@ -32,11 +32,6 @@
     },
     {
       "type": "file",
-      "source": "ubuntu-desktop-24-04/files/var/",
-      "destination": "/var/"
-    },
-    {
-      "type": "file",
       "source": "ubuntu-desktop-24-04/files/etc/",
       "destination": "/etc/"
     },
