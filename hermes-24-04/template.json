@@ -4,7 +4,7 @@
     "image_name": "hermes-24-04-snapshot-{{timestamp}}",
     "apt_packages": "procps file apt-transport-https ca-certificates curl software-properties-common git build-essential python3 python3-venv python3-pip python3-dev libffi-dev pkg-config jq unzip ripgrep ffmpeg ufw fail2ban",
     "application_name": "Hermes Agent",
-    "application_version": "main"
+    "application_version": "latest"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [

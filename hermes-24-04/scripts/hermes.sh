@@ -1,11 +1,12 @@
 #!/bin/sh
 set -e
 
-APP_VERSION="${application_version:-main}"
+APP_VERSION="${application_version:-latest}"
 INSTALLER=/tmp/hermes-install.sh
 HERMES_USER=hermes
 HERMES_HOME=/home/hermes/.hermes
 HERMES_BIN=/home/hermes/.local/bin/hermes
+LATEST_RELEASE_URL=https://github.com/NousResearch/hermes-agent/releases/latest
 
 # Terminal-first image: keep only SSH exposed by default.
 ufw limit ssh/tcp
@@ -21,9 +22,18 @@ systemctl restart fail2ban
 
 rm -f "$INSTALLER"
 
+if [ "$APP_VERSION" = "latest" ]; then
+    APP_VERSION="$(curl -fsSIL -o /dev/null -w '%{url_effective}' "$LATEST_RELEASE_URL" | sed 's#.*/##')"
+
+    if [ -z "$APP_VERSION" ] || [ "$APP_VERSION" = "latest" ]; then
+        echo "ERROR: unable to resolve the latest Hermes release tag." >&2
+        exit 1
+    fi
+fi
+
 case "$APP_VERSION" in
     *[!A-Za-z0-9._-]*)
-        echo "ERROR: unsupported Hermes version/branch: $APP_VERSION" >&2
+        echo "ERROR: unsupported Hermes version reference: $APP_VERSION" >&2
         exit 1
         ;;
 esac
