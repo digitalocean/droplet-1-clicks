@@ -9,7 +9,8 @@ RAM_FOR_MINECRAFT=$((RAM_AVAILABLE/1365))
 cat <<EOF
 ********************************************************************************
 
-Welcome to DigitalOcean's 1-Click Minecraft Droplet.
+Welcome to DigitalOcean's 1-Click Minecraft Java Droplet.
+Running Minecraft Java Edition 26.2 on Ubuntu 24.04 LTS.
 
 
 * You can SSH to this Droplet in a terminal as root: ssh root@$myip

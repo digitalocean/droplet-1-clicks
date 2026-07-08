@@ -1,5 +1,5 @@
 [Unit]
-Description=Minecraft Droplet Server
+Description=Minecraft Java Droplet Server
 After=network.target
 
 [Service]
