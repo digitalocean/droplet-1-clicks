@@ -4,7 +4,7 @@
     "image_name": "minecraft-forge-24-04-snapshot-{{timestamp}}",
     "apt_packages": "temurin-25-jre temurin-25-jdk",
     "application_name": "Minecraft Forge",
-    "application_version": "26.2-65.0.3"
+    "application_version": "26.1.2-64.0.11"
   },
   "sensitive-variables": [
     "do_api_token"
