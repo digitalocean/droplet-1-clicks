@@ -1,0 +1,36 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+Welcome to the DigitalOcean Open WebUI 1-Click Application
+
+Open WebUI is an extensible, feature-rich, and user-friendly self-hosted AI interface
+designed to operate entirely offline. It supports various LLM runners, including
+Ollama and OpenAI-compatible APIs.
+
+This application requires at least 2 GB RAM for stable operation.
+
+Open WebUI is running in Docker and is available at:
+
+  http://$myip:3000
+
+On first visit, create an admin account to get started. Then connect your inference
+endpoint (for example, a local Ollama instance or an OpenAI-compatible API).
+
+To check the container status:
+
+  docker ps --filter name=open-webui
+
+To update Open WebUI to a newer release:
+
+  docker pull ghcr.io/open-webui/open-webui:v0.10.2
+  docker stop open-webui && docker rm open-webui
+  docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data -e DATABASE_POOL_SIZE=8 -e DATABASE_SQLITE_PRAGMA_CACHE_SIZE=-2000 -e DATABASE_SQLITE_PRAGMA_MMAP_SIZE=0 --name open-webui --restart always ghcr.io/open-webui/open-webui:v0.10.2
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
