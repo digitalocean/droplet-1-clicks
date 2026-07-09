@@ -48,7 +48,7 @@ ExecStart=/bin/sh -c \
                    -XX:MaxGCPauseMillis=200 \
                    -XX:MaxTenuringThreshold=1 \
                    -XX:SurvivorRatio=32 \
-                   -jar paper-1.21.4-224.jar \
+                   -jar paper-26.1.2-74.jar \
                    --nogui'
 
 ExecReload=/usr/bin/screen -p 0 -S minecraft -X eval 'stuff "reload"\\015'

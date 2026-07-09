@@ -3,7 +3,7 @@
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "paper-minecraft-24-04-snapshot-{{timestamp}}",
     "application_name": "PaperMC",
-    "application_version": "1.21.4"
+    "application_version": "26.1.2"
   },
   "sensitive-variables": [
     "do_api_token"
