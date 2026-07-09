@@ -15,8 +15,10 @@ useradd --system --shell /usr/sbin/nologin --home /opt/minecraft -g minecraft mi
 
 mkdir -p /opt/minecraft
 
+PAPER_JAR="paper-${application_version}-${paper_build}.jar"
+
 PAPER_URL=$(curl -fsSL -H "User-Agent: digitalocean-droplet-1-clicks/1.0 (marketplace@digitalocean.com)" \
-  "https://fill.papermc.io/v3/projects/paper/versions/26.1.2/builds/74" \
+  "https://fill.papermc.io/v3/projects/paper/versions/${application_version}/builds/${paper_build}" \
   | python3 -c "import sys, json; print(json.load(sys.stdin)['downloads']['server:default']['url'])")
 
 if [ -z "${PAPER_URL}" ]; then
@@ -24,7 +26,8 @@ if [ -z "${PAPER_URL}" ]; then
   exit 1
 fi
 
-wget -q "${PAPER_URL}" -O /opt/minecraft/paper-26.1.2-74.jar
+wget -q "${PAPER_URL}" -O "/opt/minecraft/${PAPER_JAR}"
+ln -sf "${PAPER_JAR}" /opt/minecraft/paper.jar
 
 echo "eula=true" > /opt/minecraft/eula.txt
 

@@ -2,8 +2,10 @@
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "paper-minecraft-24-04-snapshot-{{timestamp}}",
+    "apt_packages": "temurin-25-jre",
     "application_name": "PaperMC",
-    "application_version": "26.1.2"
+    "application_version": "26.1.2",
+    "paper_build": "74"
   },
   "sensitive-variables": [
     "do_api_token"
@@ -46,6 +48,7 @@
       "environment_vars": [
         "application_name={{user `application_name`}}",
         "application_version={{user `application_version`}}",
+        "paper_build={{user `paper_build`}}",
         "DEBIAN_FRONTEND=noninteractive",
         "LC_ALL=C",
         "LANG=en_US.UTF-8",
