@@ -29,5 +29,3 @@ wget -q "${PAPER_URL}" -O /opt/minecraft/paper-26.1.2-74.jar
 echo "eula=true" > /opt/minecraft/eula.txt
 
 chown -R minecraft:minecraft /opt/minecraft
-chown -R minecraft:minecraft /opt/minecraft/eula.txt
-chown -R minecraft:minecraft /opt/minecraft/paper-26.1.2-74.jar
