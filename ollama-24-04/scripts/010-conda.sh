@@ -24,3 +24,5 @@ bash $anaconda_script -b -p $home_dir/anaconda3
 /home/digitalocean/anaconda3/bin/conda init
 sudo /home/digitalocean/anaconda3/bin/conda update -y -n base -c defaults conda
 sudo /home/digitalocean/anaconda3/bin/conda install -y -c conda-forge conda-bash-completion
+
+chown -R digitalocean:digitalocean $home_dir/anaconda3
