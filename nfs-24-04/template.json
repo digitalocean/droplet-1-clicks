@@ -1,7 +1,7 @@
 {
   "variables": {
     "token": "{{env `DIGITALOCEAN_TOKEN`}}",
-    "image_name": "nfs-22-04-snapshot-{{timestamp}}",
+    "image_name": "nfs-24-04-snapshot-{{timestamp}}",
     "apt_packages": "fail2ban jq nfs-kernel-server",
     "application_name": "NFS",
     "application_version": ""
@@ -10,7 +10,7 @@
     {
       "type": "digitalocean",
       "api_token": "{{user `token`}}",
-      "image": "ubuntu-22-04-x64",
+      "image": "ubuntu-24-04-x64",
       "region": "nyc3",
       "size": "s-1vcpu-1gb",
       "ssh_username": "root",
@@ -31,17 +31,17 @@
     },
     {
       "type": "file",
-      "source": "nfs-22-04/files/etc/",
+      "source": "nfs-24-04/files/etc/",
       "destination": "/etc/"
     },
     {
       "type": "file",
-      "source": "nfs-22-04/files/var/",
+      "source": "nfs-24-04/files/var/",
       "destination": "/var/"
     },
     {
       "type": "file",
-      "source": "nfs-22-04/files/root/",
+      "source": "nfs-24-04/files/root/",
       "destination": "/root/"
     },
     {
@@ -62,7 +62,7 @@
     {
       "type": "shell",
       "scripts": [
-        "nfs-22-04/scripts/010-nfs.sh",
+        "nfs-24-04/scripts/010-nfs.sh",
         "common/scripts/018-force-ssh-logout.sh",
         "common/scripts/020-application-tag.sh",
         "common/scripts/900-cleanup.sh"
