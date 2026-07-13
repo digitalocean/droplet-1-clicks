@@ -1,0 +1,38 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+Welcome to Plex Media Server
+
+Stream your personal media library to nearly any device.
+
+Access Plex:
+
+  Web (via NGINX):  http://$myip
+  Direct:           http://$myip:32400/web
+
+Media directory:
+
+  /opt/plex/media
+
+Management:
+
+  Start:    /opt/start-plex.sh    (or: systemctl start plex)
+  Stop:     /opt/stop-plex.sh     (or: systemctl stop plex)
+  Restart:  /opt/restart-plex.sh  (or: systemctl restart plex)
+  Update:   /opt/update-plex.sh
+  Logs:     docker compose -f /opt/plex/docker-compose.yml logs -f
+  Status:   systemctl status plex
+
+After deployment, sign in at the Plex web UI to claim this server and
+configure remote access on port 32400.
+
+Documentation: https://www.akamai.com/cloud/marketplace-docs/guides/plex/
+
+********************************************************************************
+To delete this message of the day: rm -rf \$(readlink -f \${0})
+EOF

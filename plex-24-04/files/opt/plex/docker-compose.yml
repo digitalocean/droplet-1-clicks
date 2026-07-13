@@ -1,0 +1,14 @@
+services:
+  plex:
+    image: plexinc/pms-docker:PLEX_VERSION_PLACEHOLDER
+    container_name: plex
+    restart: unless-stopped
+    ports:
+      - "32400:32400/tcp"
+    environment:
+      - TZ=UTC
+      - VERSION=docker
+    volumes:
+      - /opt/plex/config:/config
+      - /opt/plex/transcode:/transcode
+      - /opt/plex/media:/data

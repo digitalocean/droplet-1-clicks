@@ -1,0 +1,24 @@
+#!/bin/bash
+
+echo "Configuring Plex Media Server on first boot..."
+
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
+
+systemctl start plex
+
+sleep 5
+
+if systemctl is-active --quiet plex; then
+    echo "Plex Media Server started successfully."
+    echo ""
+    echo "Web interface: http://$(hostname -I | awk '{print $1}')"
+    echo "Direct access:  http://$(hostname -I | awk '{print $1}'):32400/web"
+else
+    echo "Plex may need more time to start. Check: systemctl status plex"
+fi
+
+echo "First boot configuration completed."
