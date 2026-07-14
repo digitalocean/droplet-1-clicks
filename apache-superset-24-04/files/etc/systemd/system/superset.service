@@ -1,0 +1,16 @@
+[Unit]
+Description=Apache Superset
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=superset
+Group=superset
+WorkingDirectory=/home/superset
+Environment=SUPERSET_CONFIG_PATH=/home/superset/superset/superset_config.py
+ExecStart=/var/superset/superset.sh
+Restart=always
+SyslogIdentifier=superset
+
+[Install]
+WantedBy=multi-user.target
