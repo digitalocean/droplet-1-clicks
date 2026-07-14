@@ -1,0 +1,22 @@
+---
+- name: stackstorm | firewall | rate limit ssh connections
+  community.general.ufw:
+    rule: limit
+    name: OpenSSH
+
+- name: stackstorm | firewall | allow http
+  community.general.ufw:
+    rule: allow
+    port: "80"
+    proto: tcp
+
+- name: stackstorm | firewall | allow https
+  community.general.ufw:
+    rule: allow
+    port: "443"
+    proto: tcp
+
+- name: stackstorm | firewall | deny everything else and enable ufw
+  community.general.ufw:
+    state: enabled
+    policy: deny
