@@ -15,21 +15,34 @@ Access Plex:
   Web (via NGINX):  http://$myip
   Direct:           http://$myip:32400/web
 
+IMPORTANT — First-time claim (unclaimed servers):
+
+  Plex only allows initial claiming from localhost. Opening the public
+  IP in a browser often shows "Not authorised". Use one of these:
+
+  Option A — SSH tunnel (from your laptop):
+    ssh -L 8888:127.0.0.1:32400 root@$myip
+    Then open: http://localhost:8888/web
+
+  Option B — Claim token:
+    1. Open https://www.plex.tv/claim and copy the token
+    2. Run: /opt/claim-plex.sh claim-XXXXXXXX
+
 Media directory:
 
-  /opt/plex/media
+  /opt/plex/media  (in Plex UI this is /data)
 
 Management:
 
-  Start:    /opt/start-plex.sh    (or: systemctl start plex)
-  Stop:     /opt/stop-plex.sh     (or: systemctl stop plex)
-  Restart:  /opt/restart-plex.sh  (or: systemctl restart plex)
+  Start:    /opt/start-plex.sh
+  Stop:     /opt/stop-plex.sh
+  Restart:  /opt/restart-plex.sh
   Update:   /opt/update-plex.sh
+  Claim:    /opt/claim-plex.sh <token>
   Logs:     docker compose -f /opt/plex/docker-compose.yml logs -f
   Status:   systemctl status plex
 
-After deployment, sign in at the Plex web UI to claim this server and
-configure remote access on port 32400.
+After claiming, configure Remote Access on port 32400 in Plex settings.
 
 Documentation: https://www.akamai.com/cloud/marketplace-docs/guides/plex/
 

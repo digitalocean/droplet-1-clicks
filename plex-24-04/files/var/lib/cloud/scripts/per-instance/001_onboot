@@ -8,6 +8,9 @@ sed -e '/Match User root/d' \
 
 systemctl restart ssh
 
+PUBLIC_IP=$(curl -fsSL http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || hostname -I | awk '{print $1}')
+echo "ADVERTISE_IP=http://${PUBLIC_IP}:32400/" > /opt/plex/.env
+
 systemctl start plex
 
 sleep 5
@@ -15,8 +18,8 @@ sleep 5
 if systemctl is-active --quiet plex; then
     echo "Plex Media Server started successfully."
     echo ""
-    echo "Web interface: http://$(hostname -I | awk '{print $1}')"
-    echo "Direct access:  http://$(hostname -I | awk '{print $1}'):32400/web"
+    echo "Web interface: http://${PUBLIC_IP}"
+    echo "Direct access:  http://${PUBLIC_IP}:32400/web"
 else
     echo "Plex may need more time to start. Check: systemctl status plex"
 fi

@@ -17,6 +17,7 @@ chmod +x /opt/start-plex.sh
 chmod +x /opt/stop-plex.sh
 chmod +x /opt/restart-plex.sh
 chmod +x /opt/update-plex.sh
+chmod +x /opt/claim-plex.sh
 chmod +x /var/lib/cloud/scripts/per-instance/001_onboot
 chmod +x /etc/update-motd.d/99-one-click
 
@@ -28,7 +29,7 @@ systemctl enable nginx
 systemctl restart nginx
 
 cd /opt/plex
-docker compose pull
+docker compose pull --quiet
 
 systemctl enable plex
 

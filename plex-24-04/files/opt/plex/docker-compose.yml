@@ -6,8 +6,10 @@ services:
     ports:
       - "32400:32400/tcp"
     environment:
-      - TZ=UTC
-      - VERSION=docker
+      TZ: UTC
+      VERSION: docker
+      ADVERTISE_IP: ${ADVERTISE_IP:-}
+      PLEX_CLAIM: ${PLEX_CLAIM:-}
     volumes:
       - /opt/plex/config:/config
       - /opt/plex/transcode:/transcode

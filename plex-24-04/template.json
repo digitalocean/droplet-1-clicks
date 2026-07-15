@@ -3,10 +3,10 @@
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "plex-24-04-snapshot-{{timestamp}}",
-    "apt_packages": "apt-transport-https ca-certificates curl software-properties-common jq nginx certbot python3-certbot-nginx docker.io docker-compose-v2",
+    "apt_packages": "apt-transport-https ca-certificates curl software-properties-common jq nginx certbot python3-certbot-nginx docker.io docker-compose-v2 fail2ban",
     "application_name": "Plex Media Server",
-    "application_version": "1.5.7.4016-25d94bad9",
-    "plex_version": "1.5.7.4016-25d94bad9"
+    "application_version": "1.43.2.10687-563d026ea",
+    "plex_version": "1.43.2.10687-563d026ea"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
@@ -56,9 +56,9 @@
         "LC_CTYPE=en_US.UTF-8"
       ],
       "inline": [
-        "apt -qqy update",
-        "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' full-upgrade",
-        "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' install {{user `apt_packages`}}",
+        "apt-get -qqy update",
+        "apt-get -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' full-upgrade",
+        "apt-get -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' install {{user `apt_packages`}}",
         "apt-get -qqy clean"
       ]
     },

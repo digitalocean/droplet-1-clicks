@@ -14,8 +14,8 @@ Override the pinned Plex version at build time:
 
 ```sh
 packer build \
-  -var 'plex_version=1.5.7.4016-25d94bad9' \
-  -var 'application_version=1.5.7.4016-25d94bad9' \
+  -var 'plex_version=1.43.2.10687-563d026ea' \
+  -var 'application_version=1.43.2.10687-563d026ea' \
   plex-24-04/template.json
 ```
 
@@ -26,6 +26,7 @@ packer build \
 - Docker and Docker Compose
 - NGINX reverse proxy (HTTP on port 80)
 - UFW (SSH, HTTP/HTTPS, Plex port 32400)
+- fail2ban
 
 ## Suggested Droplet size
 
@@ -36,3 +37,5 @@ packer build \
 ```sh
 /opt/update-plex.sh
 ```
+
+This fetches the latest versioned tag from Docker Hub, updates `docker-compose.yml`, pulls the image, and restarts the service.
