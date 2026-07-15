@@ -4,8 +4,7 @@
     "image_name": "supabase-24-04-snapshot-{{timestamp}}",
     "apt_packages": "ca-certificates curl jq git ufw dirmngr gnupg lsb-release debian-archive-keyring snapd nginx",
     "application_name": "Supabase",
-    "application_version": "v1.26.05",
-    "supabase_repo_ref": "v1.26.05"
+    "application_version": "v1.26.05"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
@@ -61,7 +60,6 @@
       "environment_vars": [
         "application_name={{user `application_name`}}",
         "application_version={{user `application_version`}}",
-        "supabase_repo_ref={{user `supabase_repo_ref`}}",
         "DEBIAN_FRONTEND=noninteractive",
         "LC_ALL=C",
         "LANG=en_US.UTF-8",

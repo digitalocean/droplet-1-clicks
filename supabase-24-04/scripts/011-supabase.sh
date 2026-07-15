@@ -9,7 +9,7 @@ systemctl enable docker
 # Clone a pinned Supabase release for stable self-hosting
 mkdir -p /srv/supabase
 cd /srv/supabase
-git clone --depth 1 --branch "$supabase_repo_ref" https://github.com/supabase/supabase
+git clone --depth 1 --branch "$application_version" https://github.com/supabase/supabase
 cd supabase/docker
 cp .env.example .env
 
