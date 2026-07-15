@@ -5,7 +5,8 @@ After=network.target
 [Service]
 User=digitalocean
 WorkingDirectory=/home/digitalocean
-ExecStart=/home/digitalocean/.conda/envs/ui/bin/open-webui serve
+Environment=PATH=/home/digitalocean/anaconda3/envs/ui/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/home/digitalocean/anaconda3/envs/ui/bin/open-webui serve
 Restart=always
 SyslogIdentifier=open-webui
 StandardOutput=append:/var/log/open-webui.log
