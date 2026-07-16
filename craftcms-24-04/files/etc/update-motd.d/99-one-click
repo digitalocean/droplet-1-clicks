@@ -1,0 +1,28 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's 1-Click Craft CMS Droplet.
+To keep this Droplet secure, the UFW firewall is enabled.
+All ports are BLOCKED except 22 (SSH), 80 (HTTP), and 443 (HTTPS).
+
+In a web browser, you can view:
+  * Your Craft CMS website: http://$myip
+  * The Craft Control Panel: http://$myip/admin
+
+On the server:
+  * The Craft project root is located at /var/www/craft
+  * The web root is located at /var/www/craft/web
+  * The MySQL root and craft passwords are saved in /root/.digitalocean_password
+  * Certbot is preinstalled. Run it to configure HTTPS. See
+    https://craftcms.com/docs/5.x/ for more detail.
+
+For help and more information, visit https://craftcms.com/docs/5.x/
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF

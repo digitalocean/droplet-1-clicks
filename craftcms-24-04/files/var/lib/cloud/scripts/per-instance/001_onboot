@@ -1,0 +1,121 @@
+#!/bin/bash
+
+# Generate MySQL passwords (WordPress / LEMP pattern)
+root_mysql_pass=$(openssl rand -hex 24)
+craft_mysql_pass=$(openssl rand -hex 24)
+debian_sys_maint_mysql_pass=$(openssl rand -hex 24)
+myip=$(hostname -I | awk '{print$1}')
+
+# Don't finish Craft install until first login (optional CLI wizard)
+cat >> /root/.bashrc <<EOM
+chmod +x /root/craft_setup.sh
+/root/craft_setup.sh
+EOM
+
+# Save the passwords
+cat > /root/.digitalocean_password <<EOM
+root_mysql_pass="${root_mysql_pass}"
+craft_mysql_pass="${craft_mysql_pass}"
+EOM
+chmod 600 /root/.digitalocean_password
+
+# Soften MySQL on tiny droplets (same approach as WordPress)
+dropletMemory=$(LANG=C free | awk '/^Mem:/{print $2}')
+if [ "$dropletMemory" -lt 2000000 ]; then
+  echo "[mysqld]
+performance_schema=off" > /etc/mysql/mysql.conf.d/performance.cnf
+  systemctl restart mysql
+fi
+
+# Set up Postfix defaults
+hostname=$(hostname)
+sed -i "s/myhostname \= .*/myhostname = $hostname/g" /etc/postfix/main.cf || true
+sed -i "s/inet_interfaces = all/inet_interfaces = loopback-only/g" /etc/postfix/main.cf || true
+systemctl restart postfix &
+
+mysqladmin -u root -h localhost create craftcms
+mysqladmin -u root -h localhost password ${root_mysql_pass}
+
+mysql -uroot -p${root_mysql_pass} \
+      -e "CREATE USER 'craft'@'localhost' IDENTIFIED BY '${craft_mysql_pass}'"
+
+mysql -uroot -p${root_mysql_pass} \
+      -e "GRANT ALL PRIVILEGES ON craftcms.* TO craft@localhost"
+
+mysql -uroot -p${root_mysql_pass} \
+      -e "ALTER USER 'debian-sys-maint'@'localhost' IDENTIFIED BY '${debian_sys_maint_mysql_pass}'"
+
+MYSQL_ROOT_PASSWORD=${root_mysql_pass}
+
+SECURE_MYSQL=$(expect -c "
+set timeout 10
+spawn mysql_secure_installation
+expect \"Enter current password for root (enter for none):\"
+send \"$MYSQL_ROOT_PASSWORD\r\"
+expect \"Change the root password?\"
+send \"n\r\"
+expect \"Remove anonymous users?\"
+send \"y\r\"
+expect \"Disallow root login remotely?\"
+send \"y\r\"
+expect \"Remove test database and access to it?\"
+send \"y\r\"
+expect \"Reload privilege tables now?\"
+send \"y\r\"
+expect eof
+")
+
+cat > /etc/mysql/debian.cnf <<EOM
+# Automatically generated for Debian scripts. DO NOT TOUCH!
+[client]
+host     = localhost
+user     = debian-sys-maint
+password = ${debian_sys_maint_mysql_pass}
+socket   = /var/run/mysqld/mysqld.sock
+[mysql_upgrade]
+host     = localhost
+user     = debian-sys-maint
+password = ${debian_sys_maint_mysql_pass}
+socket   = /var/run/mysqld/mysqld.sock
+EOM
+chmod 600 /etc/mysql/debian.cnf
+
+# Populate Craft .env for this droplet
+ENV_FILE=/var/www/craft/.env
+cat > "${ENV_FILE}" <<EOF
+# DigitalOcean Craft CMS 1-Click
+# https://craftcms.com/docs/5.x/configure.html
+
+CRAFT_APP_ID=
+CRAFT_ENVIRONMENT=production
+
+CRAFT_DB_DRIVER=mysql
+CRAFT_DB_SERVER=127.0.0.1
+CRAFT_DB_PORT=3306
+CRAFT_DB_DATABASE=craftcms
+CRAFT_DB_USER=craft
+CRAFT_DB_PASSWORD=${craft_mysql_pass}
+CRAFT_DB_SCHEMA=
+CRAFT_DB_TABLE_PREFIX=
+
+CRAFT_SECURITY_KEY=
+CRAFT_DEV_MODE=false
+CRAFT_ALLOW_ADMIN_CHANGES=true
+CRAFT_DISALLOW_ROBOTS=false
+EOF
+
+cd /var/www/craft
+php craft setup/app-id --interactive=0
+php craft setup/security-key --interactive=0
+
+chown -R www-data:www-data /var/www/craft
+chmod 640 /var/www/craft/.env
+chmod +x /var/www/craft/craft
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
+systemctl restart nginx php8.3-fpm mysql
