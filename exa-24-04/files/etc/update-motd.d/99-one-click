@@ -1,0 +1,31 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's 1-Click Exa MCP Server Droplet.
+To keep this Droplet secure, the UFW firewall is enabled.
+All ports are BLOCKED except 22 (SSH), 80 (HTTP), and 443 (HTTPS).
+
+- On first SSH login as root, you will be prompted for your Exa API key.
+  Get a key at: https://dashboard.exa.ai/
+
+- Exa MCP runs as a systemd service.
+  To view service status:
+
+  systemctl status exa-mcp
+
+On the server:
+  * API key is stored in /etc/exa/mcp.env
+  * Configuration marker: /etc/exa/.configured
+
+For more information, please refer to the Getting Started Guide:
+https://marketplace.digitalocean.com/apps/exa
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
