@@ -1,16 +1,13 @@
 #!/bin/sh
 
 # Download the WordPress bits and cache them on disk
-wget -q https://wordpress.org/wordpress-latest.tar.gz -O /tmp/wordpress.tar.gz
+wget -q "https://wordpress.org/wordpress-${application_version}.tar.gz" \
+     -O /tmp/wordpress.tar.gz
 
 # Extract the bits and stage up
 mkdir -p /var/www
 tar -C /var/www \
     -xvvf /tmp/wordpress.tar.gz
-
-# Update WordPress core to the latest version
-cd /var/www/wordpress
-wp core update
 
 wget -q https://downloads.wordpress.org/plugin/wp-fail2ban.latest-stable.zip -O /tmp/wp-fail2ban.zip
 unzip -q /tmp/wp-fail2ban.zip -d /tmp/
