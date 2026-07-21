@@ -1,0 +1,46 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+pub=$(curl -fsS --retry 3 --retry-connrefused --max-time 3 \
+  http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)
+myip="${pub:-$(hostname -I | awk '{print$1}')}"
+api_key=$(grep "^LOCAL_BACKEND_API_KEY=" /opt/openhands.env 2>/dev/null | cut -d= -f2-)
+
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's One-Click OpenHands Droplet.
+
+OpenHands Agent Canvas is a self-hosted control center for AI coding agents
+and automations. Run agents on this droplet and connect from your browser.
+
+🌐 Access:
+  Web UI:  https://$myip
+  API Key: $api_key
+
+  Paste the API key when the UI prompts for it.
+  Key file: /home/openhands/.openhands/api-key.txt
+
+📝 First steps:
+  1. Open the Web UI and enter the API key
+  2. Configure an LLM (Settings > LLM), or complete the SSH setup wizard
+     for DigitalOcean Gradient
+  3. Put projects in /home/openhands/projects and start a conversation
+
+🔧 Management:
+  Restart:  /opt/restart-openhands.sh
+  Status:   /opt/status-openhands.sh
+  Update:   /opt/update-openhands.sh
+  Domain:   /opt/setup-openhands-domain.sh
+  Setup:    /etc/setup_wizard.sh
+
+  systemctl {start|stop|restart|status} openhands
+  journalctl -u openhands -f
+
+📚 Docs: https://docs.openhands.dev/
+🔗 Site: https://www.openhands.dev/
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
