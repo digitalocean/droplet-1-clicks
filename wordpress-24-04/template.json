@@ -5,7 +5,7 @@
     "image_name": "wordpress-24-04-snapshot-{{timestamp}}",
     "apt_packages": "fail2ban mysql-server php8.3-fpm php8.3 php8.3-apcu php8.3-bz2 php8.3-curl php8.3-gd php8.3-gmp php8.3-intl php8.3-mbstring php8.3-mysql php8.3-pspell php8.3-soap php8.3-tidy php8.3-xml php8.3-xmlrpc php8.3-xsl php8.3-zip postfix software-properties-common unzip",
     "application_name": "WordPress",
-    "application_version": "6.9.5",
+    "application_version": "7.0.2",
     "fail2ban_version": ""
   },
   "sensitive-variables": ["do_api_token"],
@@ -57,7 +57,7 @@
       ],
       "inline": [
         "add-apt-repository -y ppa:ondrej/php",
-        "wget -c https://dev.mysql.com/get/mysql-apt-config_0.8.36-1_all.deb",
+        "wget -c https://repo.mysql.com/apt/ubuntu/pool/mysql-apt-config/m/mysql-apt-config/mysql-apt-config_0.8.36-1_all.deb",
         "dpkg -i mysql-apt-config_0.8.36-1_all.deb",
         "echo 'deb [arch=amd64 trusted=yes] http://repo.mysql.com/apt/ubuntu/ noble mysql-apt-config mysql-8.4' | sudo tee /etc/apt/sources.list.d/mysql.list",
         "apt -qqy update",
