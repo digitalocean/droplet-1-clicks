@@ -1,0 +1,11 @@
+[Unit]
+Description=Apply OpenHands Gradient config after cloud-init user-data
+After=cloud-init.service
+ConditionPathExists=!/home/openhands/.openhands/provider-configured
+
+[Service]
+Type=oneshot
+ExecStart=/opt/retry-apply-gradient-after-cloud-init.sh
+
+[Install]
+WantedBy=multi-user.target

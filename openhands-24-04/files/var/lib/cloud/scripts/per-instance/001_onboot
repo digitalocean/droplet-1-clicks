@@ -1,0 +1,142 @@
+#!/bin/bash
+set -euo pipefail
+
+set -a
+# shellcheck source=/dev/null
+source /etc/environment 2>/dev/null || true
+set +a
+
+ENV_FILE=/opt/openhands.env
+OPENHANDS_HOME=/home/openhands
+INFO_FILE=/root/openhands_info.txt
+
+meta() { curl -fsS --retry 10 --retry-connrefused --max-time 2 "$1"; }
+DROPLET_PUBLIC_IP="$(meta http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)"
+DROPLET_PRIVATE_IP="$(hostname -I | awk '{print $1}')"
+DROPLET_IP="${DROPLET_PUBLIC_IP:-$DROPLET_PRIVATE_IP}"
+
+# Generate per-droplet secrets
+if grep -q "PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT" "$ENV_FILE" 2>/dev/null; then
+  echo "Generating LOCAL_BACKEND_API_KEY and OH_SECRET_KEY..."
+  NEW_API_KEY="$(openssl rand -base64 32)"
+  NEW_SECRET_KEY="$(openssl rand -base64 32)"
+  sed -i "s|LOCAL_BACKEND_API_KEY=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT|LOCAL_BACKEND_API_KEY=${NEW_API_KEY}|" "$ENV_FILE"
+  sed -i "s|OH_SECRET_KEY=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT|OH_SECRET_KEY=${NEW_SECRET_KEY}|" "$ENV_FILE"
+
+  mkdir -p "$OPENHANDS_HOME/.openhands"
+  printf '%s\n' "$NEW_API_KEY" > "$OPENHANDS_HOME/.openhands/api-key.txt"
+  chown -R openhands:openhands "$OPENHANDS_HOME/.openhands"
+  chmod 700 "$OPENHANDS_HOME/.openhands"
+  chmod 600 "$OPENHANDS_HOME/.openhands/api-key.txt"
+  chmod 600 "$ENV_FILE"
+fi
+
+# Install Caddyfile and substitute droplet IP for shortlived TLS
+if [ -f /etc/caddy/Caddyfile.tmp ]; then
+  mv /etc/caddy/Caddyfile.tmp /etc/caddy/Caddyfile
+fi
+if grep -q "PLACEHOLDER_DOMAIN" /etc/caddy/Caddyfile 2>/dev/null; then
+  echo "Configuring Caddy with droplet IP address..."
+  sed -i "s/PLACEHOLDER_DOMAIN/$DROPLET_IP/" /etc/caddy/Caddyfile
+  systemctl enable caddy
+fi
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+chmod +x /opt/apply-gradient-from-env.sh
+chmod +x /opt/retry-apply-gradient-after-cloud-init.sh
+
+GRADIENT_APPLIED=0
+if /opt/apply-gradient-from-env.sh; then
+  GRADIENT_APPLIED=1
+  echo "Gradient pre-configured from droplet environment."
+elif ! grep -q 'setup_wizard.sh' /root/.bashrc 2>/dev/null; then
+  cat >> /root/.bashrc <<'EOM'
+
+chmod +x /etc/setup_wizard.sh
+/etc/setup_wizard.sh
+EOM
+
+  # Startup scripts may write GRADIENT_KEY after this script; retry after cloud-init.
+  systemctl daemon-reload
+  systemctl enable openhands-apply-gradient.service
+  systemctl start openhands-apply-gradient.service || true
+fi
+
+# Ensure persistence dirs exist with correct ownership
+mkdir -p "$OPENHANDS_HOME/.openhands" "$OPENHANDS_HOME/projects"
+chown -R openhands:openhands "$OPENHANDS_HOME"
+chmod 700 "$OPENHANDS_HOME/.openhands"
+
+API_KEY="$(grep -E '^LOCAL_BACKEND_API_KEY=' "$ENV_FILE" | tail -n 1 | cut -d= -f2-)"
+
+cat > "$INFO_FILE" << EOF
+================================================================================
+OpenHands 1-Click Droplet - Getting Started
+================================================================================
+
+OpenHands Agent Canvas is a self-hosted control center for AI coding agents.
+It is running in public mode behind Caddy with shortlived TLS.
+
+ACCESS:
+  Web UI:     https://${DROPLET_IP}
+  API Key:    ${API_KEY}
+
+  Paste the API key when the UI prompts for it (X-Session-API-Key).
+  The key is also saved at: /home/openhands/.openhands/api-key.txt
+  And in: /opt/openhands.env (LOCAL_BACKEND_API_KEY)
+
+LLM / GRADIENT:
+EOF
+
+if [ "$GRADIENT_APPLIED" = "1" ]; then
+  cat >> "$INFO_FILE" << 'EOF'
+  DigitalOcean Gradient was auto-configured from GRADIENT_KEY.
+  Confirm or change models under Settings > LLM in the web UI.
+EOF
+else
+  cat >> "$INFO_FILE" << 'EOF'
+  On first SSH login, the setup wizard can configure DigitalOcean Gradient.
+  Or set GRADIENT_KEY / GRADIENT_MODEL as droplet env vars and recreate,
+  or run: sudo /etc/setup_wizard.sh
+  Or configure any provider in Settings > LLM (Advanced: Base URL).
+EOF
+fi
+
+cat >> "$INFO_FILE" << 'EOF'
+
+MANAGEMENT:
+  Start:     /opt/start-openhands.sh   (or systemctl start openhands)
+  Stop:      /opt/stop-openhands.sh
+  Restart:   /opt/restart-openhands.sh
+  Status:    /opt/status-openhands.sh
+  Update:    /opt/update-openhands.sh
+  Domain TLS:/opt/setup-openhands-domain.sh
+
+WORKSPACE:
+  Projects:  /home/openhands/projects
+  Settings:  /home/openhands/.openhands
+  Env file:  /opt/openhands.env
+
+SECURITY:
+  Agent Canvas runs as the 'openhands' user with access to that account's
+  filesystem. Keep LOCAL_BACKEND_API_KEY private. Prefer restricting SSH and
+  (optionally) HTTP to your IP via a DigitalOcean Cloud Firewall.
+
+DOCS:
+  https://docs.openhands.dev/openhands/usage/agent-canvas/backend-setup/vm
+  https://www.openhands.dev/
+
+================================================================================
+EOF
+chmod 600 "$INFO_FILE"
+
+systemctl restart ssh
+systemctl restart openhands
+systemctl restart caddy
+
+echo "OpenHands first-boot initialization complete!"
+echo "Access info saved to ${INFO_FILE}"

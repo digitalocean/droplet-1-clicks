@@ -1,0 +1,27 @@
+[Unit]
+Description=OpenHands Agent Canvas
+Documentation=https://docs.openhands.dev/openhands/usage/agent-canvas/backend-setup/vm
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=openhands
+Group=openhands
+WorkingDirectory=/home/openhands
+EnvironmentFile=/opt/openhands.env
+Environment=HOME=/home/openhands
+Environment=PATH=/home/openhands/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=OH_PERSISTENCE_DIR=/home/openhands/.openhands
+
+# Public mode: UI prompts for LOCAL_BACKEND_API_KEY (required for internet-facing droplets)
+ExecStart=/usr/local/bin/agent-canvas --public
+
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
