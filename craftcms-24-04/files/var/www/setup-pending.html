@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Craft CMS Setup - DigitalOcean</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0080ff 0%, #0052cc 100%);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
+            text-align: center;
+            max-width: 700px;
+            padding: 2rem;
+        }
+        .logo {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 2rem;
+            background: white;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: #0080ff;
+            font-weight: bold;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h1 { font-size: 2.2rem; margin-bottom: 1rem; font-weight: 300; }
+        .subtitle { font-size: 1.2rem; margin-bottom: 2rem; opacity: 0.95; }
+        .card {
+            background: rgba(255,255,255,0.12);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: left;
+            line-height: 1.6;
+        }
+        code {
+            background: rgba(0,0,0,0.25);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">Craft</div>
+        <h1>Setup pending</h1>
+        <p class="subtitle">Finish Craft CMS setup over SSH before the site goes live.</p>
+        <div class="card">
+            <p>SSH into this Droplet as <code>root</code> to run the first-login setup wizard:</p>
+            <p><code>ssh root@YOUR_DROPLET_IP</code></p>
+            <p>That creates your admin account and enables HTTPS. Until then, the public installer is intentionally blocked.</p>
+        </div>
+    </div>
+</body>
+</html>

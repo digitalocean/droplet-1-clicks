@@ -21,19 +21,21 @@ sed -i 's/^;listen.owner = www-data/listen.owner = www-data/' /etc/php/8.3/fpm/p
 sed -i 's/^;listen.group = www-data/listen.group = www-data/' /etc/php/8.3/fpm/pool.d/www.conf
 sed -i 's/^;listen.mode = 0660/listen.mode = 0660/' /etc/php/8.3/fpm/pool.d/www.conf
 
-# Enable Nginx site
-rm -rf /etc/nginx/sites-enabled/default
-ln -sf /etc/nginx/sites-available/craftcms /etc/nginx/sites-enabled/craftcms
-nginx -t
-
 # Install Craft CMS into /var/www/craft
 # --no-install/--no-scripts: skip post-create hooks that need a database.
+if [ -z "${CRAFT_VERSION:-}" ]; then
+  echo "ERROR: CRAFT_VERSION is empty; set application_version in template.json" >&2
+  exit 1
+fi
+
 mkdir -p /var/www
 rm -rf /var/www/craft
 export COMPOSER_ALLOW_SUPERUSER=1
 export COMPOSER_HOME=/root/.composer
 
-composer create-project craftcms/craft /var/www/craft \
+# Starter package versions ≠ CMS versions (e.g. craftcms/craft has no 5.10.11).
+# Pin the Craft 5 starter, then pin craftcms/cms to application_version.
+composer create-project "craftcms/craft:^5.0" /var/www/craft \
   --no-interaction \
   --prefer-dist \
   --no-install \
@@ -48,12 +50,10 @@ fi
 
 composer install --no-interaction --prefer-dist --optimize-autoloader
 
-if [ -n "${CRAFT_VERSION:-}" ]; then
-  composer require "craftcms/cms:${CRAFT_VERSION}" \
-    --no-interaction \
-    --update-with-dependencies \
-    --prefer-dist
-fi
+composer require "craftcms/cms:${CRAFT_VERSION}" \
+  --no-interaction \
+  --update-with-dependencies \
+  --prefer-dist
 
 cat > /var/www/craft/.env <<'EOF'
 # DigitalOcean Craft CMS 1-Click
@@ -81,8 +81,14 @@ chown -R www-data:www-data /var/www/craft
 chmod -R u+rwX,g+rwX /var/www/craft/storage /var/www/craft/web/cpresources 2>/dev/null || true
 chmod +x /var/www/craft/craft
 chmod +x /root/craft_setup.sh
+chmod +x /root/craft_setup_domain.sh
 chmod +x /var/lib/cloud/scripts/per-instance/001_onboot
 chmod +x /etc/update-motd.d/99-one-click
+chmod +x /opt/start-craft.sh /opt/stop-craft.sh /opt/restart-craft.sh /opt/update-craft.sh /opt/status-craft.sh
 
-systemctl enable nginx php8.3-fpm mysql
-systemctl restart php8.3-fpm nginx
+# Enable fail2ban (sshd jail ships with the package)
+systemctl enable fail2ban
+systemctl restart fail2ban || true
+
+systemctl enable php8.3-fpm mysql
+systemctl restart php8.3-fpm

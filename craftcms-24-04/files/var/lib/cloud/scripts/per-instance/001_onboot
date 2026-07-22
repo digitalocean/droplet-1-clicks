@@ -4,11 +4,11 @@
 root_mysql_pass=$(openssl rand -hex 24)
 craft_mysql_pass=$(openssl rand -hex 24)
 debian_sys_maint_mysql_pass=$(openssl rand -hex 24)
-myip=$(hostname -I | awk '{print$1}')
 
-# Don't finish Craft install until first login (optional CLI wizard)
+# Run Craft setup on first SSH login only
 cat >> /root/.bashrc <<EOM
 chmod +x /root/craft_setup.sh
+chmod +x /root/craft_setup_domain.sh
 /root/craft_setup.sh
 EOM
 
@@ -118,4 +118,8 @@ sed -e '/Match User root/d' \
     -i /etc/ssh/sshd_config
 
 systemctl restart ssh
-systemctl restart nginx php8.3-fpm mysql
+
+# Gate public access until first-login setup completes
+cp /etc/caddy/Caddyfile.setup-pending /etc/caddy/Caddyfile
+systemctl enable caddy fail2ban php8.3-fpm mysql
+systemctl restart caddy php8.3-fpm mysql fail2ban

@@ -2,10 +2,9 @@
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "craftcms-24-04-snapshot-{{timestamp}}",
-    "apt_packages": "fail2ban mysql-server nginx composer unzip curl git jq expect postfix python3-certbot-nginx software-properties-common php8.3-fpm php8.3 php8.3-cli php8.3-common php8.3-mysql php8.3-mbstring php8.3-xml php8.3-curl php8.3-zip php8.3-bcmath php8.3-intl php8.3-gd php8.3-imagick php8.3-opcache",
+    "apt_packages": "fail2ban mysql-server composer unzip curl git expect postfix php8.3-fpm php8.3 php8.3-cli php8.3-common php8.3-mysql php8.3-mbstring php8.3-xml php8.3-curl php8.3-zip php8.3-bcmath php8.3-intl php8.3-gd php8.3-imagick php8.3-opcache",
     "application_name": "Craft CMS",
-    "application_version": "5.10.11",
-    "craft_version": "5.10.11"
+    "application_version": "5.10.11"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
@@ -47,20 +46,26 @@
       "destination": "/var/"
     },
     {
+      "type": "file",
+      "source": "craftcms-24-04/files/opt/",
+      "destination": "/opt/"
+    },
+    {
       "type": "shell",
       "environment_vars": [
         "DEBIAN_FRONTEND=noninteractive",
+        "NEEDRESTART_SUSPEND=1",
         "LC_ALL=C",
         "LANG=en_US.UTF-8",
         "LC_CTYPE=en_US.UTF-8"
       ],
       "inline": [
-        "apt -qqy update",
-        "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' full-upgrade",
-        "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' install software-properties-common",
+        "apt-get -qqy update",
+        "apt-get -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' full-upgrade",
+        "apt-get -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' install software-properties-common",
         "add-apt-repository -y ppa:ondrej/php",
-        "apt -qqy update",
-        "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' install {{user `apt_packages`}}",
+        "apt-get -qqy update",
+        "apt-get -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' install {{user `apt_packages`}}",
         "apt-get -qqy clean"
       ]
     },
@@ -69,8 +74,9 @@
       "environment_vars": [
         "application_name={{user `application_name`}}",
         "application_version={{user `application_version`}}",
-        "CRAFT_VERSION={{user `craft_version`}}",
+        "CRAFT_VERSION={{user `application_version`}}",
         "DEBIAN_FRONTEND=noninteractive",
+        "NEEDRESTART_SUSPEND=1",
         "LC_ALL=C",
         "LANG=en_US.UTF-8",
         "LC_CTYPE=en_US.UTF-8",
@@ -78,11 +84,25 @@
       ],
       "scripts": [
         "craftcms-24-04/scripts/011-craftcms.sh",
-        "common/scripts/014-ufw-nginx.sh",
+        "craftcms-24-04/scripts/012-caddy.sh",
+        "common/scripts/014-ufw-http.sh",
         "common/scripts/018-force-ssh-logout.sh",
-        "common/scripts/020-application-tag.sh",
-        "common/scripts/900-cleanup.sh"
+        "common/scripts/020-application-tag.sh"
       ]
+    },
+    {
+      "type": "shell",
+      "environment_vars": [
+        "DEBIAN_FRONTEND=noninteractive",
+        "NEEDRESTART_SUSPEND=1",
+        "LC_ALL=C",
+        "LANG=en_US.UTF-8",
+        "LC_CTYPE=en_US.UTF-8"
+      ],
+      "scripts": [
+        "common/scripts/900-cleanup.sh"
+      ],
+      "expect_disconnect": true
     }
   ]
 }

@@ -1,41 +1,61 @@
 #!/bin/bash
 #
-# Craft CMS setup script (WordPress wp_setup.sh pattern).
-# Runs on first SSH login. Users can also finish setup in the browser.
+# Craft CMS first-login setup (WordPress wp_setup.sh pattern).
+# Creates the admin account via CLI and enables Caddy HTTPS (shortlived IP certs).
+# Public web installer is gated until this completes.
 
 set -e
 
 MARKER=/root/.craft_setup_complete
 
-# Already completed
+clear_setup_bashrc() {
+  sed -i \
+    -e '/\/root\/craft_setup\.sh/d' \
+    -e '/\/root\/craft_setup_domain\.sh/d' \
+    /root/.bashrc 2>/dev/null || true
+}
+
+enable_ip_https() {
+  local server_ip
+  server_ip=$(hostname -I | awk '{print$1}')
+  if [ -z "$server_ip" ]; then
+    echo "WARNING: Could not detect server IP; HTTPS not configured."
+    echo "Run /root/craft_setup_domain.sh after DNS is configured."
+    return 1
+  fi
+  sed -e "s|PLACEHOLDER_EMAIL||g" \
+      -e "s|PLACEHOLDER_IP|${server_ip}|g" \
+      /etc/caddy/Caddyfile.ip > /etc/caddy/Caddyfile
+  sed -i '/email $/d' /etc/caddy/Caddyfile
+  systemctl enable caddy
+  systemctl restart caddy
+}
+
 if [ -f "${MARKER}" ]; then
-  sed -i '/craft_setup.sh/d' /root/.bashrc 2>/dev/null || true
+  clear_setup_bashrc
   exit 0
 fi
 
-# Skip if Craft is already installed
 if php /var/www/craft/craft install/check >/dev/null 2>&1; then
+  enable_ip_https || true
   touch "${MARKER}"
-  sed -i '/craft_setup.sh/d' /root/.bashrc 2>/dev/null || true
+  clear_setup_bashrc
   exit 0
 fi
-
-myip=$(hostname -I | awk '{print$1}')
 
 echo "================================================================"
 echo "Craft CMS Setup"
 echo "================================================================"
 echo ""
-echo "Craft CMS files and database are ready."
-echo "You can finish setup in the browser at: http://${myip}"
-echo "Or continue here to create the admin account via CLI."
+echo "This wizard creates your admin account and enables HTTPS."
+echo "The public installer is blocked until setup finishes."
 echo ""
 
-read -p "Continue with CLI setup now? [Y/n] " proceed
-proceed=${proceed:-Y}
-if [[ ! "${proceed}" =~ ^[Yy]$ ]]; then
-  echo "Skipping CLI setup. Visit http://${myip} to finish installation."
-  exit 0
+server_ip=$(hostname -I | awk '{print$1}')
+if [ -z "$server_ip" ]; then
+  echo "ERROR: Could not detect server IP."
+  echo "Run /root/craft_setup_domain.sh after DNS is configured."
+  exit 1
 fi
 
 email=""
@@ -79,7 +99,14 @@ while true; do
   fi
 done
 
-site_url="http://${myip}"
+site_url="https://${server_ip}"
+
+# Keep Craft site URL in sync via env (Craft 5 pattern)
+if grep -q '^PRIMARY_SITE_URL=' /var/www/craft/.env 2>/dev/null; then
+  sed -i "s|^PRIMARY_SITE_URL=.*|PRIMARY_SITE_URL=\"${site_url}\"|" /var/www/craft/.env
+else
+  echo "PRIMARY_SITE_URL=\"${site_url}\"" >> /var/www/craft/.env
+fi
 
 echo ""
 echo "Installing Craft CMS..."
@@ -93,15 +120,32 @@ sudo -u www-data php craft install \
   --site-url="${site_url}" \
   --language=en-US
 
+echo "Configuring Caddy with short-lived HTTPS for ${server_ip}..."
+sed -e "s|PLACEHOLDER_EMAIL|${email}|g" \
+    -e "s|PLACEHOLDER_IP|${server_ip}|g" \
+    /etc/caddy/Caddyfile.ip > /etc/caddy/Caddyfile
+
+systemctl enable caddy
+systemctl restart caddy
+
+sudo -u www-data php craft clear-caches/all --interactive=0 >/dev/null 2>&1 || true
+
 chown -R www-data:www-data /var/www/craft
+chmod 640 /var/www/craft/.env
 touch "${MARKER}"
-sed -i '/craft_setup.sh/d' /root/.bashrc 2>/dev/null || true
+clear_setup_bashrc
 
 echo ""
+echo "================================================================"
 echo "Craft CMS is ready!"
+echo "================================================================"
+echo ""
 echo "  Front-end:      ${site_url}"
 echo "  Control Panel:  ${site_url}/admin"
 echo ""
-echo "To enable HTTPS with a domain:"
-echo "  certbot --nginx -d your.domain"
+echo "  Add a custom domain: /root/craft_setup_domain.sh"
+echo "  Manage services:     /opt/restart-craft.sh"
+echo "  Status:              /opt/status-craft.sh"
+echo ""
+echo "================================================================"
 echo ""
