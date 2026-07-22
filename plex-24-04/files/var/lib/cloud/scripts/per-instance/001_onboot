@@ -8,7 +8,7 @@ sed -e '/Match User root/d' \
 
 systemctl restart ssh
 
-PUBLIC_IP=$(curl -fsSL http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || hostname -I | awk '{print $1}')
+PUBLIC_IP=$(hostname -I | awk '{print $1}')
 echo "ADVERTISE_IP=http://${PUBLIC_IP}:32400/" > /opt/plex/.env
 
 systemctl start plex

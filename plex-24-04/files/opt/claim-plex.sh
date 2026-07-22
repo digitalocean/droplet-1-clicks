@@ -18,7 +18,7 @@ if [ -z "$1" ]; then
 fi
 
 CLAIM_TOKEN="$1"
-PUBLIC_IP=$(curl -fsSL http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || hostname -I | awk '{print $1}')
+PUBLIC_IP=$(hostname -I | awk '{print $1}')
 
 cd /opt/plex
 
