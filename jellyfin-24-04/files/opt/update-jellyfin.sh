@@ -11,12 +11,7 @@ if [ -z "${TARGET_VERSION}" ]; then
     echo "Current version: ${CURRENT_VERSION}"
     echo "Usage: $0 <version>"
     echo "Example: $0 10.11.11"
-    echo ""
-    read -rp "Enter Jellyfin version to install (or leave blank to cancel): " TARGET_VERSION
-    if [ -z "${TARGET_VERSION}" ]; then
-        echo "Update cancelled."
-        exit 0
-    fi
+    exit 1
 fi
 
 IMAGE="jellyfin/jellyfin:${TARGET_VERSION}"
@@ -41,6 +36,14 @@ echo "Starting Jellyfin ${TARGET_VERSION}..."
 sleep 2
 
 if docker ps --format '{{.Names}}' | grep -qx jellyfin; then
+    if [ -f /var/lib/digitalocean/application.info ]; then
+        if grep -q '^application_version=' /var/lib/digitalocean/application.info; then
+            sed -i "s/^application_version=.*/application_version=\"${TARGET_VERSION}\"/" \
+                /var/lib/digitalocean/application.info
+        else
+            echo "application_version=\"${TARGET_VERSION}\"" >> /var/lib/digitalocean/application.info
+        fi
+    fi
     echo "Jellyfin updated successfully to ${TARGET_VERSION}."
 else
     echo "Error: Failed to start Jellyfin after update"

@@ -44,7 +44,7 @@ packer build jellyfin-24-04/template.json
 | Path | Purpose |
 |------|---------|
 | `template.json` | Packer build template |
-| `scripts/01-setup.sh` | Install Docker app, Caddy, enable services |
+| `scripts/01-setup.sh` | Install Caddy, pull Jellyfin image (start deferred to first boot) |
 | `files/etc/caddy/Caddyfile.tmp` | Caddy TLS reverse-proxy template |
 | `files/etc/systemd/system/jellyfin.service` | systemd unit for the container |
 | `files/etc/update-motd.d/99-one-click` | MOTD with usage instructions |

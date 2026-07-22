@@ -5,6 +5,15 @@
 pub=$(curl -fsS --retry 3 --retry-connrefused --max-time 3 \
   http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)
 myip="${pub:-$(hostname -I | awk '{print$1}')}"
+if [ -z "$myip" ]; then
+  access_url="https://<your-droplet-ip>"
+else
+  access_url="https://$myip"
+fi
+
+# shellcheck disable=SC1091
+. /var/lib/digitalocean/application.info 2>/dev/null
+APP_VERSION="${application_version:-unknown}"
 
 cat <<EOF
 ********************************************************************************
@@ -13,8 +22,15 @@ Welcome to DigitalOcean's 1-Click Jellyfin Droplet.
 To keep this Droplet secure, the UFW firewall is enabled.
 All ports are BLOCKED except 22 (SSH), 80 (HTTP), and 443 (HTTPS).
 
-- Access Jellyfin (complete the setup wizard immediately after create):
-  * https://$myip
+Installed version: ${APP_VERSION}
+
+IMPORTANT FIRST STEPS:
+  1. Visit ${access_url} in your browser
+  2. Complete the Jellyfin setup wizard IMMEDIATELY to create your admin account
+  3. The first person to finish the wizard gets full administrative access
+
+- Access Jellyfin:
+  * ${access_url}
 
 - Jellyfin runs in Docker behind Caddy (TLS). Port 8096 is localhost-only.
 
@@ -27,7 +43,7 @@ All ports are BLOCKED except 22 (SSH), 80 (HTTP), and 443 (HTTPS).
     /opt/stop-jellyfin.sh
     /opt/restart-jellyfin.sh
     /opt/status-jellyfin.sh
-    /opt/update-jellyfin.sh
+    /opt/update-jellyfin.sh <version>
 
 - Custom domain with Let's Encrypt:
     sudo /opt/setup-jellyfin-domain.sh
@@ -37,8 +53,8 @@ On the server:
   * Cache:  /var/lib/jellyfin/cache
   * Media:  /var/lib/jellyfin/media
 
-For more information, please refer to the Getting Started Guide:
-https://marketplace.digitalocean.com/apps/jellyfin
+For more information, please refer to the Jellyfin documentation:
+https://jellyfin.org/docs/
 
 ********************************************************************************
 To delete this message of the day: rm -rf $(readlink -f ${0})

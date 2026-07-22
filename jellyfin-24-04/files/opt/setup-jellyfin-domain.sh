@@ -12,7 +12,11 @@ fi
 
 read -rp "Enter an email for Let's Encrypt notifications (optional): " EMAIL
 
-cat > /etc/caddy/Caddyfile << CADDYEOF
+{
+    if [ -n "${EMAIL}" ]; then
+        echo "email ${EMAIL}"
+    fi
+    cat << CADDYEOF
 ${DOMAIN} {
     tls {
         issuer acme {
@@ -24,10 +28,7 @@ ${DOMAIN} {
     header X-DO-MARKETPLACE "jellyfin"
 }
 CADDYEOF
-
-if [ -n "${EMAIL}" ]; then
-    sed -i "1iemail ${EMAIL}" /etc/caddy/Caddyfile
-fi
+} > /etc/caddy/Caddyfile
 
 systemctl enable caddy
 systemctl restart caddy

@@ -24,8 +24,10 @@ Deploy [Jellyfin](https://jellyfin.org), a free and open-source media system tha
 ## Getting Started
 
 1. **Create a Droplet** from this 1-Click image (use at least **2 GB RAM**).
-2. **Open Jellyfin** at `https://your-droplet-ip` and finish the setup wizard right away to create your admin account.
+2. **Open Jellyfin** at `https://your-droplet-ip` and finish the setup wizard **immediately** to create your admin account.
 3. **Add media** by uploading or mounting files under `/var/lib/jellyfin/media`, then configure libraries in the Jellyfin UI.
+
+**Security note:** Until the setup wizard is completed, anyone who can reach your Droplet URL can claim the admin account. The first person to finish the wizard gets full administrative access.
 
 Jellyfin listens on `127.0.0.1:8096` only. Public access is through Caddy on ports 80/443.
 
