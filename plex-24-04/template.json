@@ -1,12 +1,10 @@
-
 {
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "plex-24-04-snapshot-{{timestamp}}",
-    "apt_packages": "apt-transport-https ca-certificates curl software-properties-common jq nginx certbot python3-certbot-nginx docker.io docker-compose-v2 fail2ban",
+    "apt_packages": "apt-transport-https ca-certificates curl software-properties-common jq docker.io docker-compose-v2 fail2ban gnupg",
     "application_name": "Plex Media Server",
-    "application_version": "1.43.2.10687-563d026ea",
-    "plex_version": "1.43.2.10687-563d026ea"
+    "application_version": "1.43.2.10687-563d026ea"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
@@ -67,7 +65,6 @@
       "environment_vars": [
         "application_name={{user `application_name`}}",
         "application_version={{user `application_version`}}",
-        "plex_version={{user `plex_version`}}",
         "DEBIAN_FRONTEND=noninteractive",
         "LC_ALL=C",
         "LANG=en_US.UTF-8",
@@ -75,7 +72,7 @@
       ],
       "scripts": [
         "plex-24-04/scripts/010-plex.sh",
-        "common/scripts/014-ufw-nginx.sh",
+        "common/scripts/014-ufw-http.sh",
         "common/scripts/018-force-ssh-logout.sh",
         "common/scripts/020-application-tag.sh",
         "common/scripts/900-cleanup.sh"

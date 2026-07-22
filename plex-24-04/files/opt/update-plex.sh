@@ -1,5 +1,3 @@
-
-
 #!/bin/bash
 
 set -e
@@ -36,4 +34,4 @@ docker compose pull --quiet
 systemctl start plex
 
 echo "Plex Media Server updated to ${latest} and restarted successfully."
-echo "Web interface: http://$(hostname -I | awk '{print $1}')"
+echo "Web interface: https://$(/opt/plex-get-public-ip.sh)"

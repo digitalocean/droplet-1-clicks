@@ -1,0 +1,12 @@
+PLACEHOLDER_DOMAIN {
+    tls {
+        issuer acme {
+            dir https://acme-v02.api.letsencrypt.org/directory
+            profile shortlived
+        }
+    }
+    root * /var/www/plex
+    file_server
+    rewrite * /setup-pending.html
+    header X-DO-MARKETPLACE "plex"
+}

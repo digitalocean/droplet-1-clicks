@@ -2,7 +2,7 @@
 #
 # Configured as part of the DigitalOcean 1-Click Image build process
 
-myip=$(hostname -I | awk '{print$1}')
+myip=$(/opt/plex-get-public-ip.sh 2>/dev/null || hostname -I | awk '{print$1}')
 cat <<EOF
 ********************************************************************************
 
@@ -10,23 +10,28 @@ Welcome to Plex Media Server
 
 Stream your personal media library to nearly any device.
 
-Access Plex:
+Access:
 
-  Web (via NGINX):  http://$myip
-  Direct:           http://$myip:32400/web
+  Setup / claim status:  https://$myip
+  (Shows a pending page until you claim; then proxies to Plex)
 
-IMPORTANT — First-time claim (unclaimed servers):
+IMPORTANT — First-time claim (required):
 
-  Plex only allows initial claiming from localhost. Opening the public
-  IP in a browser often shows "Not authorised". Use one of these:
+  HTTPS is gated until claim so strangers cannot take over this server.
 
   Option A — SSH tunnel (from your laptop):
     ssh -L 8888:127.0.0.1:32400 root@$myip
     Then open: http://localhost:8888/web
+    After claiming, run: /opt/enable-plex-proxy.sh
 
   Option B — Claim token:
     1. Open https://www.plex.tv/claim and copy the token
     2. Run: /opt/claim-plex.sh claim-XXXXXXXX
+       (claims and enables HTTPS automatically)
+
+Enable HTTPS for a custom domain (after claim):
+  Point your domain at this Droplet, then run:
+    sudo /opt/setup-plex-domain.sh
 
 Media directory:
 
@@ -39,12 +44,15 @@ Management:
   Restart:  /opt/restart-plex.sh
   Update:   /opt/update-plex.sh
   Claim:    /opt/claim-plex.sh <token>
+  Unlock:   /opt/enable-plex-proxy.sh
+  Status:   /opt/status-plex.sh
+  Domain:   /opt/setup-plex-domain.sh
   Logs:     docker compose -f /opt/plex/docker-compose.yml logs -f
-  Status:   systemctl status plex
 
 After claiming, configure Remote Access on port 32400 in Plex settings.
 
-Documentation: https://www.akamai.com/cloud/marketplace-docs/guides/plex/
+Documentation: https://marketplace.digitalocean.com/apps/plex
+Plex Docker:   https://github.com/plexinc/pms-docker
 
 ********************************************************************************
 To delete this message of the day: rm -rf \$(readlink -f \${0})

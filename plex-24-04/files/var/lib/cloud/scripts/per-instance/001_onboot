@@ -8,20 +8,28 @@ sed -e '/Match User root/d' \
 
 systemctl restart ssh
 
-PUBLIC_IP=$(hostname -I | awk '{print $1}')
+PUBLIC_IP="$(/opt/plex-get-public-ip.sh)"
 echo "ADVERTISE_IP=http://${PUBLIC_IP}:32400/" > /opt/plex/.env
+
+# Serve setup-pending page over shortlived TLS until the server is claimed.
+# Do NOT reverse-proxy to Plex yet — that would bypass localhost-only claim.
+if [ -f /etc/caddy/Caddyfile.setup-pending ]; then
+    sed "s/PLACEHOLDER_DOMAIN/${PUBLIC_IP}/" /etc/caddy/Caddyfile.setup-pending > /etc/caddy/Caddyfile
+    systemctl enable caddy
+    systemctl restart caddy
+fi
 
 systemctl start plex
 
 sleep 5
 
-if systemctl is-active --quiet plex; then
+if /opt/status-plex.sh >/dev/null 2>&1; then
     echo "Plex Media Server started successfully."
     echo ""
-    echo "Web interface: http://${PUBLIC_IP}"
-    echo "Direct access:  http://${PUBLIC_IP}:32400/web"
+    echo "Setup pending page: https://${PUBLIC_IP}"
+    echo "Claim via SSH tunnel or: /opt/claim-plex.sh <token>"
 else
-    echo "Plex may need more time to start. Check: systemctl status plex"
+    echo "Plex may need more time to start. Check: /opt/status-plex.sh"
 fi
 
 echo "First boot configuration completed."

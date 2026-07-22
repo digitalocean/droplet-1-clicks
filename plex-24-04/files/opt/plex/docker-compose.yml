@@ -4,7 +4,8 @@ services:
     container_name: plex
     restart: unless-stopped
     ports:
-      - "32400:32400/tcp"
+      # Bound to localhost until claim; /opt/enable-plex-proxy.sh opens 32400 publicly
+      - "127.0.0.1:32400:32400/tcp"
     environment:
       TZ: UTC
       VERSION: docker
