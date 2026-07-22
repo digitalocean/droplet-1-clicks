@@ -1,4 +1,14 @@
-#!/bin/sh
+#!/bin/bash
+
+# Configure Caddy with this droplet's public IP for HTTPS access
+meta() { curl -fsS --retry 10 --retry-connrefused --max-time 2 "$1"; }
+DROPLET_PUBLIC_IP="$(meta http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)"
+DROPLET_PRIVATE_IP="$(hostname -I | awk '{print $1}')"
+DROPLET_IP="${DROPLET_PUBLIC_IP:-$DROPLET_PRIVATE_IP}"
+
+if [ -f /etc/caddy/Caddyfile.tmp ]; then
+    sed "s/PLACEHOLDER_DOMAIN/${DROPLET_IP}/" /etc/caddy/Caddyfile.tmp > /etc/caddy/Caddyfile
+fi
 
 # Remove the ssh force logout command
 sed -e '/Match User root/d' \
@@ -6,3 +16,14 @@ sed -e '/Match User root/d' \
     -i /etc/ssh/sshd_config
 
 systemctl restart ssh
+
+systemctl enable docker
+systemctl start docker
+
+# Create/start Jellyfin on first boot so config is unique to this droplet
+systemctl enable jellyfin
+systemctl start jellyfin
+
+# Enable Caddy only after the Jellyfin Caddyfile is in place
+systemctl enable caddy
+systemctl restart caddy

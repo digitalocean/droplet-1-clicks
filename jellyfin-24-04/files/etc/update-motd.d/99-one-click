@@ -2,33 +2,44 @@
 #
 # Configured as part of the DigitalOcean 1-Click Image build process
 
-myip=$(hostname -I | awk '{print$1}')
+pub=$(curl -fsS --retry 3 --retry-connrefused --max-time 3 \
+  http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)
+myip="${pub:-$(hostname -I | awk '{print$1}')}"
 
 cat <<EOF
 ********************************************************************************
 
 Welcome to DigitalOcean's 1-Click Jellyfin Droplet.
 To keep this Droplet secure, the UFW firewall is enabled.
-All ports are BLOCKED except 22 (SSH), 80 (HTTP), 443 (HTTPS), and 8096 (Jellyfin).
+All ports are BLOCKED except 22 (SSH), 80 (HTTP), and 443 (HTTPS).
 
-- Access Jellyfin:
-  * http://$myip:8096
+- Access Jellyfin (complete the setup wizard immediately after create):
+  * https://$myip
 
-- Jellyfin is running as a systemd service.
-  To view service status run the following command:
+- Jellyfin runs in Docker behind Caddy (TLS). Port 8096 is localhost-only.
 
-  systemctl status jellyfin
+- Service control:
+    systemctl status jellyfin
+    systemctl status caddy
 
-- On first visit, complete the Jellyfin setup wizard to create an admin account
-  and add your media libraries.
+- Helper scripts:
+    /opt/start-jellyfin.sh
+    /opt/stop-jellyfin.sh
+    /opt/restart-jellyfin.sh
+    /opt/status-jellyfin.sh
+    /opt/update-jellyfin.sh
+
+- Custom domain with Let's Encrypt:
+    sudo /opt/setup-jellyfin-domain.sh
 
 On the server:
-  * Jellyfin configuration is stored in /etc/jellyfin
-  * Jellyfin data is stored in /var/lib/jellyfin
+  * Config: /var/lib/jellyfin/config
+  * Cache:  /var/lib/jellyfin/cache
+  * Media:  /var/lib/jellyfin/media
 
 For more information, please refer to the Getting Started Guide:
 https://marketplace.digitalocean.com/apps/jellyfin
 
 ********************************************************************************
-To delete this message of the day: rm -rf /etc/update-motd.d/99-one-click
+To delete this message of the day: rm -rf $(readlink -f ${0})
 EOF

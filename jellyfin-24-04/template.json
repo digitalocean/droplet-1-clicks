@@ -1,11 +1,10 @@
-
 {
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "jellyfin-24-04-snapshot-{{timestamp}}",
     "application_name": "Jellyfin",
-    "application_version": "10.11.x",
-    "apt_packages": "curl gnupg apt-transport-https"
+    "application_version": "10.11.11",
+    "apt_packages": "apt-transport-https ca-certificates curl software-properties-common jq unzip docker.io gnupg"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
@@ -14,7 +13,7 @@
       "api_token": "{{user `do_api_token`}}",
       "image": "ubuntu-24-04-x64",
       "region": "nyc3",
-      "size": "s-1vcpu-1gb",
+      "size": "s-1vcpu-2gb",
       "ssh_username": "root",
       "snapshot_name": "{{user `image_name`}}"
     }
@@ -40,6 +39,11 @@
       "type": "file",
       "source": "jellyfin-24-04/files/var/",
       "destination": "/var/"
+    },
+    {
+      "type": "file",
+      "source": "jellyfin-24-04/files/opt/",
+      "destination": "/opt/"
     },
     {
       "type": "shell",
