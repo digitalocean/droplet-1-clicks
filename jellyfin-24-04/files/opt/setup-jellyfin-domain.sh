@@ -40,8 +40,8 @@ if [ -f /opt/jellyfin.env ]; then
 fi
 
 # Recreate the container so the new PublishedServerUrl is applied
+# (systemctl stop removes the container via jellyfin-docker.sh)
 systemctl stop jellyfin 2>/dev/null || true
-docker rm -f jellyfin 2>/dev/null || true
 systemctl start jellyfin
 
 # Domain setup implies the owner is present; unlock HTTPS if not yet claimed
