@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-RUNNER_VERSION="${RUNNER_VERSION}"
+# RUNNER_VERSION is set from application_version in template.json
 RUNNER_USER="runner"
 RUNNER_HOME="/home/${RUNNER_USER}"
 RUNNER_DIR="${RUNNER_HOME}/actions-runner"
