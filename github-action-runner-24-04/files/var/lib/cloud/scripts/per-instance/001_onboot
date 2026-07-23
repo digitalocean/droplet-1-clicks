@@ -8,19 +8,7 @@ sed -e '/Match User root/d' \
 
 systemctl restart ssh
 
-# Hook first-login registration wizard if the runner is not configured yet
-if [ ! -f /home/runner/actions-runner/.runner ]; then
-  if ! grep -q 'setup-github-runner.sh' /root/.bashrc 2>/dev/null; then
-    cat >> /root/.bashrc <<'EOM'
-
-# GITHUB_ACTIONS_RUNNER_FIRST_LOGIN_MARKER
-chmod +x /etc/setup-github-runner.sh
-/etc/setup-github-runner.sh
-EOM
-  fi
-fi
-
-# Ensure service unit is known; it only starts after .runner exists
+# Service unit is known; it only starts after .runner exists (ConditionPathExists)
 systemctl daemon-reload
 systemctl enable actions-runner.service || true
 if [ -f /home/runner/actions-runner/.runner ]; then

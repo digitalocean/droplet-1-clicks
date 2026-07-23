@@ -53,21 +53,23 @@ if [[ "${yn,,}" != "y" && "${yn,,}" != "yes" ]]; then
   echo "Or register manually:"
   echo "  cd ${RUNNER_DIR}"
   echo "  sudo -u runner ./config.sh --url <URL> --token <TOKEN>"
-  echo "  systemctl start actions-runner"
+  echo "  /opt/start-github-runner.sh"
   remove_first_login_hook
   exit 0
 fi
 
 read -r -p "GitHub URL (e.g. https://github.com/ORG/REPO): " github_url
 if [ -z "$github_url" ]; then
-  echo "URL is required. Exiting."
-  exit 1
+  echo "URL is required. Re-run: /etc/setup-github-runner.sh"
+  # Keep the bashrc hook so the next login can retry; do not fail the SSH session.
+  exit 0
 fi
 
-read -r -p "Registration token: " github_token
+read -rs -p "Registration token (input hidden): " github_token
+echo ""
 if [ -z "$github_token" ]; then
-  echo "Token is required. Exiting."
-  exit 1
+  echo "Token is required. Re-run: /etc/setup-github-runner.sh"
+  exit 0
 fi
 
 default_name="$(hostname -s)"
@@ -108,11 +110,12 @@ cat <<EOF
 ********************************************************************************
   Runner registered and started.
 
-  Status:  systemctl status actions-runner
+  Status:  /opt/status-github-runner.sh
   Logs:    journalctl -u actions-runner -f
-  Stop:    systemctl stop actions-runner
-  Start:   systemctl start actions-runner
-  Restart: systemctl restart actions-runner
+  Stop:    /opt/stop-github-runner.sh
+  Start:   /opt/start-github-runner.sh
+  Restart: /opt/restart-github-runner.sh
+  Update:  /opt/update-github-runner.sh
 
   Install path: ${RUNNER_DIR}
 ********************************************************************************

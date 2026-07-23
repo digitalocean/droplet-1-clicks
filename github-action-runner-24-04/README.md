@@ -17,9 +17,16 @@ github-action-runner-24-04/
 │   └── 010-github-action-runner.sh
 └── files/
     ├── etc/
+    │   ├── github-runner-bashrc.snippet
     │   ├── setup-github-runner.sh
     │   ├── systemd/system/actions-runner.service
     │   └── update-motd.d/99-one-click
+    ├── opt/
+    │   ├── start-github-runner.sh
+    │   ├── stop-github-runner.sh
+    │   ├── restart-github-runner.sh
+    │   ├── status-github-runner.sh
+    │   └── update-github-runner.sh
     └── var/lib/cloud/scripts/per-instance/001_onboot
 ```
 
@@ -44,23 +51,27 @@ make build-github-action-runner-24-04
 
 | Component | Details |
 |-----------|---------|
-| GitHub Actions Runner | Version from `application_version` in `template.json` (currently **2.336.0**) |
+| GitHub Actions Runner | Version from `application_version` in `template.json` |
 | Docker + Compose | Via `common/scripts/010-docker.sh` and `011-docker-compose.sh` |
-| UFW | SSH rate-limited + Docker ports (`014-ufw-docker.sh`) |
+| UFW | SSH only (rate-limited); Docker uses the local unix socket |
 | User | Dedicated `runner` user (in `docker` group) |
 | Path | `/home/runner/actions-runner` |
 
 ## First Boot / First Login
 
-1. `001_onboot` unlocks SSH and hooks `/etc/setup-github-runner.sh` into root's `.bashrc` if the runner is not registered yet.
-2. On first interactive SSH login, the wizard prompts for GitHub URL and registration token, runs `config.sh`, and starts `actions-runner.service`.
+1. `001_onboot` unlocks SSH and starts the runner service if already registered.
+2. On first interactive SSH login, the build-time `.bashrc` hook runs `/etc/setup-github-runner.sh`, which prompts for GitHub URL and registration token, runs `config.sh`, and starts `actions-runner.service`.
 3. You can re-run the wizard anytime: `/etc/setup-github-runner.sh` (use `--force` to reconfigure).
 
 ## Service Management
 
 ```bash
-systemctl status actions-runner
-systemctl start|stop|restart actions-runner
+/opt/status-github-runner.sh
+/opt/start-github-runner.sh
+/opt/stop-github-runner.sh
+/opt/restart-github-runner.sh
+/opt/update-github-runner.sh           # latest
+/opt/update-github-runner.sh <VERSION> # pin a version
 journalctl -u actions-runner -f
 ```
 
@@ -68,7 +79,8 @@ The unit starts only when `/home/runner/actions-runner/.runner` exists (after re
 
 ## Updating the Runner Version
 
-Edit `application_version` in `template.json` to a release from [actions/runner releases](https://github.com/actions/runner/releases), then rebuild the image.
+- **Image rebuild:** edit `application_version` in `template.json` to a release from [actions/runner releases](https://github.com/actions/runner/releases), then rebuild.
+- **Live Droplet:** run `/opt/update-github-runner.sh` (or pass an exact version).
 
 ## Security
 

@@ -6,11 +6,12 @@ Deploy a self-hosted **GitHub Actions Runner** on Ubuntu 24.04 with Docker pre-i
 
 | Component | Purpose |
 |-----------|---------|
-| GitHub Actions Runner 2.336.0 | Official self-hosted runner agent |
+| GitHub Actions Runner | Official self-hosted runner agent (version pinned in the image build / `application.info`) |
 | Docker & Docker Compose | Run workflows that use container jobs and services |
-| UFW firewall | SSH rate-limited; Docker ports allowed |
+| UFW firewall | SSH rate-limited only; Docker uses the local unix socket |
 | `runner` system user | Non-root account that executes jobs |
 | Setup wizard | First-login registration with GitHub |
+| `/opt/*-github-runner.sh` | Start, stop, restart, status, and update helpers |
 
 ## System Requirements
 
@@ -37,7 +38,7 @@ Choose a Droplet size that matches your workflow resource needs when creating th
 Enter:
 
 - GitHub URL (for example `https://github.com/ORG/REPO` or `https://github.com/ORG`)
-- Registration token (expires in about one hour)
+- Registration token (expires in about one hour; input is hidden)
 - Optional runner name and labels
 
 5. Confirm the runner shows as **Idle** under your GitHub Runners page.
@@ -47,16 +48,16 @@ Enter:
 ```bash
 cd /home/runner/actions-runner
 sudo -u runner ./config.sh --url https://github.com/ORG/REPO --token YOUR_TOKEN
-systemctl start actions-runner
+/opt/start-github-runner.sh
 ```
 
 ## Service Management
 
 ```bash
-systemctl status actions-runner
-systemctl start actions-runner
-systemctl stop actions-runner
-systemctl restart actions-runner
+/opt/status-github-runner.sh
+/opt/start-github-runner.sh
+/opt/stop-github-runner.sh
+/opt/restart-github-runner.sh
 journalctl -u actions-runner -f
 ```
 
@@ -65,6 +66,11 @@ journalctl -u actions-runner -f
 | `/home/runner/actions-runner` | Runner install directory |
 | `/etc/setup-github-runner.sh` | Registration wizard |
 | `/etc/systemd/system/actions-runner.service` | systemd unit |
+| `/opt/start-github-runner.sh` | Start the runner |
+| `/opt/stop-github-runner.sh` | Stop the runner |
+| `/opt/restart-github-runner.sh` | Restart the runner |
+| `/opt/status-github-runner.sh` | Show status |
+| `/opt/update-github-runner.sh` | Update runner binaries |
 
 ## Using the Runner in Workflows
 
@@ -89,7 +95,14 @@ Docker is available for jobs that use the `container:` key or build images.
 
 ## Updating
 
-To update the runner software on a live Droplet, follow [GitHub's upgrade documentation](https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/upgrading-self-hosted-runners), or rebuild this 1-Click image with a newer `application_version` and redeploy.
+On a live Droplet:
+
+```bash
+/opt/update-github-runner.sh           # latest release
+/opt/update-github-runner.sh <VERSION> # specific version (e.g. from actions/runner releases)
+```
+
+Or follow [GitHub's upgrade documentation](https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/upgrading-self-hosted-runners). To change the version baked into new Marketplace images, rebuild with an updated `application_version` in `template.json`.
 
 ## Security Notes
 
@@ -97,6 +110,7 @@ To update the runner software on a live Droplet, follow [GitHub's upgrade docume
 - Forks of **public** repositories can run untrusted workflow code on this machine.
 - Treat registration tokens as secrets; they expire quickly.
 - Restrict SSH access with a DigitalOcean Cloud Firewall when possible.
+- Docker API ports are not exposed; only SSH is allowed through UFW.
 
 ## Support and Resources
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-RUNNER_VERSION="${RUNNER_VERSION:-${application_version}}"
+RUNNER_VERSION="${RUNNER_VERSION}"
 RUNNER_USER="runner"
 RUNNER_HOME="/home/${RUNNER_USER}"
 RUNNER_DIR="${RUNNER_HOME}/actions-runner"
@@ -15,7 +15,7 @@ if ! id -u "${RUNNER_USER}" >/dev/null 2>&1; then
   useradd --create-home --shell /bin/bash "${RUNNER_USER}"
 fi
 
-# Allow Docker-based workflow jobs
+# Allow Docker-based workflow jobs (local docker.sock only)
 if getent group docker >/dev/null 2>&1; then
   usermod -aG docker "${RUNNER_USER}"
 fi
@@ -36,6 +36,27 @@ chown -R "${RUNNER_USER}:${RUNNER_USER}" "${RUNNER_HOME}"
 chmod +x /etc/update-motd.d/99-one-click
 chmod +x /etc/setup-github-runner.sh
 chmod +x /var/lib/cloud/scripts/per-instance/001_onboot
+chmod +x /opt/start-github-runner.sh
+chmod +x /opt/stop-github-runner.sh
+chmod +x /opt/restart-github-runner.sh
+chmod +x /opt/status-github-runner.sh
+chmod +x /opt/update-github-runner.sh
+
+# First-login wizard hook from shipped snippet (removed after registration)
+if ! grep -q 'setup-github-runner.sh' /root/.bashrc 2>/dev/null; then
+  printf '\n' >> /root/.bashrc
+  cat /etc/github-runner-bashrc.snippet >> /root/.bashrc
+fi
+
+# SSH-only UFW. Keep Docker forward policy so container networking works;
+# do not open Docker API ports 2375/2376.
+ufw --force reset
+sed -e 's|DEFAULT_FORWARD_POLICY=.*|DEFAULT_FORWARD_POLICY="ACCEPT"|g' \
+    -i /etc/default/ufw
+ufw default deny incoming
+ufw default allow outgoing
+ufw limit ssh
+ufw --force enable
 
 # Enable the unit (starts only after registration creates .runner)
 systemctl daemon-reload

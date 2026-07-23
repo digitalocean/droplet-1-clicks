@@ -2,15 +2,13 @@
 #
 # Configured as part of the DigitalOcean 1-Click Image build process
 
-myip=$(hostname -I | awk '{print$1}')
-
-cat <<EOF
+cat <<'EOF'
 ********************************************************************************
 
 Welcome to DigitalOcean's 1-Click GitHub Actions Runner Droplet.
 
 To keep this Droplet secure, the UFW firewall is enabled.
-All ports are BLOCKED except 22 (SSH) and Docker-related ports.
+All ports are BLOCKED except 22 (SSH). Docker is available via the local socket.
 
 This image includes:
   * GitHub Actions Runner (self-hosted)
@@ -30,16 +28,18 @@ QUICK START
    Or register manually:
      cd /home/runner/actions-runner
      sudo -u runner ./config.sh --url https://github.com/ORG/REPO --token TOKEN
-     systemctl start actions-runner
+     /opt/start-github-runner.sh
 
 --------------------------------------------------------------------------------
 SERVICE MANAGEMENT
 --------------------------------------------------------------------------------
 
-  Status:   systemctl status actions-runner
-  Start:    systemctl start actions-runner
-  Stop:     systemctl stop actions-runner
-  Restart:  systemctl restart actions-runner
+  Status:   /opt/status-github-runner.sh   (or systemctl status actions-runner)
+  Start:    /opt/start-github-runner.sh
+  Stop:     /opt/stop-github-runner.sh
+  Restart:  /opt/restart-github-runner.sh
+  Update:   /opt/update-github-runner.sh
+            (no args = latest release; or pass an exact version)
   Logs:     journalctl -u actions-runner -f
 
   Runner home: /home/runner/actions-runner
@@ -55,5 +55,5 @@ SECURITY NOTES
 Docs: https://docs.github.com/en/actions/hosting-your-own-runners
 
 ********************************************************************************
-To delete this message of the day: rm -rf $(readlink -f ${0})
+To delete this message of the day: rm -rf /etc/update-motd.d/99-one-click
 EOF
