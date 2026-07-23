@@ -1,0 +1,18 @@
+#!/bin/bash
+set -euo pipefail
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
+
+# Service unit is known; it only starts after .runner exists (ConditionPathExists)
+systemctl daemon-reload
+systemctl enable actions-runner.service || true
+if [ -f /home/runner/actions-runner/.runner ]; then
+  systemctl restart actions-runner.service || true
+fi
+
+echo "GitHub Actions Runner first-boot initialization complete."

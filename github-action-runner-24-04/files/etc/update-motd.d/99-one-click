@@ -1,0 +1,59 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+cat <<'EOF'
+********************************************************************************
+
+Welcome to DigitalOcean's 1-Click GitHub Actions Runner Droplet.
+
+To keep this Droplet secure, the UFW firewall is enabled.
+All ports are BLOCKED except 22 (SSH). Docker is available via the local socket.
+
+This image includes:
+  * GitHub Actions Runner (self-hosted)
+  * Docker and Docker Compose (for container jobs)
+  * Dedicated 'runner' user
+
+--------------------------------------------------------------------------------
+QUICK START
+--------------------------------------------------------------------------------
+
+1. On GitHub, create a self-hosted runner registration token:
+     Repo/Org → Settings → Actions → Runners → New self-hosted runner
+
+2. SSH in and run the setup wizard (also runs on first login):
+     /etc/setup-github-runner.sh
+
+   Or register manually:
+     cd /home/runner/actions-runner
+     sudo -u runner ./config.sh --url https://github.com/ORG/REPO --token TOKEN
+     /opt/start-github-runner.sh
+
+--------------------------------------------------------------------------------
+SERVICE MANAGEMENT
+--------------------------------------------------------------------------------
+
+  Status:   /opt/status-github-runner.sh   (or systemctl status actions-runner)
+  Start:    /opt/start-github-runner.sh
+  Stop:     /opt/stop-github-runner.sh
+  Restart:  /opt/restart-github-runner.sh
+  Update:   /opt/update-github-runner.sh
+            (no args = latest release; or pass an exact version)
+  Logs:     journalctl -u actions-runner -f
+
+  Runner home: /home/runner/actions-runner
+
+--------------------------------------------------------------------------------
+SECURITY NOTES
+--------------------------------------------------------------------------------
+
+  * Prefer private repositories with self-hosted runners.
+  * Forks of public repos can run untrusted workflow code on this Droplet.
+  * Keep the registration token private; it expires in about one hour.
+
+Docs: https://docs.github.com/en/actions/hosting-your-own-runners
+
+********************************************************************************
+To delete this message of the day: rm -rf /etc/update-motd.d/99-one-click
+EOF
