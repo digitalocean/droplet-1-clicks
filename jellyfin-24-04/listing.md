@@ -24,12 +24,13 @@ Deploy [Jellyfin](https://jellyfin.org), a free and open-source media system tha
 ## Getting Started
 
 1. **Create a Droplet** from this 1-Click image (use at least **2 GB RAM**).
-2. **Open Jellyfin** at `https://your-droplet-ip` and finish the setup wizard **immediately** to create your admin account.
-3. **Add media** by uploading or mounting files under `/var/lib/jellyfin/media`, then configure libraries in the Jellyfin UI.
+2. **SSH in once** — first login runs `/opt/claim-jellyfin-access.sh`, which enables Caddy and unlocks HTTPS. Until then, the setup wizard is not publicly reachable.
+3. **Open Jellyfin** at `https://your-droplet-ip` and finish the setup wizard **immediately** to create your admin account.
+4. **Add media** by uploading or mounting files under `/var/lib/jellyfin/media`, then configure libraries in the Jellyfin UI.
 
-**Security note:** Until the setup wizard is completed, anyone who can reach your Droplet URL can claim the admin account. The first person to finish the wizard gets full administrative access.
+**Security note:** Public HTTPS stays disabled until the first SSH claim. After claim, complete the setup wizard right away — the first person to finish it gets full administrative access.
 
-Jellyfin listens on `127.0.0.1:8096` only. Public access is through Caddy on ports 80/443.
+Jellyfin listens on `127.0.0.1:8096` only. Public access is through Caddy on ports 80/443 after claim.
 
 ### Custom Domain (Recommended)
 
@@ -55,11 +56,14 @@ systemctl status jellyfin
 
 ### Helper scripts
 
+Helpers wrap `systemctl` so unit state stays consistent:
+
 ```bash
 /opt/start-jellyfin.sh
 /opt/stop-jellyfin.sh
 /opt/restart-jellyfin.sh
 /opt/status-jellyfin.sh
+/opt/claim-jellyfin-access.sh
 sudo /opt/update-jellyfin.sh 10.11.11
 ```
 

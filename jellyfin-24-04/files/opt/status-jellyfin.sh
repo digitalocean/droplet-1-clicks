@@ -13,6 +13,10 @@ echo "=== Jellyfin systemd status ==="
 systemctl status jellyfin --no-pager || true
 
 echo ""
+echo "=== Caddy systemd status ==="
+systemctl status caddy --no-pager || true
+
+echo ""
 echo "=== Jellyfin container ==="
 docker ps -a --filter name=^jellyfin$ --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}\t{{.Ports}}' || true
 
@@ -25,9 +29,15 @@ if [ -f /opt/jellyfin.env ]; then
     # shellcheck source=/dev/null
     source /opt/jellyfin.env
     echo "Configured image: ${JELLYFIN_IMAGE:-jellyfin/jellyfin:${JELLYFIN_VERSION}}"
+    echo "PublishedServerUrl: ${JELLYFIN_PUBLISHED_SERVER_URL:-unset}"
 fi
 
 echo ""
-echo "=== Access URL ==="
-echo "${access_url} (proxied via Caddy with TLS)"
+echo "=== Access ==="
+if [ -f /var/lib/digitalocean/jellyfin_access_claimed ]; then
+    echo "HTTPS claim: unlocked"
+    echo "${access_url} (proxied via Caddy with TLS)"
+else
+    echo "HTTPS claim: locked (run /opt/claim-jellyfin-access.sh or SSH in once)"
+fi
 echo "http://127.0.0.1:8096 (localhost only — not publicly exposed)"

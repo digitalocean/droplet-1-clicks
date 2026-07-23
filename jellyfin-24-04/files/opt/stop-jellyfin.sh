@@ -1,6 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-echo "Stopping Jellyfin..."
-docker stop jellyfin 2>/dev/null || true
+echo "Stopping Jellyfin via systemd..."
+systemctl stop jellyfin
 echo "Jellyfin stopped."

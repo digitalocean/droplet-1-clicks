@@ -18,7 +18,7 @@ chown -R caddy:caddy /var/log/caddy
 touch /var/log/caddy/access.json
 chown caddy:caddy /var/log/caddy/access.json
 
-# Defer Caddy until 001_onboot writes the Jellyfin Caddyfile (avoid stock config).
+# Defer Caddy until first-SSH claim (after onboot writes the Jellyfin Caddyfile).
 systemctl disable --now caddy || true
 
 echo "==> Preparing Jellyfin data directories..."
@@ -34,6 +34,8 @@ echo "==> Pulling Jellyfin ${APP_VERSION} (start deferred to first boot)..."
 docker pull "jellyfin/jellyfin:${APP_VERSION}"
 
 echo "==> Setting script permissions..."
+chmod +x /opt/jellyfin-docker.sh
+chmod +x /opt/claim-jellyfin-access.sh
 chmod +x /opt/start-jellyfin.sh
 chmod +x /opt/stop-jellyfin.sh
 chmod +x /opt/restart-jellyfin.sh

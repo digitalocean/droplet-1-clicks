@@ -1,25 +1,28 @@
 #!/bin/bash
 set -euo pipefail
 
-# shellcheck source=/dev/null
-source /opt/jellyfin.env
-
-IMAGE="${JELLYFIN_IMAGE:-jellyfin/jellyfin:${JELLYFIN_VERSION}}"
-
-if docker ps -a --format '{{.Names}}' | grep -qx jellyfin; then
-    echo "Starting existing Jellyfin container..."
-    docker start jellyfin
+pub=$(curl -fsS --retry 3 --retry-connrefused --max-time 3 \
+  http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)
+myip="${pub:-$(hostname -I | awk '{print $1}')}"
+if [ -n "$myip" ]; then
+  access_url="https://${myip}"
 else
-    echo "Creating Jellyfin container from ${IMAGE}..."
-    mkdir -p /var/lib/jellyfin/config /var/lib/jellyfin/cache /var/lib/jellyfin/media
-    docker run -d \
-      --name jellyfin \
-      --restart unless-stopped \
-      -p 127.0.0.1:8096:8096 \
-      -v /var/lib/jellyfin/config:/config \
-      -v /var/lib/jellyfin/cache:/cache \
-      -v /var/lib/jellyfin/media:/media \
-      "${IMAGE}"
+  access_url="https://<your-droplet-ip>"
 fi
 
-echo "Jellyfin is running on 127.0.0.1:8096 (proxied via Caddy)."
+echo "Starting Jellyfin via systemd..."
+systemctl start jellyfin
+
+sleep 1
+if systemctl is-active --quiet jellyfin; then
+    echo "Jellyfin started successfully."
+    if [ -f /var/lib/digitalocean/jellyfin_access_claimed ]; then
+        echo "Access via ${access_url}"
+    else
+        echo "HTTPS is not public yet. SSH claim runs /opt/claim-jellyfin-access.sh on first login."
+    fi
+else
+    echo "Error: Failed to start Jellyfin"
+    echo "Check logs with: journalctl -u jellyfin -xe"
+    exit 1
+fi

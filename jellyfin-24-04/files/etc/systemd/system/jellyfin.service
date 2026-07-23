@@ -9,8 +9,8 @@ Wants=network-online.target
 Type=oneshot
 RemainAfterExit=yes
 EnvironmentFile=/opt/jellyfin.env
-ExecStart=/opt/start-jellyfin.sh
-ExecStop=/opt/stop-jellyfin.sh
+ExecStart=/opt/jellyfin-docker.sh start
+ExecStop=/opt/jellyfin-docker.sh stop
 TimeoutStartSec=0
 
 [Install]
