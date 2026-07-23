@@ -1,4 +1,5 @@
-#!/bin/sh
+#!/bin/bash
+set -euo pipefail
 
 # Remove the ssh force logout command
 sed -e '/Match User root/d' \
@@ -6,3 +7,15 @@ sed -e '/Match User root/d' \
     -i /etc/ssh/sshd_config
 
 systemctl restart ssh
+
+mkdir -p /etc/exa
+chmod 700 /etc/exa
+
+# Hook first-login API key setup when not yet configured
+if [ ! -f /etc/exa/.configured ]; then
+  if ! grep -q '/opt/setup-exa.sh' /root/.bashrc 2>/dev/null; then
+    echo '/opt/setup-exa.sh' >> /root/.bashrc
+  fi
+fi
+
+echo "Exa MCP first-boot initialization complete."

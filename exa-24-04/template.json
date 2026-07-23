@@ -1,11 +1,10 @@
-
 {
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "exa-24-04-snapshot-{{timestamp}}",
-    "apt_packages": "curl git unzip nodejs npm",
+    "apt_packages": "curl git unzip ca-certificates ufw",
     "application_name": "Exa MCP Server",
-    "application_version": "1.0.0"
+    "application_version": "3.2.1"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
@@ -35,6 +34,11 @@
       "type": "file",
       "source": "exa-24-04/files/etc/",
       "destination": "/etc/"
+    },
+    {
+      "type": "file",
+      "source": "exa-24-04/files/opt/",
+      "destination": "/opt/"
     },
     {
       "type": "file",
@@ -68,7 +72,6 @@
       ],
       "scripts": [
         "exa-24-04/scripts/01-exa.sh",
-        "common/scripts/014-ufw-http.sh",
         "common/scripts/018-force-ssh-logout.sh",
         "common/scripts/020-application-tag.sh",
         "common/scripts/900-cleanup.sh"
