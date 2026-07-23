@@ -4,7 +4,7 @@ Deploy [Craft CMS](https://craftcms.com/) on DigitalOcean with Caddy (automatic 
 
 ## What is Craft CMS?
 
-Craft is a flexible, developer-friendly CMS for creating custom digital experiences. This 1-Click installs Craft 5 with a production-ready LAMP-alternative stack using Caddy as the edge web server.
+Craft is a flexible, developer-friendly CMS for creating custom digital experiences. This 1-Click installs Craft 5 with a production-ready stack: Caddy (edge TLS), PHP 8.3 FPM, and MySQL.
 
 ## System Components
 
@@ -12,7 +12,7 @@ Craft is a flexible, developer-friendly CMS for creating custom digital experien
 - Craft CMS 5.10.11
 - PHP 8.3 FPM
 - MySQL
-- Caddy (short-lived Let's Encrypt certificates for IP access)
+- Caddy (short-lived Let's Encrypt certificates for IP and custom-domain HTTPS)
 - Composer
 - UFW firewall (22, 80, 443)
 - fail2ban

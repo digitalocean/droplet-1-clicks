@@ -4,7 +4,8 @@
     "image_name": "craftcms-24-04-snapshot-{{timestamp}}",
     "apt_packages": "fail2ban mysql-server composer unzip curl git expect postfix php8.3-fpm php8.3 php8.3-cli php8.3-common php8.3-mysql php8.3-mbstring php8.3-xml php8.3-curl php8.3-zip php8.3-bcmath php8.3-intl php8.3-gd php8.3-imagick php8.3-opcache",
     "application_name": "Craft CMS",
-    "application_version": "5.10.11"
+    "application_version": "5.10.11",
+    "craft_starter_version": "5.8.0"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
@@ -75,6 +76,7 @@
         "application_name={{user `application_name`}}",
         "application_version={{user `application_version`}}",
         "CRAFT_VERSION={{user `application_version`}}",
+        "CRAFT_STARTER_VERSION={{user `craft_starter_version`}}",
         "DEBIAN_FRONTEND=noninteractive",
         "NEEDRESTART_SUSPEND=1",
         "LC_ALL=C",

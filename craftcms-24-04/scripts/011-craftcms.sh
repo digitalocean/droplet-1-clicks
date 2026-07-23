@@ -27,6 +27,10 @@ if [ -z "${CRAFT_VERSION:-}" ]; then
   echo "ERROR: CRAFT_VERSION is empty; set application_version in template.json" >&2
   exit 1
 fi
+if [ -z "${CRAFT_STARTER_VERSION:-}" ]; then
+  echo "ERROR: CRAFT_STARTER_VERSION is empty; set craft_starter_version in template.json" >&2
+  exit 1
+fi
 
 mkdir -p /var/www
 rm -rf /var/www/craft
@@ -34,8 +38,8 @@ export COMPOSER_ALLOW_SUPERUSER=1
 export COMPOSER_HOME=/root/.composer
 
 # Starter package versions ≠ CMS versions (e.g. craftcms/craft has no 5.10.11).
-# Pin the Craft 5 starter, then pin craftcms/cms to application_version.
-composer create-project "craftcms/craft:^5.0" /var/www/craft \
+# Pin both: exact craftcms/craft scaffold, then craftcms/cms to application_version.
+composer create-project "craftcms/craft:${CRAFT_STARTER_VERSION}" /var/www/craft \
   --no-interaction \
   --prefer-dist \
   --no-install \

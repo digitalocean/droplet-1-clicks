@@ -1,4 +1,4 @@
-# Custom domain with standard Let's Encrypt certificates
+# Custom domain with short-lived Let's Encrypt certificates
 # Placeholders: PLACEHOLDER_EMAIL, PLACEHOLDER_DOMAIN
 # If PLACEHOLDER_EMAIL is empty, the email line is removed by craft_setup_domain.sh
 
@@ -11,6 +11,13 @@ http://PLACEHOLDER_DOMAIN {
 }
 
 https://PLACEHOLDER_DOMAIN {
+    tls {
+        issuer acme {
+            dir https://acme-v02.api.letsencrypt.org/directory
+            profile shortlived
+        }
+    }
+
     root * /var/www/craft/web
     php_fastcgi unix//run/php/php8.3-fpm.sock
     file_server

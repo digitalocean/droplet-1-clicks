@@ -45,10 +45,11 @@ make validate-craftcms-24-04
 make build-craftcms-24-04
 ```
 
-Override the Craft version (`application_version` pins both the Marketplace tag and Composer install):
+Override versions (`application_version` pins Marketplace tag + `craftcms/cms`; `craft_starter_version` pins the `craftcms/craft` scaffold — versions differ):
 
 ```bash
 packer build \
   -var 'application_version=5.10.11' \
+  -var 'craft_starter_version=5.8.0' \
   craftcms-24-04/template.json
 ```

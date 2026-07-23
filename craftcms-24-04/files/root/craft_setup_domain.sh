@@ -15,7 +15,7 @@ echo "================================================================"
 echo "Craft CMS Domain Setup"
 echo "================================================================"
 echo ""
-echo "Configure Caddy with a custom domain and Let's Encrypt TLS."
+echo "Configure Caddy with a custom domain and short-lived Let's Encrypt TLS."
 echo "IMPORTANT: DNS A record must already point to this Droplet."
 echo ""
 
