@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# SUPERSET_VERSION must be set (from Packer application_version)
+# SUPERSET_VERSION must be set by the caller (011-superset.sh passes application_version)
 VERSION="${SUPERSET_VERSION:?SUPERSET_VERSION is required}"
 
 cd /home/superset
