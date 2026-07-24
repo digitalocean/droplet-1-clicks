@@ -108,7 +108,6 @@ The following models are available via DigitalOcean Gradient (only a Gradient mo
 | Kimi K2.5 (default) | `digitalocean/kimi-k2.5` |
 | GPT-5.2 | `digitalocean/openai-gpt-5.2` |
 | GPT-5 | `digitalocean/openai-gpt-5` |
-| GPT-5.1 Codex Max | `digitalocean/openai-gpt-5.1-codex-max` |
 | GPT-4.1 | `digitalocean/openai-gpt-4.1` |
 | OpenAI o3 | `digitalocean/openai-o3` |
 | DeepSeek R1 Distill Llama 70B | `digitalocean/deepseek-r1-distill-llama-70b` |
