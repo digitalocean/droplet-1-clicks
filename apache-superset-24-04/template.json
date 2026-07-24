@@ -2,7 +2,7 @@
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "apache-superset-24-04-snapshot-{{timestamp}}",
-    "apt_packages": "apt-transport-https ca-certificates curl jq software-properties-common git ufw dirmngr gnupg2 lsb-release debian-archive-keyring snapd nginx build-essential libssl-dev libffi-dev python3-dev python3-pip python3-venv libsasl2-dev libldap2-dev libpq-dev default-libmysqlclient-dev pkg-config postgresql",
+    "apt_packages": "apt-transport-https ca-certificates curl jq software-properties-common git ufw gnupg2 lsb-release debian-archive-keyring build-essential libssl-dev libffi-dev python3-dev python3-pip python3-venv libsasl2-dev libldap2-dev libpq-dev default-libmysqlclient-dev pkg-config postgresql",
     "application_name": "Apache Superset",
     "application_version": "6.1.0"
   },
@@ -13,7 +13,7 @@
       "api_token": "{{user `do_api_token`}}",
       "image": "ubuntu-24-04-x64",
       "region": "nyc3",
-      "size": "s-1vcpu-2gb",
+      "size": "s-2vcpu-8gb",
       "ssh_username": "root",
       "snapshot_name": "{{user `image_name`}}"
     }
@@ -39,6 +39,11 @@
       "type": "file",
       "source": "apache-superset-24-04/files/etc/",
       "destination": "/etc/"
+    },
+    {
+      "type": "file",
+      "source": "apache-superset-24-04/files/opt/",
+      "destination": "/opt/"
     },
     {
       "type": "shell",

@@ -1,4 +1,5 @@
-#!/bin/bash -x
+#!/bin/bash
+set -euo pipefail
 
 exec > >(tee /var/log/one_click_setup.log) 2>&1
 
@@ -14,11 +15,6 @@ EOM
 
 chown root:root /root/.digitalocean_passwords
 chmod 600 /root/.digitalocean_passwords
-
-chown superset:superset /var/lib/digitalocean/finish-setup.sh
-chmod +x /var/lib/digitalocean/finish-setup.sh
-chown root:root /var/lib/digitalocean/setup-dbaas.sh
-chmod +x /var/lib/digitalocean/setup-dbaas.sh
 
 systemctl start postgresql
 
@@ -36,17 +32,28 @@ chown superset:superset /home/superset/superset/superset_config.py
 sudo -u superset env PASSWORD="${PASSWORD}" bash /var/lib/digitalocean/finish-setup.sh
 
 # Optionally switch to Managed Database if attached at Droplet create time
-# setup-dbaas.sh expects SECRET_KEY and PASSWORD from the environment when rewriting/re-running
 export SECRET_KEY
 export PASSWORD
+# shellcheck disable=SC1091
 source /var/lib/digitalocean/setup-dbaas.sh
 
-ln -sf /etc/nginx/sites-available/superset /etc/nginx/sites-enabled/superset
-unlink /etc/nginx/sites-enabled/default 2>/dev/null || true
+# Configure Caddy with droplet IP for shortlived TLS
+meta() { curl -fsS --retry 10 --retry-connrefused --max-time 2 "$1" 2>/dev/null || true; }
+DROPLET_PUBLIC_IP="$(meta http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address)"
+DROPLET_PRIVATE_IP="$(hostname -I | awk '{print $1}')"
+DROPLET_IP="${DROPLET_PUBLIC_IP:-$DROPLET_PRIVATE_IP}"
 
+if [ -f /etc/caddy/Caddyfile.tmp ]; then
+  mv /etc/caddy/Caddyfile.tmp /etc/caddy/Caddyfile
+fi
+if grep -q "PLACEHOLDER_DOMAIN" /etc/caddy/Caddyfile 2>/dev/null; then
+  sed -i "s/PLACEHOLDER_DOMAIN/${DROPLET_IP}/" /etc/caddy/Caddyfile
+fi
+
+systemctl enable caddy
 systemctl enable superset
-systemctl start superset
-systemctl restart nginx
+systemctl restart caddy
+systemctl restart superset
 
 # Remove the ssh force logout command
 sed -e '/Match User root/d' \
@@ -54,3 +61,6 @@ sed -e '/Match User root/d' \
     -i /etc/ssh/sshd_config
 
 systemctl restart ssh
+
+echo "Apache Superset first-boot initialization complete."
+echo "Access: https://${DROPLET_IP}"

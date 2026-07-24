@@ -2,7 +2,6 @@
 #
 # Configured as part of the DigitalOcean 1-Click Image build process
 
-# Read in the passwords....
 . /root/.digitalocean_passwords
 
 dbaas_text="Apache Superset uses local PostgreSQL (localhost:5432).
@@ -36,14 +35,12 @@ myip=$(hostname -I | awk '{print$1}')
 cat <<EOF
 ********************************************************************************
 
-PASSWORD: ${PASSWORD}
-
 Welcome to DigitalOcean's 1-Click Apache Superset Droplet.
 To keep this Droplet secure, the UFW firewall is enabled.
 All ports are BLOCKED except 22 (SSH), 80 (HTTP), and 443 (HTTPS).
 
-Access the Superset site
-    URL: http://${myip}
+Access the Superset UI (TLS via Caddy shortlived certificate):
+    URL:  https://${myip}
     User: admin
     Pass: ${PASSWORD}
 
@@ -52,14 +49,20 @@ ${dbaas_text}
 ${spaces_text}
 
 On the server:
-  * Superset is installed at /home/superset/superset-project
-  * Configuration file: /home/superset/superset/superset_config.py
-  * Admin and database passwords are saved in /root/.digitalocean_passwords
-  * On first login you will be prompted to configure SSL (domain + Certbot)
-  * SSL setup utility: /var/superset/superset-setup.sh
+  * Superset install: /home/superset/superset-project
+  * Config: /home/superset/superset/superset_config.py
+  * Passwords: /root/.digitalocean_passwords
+  * Custom domain TLS: /opt/setup-superset-domain.sh
 
-For help and more information, visit https://superset.apache.org/docs/intro
+Service management:
+  * /opt/status-superset.sh
+  * /opt/start-superset.sh
+  * /opt/stop-superset.sh
+  * /opt/restart-superset.sh
+  * /opt/update-superset.sh
+
+Docs: https://superset.apache.org/docs/intro
 
 ********************************************************************************
-To delete this message of the day: rm -rf $(readlink -f ${0})
+To delete this message of the day: rm -rf /etc/update-motd.d/99-one-click
 EOF
