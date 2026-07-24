@@ -1,0 +1,68 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+. /root/.digitalocean_passwords
+
+dbaas_text="Apache Superset uses local PostgreSQL (localhost:5432).
+    Database password is stored in /root/.digitalocean_passwords"
+if [ -f "/root/.digitalocean_dbaas_credentials" ]; then
+    . /root/.digitalocean_dbaas_credentials
+    dbaas_text="Apache Superset is configured to use managed Postgres as its metadata database. Use the following credentials to manage the database:
+    Database: ${db_database}
+    Host:     ${db_host}
+    Port:     ${db_port}
+    User:     ${db_username}
+    Pass:     ${db_password}
+
+    Note: The local PostgreSQL service has been stopped. To re-enable it, run:
+          sudo systemctl start postgresql
+          sudo systemctl enable postgresql"
+fi
+
+spaces_text=""
+if [ -f "/root/.digitalocean_spaces_credentials" ]; then
+    . /root/.digitalocean_spaces_credentials
+    spaces_text="A Spaces bucket is also available. Following are the access key details:
+    Bucket:         ${bucket_name}
+    Host:           ${spaces_host}
+    Access_Key:     ${spaces_access_key_id}
+    Secret_Key:     ${spaces_secret_key}
+    Region:         ${spaces_region}"
+fi
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's 1-Click Apache Superset Droplet.
+To keep this Droplet secure, the UFW firewall is enabled.
+All ports are BLOCKED except 22 (SSH), 80 (HTTP), and 443 (HTTPS).
+
+Access the Superset UI (TLS via Caddy shortlived certificate):
+    URL:  https://${myip}
+    User: admin
+    Pass: ${PASSWORD}
+
+${dbaas_text}
+
+${spaces_text}
+
+On the server:
+  * Superset install: /home/superset/superset-project
+  * Config: /home/superset/superset/superset_config.py
+  * Passwords: /root/.digitalocean_passwords
+  * Custom domain TLS: /opt/setup-superset-domain.sh
+
+Service management:
+  * /opt/status-superset.sh
+  * /opt/start-superset.sh
+  * /opt/stop-superset.sh
+  * /opt/restart-superset.sh
+  * /opt/update-superset.sh
+
+Docs: https://superset.apache.org/docs/intro
+
+********************************************************************************
+To delete this message of the day: rm -rf /etc/update-motd.d/99-one-click
+EOF

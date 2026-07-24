@@ -1,0 +1,66 @@
+#!/bin/bash
+set -euo pipefail
+
+exec > >(tee /var/log/one_click_setup.log) 2>&1
+
+PASSWORD=$(openssl rand -base64 60 | head -c49)
+SUPERSET_DB_PASSWORD=$(openssl rand -base64 32 | head -c32)
+SECRET_KEY=$(openssl rand -base64 60 | head -c42)
+
+cat > /root/.digitalocean_passwords <<EOM
+PASSWORD="${PASSWORD}"
+SUPERSET_DB_PASSWORD="${SUPERSET_DB_PASSWORD}"
+SECRET_KEY="${SECRET_KEY}"
+EOM
+
+chown root:root /root/.digitalocean_passwords
+chmod 600 /root/.digitalocean_passwords
+
+systemctl start postgresql
+
+# Create local Postgres role/database for Superset metadata
+sudo -u postgres psql -U postgres -d postgres -c "CREATE USER superset PASSWORD '${SUPERSET_DB_PASSWORD}';"
+sudo -u postgres createdb --owner=superset superset
+
+sed -e "s/@DBPASSWORD@/${SUPERSET_DB_PASSWORD}/" \
+    -e "s/@SECRET_KEY@/${SECRET_KEY}/" \
+    -i /home/superset/superset/superset_config.py
+
+chown superset:superset /home/superset/superset/superset_config.py
+
+# Initialize metadata DB and create admin user (local Postgres first)
+sudo -u superset env PASSWORD="${PASSWORD}" bash /var/lib/digitalocean/finish-setup.sh
+
+# Optionally switch to Managed Database if attached at Droplet create time
+export SECRET_KEY
+export PASSWORD
+# shellcheck disable=SC1091
+source /var/lib/digitalocean/setup-dbaas.sh
+
+# Configure Caddy with droplet IP for shortlived TLS
+meta() { curl -fsS --retry 10 --retry-connrefused --max-time 2 "$1" 2>/dev/null || true; }
+DROPLET_PUBLIC_IP="$(meta http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address)"
+DROPLET_PRIVATE_IP="$(hostname -I | awk '{print $1}')"
+DROPLET_IP="${DROPLET_PUBLIC_IP:-$DROPLET_PRIVATE_IP}"
+
+if [ -f /etc/caddy/Caddyfile.tmp ]; then
+  mv /etc/caddy/Caddyfile.tmp /etc/caddy/Caddyfile
+fi
+if grep -q "PLACEHOLDER_DOMAIN" /etc/caddy/Caddyfile 2>/dev/null; then
+  sed -i "s/PLACEHOLDER_DOMAIN/${DROPLET_IP}/" /etc/caddy/Caddyfile
+fi
+
+systemctl enable caddy
+systemctl enable superset
+systemctl restart caddy
+systemctl restart superset
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
+
+echo "Apache Superset first-boot initialization complete."
+echo "Access: https://${DROPLET_IP}"
