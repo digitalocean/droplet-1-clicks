@@ -1,0 +1,73 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+pub=$(curl -fsS --retry 3 --retry-connrefused --max-time 3 \
+  http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)
+myip="${pub:-$(hostname -I | awk '{print$1}')}"
+if [ -z "$myip" ]; then
+  access_url="https://<your-droplet-ip>"
+else
+  access_url="https://$myip"
+fi
+
+# shellcheck disable=SC1091
+. /var/lib/digitalocean/application.info 2>/dev/null
+APP_VERSION="${application_version:-unknown}"
+
+if [ -f /var/lib/digitalocean/jellyfin_access_claimed ]; then
+  access_status="HTTPS unlocked (Caddy enabled)"
+else
+  # MOTD runs before .bashrc on this login; claim unlocks HTTPS immediately after
+  access_status="HTTPS unlock pending (claim runs on this SSH login via .bashrc)"
+fi
+
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's 1-Click Jellyfin Droplet.
+To keep this Droplet secure, the UFW firewall is enabled.
+All ports are BLOCKED except 22 (SSH), 80 (HTTP), and 443 (HTTPS).
+
+Installed version: ${APP_VERSION}
+Access status: ${access_status}
+
+IMPORTANT FIRST STEPS:
+  1. On first SSH, /opt/claim-jellyfin-access.sh unlocks HTTPS (runs from .bashrc after this MOTD)
+  2. Visit ${access_url} in your browser
+  3. Complete the Jellyfin setup wizard IMMEDIATELY to create your admin account
+  4. The first person to finish the wizard gets full administrative access
+
+- Access Jellyfin:
+  * ${access_url}
+
+- Jellyfin runs in Docker behind Caddy (TLS). Port 8096 is localhost-only.
+  Caddy stays disabled until the first SSH claim so strangers cannot reach
+  the setup wizard before you do.
+
+- Service control:
+    systemctl status jellyfin
+    systemctl status caddy
+
+- Helper scripts (wrap systemctl):
+    /opt/start-jellyfin.sh
+    /opt/stop-jellyfin.sh
+    /opt/restart-jellyfin.sh
+    /opt/status-jellyfin.sh
+    /opt/update-jellyfin.sh <version>
+    /opt/claim-jellyfin-access.sh
+
+- Custom domain with Let's Encrypt:
+    sudo /opt/setup-jellyfin-domain.sh
+
+On the server:
+  * Config: /var/lib/jellyfin/config
+  * Cache:  /var/lib/jellyfin/cache
+  * Media:  /var/lib/jellyfin/media
+
+For more information, please refer to the Jellyfin documentation:
+https://jellyfin.org/docs/
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF

@@ -1,0 +1,17 @@
+[Unit]
+Description=Jellyfin Media Server
+Documentation=https://jellyfin.org
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+EnvironmentFile=/opt/jellyfin.env
+ExecStart=/opt/jellyfin-docker.sh start
+ExecStop=/opt/jellyfin-docker.sh stop
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target

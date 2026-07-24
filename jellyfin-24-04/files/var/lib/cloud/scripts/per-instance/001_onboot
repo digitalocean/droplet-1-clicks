@@ -1,0 +1,55 @@
+#!/bin/bash
+set -euo pipefail
+
+# Remove the ssh force logout command first so SSH is not left locked if later steps fail
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
+
+# Configure Caddy with this droplet's public IP for HTTPS access (enabled on first SSH claim)
+meta() { curl -fsS --retry 10 --retry-connrefused --max-time 2 "$1"; }
+DROPLET_PUBLIC_IP="$(meta http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)"
+DROPLET_PRIVATE_IP="$(hostname -I | awk '{print $1}')"
+DROPLET_IP="${DROPLET_PUBLIC_IP:-$DROPLET_PRIVATE_IP}"
+
+if [ -z "${DROPLET_IP}" ]; then
+    echo "ERROR: Unable to determine droplet IP; cannot configure Caddy." >&2
+    exit 1
+fi
+
+if [ ! -f /etc/caddy/Caddyfile.tmp ]; then
+    echo "ERROR: Missing /etc/caddy/Caddyfile.tmp; cannot configure Caddy." >&2
+    exit 1
+fi
+
+sed "s/PLACEHOLDER_DOMAIN/${DROPLET_IP}/" /etc/caddy/Caddyfile.tmp > /etc/caddy/Caddyfile
+
+# Publish the HTTPS URL Jellyfin should advertise behind Caddy
+if [ -f /opt/jellyfin.env ]; then
+    if grep -q '^JELLYFIN_PUBLISHED_SERVER_URL=' /opt/jellyfin.env; then
+        sed -i "s|^JELLYFIN_PUBLISHED_SERVER_URL=.*|JELLYFIN_PUBLISHED_SERVER_URL=https://${DROPLET_IP}|" /opt/jellyfin.env
+    else
+        echo "JELLYFIN_PUBLISHED_SERVER_URL=https://${DROPLET_IP}" >> /opt/jellyfin.env
+    fi
+fi
+
+systemctl enable docker
+systemctl start docker
+
+# Create/start Jellyfin on first boot (localhost only). Keep Caddy off until first SSH claim.
+systemctl enable jellyfin
+systemctl start jellyfin
+
+# Ensure Caddy stays disabled until /opt/claim-jellyfin-access.sh runs on first SSH
+systemctl disable --now caddy || true
+
+# First-login hook: unlock public HTTPS after the droplet owner SSHs in
+# Two-line form (OpenClaw/Coolify) so sed '/claim-jellyfin-access\.sh/d' removes the whole hook
+if ! grep -q 'claim-jellyfin-access.sh' /root/.bashrc 2>/dev/null; then
+    cat >> /root/.bashrc <<'EOM'
+chmod +x /opt/claim-jellyfin-access.sh
+/opt/claim-jellyfin-access.sh
+EOM
+fi
