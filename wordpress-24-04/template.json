@@ -5,7 +5,7 @@
     "image_name": "wordpress-24-04-snapshot-{{timestamp}}",
     "apt_packages": "fail2ban mysql-server php8.3-fpm php8.3 php8.3-apcu php8.3-bz2 php8.3-curl php8.3-gd php8.3-gmp php8.3-intl php8.3-mbstring php8.3-mysql php8.3-pspell php8.3-soap php8.3-tidy php8.3-xml php8.3-xmlrpc php8.3-xsl php8.3-zip postfix software-properties-common unzip",
     "application_name": "WordPress",
-    "application_version": "6.9.5",
+    "application_version": "",
     "fail2ban_version": ""
   },
   "sensitive-variables": ["do_api_token"],
