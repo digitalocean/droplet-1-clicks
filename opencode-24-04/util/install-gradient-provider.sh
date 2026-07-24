@@ -141,7 +141,6 @@ GRADIENT_PROVIDER_JSON='{
     "models": {
       "openai-gpt-5.2": { "name": "GPT-5.2" },
       "openai-gpt-5": { "name": "GPT-5" },
-      "openai-gpt-5.1-codex-max": { "name": "GPT-5.1 Codex Max" },
       "openai-gpt-4.1": { "name": "GPT-4.1" },
       "openai-o3": { "name": "OpenAI o3" },
       "deepseek-r1-distill-llama-70b": { "name": "DeepSeek R1 Distill Llama 70B" },
@@ -271,7 +270,7 @@ print_success() {
   echo "  Default model: Kimi K2.5 (digitalocean/kimi-k2.5)"
   echo ""
   echo "  Available models via Gradient:"
-  echo "    digitalocean/:  GPT-5.2, GPT-5, GPT-5.1 Codex Max, GPT-4.1, o3,"
+  echo "    digitalocean/:  GPT-5.2, GPT-5, GPT-4.1, o3,"
   echo "                    DeepSeek R1 70B, Qwen3 32B, Llama 3.3 70B, Kimi K2.5, glm-5, MiniMax M2.5,"
   echo "                    Claude Opus 4.6, Opus 4.5, Sonnet 4.5, Sonnet 4"
   echo ""
