@@ -1,0 +1,41 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's 1-Click Craft CMS Droplet.
+
+UFW is enabled. Ports open: 22 (SSH), 80 (HTTP), 443 (HTTPS).
+
+FIRST LOGIN REQUIRED:
+  SSH as root to finish setup (creates admin + enables HTTPS):
+    ssh root@$myip
+
+Until setup completes, http://$myip shows a setup-pending page.
+The Craft web installer is intentionally blocked until then.
+
+After setup:
+  * Site:            https://$myip
+  * Control Panel:   https://$myip/admin
+  * Project root:    /var/www/craft
+  * Web root:        /var/www/craft/web
+  * DB passwords:    /root/.digitalocean_password
+
+Management:
+  Start:    /opt/start-craft.sh
+  Stop:     /opt/stop-craft.sh
+  Restart:  /opt/restart-craft.sh
+  Update:   /opt/update-craft.sh
+  Status:   /opt/status-craft.sh
+  Domain:   /root/craft_setup_domain.sh
+
+Docs:
+  * Craft CMS: https://craftcms.com/docs/5.x/
+  * DigitalOcean Community: https://www.digitalocean.com/community/
+
+********************************************************************************
+To delete this message of the day: rm -rf \$(readlink -f \${0})
+EOF
