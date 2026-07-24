@@ -97,7 +97,6 @@ All models below are available via DigitalOcean Serverless Inference with just a
 | `gpt-5-4` | GPT-5.4 | `openai-gpt-5.4` |
 | `gpt-5-3-codex` | GPT-5.3 Codex | `openai-gpt-5.3-codex` |
 | `gpt-5-2` | GPT-5.2 | `openai-gpt-5.2` |
-| `gpt-5-1-codex-max` | GPT-5.1 Codex Max | `openai-gpt-5.1-codex-max` |
 | `gpt-5` | GPT-5 | `openai-gpt-5` |
 | `gpt-4-1` | GPT-4.1 | `openai-gpt-4.1` |
 | `claude-opus-4-8` | Claude Opus 4.8 | `anthropic-claude-opus-4.8` |
