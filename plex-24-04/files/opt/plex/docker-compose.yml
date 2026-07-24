@@ -1,0 +1,17 @@
+services:
+  plex:
+    image: plexinc/pms-docker:PLEX_VERSION_PLACEHOLDER
+    container_name: plex
+    restart: unless-stopped
+    ports:
+      # Bound to localhost until claim; /opt/enable-plex-proxy.sh opens 32400 publicly
+      - "127.0.0.1:32400:32400/tcp"
+    environment:
+      TZ: UTC
+      VERSION: docker
+      ADVERTISE_IP: ${ADVERTISE_IP:-}
+      PLEX_CLAIM: ${PLEX_CLAIM:-}
+    volumes:
+      - /opt/plex/config:/config
+      - /opt/plex/transcode:/transcode
+      - /opt/plex/media:/data
