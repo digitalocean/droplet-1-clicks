@@ -91,7 +91,7 @@ cd /path/to/your/project
 codex
 ```
 
-The default model is **GPT-5.5** (`openai-gpt-5.5`). Change it with `codex -m "openai-gpt-5.1-codex-max"` or the `/model` command inside Codex.
+The default model is **GPT-5.5** (`openai-gpt-5.5`). Change it with `codex -m "openai-gpt-5.2"` or the `/model` command inside Codex.
 
 ## Managing Codex CLI
 
@@ -118,7 +118,6 @@ Use model IDs from the Gradient Model Catalog with `codex -m "<model-id>"` or ed
 |-------|----------|
 | GPT-5.5 (default) | `openai-gpt-5.5` |
 | GPT-5.2 | `openai-gpt-5.2` |
-| GPT-5.1 Codex Max | `openai-gpt-5.1-codex-max` |
 | GPT-5 | `openai-gpt-5` |
 | GPT-4.1 | `openai-gpt-4.1` |
 | OpenAI o3 | `openai-o3` |

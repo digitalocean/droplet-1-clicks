@@ -47,7 +47,7 @@ Gradient was configured automatically from droplet environment variables
 PRE-CONFIGURED MODELS (via DigitalOcean Gradient):
 
   Default: openai-gpt-5.5 (GPT-5.5)
-  Also available: GPT-5.2, GPT-5.1 Codex Max, GPT-5, GPT-4.1, o3, DeepSeek R1 70B, Qwen3 32B,
+  Also available: GPT-5.2, GPT-5, GPT-4.1, o3, DeepSeek R1 70B, Qwen3 32B,
   Llama 3.3 70B, Kimi K2.5, glm-5, MiniMax M2.5, Claude Opus/Sonnet models
 
 NEXT STEPS:
@@ -61,7 +61,7 @@ NEXT STEPS:
    Update Codex CLI: /opt/update-codex-cli.sh
    Re-run setup:     /opt/setup-codex-cli.sh
 
-Switch models:  codex -m "openai-gpt-5.1-codex-max"  or use /model inside Codex
+Switch models:  codex -m "openai-gpt-5.2"  or use /model inside Codex
 
 Configuration:  /root/.codex/config.toml
 API key:        /root/.codex/env (MODEL_ACCESS_KEY)
@@ -84,7 +84,7 @@ DigitalOcean Gradient AI for inference.
 PRE-CONFIGURED MODELS (via DigitalOcean Gradient):
 
   Default: openai-gpt-5.5 (GPT-5.5)
-  Also available: GPT-5.2, GPT-5.1 Codex Max, GPT-5, GPT-4.1, o3, DeepSeek R1 70B, Qwen3 32B,
+  Also available: GPT-5.2, GPT-5, GPT-4.1, o3, DeepSeek R1 70B, Qwen3 32B,
   Llama 3.3 70B, Kimi K2.5, glm-5, MiniMax M2.5, Claude Opus/Sonnet models
 
 NEXT STEPS:
@@ -107,7 +107,7 @@ NEXT STEPS:
    Update Codex CLI: /opt/update-codex-cli.sh
    Re-run setup:     /opt/setup-codex-cli.sh
 
-Switch models:  codex -m "openai-gpt-5.1-codex-max"  or use /model inside Codex
+Switch models:  codex -m "openai-gpt-5.2"  or use /model inside Codex
 
 Configuration:  /root/.codex/config.toml
 API key:        /root/.codex/env (MODEL_ACCESS_KEY)
