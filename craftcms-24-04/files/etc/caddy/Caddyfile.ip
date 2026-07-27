@@ -1,0 +1,39 @@
+# IP access with short-lived Let's Encrypt certificates
+# Placeholders: PLACEHOLDER_EMAIL, PLACEHOLDER_IP
+
+{
+    email PLACEHOLDER_EMAIL
+}
+
+http://PLACEHOLDER_IP {
+    redir https://{host}{uri} permanent
+}
+
+https://PLACEHOLDER_IP {
+    tls {
+        issuer acme {
+            dir https://acme-v02.api.letsencrypt.org/directory
+            profile shortlived
+        }
+    }
+
+    root * /var/www/craft/web
+    php_fastcgi unix//run/php/php8.3-fpm.sock
+    file_server
+    encode gzip
+
+    try_files {path} {path}/ /index.php?{query}
+
+    @blocked {
+        path */.env
+        path */.git/*
+        path */composer.json
+        path */composer.lock
+        path */config/*
+        path */storage/*
+        path */vendor/*
+    }
+    respond @blocked 403
+
+    header X-DO-MARKETPLACE "craftcms"
+}
