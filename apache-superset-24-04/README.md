@@ -65,10 +65,12 @@ Builder size defaults to **s-2vcpu-8gb** to match community guidance for a moder
 ## First Boot
 
 1. Generates admin password, DB password, and `SECRET_KEY`
-2. Creates local Postgres role/DB and runs `superset db upgrade` / `create-admin` / `init`
-3. Optionally reconfigures for attached Managed Postgres credentials
-4. Installs Caddyfile with droplet public IP and starts `caddy` + `superset`
-5. Unlocks SSH
+2. Unlocks SSH early (so a later setup failure does not lock out the Droplet)
+3. Waits for PostgreSQL, creates local role/DB, runs `superset db upgrade` / `create-admin` / `init`
+4. Optionally reconfigures for attached Managed Postgres credentials
+5. Installs Caddyfile with droplet **public** IP and starts `caddy` + `superset`
+
+Create Marketplace Droplets with at least **2 vCPUs / 4 GB RAM** (prefer **s-2vcpu-8gb**). Smaller sizes often OOM during first-boot `db upgrade`.
 
 ## Service Management
 

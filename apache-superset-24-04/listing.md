@@ -15,19 +15,19 @@ Deploy **Apache Superset** — an open-source data exploration and visualization
 
 ## System Requirements
 
-Community guidance for a moderate instance is about **8 GB RAM / 2 vCPUs**. Choose at least that size when creating the Droplet from the Marketplace for production use.
+Superset needs **at least 2 vCPUs**. Community guidance for a moderate instance is **8 GB RAM / 2 vCPUs**. Do not create 1-vCPU Droplets — first boot and the UI will often fail or become unreachable.
 
 | Use case | Recommended size |
 |----------|------------------|
-| Light / trial | 4 GB RAM / 2 vCPU |
-| Moderate production | 8 GB RAM / 2 vCPU |
+| Minimum / light trial | 4 GB RAM / **2 vCPU** |
+| Moderate production | 8 GB RAM / **2 vCPU** (matches Packer builder `s-2vcpu-8gb`) |
 | Higher concurrency | 16 GB+ RAM / 4+ vCPU |
 
 ## Getting Started
 
-1. **Deploy** this 1-Click from the DigitalOcean Marketplace (prefer ≥ 8 GB RAM).
-2. **SSH** in: `ssh root@your-droplet-ip`
-3. Open the MOTD URL: **`https://your-droplet-ip`**
+1. **Deploy** this 1-Click from the DigitalOcean Marketplace with **≥ 2 vCPUs** (prefer ≥ 8 GB RAM).
+2. Wait a few minutes for first-boot setup (`superset db upgrade`), then **SSH** in: `ssh root@your-droplet-ip`
+3. Open the MOTD URL: **`https://your-droplet-public-ip`** (public IP from metadata — not a 10.x private address)
 4. Sign in with user **`admin`** and the password from the MOTD (also in `/root/.digitalocean_passwords`).
 
 ### Custom domain

@@ -3,9 +3,10 @@ set -euo pipefail
 
 exec > >(tee /var/log/one_click_setup.log) 2>&1
 
-PASSWORD=$(openssl rand -base64 60 | head -c49)
-SUPERSET_DB_PASSWORD=$(openssl rand -base64 32 | head -c32)
-SECRET_KEY=$(openssl rand -base64 60 | head -c42)
+# Hex secrets: safe for sed, SQLAlchemy URIs, and shell (base64 /+ breaks those).
+PASSWORD=$(openssl rand -hex 24)
+SUPERSET_DB_PASSWORD=$(openssl rand -hex 24)
+SECRET_KEY=$(openssl rand -hex 32)
 
 cat > /root/.digitalocean_passwords <<EOM
 PASSWORD="${PASSWORD}"
@@ -16,7 +17,28 @@ EOM
 chown root:root /root/.digitalocean_passwords
 chmod 600 /root/.digitalocean_passwords
 
+unlock_ssh() {
+  sed -e '/Match User root/d' \
+      -e '/.*ForceCommand.*droplet.*/d' \
+      -i /etc/ssh/sshd_config
+  systemctl restart ssh || true
+}
+
+# Unlock SSH before long Superset init so a failed/OOM setup does not lock out the Droplet.
+unlock_ssh
+
 systemctl start postgresql
+echo "Waiting for local PostgreSQL..."
+for _ in $(seq 1 60); do
+  if pg_isready -h localhost -p 5432 >/dev/null 2>&1; then
+    break
+  fi
+  sleep 1
+done
+if ! pg_isready -h localhost -p 5432 >/dev/null 2>&1; then
+  echo "PostgreSQL did not become ready in time" >&2
+  exit 1
+fi
 
 # Create local Postgres role/database for Superset metadata
 sudo -u postgres psql -U postgres -d postgres -c "CREATE USER superset PASSWORD '${SUPERSET_DB_PASSWORD}';"
@@ -37,7 +59,7 @@ export PASSWORD
 # shellcheck disable=SC1091
 source /var/lib/digitalocean/setup-dbaas.sh
 
-# Configure Caddy with droplet IP for shortlived TLS
+# Configure Caddy with public droplet IP for shortlived TLS
 meta() { curl -fsS --retry 10 --retry-connrefused --max-time 2 "$1" 2>/dev/null || true; }
 DROPLET_PUBLIC_IP="$(meta http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address)"
 DROPLET_PRIVATE_IP="$(hostname -I | awk '{print $1}')"
@@ -54,13 +76,6 @@ systemctl enable caddy
 systemctl enable superset
 systemctl restart caddy
 systemctl restart superset
-
-# Remove the ssh force logout command
-sed -e '/Match User root/d' \
-    -e '/.*ForceCommand.*droplet.*/d' \
-    -i /etc/ssh/sshd_config
-
-systemctl restart ssh
 
 echo "Apache Superset first-boot initialization complete."
 echo "Access: https://${DROPLET_IP}"
