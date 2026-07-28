@@ -1,0 +1,49 @@
+#!/bin/bash
+
+set -e
+
+set -a
+source /etc/environment 2>/dev/null || true
+set +a
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
+
+chmod +x /opt/apply-openrouter-token.sh
+
+# Ensure shipped Kilo OpenRouter attribution config is present and private
+mkdir -p /root/.config/kilo
+chmod 700 /root/.config/kilo
+if [ -f /root/.config/kilo/kilo.jsonc ]; then
+  chmod 600 /root/.config/kilo/kilo.jsonc
+fi
+if [ -f /root/.config/kilo/kilo.json ]; then
+  chmod 600 /root/.config/kilo/kilo.json
+fi
+
+OPENROUTER_APPLIED=0
+if /opt/apply-openrouter-token.sh; then
+    OPENROUTER_APPLIED=1
+    echo "OPENROUTER_API_KEY saved for Kilo Code sessions."
+fi
+
+# Append shipped first-login snippet once (not generated inline)
+FIRST_LOGIN_SNIPPET=/opt/kilocode-openrouter-first-login.bashrc
+if [ -f "$FIRST_LOGIN_SNIPPET" ] && ! grep -q 'kilocode-openrouter-24-04-first-login BEGIN' /root/.bashrc 2>/dev/null; then
+    cat "$FIRST_LOGIN_SNIPPET" >> /root/.bashrc
+fi
+
+if [ "$OPENROUTER_APPLIED" -eq 1 ]; then
+    cp /var/lib/digitalocean/kilocode_info_with_token.txt /root/kilocode_info.txt
+else
+    cp /var/lib/digitalocean/kilocode_info_no_token.txt /root/kilocode_info.txt
+fi
+
+chmod 600 /root/kilocode_info.txt
+
+echo "Kilo Code CLI (OpenRouter) first-boot initialization complete!"
+echo "Getting started info saved to /root/kilocode_info.txt"

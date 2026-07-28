@@ -1,0 +1,15 @@
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "provider": {
+    "openrouter": {
+      "options": {
+        "headers": {
+          "HTTP-Referer": "https://kilo.ai/",
+          "X-Title": "Kilo Code",
+          "X-OpenRouter-Title": "Kilo Code",
+          "X-OpenRouter-Categories": "cli-agent,cloud-agent"
+        }
+      }
+    }
+  }
+}

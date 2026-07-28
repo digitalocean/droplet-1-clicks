@@ -1,0 +1,25 @@
+================================================================================
+Kilo Code CLI (OpenRouter Agent) 1-Click Droplet - Getting Started
+================================================================================
+
+Kilo Code is an open-source AI coding agent CLI. This Droplet is set up for
+OpenRouter (https://openrouter.ai/apps/kilo-code).
+
+OPENROUTER_API_KEY was configured automatically from the environment.
+
+FIRST LOGIN:
+
+Kilo Code will start automatically after the first-login setup check.
+Stop Kilo with Ctrl+C or by exiting the CLI session.
+
+Helper commands:
+   Update Kilo Code:   /opt/update-kilocode.sh
+   Re-run setup:       /opt/setup-kilocode-openrouter.sh --force
+
+Token env:      OPENROUTER_API_KEY
+Provider env:   KILO_PROVIDER_TYPE=openrouter
+Config:         /root/.config/kilo/kilo.jsonc
+OpenRouter app: https://openrouter.ai/apps/kilo-code
+Documentation:  https://kilo.ai/docs/ai-providers/openrouter
+
+================================================================================

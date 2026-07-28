@@ -1,0 +1,46 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's One-Click Kilo Code CLI (OpenRouter) Droplet.
+
+This image runs Kilo Code as an OpenRouter coding agent
+(https://openrouter.ai/apps/kilo-code). Use natural language to plan,
+write, debug, and refactor code from your terminal.
+
+GETTING STARTED:
+
+  Optional OpenRouter API key setup:
+
+     The first-login setup helper will ask for OPENROUTER_API_KEY.
+     If you do not have one, press Enter to skip setup; Kilo will start
+     automatically.
+
+     To configure it later, export your API key as OPENROUTER_API_KEY
+     and apply it:
+
+       export OPENROUTER_API_KEY=your_key_here
+       /opt/apply-openrouter-token.sh
+
+     Create or manage keys at:
+     https://openrouter.ai/keys
+
+     Kilo Code on OpenRouter:
+     https://openrouter.ai/apps/kilo-code
+
+  Kilo Code starts automatically after the first-login setup prompt.
+  To run it again later:
+     kilo
+
+Helper Commands:
+  Update Kilo Code:   /opt/update-kilocode.sh
+  Re-run setup:       /opt/setup-kilocode-openrouter.sh --force
+
+Documentation:  https://kilo.ai/docs/ai-providers/openrouter
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
