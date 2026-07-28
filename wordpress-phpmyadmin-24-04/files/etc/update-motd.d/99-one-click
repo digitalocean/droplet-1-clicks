@@ -1,0 +1,72 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+
+pma_user="admin"
+admin_mysql_pass="(see /root/.digitalocean_password)"
+if [ -f /root/.digitalocean_password ]; then
+  # shellcheck disable=SC1091
+  . /root/.digitalocean_password
+  if [ "${using_dbaas:-}" = "true" ]; then
+    pma_user="${phpmyadmin_user}"
+  else
+    pma_user="admin"
+  fi
+fi
+
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's One-Click WordPress + phpMyAdmin Droplet.
+To keep this Droplet secure, the UFW firewall is enabled.
+All ports are BLOCKED except 22 (SSH), 80 (HTTP), and 443 (HTTPS).
+
+🚀 AUTOMATIC SETUP WITH SSL:
+ * The automatic setup wizard will launch now (first login only)
+ * Your WordPress site will be secured with HTTPS using Caddy
+ * Uses Let's Encrypt short-lived certificates (supports IP addresses!)
+ * phpMyAdmin is available at /phpmyadmin after setup
+ * Setup takes ~2-3 minutes to complete
+
+In a web browser, you can view:
+ * Setup pending page (before setup): http://$myip
+ * Your WordPress site (after setup): https://$myip
+ * WordPress admin panel: https://$myip/wp-admin
+ * phpMyAdmin: https://$myip/phpmyadmin
+   Username: $pma_user
+   Password: $admin_mysql_pass
+   (If you selected Add a Database, these values are updated after setup)
+
+On the server:
+ * WordPress root: /var/www/html
+ * phpMyAdmin: /usr/share/phpmyadmin
+ * Caddy config: /etc/caddy/Caddyfile
+ * SSL certificates: /var/lib/caddy/.local/share/caddy/certificates/
+ * Database credentials: /root/.digitalocean_password
+   (If using DBaaS before setup: /root/.digitalocean_dbaas_credentials)
+ * WP-Fail2Ban: installed on first-login setup (wp plugin under /var/www/html)
+
+🔧 USEFUL COMMANDS:
+ * Add a custom domain: /root/wp_setup_domain.sh
+ * WordPress CLI: wp --allow-root --path="/var/www/html" [command]
+ * Reload Caddy config: systemctl reload caddy
+ * View Caddy logs: journalctl -u caddy -f
+ * View PHP logs: tail -f /var/log/php8.3-fpm.log
+
+📚 DOCUMENTATION:
+ * WordPress docs: https://wordpress.org/documentation/
+ * phpMyAdmin docs: https://docs.phpmyadmin.net/
+ * DigitalOcean Community: https://www.digitalocean.com/community/
+
+IMPORTANT:
+ * SSL certificates auto-renew every ~6 days (short-lived certificates)
+ * Caddy handles renewals automatically in the background
+ * For security, xmlrpc endpoint is blocked by default
+ * Restrict phpMyAdmin access (VPN, firewall, or strong passwords) in production
+ * You can switch to a custom domain anytime using /root/wp_setup_domain.sh
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
