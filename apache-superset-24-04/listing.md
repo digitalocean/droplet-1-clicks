@@ -20,7 +20,7 @@ Superset needs **at least 2 vCPUs**. Community guidance for a moderate instance 
 | Use case | Recommended size |
 |----------|------------------|
 | Minimum / light trial | 4 GB RAM / **2 vCPU** |
-| Moderate production | 8 GB RAM / **2 vCPU** (matches Packer builder `s-2vcpu-8gb`) |
+| Moderate production | 8 GB RAM / **2 vCPU** (Packer builder uses `s-4vcpu-8gb`) |
 | Higher concurrency | 16 GB+ RAM / 4+ vCPU |
 
 ## Getting Started
