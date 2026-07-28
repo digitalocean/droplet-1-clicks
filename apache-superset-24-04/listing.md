@@ -20,7 +20,7 @@ Community guidance for a moderate instance is about **8 GB RAM / 2 vCPUs**. Choo
 | Use case | Recommended size |
 |----------|------------------|
 | Light / trial | 4 GB RAM / 2 vCPU |
-| Moderate production | 8 GB RAM / 2 vCPU |
+| Moderate production | 8 GB RAM / **2 vCPU** (Packer builder uses `s-4vcpu-8gb`) |
 | Higher concurrency | 16 GB+ RAM / 4+ vCPU |
 
 ## Getting Started

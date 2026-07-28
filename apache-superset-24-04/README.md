@@ -60,7 +60,7 @@ make build-apache-superset-24-04
 | UFW | SSH + HTTP + HTTPS |
 | User | Dedicated `superset` system user |
 
-Builder size defaults to **s-2vcpu-8gb** to match community guidance for a moderate Superset instance.
+Builder size defaults to **s-4vcpu-8gb** (valid Basic slug with 8 GB RAM) so Packer can install Superset without OOM. Marketplace Droplets should still use at least **2 vCPUs / 4 GB RAM** (prefer 8 GB).
 
 ## First Boot
 
@@ -69,6 +69,8 @@ Builder size defaults to **s-2vcpu-8gb** to match community guidance for a moder
 3. Optionally reconfigures for attached Managed Postgres credentials
 4. Installs Caddyfile with droplet public IP and starts `caddy` + `superset`
 5. Unlocks SSH
+
+Create Marketplace Droplets with at least **2 vCPUs / 4 GB RAM** (prefer **8 GB RAM**). Smaller sizes often OOM during first-boot `db upgrade`.
 
 ## Service Management
 
