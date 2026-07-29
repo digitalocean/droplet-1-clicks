@@ -1,0 +1,112 @@
+# Supabase 1-Click Application
+
+Deploy self-hosted Supabase on Ubuntu 24.04 with Docker Compose and Nginx. Supabase provides Postgres-backed Auth, REST/Realtime APIs, Storage, and Studio. The Supabase stack uses its local `db` container. You can optionally attach a DigitalOcean Managed PostgreSQL database at create time for your own application data.
+
+## Included System Components
+
+- **Ubuntu 24.04 LTS**
+- **Docker Engine** and **Docker Compose plugin**
+- **Supabase** (pinned release from the image build, currently `v1.26.05`) — Studio, Kong, Auth, PostgREST, Realtime, Storage, and related services
+- **PostgreSQL** via the Supabase `db` container (`supabase/postgres`)
+- **Nginx** reverse proxy (ports 80/443 → Kong on `localhost:8000`)
+- **Certbot** (Snap) for optional custom-domain TLS
+- **UFW** — SSH, HTTP, and HTTPS
+- **postgresql-client** — used on first boot when a Managed Database is attached
+
+## System Requirements
+
+| Use Case | RAM | CPU | Storage |
+|----------|-----|-----|---------|
+| Minimum | 2 GB | 1 vCPU | 25 GB |
+| Recommended | 4 GB+ | 2 vCPU | 50 GB+ |
+
+## Getting Started
+
+### 1. Deploy the Droplet
+
+1. Select the Supabase 1-Click from the DigitalOcean Marketplace
+2. Choose a Droplet size (2 GB RAM minimum recommended)
+3. Optionally select **Add a Database** to provision Managed PostgreSQL (see below)
+4. Add your SSH key and create the Droplet
+
+### 2. Access Supabase
+
+1. Open `http://your-droplet-ip` in a browser (Nginx → Kong / Studio)
+2. SSH in for credentials:
+
+```bash
+ssh root@your-droplet-ip
+```
+
+Dashboard username and password are shown in the MOTD and stored in `/root/.digitalocean_passwords`.
+
+### 3. Optional domain / HTTPS
+
+Domain and TLS setup is manual (not prompted on every login). When ready, run:
+
+```bash
+/var/supabase/supabase-setup.sh
+```
+
+## Managing Supabase
+
+Supabase runs as Docker Compose services under `/srv/supabase/supabase/docker`.
+
+| Action | Command |
+|--------|---------|
+| Start | `cd /srv/supabase/supabase/docker && docker compose up -d` |
+| Stop | `cd /srv/supabase/supabase/docker && docker compose down` |
+| Restart | `cd /srv/supabase/supabase/docker && docker compose restart` |
+| Status | `cd /srv/supabase/supabase/docker && docker compose ps` |
+| Logs | `cd /srv/supabase/supabase/docker && docker compose logs -f` |
+| Update | Pin/bump `application_version` in a new image build, or follow [Supabase self-hosting update docs](https://supabase.com/docs/guides/self-hosting/docker) then `docker compose pull && docker compose up -d` |
+| Domain TLS | `/var/supabase/supabase-setup.sh` |
+
+Nginx: `systemctl {start|stop|restart|status} nginx`
+
+### Configuration paths
+
+- Supabase stack: `/srv/supabase/supabase/docker`
+- Env / secrets: `/srv/supabase/supabase/docker/.env`
+- Passwords: `/root/.digitalocean_passwords`
+- Managed DB credentials (when attached): `/root/.digitalocean_dbaas_credentials`
+- Domain / TLS helper: `/var/supabase/supabase-setup.sh`
+- Setup log: `/var/log/one_click_setup.log`
+
+## Using a DigitalOcean Managed Database (Optional)
+
+When creating the Droplet, select **Add a Database** to provision Managed PostgreSQL alongside Supabase.
+
+On first boot the Droplet:
+
+1. Waits for the managed cluster (up to a few minutes)
+2. Saves connection details and `DATABASE_URL` to `/root/.digitalocean_passwords` and `/etc/environment`
+3. Starts Supabase with its **local** `db` container (unchanged)
+
+Use the managed database for your own apps or tooling. Supabase services keep using the specialized local Postgres image.
+
+Add the Droplet IP under the database cluster’s **Trusted Sources** in the [control panel](https://cloud.digitalocean.com/databases) if connections time out.
+
+## Marketplace release note (Vendor Portal)
+
+Image code alone does **not** show **Add a Database** to customers. Before publishing or updating this 1-Click in the Marketplace:
+
+1. Open the [Vendor Portal](https://cloud.digitalocean.com/vendorportal)
+2. Edit the Supabase Droplet 1-Click
+3. Enable **PostgreSQL** under managed database / predeploy options
+4. Save so create-droplet offers **Add a Database**
+
+Without that checkbox, `/root/.digitalocean_dbaas_credentials` is never injected and DBaaS predeploy will not run.
+
+## Security notes
+
+- Change the Studio dashboard password after first login if needed (value in `/root/.digitalocean_passwords`)
+- Prefer restricting SSH (and optionally HTTP/HTTPS) with a Cloud Firewall
+- For production, configure a custom domain and TLS via `/var/supabase/supabase-setup.sh`
+- Rotate default JWT / API secrets in `/srv/supabase/supabase/docker/.env` for production use
+
+## Additional Resources
+
+- Marketplace: https://marketplace.digitalocean.com/apps/supabase
+- Supabase self-hosting: https://supabase.com/docs/guides/self-hosting/docker
+- Managed Databases: https://docs.digitalocean.com/products/databases/

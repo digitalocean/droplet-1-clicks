@@ -2,7 +2,7 @@
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "supabase-24-04-snapshot-{{timestamp}}",
-    "apt_packages": "ca-certificates curl jq git ufw dirmngr gnupg lsb-release debian-archive-keyring snapd nginx",
+    "apt_packages": "ca-certificates curl jq git ufw dirmngr gnupg lsb-release debian-archive-keyring snapd nginx postgresql-client",
     "application_name": "Supabase",
     "application_version": "v1.26.05"
   },

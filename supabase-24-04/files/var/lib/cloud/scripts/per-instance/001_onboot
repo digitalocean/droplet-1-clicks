@@ -4,27 +4,39 @@
 # created from your image.  Things like generating passwords, configuration requiring IP address
 # or other items that will be unique to each instance should be done in scripts here.
 
-# Install latest updates on first boot
+exec > >(tee /var/log/one_click_setup.log) 2>&1
+
+unlock_ssh() {
+  sed -e '/Match User root/d' \
+      -e '/.*ForceCommand.*droplet.*/d' \
+      -i /etc/ssh/sshd_config
+  systemctl restart ssh
+}
+trap unlock_ssh EXIT
+
+set -e
+
 cd /srv/supabase/supabase/docker
 
 #git pull  ### it was broken two times because of updates, so this process should be manual
 
 export SUPABASE_PASSWORD=`openssl rand -base64 12`
+cat > /root/.digitalocean_passwords <<EOM
+DASHBOARD_USERNAME=supabase
+DASHBOARD_PASSWORD=${SUPABASE_PASSWORD}
+EOM
+
 cat >> /srv/supabase/supabase/docker/.env <<EOM
 DASHBOARD_USERNAME=supabase
 DASHBOARD_PASSWORD=${SUPABASE_PASSWORD}
 EOM
 
+chmod +x /var/lib/digitalocean/setup-dbaas.sh
+/var/lib/digitalocean/setup-dbaas.sh
+
 docker compose up -d
 
-ln -s /etc/nginx/sites-available/supabase /etc/nginx/sites-enabled/supabase
-unlink /etc/nginx/sites-enabled/default
+ln -sf /etc/nginx/sites-available/supabase /etc/nginx/sites-enabled/supabase
+unlink /etc/nginx/sites-enabled/default 2>/dev/null || true
 
 systemctl restart nginx
-
-# Remove the ssh force logout command
-sed -e '/Match User root/d' \
-    -e '/.*ForceCommand.*droplet.*/d' \
-    -i /etc/ssh/sshd_config
-
-systemctl restart ssh
