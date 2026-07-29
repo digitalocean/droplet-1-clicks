@@ -20,17 +20,6 @@ if [ -f "/root/.digitalocean_dbaas_credentials" ]; then
           sudo systemctl enable postgresql"
 fi
 
-spaces_text=""
-if [ -f "/root/.digitalocean_spaces_credentials" ]; then
-    . /root/.digitalocean_spaces_credentials
-    spaces_text="A Spaces bucket is also available. Following are the access key details:
-    Bucket:         ${bucket_name}
-    Host:           ${spaces_host}
-    Access_Key:     ${spaces_access_key_id}
-    Secret_Key:     ${spaces_secret_key}
-    Region:         ${spaces_region}"
-fi
-
 myip=$(hostname -I | awk '{print$1}')
 cat <<EOF
 ********************************************************************************
@@ -45,8 +34,6 @@ Access the Superset UI (TLS via Caddy shortlived certificate):
     Pass: ${PASSWORD}
 
 ${dbaas_text}
-
-${spaces_text}
 
 On the server:
   * Superset install: /home/superset/superset-project

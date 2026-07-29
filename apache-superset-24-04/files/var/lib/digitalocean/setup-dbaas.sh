@@ -12,8 +12,6 @@ if [ -f "/root/.digitalocean_dbaas_credentials" ]; then
         PG_DB=$(sed -n "s/^db_database=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
         PG_PASS=$(sed -n "s/^db_password=\"\(.*\)\"$/\1/p" /root/.digitalocean_dbaas_credentials)
 
-        PG_URL="postgresql+psycopg2://${PG_USER}:${PG_PASS}@${PG_HOST}:${PG_PORT}/${PG_DB}?sslmode=require"
-
         echo "Waiting for your database to become available (this may take a few minutes)"
         while ! pg_isready -h "$PG_HOST" -p "$PG_PORT"; do
             printf .
@@ -22,14 +20,19 @@ if [ -f "/root/.digitalocean_dbaas_credentials" ]; then
         echo ""
         echo "Database available!"
 
-        # Update URI in the shipped config (preserve SECRET_KEY and other settings)
-        python3 - "${CONFIG_FILE}" "${PG_URL}" <<'PY'
+        # URL-encode user/password before writing SQLAlchemy URI
+        python3 - "${CONFIG_FILE}" "${PG_USER}" "${PG_PASS}" "${PG_HOST}" "${PG_PORT}" "${PG_DB}" <<'PY'
 import re
 import sys
 from pathlib import Path
+from urllib.parse import quote
 
 path = Path(sys.argv[1])
-uri = sys.argv[2]
+user, password, host, port, db = sys.argv[2:7]
+uri = (
+    f"postgresql+psycopg2://{quote(user, safe='')}:{quote(password, safe='')}"
+    f"@{host}:{port}/{db}?sslmode=require"
+)
 text = path.read_text()
 text, n = re.subn(
     r"^SQLALCHEMY_DATABASE_URI = .*",

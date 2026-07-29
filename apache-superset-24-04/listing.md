@@ -15,12 +15,12 @@ Deploy **Apache Superset** — an open-source data exploration and visualization
 
 ## System Requirements
 
-Community guidance for a moderate instance is about **8 GB RAM / 2 vCPUs**. Choose at least that size when creating the Droplet from the Marketplace for production use.
+Community guidance for a moderate instance is about **8 GB RAM**. Choose at least that size when creating the Droplet from the Marketplace for production use. The Packer builder uses `s-4vcpu-8gb`.
 
 | Use case | Recommended size |
 |----------|------------------|
 | Light / trial | 4 GB RAM / 2 vCPU |
-| Moderate production | 8 GB RAM / **2 vCPU** (Packer builder uses `s-4vcpu-8gb`) |
+| Moderate production | 8 GB RAM / 4 vCPU |
 | Higher concurrency | 16 GB+ RAM / 4+ vCPU |
 
 ## Getting Started

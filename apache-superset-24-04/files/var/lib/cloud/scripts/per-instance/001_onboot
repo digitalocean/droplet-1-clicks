@@ -3,9 +3,20 @@ set -euo pipefail
 
 exec > >(tee /var/log/one_click_setup.log) 2>&1
 
-PASSWORD=$(openssl rand -base64 60 | head -c49)
-SUPERSET_DB_PASSWORD=$(openssl rand -base64 32 | head -c32)
-SECRET_KEY=$(openssl rand -base64 60 | head -c42)
+# Always unlock SSH, even if first-boot setup fails mid-way.
+# Otherwise ForceCommand from 018-force-ssh-logout.sh permanently blocks root login.
+unlock_ssh() {
+  sed -e '/Match User root/d' \
+      -e '/.*ForceCommand.*droplet.*/d' \
+      -i /etc/ssh/sshd_config || true
+  systemctl restart ssh || true
+}
+trap unlock_ssh EXIT
+
+# Hex secrets are URI-safe (base64 can include / + = and break SQLAlchemy URLs).
+PASSWORD=$(openssl rand -hex 24)
+SUPERSET_DB_PASSWORD=$(openssl rand -hex 16)
+SECRET_KEY=$(openssl rand -hex 32)
 
 cat > /root/.digitalocean_passwords <<EOM
 PASSWORD="${PASSWORD}"
@@ -55,12 +66,7 @@ systemctl enable superset
 systemctl restart caddy
 systemctl restart superset
 
-# Remove the ssh force logout command
-sed -e '/Match User root/d' \
-    -e '/.*ForceCommand.*droplet.*/d' \
-    -i /etc/ssh/sshd_config
-
-systemctl restart ssh
+# SSH unlock runs via EXIT trap (unlock_ssh)
 
 echo "Apache Superset first-boot initialization complete."
 echo "Access: https://${DROPLET_IP}"
