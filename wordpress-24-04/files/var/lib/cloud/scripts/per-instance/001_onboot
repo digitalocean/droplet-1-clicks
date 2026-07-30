@@ -1,5 +1,35 @@
 #!/bin/bash
 
+# Always unlock SSH, even if first-boot setup fails mid-way.
+# Otherwise ForceCommand from 018-force-ssh-logout.sh permanently blocks root login.
+# Also restore password auth for Droplets created with a password (Web Console).
+unlock_ssh() {
+  sed -e '/Match User root/d' \
+      -e '/.*ForceCommand.*droplet.*/d' \
+      -i /etc/ssh/sshd_config || true
+
+  # Packer builds authenticate with SSH keys, so cloud-init bakes
+  # PasswordAuthentication no into sshd_config.d/50-cloud-init.conf.
+  # That file is snapshotted into the image. sshd keeps the first value it
+  # reads, so a later PasswordAuthentication yes from cloud-init on a
+  # password Droplet may never win — Web Console (SSH) then rejects the
+  # password while SSH keys still work. Override with a 00- drop-in when
+  # root has a real password hash.
+  if grep -qE '^root:[^!:*]' /etc/shadow 2>/dev/null; then
+    mkdir -p /etc/ssh/sshd_config.d
+    cat > /etc/ssh/sshd_config.d/00-allow-password.conf <<'EOF'
+PermitRootLogin yes
+PasswordAuthentication yes
+EOF
+  fi
+
+  systemctl restart ssh || true
+}
+trap unlock_ssh EXIT
+
+# Unlock immediately so Web Console works while MySQL/setup runs
+unlock_ssh
+
 #Generate Mysql root password.
 root_mysql_pass=$(openssl rand -hex 24)
 wordpress_mysql_pass=$(openssl rand -hex 24)
@@ -57,7 +87,7 @@ mysql -uroot -p${root_mysql_pass} \
 mysql -uroot -p${root_mysql_pass} \
       -e "ALTER USER 'debian-sys-maint'@'localhost' IDENTIFIED BY '${debian_sys_maint_mysql_pass}'"
 
-MYSQL_ROOT_PASSWORD=${wordpress_mysql_pass}
+MYSQL_ROOT_PASSWORD=${root_mysql_pass}
 
 SECURE_MYSQL=$(expect -c "
 set timeout 10
@@ -98,13 +128,6 @@ do
     sed -e "0,/put your unique phrase here/s/put your unique phrase here/${wp_salt}/" \
         -i /var/www/wordpress/wp-config.php;
 done
-
-# Remove the ssh force logout command
-sed -e '/Match User root/d' \
-    -e '/.*ForceCommand.*droplet.*/d' \
-    -i /etc/ssh/sshd_config
-
-systemctl restart ssh
 
 # Configure Caddy to show setup-pending page until first login setup completes
 cp /etc/caddy/Caddyfile.setup-pending /etc/caddy/Caddyfile
