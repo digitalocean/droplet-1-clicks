@@ -1,0 +1,45 @@
+{
+    email PLACEHOLDER_EMAIL
+}
+
+# HTTP redirect to HTTPS
+http://PLACEHOLDER_IP {
+    redir https://{host}{uri} permanent
+}
+
+# HTTPS with Let's Encrypt short-lived IP certificates
+https://PLACEHOLDER_IP {
+    tls {
+        issuer acme {
+            dir https://acme-v02.api.letsencrypt.org/directory
+            profile shortlived
+        }
+    }
+
+    encode gzip
+
+    # phpMyAdmin (must be before WordPress handle)
+    redir /phpmyadmin /phpmyadmin/ 308
+    handle /phpmyadmin/* {
+        root * /usr/share
+        php_fastcgi unix//run/php/php8.3-fpm.sock
+        file_server
+    }
+
+    handle {
+        root * /var/www/html
+        php_fastcgi unix//run/php/php8.3-fpm.sock
+        file_server
+
+        # WordPress permalinks
+        try_files {path} {path}/ /index.php?{query}
+
+        # Deny access to sensitive files
+        @blocked {
+            path */xmlrpc.php
+            path */.git/*
+            path */wp-config.php
+        }
+        respond @blocked 403
+    }
+}
