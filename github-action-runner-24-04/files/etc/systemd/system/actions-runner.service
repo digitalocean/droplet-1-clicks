@@ -1,0 +1,23 @@
+[Unit]
+Description=GitHub Actions Runner
+Documentation=https://docs.github.com/en/actions/hosting-your-own-runners
+After=network-online.target docker.service
+Wants=network-online.target
+ConditionPathExists=/home/runner/actions-runner/.runner
+
+[Service]
+Type=simple
+User=runner
+Group=runner
+WorkingDirectory=/home/runner/actions-runner
+ExecStart=/home/runner/actions-runner/run.sh
+Restart=always
+RestartSec=10
+KillMode=process
+KillSignal=SIGTERM
+TimeoutStopSec=5min
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
