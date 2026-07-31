@@ -1,0 +1,154 @@
+#!/bin/bash
+set -euo pipefail
+
+ENV_FILE=/opt/buzz/.env
+CREDS_FILE=/root/buzz_credentials.txt
+INFO_FILE=/root/buzz_info.txt
+
+meta() { curl -fsS --retry 10 --retry-connrefused --max-time 2 "$1"; }
+DROPLET_PUBLIC_IP="$(meta http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)"
+DROPLET_PRIVATE_IP="$(hostname -I | awk '{print $1}')"
+DROPLET_IP="${DROPLET_PUBLIC_IP:-$DROPLET_PRIVATE_IP}"
+
+generate_keypair() {
+  local image out
+  image="$(grep -E '^BUZZ_IMAGE=' "$ENV_FILE" | cut -d= -f2-)"
+  out="$(docker run --rm --entrypoint /usr/local/bin/buzz-admin "$image" generate-key)"
+  OWNER_PUB="$(printf '%s\n' "$out" | awk '/^Public key:/{print $3}')"
+  OWNER_SEC="$(printf '%s\n' "$out" | awk '/^Secret key:/{print $3}')"
+  if [ -z "${OWNER_PUB:-}" ] || [ -z "${OWNER_SEC:-}" ]; then
+    echo "ERROR: failed to parse buzz-admin generate-key output:" >&2
+    printf '%s\n' "$out" >&2
+    exit 1
+  fi
+}
+
+# Generate unique secrets + owner keypair once per droplet
+if grep -q "PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT" "$ENV_FILE" 2>/dev/null; then
+  echo "Generating Buzz secrets and owner keypair..."
+
+  generate_keypair
+  RELAY_KEY_OUT="$(docker run --rm --entrypoint /usr/local/bin/buzz-admin \
+    "$(grep -E '^BUZZ_IMAGE=' "$ENV_FILE" | cut -d= -f2-)" generate-key)"
+  RELAY_SEC="$(printf '%s\n' "$RELAY_KEY_OUT" | awk '/^Secret key:/{print $3}')"
+
+  POSTGRES_PASSWORD="$(openssl rand -base64 32 | tr -d '=+/' | cut -c1-32)"
+  REDIS_PASSWORD="$(openssl rand -base64 32 | tr -d '=+/' | cut -c1-32)"
+  GIT_HMAC="$(openssl rand -hex 32)"
+  S3_ACCESS="$(openssl rand -hex 12)"
+  S3_SECRET="$(openssl rand -hex 32)"
+
+  sed -i "s|^RELAY_OWNER_PUBKEY=.*|RELAY_OWNER_PUBKEY=${OWNER_PUB}|" "$ENV_FILE"
+  sed -i "s|^BUZZ_RELAY_PRIVATE_KEY=.*|BUZZ_RELAY_PRIVATE_KEY=${RELAY_SEC}|" "$ENV_FILE"
+  sed -i "s|^BUZZ_GIT_HOOK_HMAC_SECRET=.*|BUZZ_GIT_HOOK_HMAC_SECRET=${GIT_HMAC}|" "$ENV_FILE"
+  sed -i "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=${POSTGRES_PASSWORD}|" "$ENV_FILE"
+  sed -i "s|^REDIS_PASSWORD=.*|REDIS_PASSWORD=${REDIS_PASSWORD}|" "$ENV_FILE"
+  sed -i "s|^BUZZ_S3_ACCESS_KEY=.*|BUZZ_S3_ACCESS_KEY=${S3_ACCESS}|" "$ENV_FILE"
+  sed -i "s|^BUZZ_S3_SECRET_KEY=.*|BUZZ_S3_SECRET_KEY=${S3_SECRET}|" "$ENV_FILE"
+
+  umask 077
+  cat > "$CREDS_FILE" << EOF
+Buzz 1-Click credentials (keep private)
+=======================================
+Generated: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+Owner public key (RELAY_OWNER_PUBKEY):
+  ${OWNER_PUB}
+
+Owner secret key (import this identity to claim the relay):
+  ${OWNER_SEC}
+
+Relay URL:
+  wss://${DROPLET_IP}
+
+Web UI:
+  https://${DROPLET_IP}
+
+Env file:
+  ${ENV_FILE}
+EOF
+  chmod 600 "$CREDS_FILE"
+  chmod 600 "$ENV_FILE"
+  echo "Credentials written to ${CREDS_FILE}"
+fi
+
+# Point public URLs at this droplet's IP (domain helper rewrites later)
+if grep -q "PLACEHOLDER_DOMAIN" "$ENV_FILE" 2>/dev/null; then
+  echo "Configuring Buzz public URLs for ${DROPLET_IP}..."
+  sed -i "s|PLACEHOLDER_DOMAIN|${DROPLET_IP}|g" "$ENV_FILE"
+fi
+
+# Install Caddyfile and substitute droplet IP for shortlived TLS
+if [ -f /etc/caddy/Caddyfile.tmp ]; then
+  mv /etc/caddy/Caddyfile.tmp /etc/caddy/Caddyfile
+fi
+if grep -q "PLACEHOLDER_DOMAIN" /etc/caddy/Caddyfile 2>/dev/null; then
+  echo "Configuring Caddy with droplet IP address..."
+  sed -i "s/PLACEHOLDER_DOMAIN/${DROPLET_IP}/" /etc/caddy/Caddyfile
+  systemctl enable caddy
+fi
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+OWNER_PUB="$(grep -E '^RELAY_OWNER_PUBKEY=' "$ENV_FILE" | cut -d= -f2-)"
+
+cat > "$INFO_FILE" << EOF
+================================================================================
+Buzz 1-Click Droplet - Getting Started
+================================================================================
+
+Buzz is a self-hostable workspace for humans and AI agents on a relay you own.
+
+ACCESS:
+  Web UI:     https://${DROPLET_IP}
+  Relay URL:  wss://${DROPLET_IP}
+
+OWNER IDENTITY:
+  Public key:  ${OWNER_PUB}
+  Secret key:  see ${CREDS_FILE}
+
+  Import the owner secret key in the Buzz desktop/web client to administer
+  this closed relay. Add other members with:
+    /opt/buzz/run.sh add-member <npub-or-hex>
+
+MANAGEMENT:
+  Start:     /opt/start-buzz.sh
+  Stop:      /opt/stop-buzz.sh
+  Restart:   /opt/restart-buzz.sh
+  Status:    /opt/status-buzz.sh
+  Update:    /opt/update-buzz.sh [version]
+  Domain:    /opt/setup-buzz-domain.sh
+  Logs:      /opt/buzz/run.sh logs
+  Backup:    /opt/buzz/run.sh backup-hint
+
+  systemctl {start|stop|restart|status} buzz
+  systemctl {start|stop|restart|status} caddy
+
+PATHS:
+  Stack:     /opt/buzz
+  Env:       /opt/buzz/.env
+  Creds:     ${CREDS_FILE}
+
+SECURITY:
+  The relay runs in closed membership mode. Port 3000 is bound to localhost;
+  only HTTPS (80/443 via Caddy) is public. Keep ${CREDS_FILE} and .env private.
+
+DOCS:
+  https://github.com/block/buzz
+  https://buzz.xyz/
+
+================================================================================
+EOF
+chmod 600 "$INFO_FILE"
+
+systemctl restart ssh
+systemctl enable buzz
+# start-buzz.sh runs `docker compose up -d --wait`, so this blocks until healthy.
+systemctl restart buzz
+systemctl restart caddy
+
+echo "Buzz first-boot initialization complete!"
+echo "Access info saved to ${INFO_FILE}"
