@@ -1,0 +1,20 @@
+#!/bin/sh
+
+
+#Generate root passwords.
+admin_rabbitmq_pass=$(openssl rand -hex 24)
+
+# Generate some passwords
+cat > /root/.digitalocean_passwords << EOM
+admin_rabbitmq_password="${admin_rabbitmq_pass}"
+EOM
+
+source /root/.digitalocean_passwords
+
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
