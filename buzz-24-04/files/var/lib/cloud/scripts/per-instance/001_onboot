@@ -78,15 +78,18 @@ if grep -q "PLACEHOLDER_DOMAIN" "$ENV_FILE" 2>/dev/null; then
   sed -i "s|PLACEHOLDER_DOMAIN|${DROPLET_IP}|g" "$ENV_FILE"
 fi
 
-# Install Caddyfile and substitute droplet IP for shortlived TLS
+# Install Caddyfile and substitute droplet IP for shortlived TLS.
+# Reload Caddy immediately: it may already be running with the package default
+# (congrats page) from enable-at-build, before this per-instance script runs.
 if [ -f /etc/caddy/Caddyfile.tmp ]; then
   mv /etc/caddy/Caddyfile.tmp /etc/caddy/Caddyfile
 fi
 if grep -q "PLACEHOLDER_DOMAIN" /etc/caddy/Caddyfile 2>/dev/null; then
   echo "Configuring Caddy with droplet IP address..."
   sed -i "s/PLACEHOLDER_DOMAIN/${DROPLET_IP}/" /etc/caddy/Caddyfile
-  systemctl enable caddy
 fi
+systemctl enable caddy
+systemctl restart caddy
 
 # Remove the ssh force logout command
 sed -e '/Match User root/d' \
@@ -110,8 +113,10 @@ OWNER IDENTITY:
   Public key:  ${OWNER_PUB}
   Secret key:  see ${CREDS_FILE}
 
-  Import the owner secret key in the Buzz desktop/web client to administer
-  this closed relay. Add other members with:
+  Download Buzz Desktop (https://github.com/block/buzz/releases), import the
+  owner secret key, then Join a Community with wss://${DROPLET_IP}.
+  The browser page at https://${DROPLET_IP} is a landing page only — key
+  import and chat are in the desktop app. Add other members with:
     /opt/buzz/run.sh add-member <npub-or-hex>
 
 MANAGEMENT:
@@ -148,7 +153,6 @@ systemctl restart ssh
 systemctl enable buzz
 # start-buzz.sh runs `docker compose up -d --wait`, so this blocks until healthy.
 systemctl restart buzz
-systemctl restart caddy
 
 echo "Buzz first-boot initialization complete!"
 echo "Access info saved to ${INFO_FILE}"

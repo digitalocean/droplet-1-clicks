@@ -4,7 +4,7 @@ Deploy [Buzz](https://buzz.xyz/) — a free, open-source collaboration platform 
 
 ## What is Buzz?
 
-Buzz is a self-hostable workspace built on a Nostr-style event relay. Channels, threads, media, git events, workflows, and agent activity live in one signed event log. Use the web UI served by the relay, or connect the [Buzz desktop app](https://github.com/block/buzz/releases) to `wss://your-droplet`.
+Buzz is a self-hostable workspace built on a Nostr-style event relay. Channels, threads, media, git events, workflows, and agent activity live in one signed event log. Connect the [Buzz desktop app](https://github.com/block/buzz/releases) to `wss://your-droplet` (the HTTPS page on the Droplet is a relay landing page only).
 
 ## Included System Components
 
@@ -30,9 +30,9 @@ This 1-Click defaults to a **2 vCPU / 4 GB** Droplet.
 ## Getting Started
 
 1. **Create the Droplet** from this 1-Click, attach an SSH key, and wait for first-boot init (SSH is locked until `001_onboot` finishes).
-2. **Open the UI**: `https://YOUR_DROPLET_IP`
-3. **Claim the relay**: read `/root/buzz_credentials.txt` (also shown in the MOTD). Import the **owner secret key** into the Buzz client so you authenticate as `RELAY_OWNER_PUBKEY`.
-4. **Connect desktop clients** to `wss://YOUR_DROPLET_IP` (or your custom domain after step 5).
+2. **Read credentials**: `/root/buzz_credentials.txt` (also shown in the MOTD) — note the **owner secret key** and Relay URL `wss://YOUR_DROPLET_IP`.
+3. **Install [Buzz Desktop](https://github.com/block/buzz/releases)** (macOS / Windows / Linux). The browser page at `https://YOUR_DROPLET_IP` is only a relay landing page; it does **not** offer key import or chat.
+4. **Claim the relay** in Buzz Desktop: import the owner secret key, then add/connect to `wss://YOUR_DROPLET_IP`.
 5. **Optional domain**: point DNS at the Droplet, then run `/opt/setup-buzz-domain.sh`.
 
 The relay starts in **closed membership mode**. Random visitors cannot join until you add them.

@@ -15,7 +15,8 @@ require_env() {
     echo "Missing /opt/buzz/.env" >&2
     exit 1
   fi
-  if grep -Eq 'PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT|PLACEHOLDER_DOMAIN|CHANGE_ME' .env; then
+  # Ignore comments — Packer/docs lines must not trip this check.
+  if grep -vE '^\s*#' .env | grep -Eq 'PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT|PLACEHOLDER_DOMAIN|CHANGE_ME'; then
     echo "/opt/buzz/.env still contains placeholders. Wait for first-boot init or finish setup." >&2
     exit 1
   fi

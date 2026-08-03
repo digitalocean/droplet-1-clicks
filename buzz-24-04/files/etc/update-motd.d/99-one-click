@@ -25,10 +25,14 @@ relay you own (https://buzz.xyz / https://github.com/block/buzz).
   Owner pubkey: ${owner_pub:-see credentials file}
 
 📝 First steps:
-  1. Open the Web UI (or point the Buzz desktop app at wss://$myip)
-  2. Import / use the owner secret key from $creds to claim the relay
-  3. Optionally attach a domain: /opt/setup-buzz-domain.sh
-  4. Add members: /opt/buzz/run.sh add-member <npub-or-hex>
+  1. Download Buzz Desktop: https://github.com/block/buzz/releases (or https://buzz.xyz/)
+  2. Import the owner secret key from $creds (Identity / import key in the desktop app)
+  3. Add this relay: wss://$myip
+  4. Optionally attach a domain: /opt/setup-buzz-domain.sh
+  5. Add members: /opt/buzz/run.sh add-member <npub-or-hex>
+
+  Note: The browser page at https://$myip is a read-only relay landing page.
+  Claiming ownership and chatting happen in Buzz Desktop, not in that web UI.
 
 🔧 Management:
   Start:    /opt/start-buzz.sh
