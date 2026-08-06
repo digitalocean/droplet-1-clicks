@@ -44,8 +44,9 @@ During first-boot setup, the Droplet automatically:
 
 1. Waits for the PostgreSQL cluster to become available (up to a few minutes)
 2. Points Supabase `.env` / Compose at Managed Postgres (and disables the local `db` container)
-3. Bootstraps Supabase roles and schemas on the managed database (best-effort)
-4. Saves connection details in `/root/.digitalocean_passwords` and `DATABASE_URL` in `/etc/environment`
+3. Bootstraps Supabase roles and schemas on the managed database (`auth`, `storage`, `_supabase`, etc.)
+4. Enables TLS for analytics/auth/storage/realtime (`docker-compose.dbaas.yml`; Logflare SSL runtime is patched at image build and verified on first boot)
+5. Saves connection details in `/root/.digitalocean_passwords` and `DATABASE_URL` in `/etc/environment`
 
 ### Security: Trusted Sources
 
@@ -54,6 +55,10 @@ Your Droplet is not automatically added to the Managed Database's trusted source
 1. Open your database cluster in the control panel
 2. Go to **Settings** → **Trusted Sources**
 3. Add your Droplet's public IP address
+
+### Connection limits
+
+DigitalOcean Managed Postgres allows about **25 connections per 1GB RAM** (minus 3 reserved for maintenance). The Supabase stack opens many pools (Supavisor, PostgREST, Auth, Storage, Realtime, Logflare). On first boot with DBaaS, this 1-Click lowers pool sizes so a small Marketplace DB can start. Prefer a **2GB+** Managed Database for production; if you see `remaining connection slots are reserved for roles with the SUPERUSER attribute`, resize the DB or lower `POOLER_DEFAULT_POOL_SIZE` in `/srv/supabase/supabase/docker/.env` and restart Compose.
 
 ### Modifying database settings later
 

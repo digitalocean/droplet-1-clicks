@@ -14,21 +14,47 @@ unlock_ssh() {
 }
 trap unlock_ssh EXIT
 
-set -e
+set -euo pipefail
 
-cd /srv/supabase/supabase/docker
+COMPOSE_DIR="/srv/supabase/supabase/docker"
+ENV_FILE="${COMPOSE_DIR}/.env"
+GENERATE_KEYS="${COMPOSE_DIR}/utils/generate-keys.sh"
 
-#git pull  ### it was broken two times because of updates, so this process should be manual
+cd "${COMPOSE_DIR}"
 
-export SUPABASE_PASSWORD=`openssl rand -base64 12`
+# Rotate all material secrets from the Packer-baked .env.example defaults so each
+# Droplet gets unique JWT/API keys (Coolify-style; uses upstream generate-keys.sh).
+if [ ! -x "${GENERATE_KEYS}" ] && [ -f "${GENERATE_KEYS}" ]; then
+  chmod +x "${GENERATE_KEYS}"
+fi
+if [ ! -f "${GENERATE_KEYS}" ]; then
+  echo "ERROR: missing ${GENERATE_KEYS}" >&2
+  exit 1
+fi
+sh "${GENERATE_KEYS}" --update-env
+rm -f "${ENV_FILE}.old"
+
+# Ensure dashboard user and a unique pooler tenant (not covered by generate-keys).
+sed -i '/^DASHBOARD_USERNAME=/d' "${ENV_FILE}"
+printf 'DASHBOARD_USERNAME=supabase\n' >> "${ENV_FILE}"
+sed -i '/^POOLER_TENANT_ID=/d' "${ENV_FILE}"
+printf 'POOLER_TENANT_ID=%s\n' "$(openssl rand -hex 16)" >> "${ENV_FILE}"
+
+# Prefer last assignment if duplicates exist
+read_env() {
+  local key="$1"
+  sed -n "s/^${key}=//p" "${ENV_FILE}" | tail -n1
+}
+
+DASHBOARD_PASSWORD="$(read_env DASHBOARD_PASSWORD)"
+if [ -z "${DASHBOARD_PASSWORD}" ]; then
+  echo "ERROR: DASHBOARD_PASSWORD missing after generate-keys" >&2
+  exit 1
+fi
+
 cat > /root/.digitalocean_passwords <<EOM
 DASHBOARD_USERNAME=supabase
-DASHBOARD_PASSWORD=${SUPABASE_PASSWORD}
-EOM
-
-cat >> /srv/supabase/supabase/docker/.env <<EOM
-DASHBOARD_USERNAME=supabase
-DASHBOARD_PASSWORD=${SUPABASE_PASSWORD}
+DASHBOARD_PASSWORD=${DASHBOARD_PASSWORD}
 EOM
 
 chmod +x /var/lib/digitalocean/setup-dbaas.sh
