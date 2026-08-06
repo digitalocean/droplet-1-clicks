@@ -34,7 +34,11 @@ EOM
 chmod +x /var/lib/digitalocean/setup-dbaas.sh
 /var/lib/digitalocean/setup-dbaas.sh
 
-docker compose up -d
+COMPOSE_ARGS=(-f docker-compose.yml)
+if [ -f docker-compose.dbaas.yml ]; then
+  COMPOSE_ARGS+=(-f docker-compose.dbaas.yml)
+fi
+docker compose "${COMPOSE_ARGS[@]}" up -d
 
 ln -sf /etc/nginx/sites-available/supabase /etc/nginx/sites-enabled/supabase
 unlink /etc/nginx/sites-enabled/default 2>/dev/null || true

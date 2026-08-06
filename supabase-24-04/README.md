@@ -1,12 +1,12 @@
 # Supabase 1-Click
 
-Deploy self-hosted Supabase on Ubuntu 24.04 with Docker Compose and Nginx. Postgres for the Supabase stack runs as the local `db` container. You can optionally attach a DigitalOcean Managed PostgreSQL database during deployment for your own application data.
+Deploy self-hosted Supabase on Ubuntu 24.04 with Docker Compose and Nginx. By default Postgres runs as the local `db` container. When you select **Add a Database** at create time, Supabase is configured to use DigitalOcean Managed PostgreSQL instead.
 
 ## Getting Started
 
 1. Select the Supabase 1-Click from the DigitalOcean Marketplace
 2. Choose a Droplet size and region (2GB RAM minimum recommended)
-3. Optionally select **Add a Database** to provision a Managed PostgreSQL database (see below)
+3. Optionally select **Add a Database** to provision Managed PostgreSQL (see below)
 4. Create the Droplet and SSH in as `root`
 
 On first boot, the Supabase Docker stack starts automatically and Nginx proxies to Kong.
@@ -43,10 +43,9 @@ When you choose this option during Droplet creation, DigitalOcean:
 During first-boot setup, the Droplet automatically:
 
 1. Waits for the PostgreSQL cluster to become available (up to a few minutes)
-2. Saves connection details and a `DATABASE_URL` in `/root/.digitalocean_passwords` and `/etc/environment`
-3. Starts the Supabase stack with its **local** `db` container (unchanged)
-
-The Supabase services are not automatically pointed at Managed Postgres. Supabase requires its specialized Postgres image; use the managed database for your own apps or tooling alongside Supabase.
+2. Points Supabase `.env` / Compose at Managed Postgres (and disables the local `db` container)
+3. Bootstraps Supabase roles and schemas on the managed database (best-effort)
+4. Saves connection details in `/root/.digitalocean_passwords` and `DATABASE_URL` in `/etc/environment`
 
 ### Security: Trusted Sources
 
@@ -58,9 +57,9 @@ Your Droplet is not automatically added to the Managed Database's trusted source
 
 ### Modifying database settings later
 
-- **Managed DB credentials:** `/root/.digitalocean_dbaas_credentials` and `/root/.digitalocean_passwords` (`DATABASE_URL`, `DB_*`)
+- **Managed DB credentials:** `/root/.digitalocean_dbaas_credentials` and `/root/.digitalocean_passwords` (`POSTGRES_*`, `DATABASE_URL`)
 - **Supabase stack env:** `/srv/supabase/supabase/docker/.env`
-- **Password rotation:** If you change managed DB credentials in the control panel, update `/root/.digitalocean_passwords` and `/etc/environment` to match
+- **Password rotation:** If you change managed DB credentials in the control panel, update `/root/.digitalocean_passwords`, `/etc/environment`, and `/srv/supabase/supabase/docker/.env` to match, then restart the stack
 
 ## File Locations
 

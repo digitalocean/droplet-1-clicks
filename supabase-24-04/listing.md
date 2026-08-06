@@ -1,13 +1,13 @@
 # Supabase 1-Click Application
 
-Deploy self-hosted Supabase on Ubuntu 24.04 with Docker Compose and Nginx. Supabase provides Postgres-backed Auth, REST/Realtime APIs, Storage, and Studio. The Supabase stack uses its local `db` container. You can optionally attach a DigitalOcean Managed PostgreSQL database at create time for your own application data.
+Deploy self-hosted Supabase on Ubuntu 24.04 with Docker Compose and Nginx. Supabase provides Postgres-backed Auth, REST/Realtime APIs, Storage, and Studio. By default the stack uses its local `db` container; with **Add a Database**, Supabase is configured to use Managed PostgreSQL instead.
 
 ## Included System Components
 
 - **Ubuntu 24.04 LTS**
 - **Docker Engine** and **Docker Compose plugin**
 - **Supabase** (pinned release from the image build, currently `v1.26.05`) — Studio, Kong, Auth, PostgREST, Realtime, Storage, and related services
-- **PostgreSQL** via the Supabase `db` container (`supabase/postgres`)
+- **PostgreSQL** via the Supabase `db` container (`supabase/postgres`), or DigitalOcean Managed PostgreSQL when **Add a Database** is selected
 - **Nginx** reverse proxy (ports 80/443 → Kong on `localhost:8000`)
 - **Certbot** (Snap) for optional custom-domain TLS
 - **UFW** — SSH, HTTP, and HTTPS
@@ -54,7 +54,7 @@ Supabase runs as Docker Compose services under `/srv/supabase/supabase/docker`.
 
 | Action | Command |
 |--------|---------|
-| Start | `cd /srv/supabase/supabase/docker && docker compose up -d` |
+| Start | `cd /srv/supabase/supabase/docker && docker compose up -d` (add `-f docker-compose.dbaas.yml` when Managed DB is in use) |
 | Stop | `cd /srv/supabase/supabase/docker && docker compose down` |
 | Restart | `cd /srv/supabase/supabase/docker && docker compose restart` |
 | Status | `cd /srv/supabase/supabase/docker && docker compose ps` |
@@ -75,15 +75,14 @@ Nginx: `systemctl {start|stop|restart|status} nginx`
 
 ## Using a DigitalOcean Managed Database (Optional)
 
-When creating the Droplet, select **Add a Database** to provision Managed PostgreSQL alongside Supabase.
+When creating the Droplet, select **Add a Database** to provision Managed PostgreSQL for Supabase.
 
 On first boot the Droplet:
 
 1. Waits for the managed cluster (up to a few minutes)
-2. Saves connection details and `DATABASE_URL` to `/root/.digitalocean_passwords` and `/etc/environment`
-3. Starts Supabase with its **local** `db` container (unchanged)
-
-Use the managed database for your own apps or tooling. Supabase services keep using the specialized local Postgres image.
+2. Points Supabase at Managed Postgres and disables the local `db` container
+3. Bootstraps Supabase roles/schemas on the managed database (best-effort)
+4. Saves connection details to `/root/.digitalocean_passwords` and `DATABASE_URL` in `/etc/environment`
 
 Add the Droplet IP under the database cluster’s **Trusted Sources** in the [control panel](https://cloud.digitalocean.com/databases) if connections time out.
 

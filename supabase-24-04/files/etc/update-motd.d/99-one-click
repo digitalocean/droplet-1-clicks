@@ -7,18 +7,17 @@
 dbaas_text=""
 if [ -f "/root/.digitalocean_dbaas_credentials" ]; then
     . /root/.digitalocean_dbaas_credentials
-    dbaas_text="A DigitalOcean Managed PostgreSQL database was provisioned with this Droplet.
-Supabase itself still uses the local Postgres container (service: db).
-Use the managed database for your own app data or tooling:
-
-    Host:     ${DB_HOST:-$db_host}
-    Port:     ${DB_PORT:-$db_port}
-    Database: ${DB_DATABASE:-$db_database}
-    User:     ${DB_USERNAME:-$db_username}
-    Pass:     (see DB_PASSWORD / DATABASE_URL in /root/.digitalocean_passwords)
-    File:     /root/.digitalocean_dbaas_credentials"
+    dbaas_text="Supabase is configured to use managed Postgres as its database. Use the following credentials to manage the database:
+    Database: ${db_database}
+    Host:     ${db_host}
+    Port:     ${db_port}
+    User:     ${db_username}
+    Pass:     ${POSTGRES_PASSWORD}"
 else
-    dbaas_text="No managed database was attached. Supabase uses the local Postgres container (service: db)."
+    dbaas_text="Supabase is configured to use local Postgres as its database. Use the following credentials to manage the database:
+    Database: ${POSTGRES_DB}
+    User:     postgres
+    Pass:     ${POSTGRES_PASSWORD}"
 fi
 
 myip=$(hostname -I | awk '{print$1}')
