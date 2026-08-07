@@ -3,13 +3,15 @@
 # credentials are provided via Marketplace predeploy (Add a Database).
 #
 # When DBaaS credentials are present:
+#   - Wait until Managed Postgres is reachable (abort on timeout)
 #   - Point Supabase .env at Managed Postgres
-#   - Remove the local db (supabase/postgres) service from compose
-#   - Bootstrap roles/schemas (incl. auth/storage) needed by Supabase
+#   - Remove only the local db service from compose (keep vector)
+#   - Fail-fast bootstrap of required roles/schemas/_supabase
+#   - Apply local-parity init SQL where Managed PG allows
 #   - Enable TLS for analytics/auth/storage/realtime against Managed Postgres
 # When absent, keep the local db container (default).
 
-set -uo pipefail
+set -euo pipefail
 
 COMPOSE_DIR="/srv/supabase/supabase/docker"
 COMPOSE_FILE="${COMPOSE_DIR}/docker-compose.yml"
@@ -35,6 +37,59 @@ read_env_var() {
   sed -n "s/^${key}=//p" "${ENV_FILE}" | tail -n1
 }
 
+# Remove a single top-level Compose service by name (2-space indent).
+# Safer than cutting between upstream comment markers (which also deleted vector).
+# Re-test whenever application_version / upstream docker-compose.yml layout changes.
+remove_compose_service() {
+  local service="$1"
+  local file="$2"
+  local tmp had_vector=0
+
+  if grep -qE "^  ${service}:" "${file}"; then
+    :
+  else
+    echo "NOTE: top-level service '${service}' not present in ${file}; nothing to remove"
+    return 0
+  fi
+  grep -qE '^  vector:' "${file}" && had_vector=1
+
+  tmp=$(mktemp)
+  awk -v svc="${service}" '
+    BEGIN { skip=0 }
+    /^  # Comment out everything below this point if you are using an external Postgres database$/ {
+      next
+    }
+    /^  [a-zA-Z0-9_]+:/ {
+      name=$1
+      sub(/:.*/, "", name)
+      if (name == svc) { skip=1; next }
+      skip=0
+      print
+      next
+    }
+    /^  #/ {
+      skip=0
+      print
+      next
+    }
+    skip { next }
+    { print }
+  ' "${file}" > "${tmp}"
+
+  if grep -qE "^  ${service}:" "${tmp}"; then
+    echo "ERROR: failed to remove Compose service '${service}' from ${file}" >&2
+    rm -f "${tmp}"
+    exit 1
+  fi
+  if [ "${had_vector}" -eq 1 ] && ! grep -qE '^  vector:' "${tmp}"; then
+    echo "ERROR: compose edit removed vector while stripping '${service}' — aborting" >&2
+    rm -f "${tmp}"
+    exit 1
+  fi
+  mv "${tmp}" "${file}"
+  echo "Removed local Compose service '${service}' (vector preserved if present)"
+}
+
 using_dbaas=false
 
 if [ -f "${DBAAS_FILE}" ] && [ "$(sed -n "s/^db_protocol=\"\(.*\)\"$/\1/p" "${DBAAS_FILE}")" = "postgresql" ]; then
@@ -49,23 +104,33 @@ if [ -f "${DBAAS_FILE}" ] && [ "$(sed -n "s/^db_protocol=\"\(.*\)\"$/\1/p" "${DB
   JWT_SECRET=$(read_env_var JWT_SECRET)
   JWT_EXPIRY=$(read_env_var JWT_EXPIRY)
   JWT_EXPIRY="${JWT_EXPIRY:-3600}"
+  JWT_SECRET_SQL=$(printf '%s' "${JWT_SECRET}" | sed "s/'/''/g")
 
   echo -e "\nWaiting for your managed database to become available (up to ${DBAAS_WAIT_SECONDS}s)"
   elapsed=0
   until PGPASSWORD="${PG_PASS}" psql \
-    "host=${PG_HOST} port=${PG_PORT} user=${PG_USER} dbname=${PG_DB} sslmode=require" \
+    "host=${PG_HOST} port=${PG_PORT} user=${PG_USER} dbname=${PG_DB} sslmode=require connect_timeout=5" \
     -c 'SELECT 1' >/dev/null 2>&1; do
     if [ "${elapsed}" -ge "${DBAAS_WAIT_SECONDS}" ]; then
-      echo -e "\nTimed out waiting for managed database. Continuing with Managed Postgres config; check Trusted Sources if services fail to connect."
-      break
+      echo -e "\nERROR: Timed out waiting for Managed Postgres at ${PG_HOST}:${PG_PORT}." >&2
+      echo "ERROR: Refusing to rewire Supabase to an unreachable database." >&2
+      echo "ERROR: Add this Droplet's public IP under the database Trusted Sources," >&2
+      echo "ERROR: then re-run: /var/lib/digitalocean/setup-dbaas.sh && cd /srv/supabase/supabase/docker && docker compose -f docker-compose.yml -f docker-compose.dbaas.yml up -d" >&2
+      cat >> /root/.digitalocean_passwords <<EOM
+SUPABASE_DBAAS=failed
+SUPABASE_DBAAS_ERROR='Timed out waiting for Managed Postgres — check Trusted Sources'
+POSTGRES_HOST=$(shell_quote "${PG_HOST}")
+POSTGRES_PORT=$(shell_quote "${PG_PORT}")
+POSTGRES_DB=$(shell_quote "${PG_DB}")
+POSTGRES_USER=$(shell_quote "${PG_USER}")
+EOM
+      exit 1
     fi
     printf .
     sleep 2
     elapsed=$((elapsed + 2))
   done
-  if [ "${elapsed}" -lt "${DBAAS_WAIT_SECONDS}" ]; then
-    echo -e "\nManaged database available!\n"
-  fi
+  echo -e "\nManaged database available!\n"
 
   # Point Supabase services at the managed Postgres instance
   update_env_var POSTGRES_HOST "${PG_HOST}"
@@ -75,8 +140,7 @@ if [ -f "${DBAAS_FILE}" ] && [ "$(sed -n "s/^db_protocol=\"\(.*\)\"$/\1/p" "${DB
 
   # DO Managed Postgres allows ~25 connections per 1GB RAM, minus 3 reserved
   # for maintenance. Stock Supabase defaults (POOLER_DEFAULT_POOL_SIZE=20 plus
-  # PostgREST/Auth/Logflare/…) exhaust a typical Marketplace 1GB DB and surface:
-  #   FATAL: remaining connection slots are reserved for roles with the SUPERUSER attribute
+  # PostgREST/Auth/Logflare/…) exhaust a typical Marketplace 1GB DB.
   update_env_var POOLER_DEFAULT_POOL_SIZE "5"
   update_env_var POOLER_MAX_CLIENT_CONN "50"
   update_env_var POOLER_DB_POOL_SIZE "2"
@@ -87,10 +151,7 @@ if [ -f "${DBAAS_FILE}" ] && [ "$(sed -n "s/^db_protocol=\"\(.*\)\"$/\1/p" "${DB
   # Remove empty depends_on keys left behind
   perl -i -0pe 's/\n(    depends_on:)\n(    [a-z#])/\n$2/g' "${COMPOSE_FILE}"
 
-  # Drop only the embedded db service; keep vector (log shipping) and everything after.
-  # Upstream places vector between db and the "# Update the DATABASE_URL…" marker — do not
-  # cut through that whole region or vector is deleted with db.
-  perl -i -0pe 's/\n  # Comment out everything below this point if you are using an external Postgres database\n  db:\n(?:.*\n)*?(?=\n  vector:)//' "${COMPOSE_FILE}"
+  remove_compose_service db "${COMPOSE_FILE}"
 
   # Require SSL for managed database connection strings in compose
   # Ecto uses ssl=true; libpq URLs use sslmode=require (apply ecto first)
@@ -102,8 +163,15 @@ if [ -f "${DBAAS_FILE}" ] && [ "$(sed -n "s/^db_protocol=\"\(.*\)\"$/\1/p" "${DB
       "host=${PG_HOST} port=${PG_PORT} user=${PG_USER} dbname=${PG_DB} sslmode=require" "$@"
   }
 
-  # Create roles expected by Supabase services (best-effort on managed Postgres)
-  psql_admin -v ON_ERROR_STOP=0 <<SQL || true
+  psql_supabase_db() {
+    PGPASSWORD="${PG_PASS}" psql \
+      "host=${PG_HOST} port=${PG_PORT} user=${PG_USER} dbname=_supabase sslmode=require" "$@"
+  }
+
+  echo "Bootstrapping required Supabase roles (fail-fast)..."
+  # Create required login roles. BYPASSRLS is attempted but optional on Managed PG
+  # (doadmin may lack permission); role existence is mandatory.
+  psql_admin -v ON_ERROR_STOP=1 <<SQL
 DO \$\$
 BEGIN
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'postgres') THEN
@@ -111,39 +179,52 @@ BEGIN
   ELSE
     BEGIN
       ALTER ROLE postgres WITH LOGIN PASSWORD '${PG_PASS_SQL}';
-    EXCEPTION WHEN OTHERS THEN NULL;
+    EXCEPTION WHEN insufficient_privilege THEN
+      RAISE NOTICE 'skipping ALTER ROLE postgres (insufficient privilege)';
     END;
   END IF;
+
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'authenticator') THEN
     CREATE ROLE authenticator NOINHERIT LOGIN PASSWORD '${PG_PASS_SQL}';
   ELSE
     ALTER ROLE authenticator WITH LOGIN PASSWORD '${PG_PASS_SQL}';
   END IF;
+
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'pgbouncer') THEN
     CREATE ROLE pgbouncer LOGIN PASSWORD '${PG_PASS_SQL}';
   ELSE
     ALTER ROLE pgbouncer WITH LOGIN PASSWORD '${PG_PASS_SQL}';
   END IF;
+
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'supabase_admin') THEN
-    CREATE ROLE supabase_admin LOGIN PASSWORD '${PG_PASS_SQL}' CREATEDB CREATEROLE BYPASSRLS;
+    BEGIN
+      CREATE ROLE supabase_admin LOGIN PASSWORD '${PG_PASS_SQL}' CREATEDB CREATEROLE BYPASSRLS;
+    EXCEPTION WHEN OTHERS THEN
+      CREATE ROLE supabase_admin LOGIN PASSWORD '${PG_PASS_SQL}' CREATEDB CREATEROLE;
+      RAISE NOTICE 'created supabase_admin without BYPASSRLS: %', SQLERRM;
+    END;
   ELSE
     ALTER ROLE supabase_admin WITH LOGIN PASSWORD '${PG_PASS_SQL}' CREATEDB CREATEROLE;
   END IF;
+
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'supabase_auth_admin') THEN
     CREATE ROLE supabase_auth_admin LOGIN PASSWORD '${PG_PASS_SQL}';
   ELSE
     ALTER ROLE supabase_auth_admin WITH LOGIN PASSWORD '${PG_PASS_SQL}';
   END IF;
+
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'supabase_storage_admin') THEN
     CREATE ROLE supabase_storage_admin LOGIN PASSWORD '${PG_PASS_SQL}';
   ELSE
     ALTER ROLE supabase_storage_admin WITH LOGIN PASSWORD '${PG_PASS_SQL}';
   END IF;
+
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'supabase_functions_admin') THEN
     CREATE ROLE supabase_functions_admin LOGIN PASSWORD '${PG_PASS_SQL}';
   ELSE
     ALTER ROLE supabase_functions_admin WITH LOGIN PASSWORD '${PG_PASS_SQL}';
   END IF;
+
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'anon') THEN
     CREATE ROLE anon NOLOGIN NOINHERIT;
   END IF;
@@ -151,7 +232,12 @@ BEGIN
     CREATE ROLE authenticated NOLOGIN NOINHERIT;
   END IF;
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'service_role') THEN
-    CREATE ROLE service_role NOLOGIN NOINHERIT BYPASSRLS;
+    BEGIN
+      CREATE ROLE service_role NOLOGIN NOINHERIT BYPASSRLS;
+    EXCEPTION WHEN OTHERS THEN
+      CREATE ROLE service_role NOLOGIN NOINHERIT;
+      RAISE NOTICE 'created service_role without BYPASSRLS: %', SQLERRM;
+    END;
   END IF;
 END
 \$\$;
@@ -166,13 +252,13 @@ GRANT anon, authenticated, service_role TO authenticator;
 GRANT ALL ON SCHEMA public TO anon, authenticated, service_role;
 SQL
 
-  if ! psql_admin -tAc "SELECT 1 FROM pg_database WHERE datname = '_supabase'" 2>/dev/null | grep -q 1; then
-    psql_admin -c "CREATE DATABASE _supabase OWNER supabase_admin;" || true
+  echo "Ensuring _supabase database exists..."
+  if ! psql_admin -tAc "SELECT 1 FROM pg_database WHERE datname = '_supabase'" | grep -q 1; then
+    psql_admin -v ON_ERROR_STOP=1 -c "CREATE DATABASE _supabase OWNER supabase_admin;"
   fi
 
-  # Schemas the local supabase/postgres image would create via init scripts.
-  # auth/storage are required before GoTrue/Storage can migrate on Managed Postgres.
-  psql_admin -v ON_ERROR_STOP=0 <<SQL || true
+  echo "Creating required schemas (auth/storage/realtime/…)..."
+  psql_admin -v ON_ERROR_STOP=1 <<SQL
 CREATE SCHEMA IF NOT EXISTS _realtime AUTHORIZATION supabase_admin;
 CREATE SCHEMA IF NOT EXISTS extensions AUTHORIZATION supabase_admin;
 CREATE SCHEMA IF NOT EXISTS auth AUTHORIZATION supabase_auth_admin;
@@ -187,38 +273,77 @@ GRANT ALL ON SCHEMA extensions TO postgres, supabase_admin, authenticator;
 GRANT ALL ON SCHEMA _realtime TO postgres, supabase_admin;
 SQL
 
-  PGPASSWORD="${PG_PASS}" psql \
-    "host=${PG_HOST} port=${PG_PORT} user=${PG_USER} dbname=_supabase sslmode=require" \
-    -v ON_ERROR_STOP=0 <<SQL || true
+  # Local image init equivalents: logs.sql / pooler.sql (_analytics, _supavisor on _supabase)
+  psql_supabase_db -v ON_ERROR_STOP=1 <<SQL
 CREATE SCHEMA IF NOT EXISTS _analytics AUTHORIZATION supabase_admin;
 CREATE SCHEMA IF NOT EXISTS _supavisor AUTHORIZATION supabase_admin;
 GRANT ALL ON SCHEMA _analytics TO supabase_admin;
 GRANT ALL ON SCHEMA _supavisor TO supabase_admin;
 SQL
 
-  if [ -n "${JWT_SECRET}" ]; then
-    psql_admin -v ON_ERROR_STOP=0 \
-      -c "ALTER DATABASE \"${PG_DB}\" SET \"app.settings.jwt_secret\" TO '${JWT_SECRET}';" || true
-    psql_admin -v ON_ERROR_STOP=0 \
-      -c "ALTER DATABASE \"${PG_DB}\" SET \"app.settings.jwt_exp\" TO '${JWT_EXPIRY}';" || true
+  # jwt.sql equivalent. Custom GUCs like app.settings.* are often denied for doadmin
+  # on Managed Postgres; Auth/Realtime still get JWT from container env — warn, don't abort.
+  if [ -z "${JWT_SECRET}" ]; then
+    echo "ERROR: JWT_SECRET missing from ${ENV_FILE}; run generate-keys before setup-dbaas" >&2
+    exit 1
   fi
+  if ! psql_admin -v ON_ERROR_STOP=1 \
+    -c "ALTER DATABASE \"${PG_DB}\" SET \"app.settings.jwt_secret\" TO '${JWT_SECRET_SQL}';" 2>/tmp/supabase-jwt-guc.err; then
+    echo "WARNING: cannot set app.settings.jwt_secret on Managed Postgres (common for doadmin)." >&2
+    echo "WARNING: continuing — services use JWT_SECRET from .env. Detail: $(tr '\n' ' ' </tmp/supabase-jwt-guc.err)" >&2
+  fi
+  if ! psql_admin -v ON_ERROR_STOP=1 \
+    -c "ALTER DATABASE \"${PG_DB}\" SET \"app.settings.jwt_exp\" TO '${JWT_EXPIRY}';" 2>/tmp/supabase-jwt-guc.err; then
+    echo "WARNING: cannot set app.settings.jwt_exp on Managed Postgres; continuing." >&2
+  fi
+  rm -f /tmp/supabase-jwt-guc.err
 
-  # Apply remaining bundled init SQL when possible (extensions like pg_net may be unavailable)
-  for sql in \
-    "${COMPOSE_DIR}/volumes/db/roles.sql" \
-    "${COMPOSE_DIR}/volumes/db/webhooks.sql"
-  do
-    if [ -f "${sql}" ]; then
-      echo "Applying $(basename "${sql}") to managed database (best-effort)"
-      PGPASSWORD="${PG_PASS}" POSTGRES_PASSWORD="${PG_PASS}" POSTGRES_USER=supabase_admin psql \
-        "host=${PG_HOST} port=${PG_PORT} user=${PG_USER} dbname=${PG_DB} sslmode=require" \
-        -v ON_ERROR_STOP=0 -f "${sql}" || true
+  # Verify required objects exist before continuing
+  echo "Verifying required roles and schemas..."
+  for role in supabase_admin authenticator supabase_auth_admin supabase_storage_admin \
+              anon authenticated service_role pgbouncer; do
+    if ! psql_admin -tAc "SELECT 1 FROM pg_roles WHERE rolname = '${role}'" | grep -q 1; then
+      echo "ERROR: required role missing after bootstrap: ${role}" >&2
+      exit 1
+    fi
+  done
+  for schema in auth storage realtime _realtime graphql_public extensions; do
+    if ! psql_admin -tAc "SELECT 1 FROM pg_namespace WHERE nspname = '${schema}'" | grep -q 1; then
+      echo "ERROR: required schema missing after bootstrap: ${schema}" >&2
+      exit 1
+    fi
+  done
+  if ! psql_admin -tAc "SELECT 1 FROM pg_database WHERE datname = '_supabase'" | grep -q 1; then
+    echo "ERROR: database _supabase was not created" >&2
+    exit 1
+  fi
+  for schema in _analytics _supavisor; do
+    if ! psql_supabase_db -tAc "SELECT 1 FROM pg_namespace WHERE nspname = '${schema}'" | grep -q 1; then
+      echo "ERROR: required _supabase schema missing: ${schema}" >&2
+      exit 1
     fi
   done
 
+  # roles.sql — sync passwords (local-parity; fail-fast)
+  if [ -f "${COMPOSE_DIR}/volumes/db/roles.sql" ]; then
+    echo "Applying roles.sql to managed database..."
+    PGPASSWORD="${PG_PASS}" POSTGRES_PASSWORD="${PG_PASS}" psql \
+      "host=${PG_HOST} port=${PG_PORT} user=${PG_USER} dbname=${PG_DB} sslmode=require" \
+      -v ON_ERROR_STOP=1 -f "${COMPOSE_DIR}/volumes/db/roles.sql"
+  fi
+
+  # webhooks.sql needs pg_net (often unavailable on Managed PG) — best-effort with warning
+  if [ -f "${COMPOSE_DIR}/volumes/db/webhooks.sql" ]; then
+    echo "Applying webhooks.sql to managed database (best-effort; needs pg_net)..."
+    if ! PGPASSWORD="${PG_PASS}" POSTGRES_PASSWORD="${PG_PASS}" POSTGRES_USER=supabase_admin psql \
+      "host=${PG_HOST} port=${PG_PORT} user=${PG_USER} dbname=${PG_DB} sslmode=require" \
+      -v ON_ERROR_STOP=1 -f "${COMPOSE_DIR}/volumes/db/webhooks.sql"; then
+      echo "WARNING: webhooks.sql failed (pg_net or privileges). Database webhooks may be unavailable." >&2
+    fi
+  fi
+
   # Logflare only enables DB SSL when DB_SSL=true AND client cert PEMs exist.
   # DO Managed Postgres uses server TLS without client certs.
-  # Prefer the Packer-baked patched runtime.exs; rebuild it if missing.
   ANALYTICS_VOL="${COMPOSE_DIR}/volumes/analytics"
   RUNTIME_EXS="${ANALYTICS_VOL}/runtime.exs"
   VERSION_FILE="${ANALYTICS_VOL}/logflare_version"

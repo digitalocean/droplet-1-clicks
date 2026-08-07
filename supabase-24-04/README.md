@@ -48,13 +48,21 @@ During first-boot setup, the Droplet automatically:
 4. Enables TLS for analytics/auth/storage/realtime (`docker-compose.dbaas.yml`; Logflare SSL runtime is patched at image build and verified on first boot)
 5. Saves connection details in `/root/.digitalocean_passwords` and `DATABASE_URL` in `/etc/environment`
 
+Required roles/schemas (`supabase_admin`, `authenticator`, `auth`/`storage`, `_supabase` / `_analytics` / `_supavisor`, JWT settings) are created with **fail-fast** checks. Optional `webhooks.sql` (needs `pg_net`) is best-effort.
+
+When bumping `application_version` in `template.json`, re-test the DBaaS compose edit (local `db` service removal must keep `vector`) against the new upstream `docker-compose.yml`.
+
 ### Security: Trusted Sources
 
-Your Droplet is not automatically added to the Managed Database's trusted sources. For better security, add your Droplet's public IP address to the database cluster's **Trusted Sources** in the [DigitalOcean control panel](https://cloud.digitalocean.com/databases):
+Your Droplet is not automatically added to the Managed Database's trusted sources. Add your Droplet's public IP under **Settings → Trusted Sources** in the [control panel](https://cloud.digitalocean.com/databases) **before or right after create**.
 
-1. Open your database cluster in the control panel
-2. Go to **Settings** → **Trusted Sources**
-3. Add your Droplet's public IP address
+If the Droplet cannot reach Managed Postgres within ~5 minutes on first boot, DBaaS setup **aborts** (it will not rewire Supabase to an unreachable DB). Check `/var/log/one_click_setup.log`, add Trusted Sources, then re-run:
+
+```bash
+/var/lib/digitalocean/setup-dbaas.sh
+cd /srv/supabase/supabase/docker
+docker compose -f docker-compose.yml -f docker-compose.dbaas.yml up -d
+```
 
 ### Connection limits
 

@@ -64,9 +64,30 @@ COMPOSE_ARGS=(-f docker-compose.yml)
 if [ -f docker-compose.dbaas.yml ]; then
   COMPOSE_ARGS+=(-f docker-compose.dbaas.yml)
 fi
-docker compose "${COMPOSE_ARGS[@]}" up -d
 
+# Switch nginx first so users never see the default "Welcome to nginx!" page if
+# Compose is still pulling images / waiting on Studio health.
 ln -sf /etc/nginx/sites-available/supabase /etc/nginx/sites-enabled/supabase
 unlink /etc/nginx/sites-enabled/default 2>/dev/null || true
-
 systemctl restart nginx
+
+# First boot often pulls many images; Studio health can lag behind "Started"
+# (Kong waits on studio healthy). Retry instead of aborting mid-stack.
+compose_up_with_retry() {
+  local attempt rc
+  for attempt in 1 2 3; do
+    set +e
+    docker compose "${COMPOSE_ARGS[@]}" up -d
+    rc=$?
+    set -e
+    if [ "${rc}" -eq 0 ]; then
+      return 0
+    fi
+    echo "WARNING: docker compose up failed (attempt ${attempt}/3, rc=${rc}); retrying in 30s..." >&2
+    sleep 30
+  done
+  echo "ERROR: docker compose up failed after retries" >&2
+  return 1
+}
+
+compose_up_with_retry

@@ -79,12 +79,12 @@ When creating the Droplet, select **Add a Database** to provision Managed Postgr
 
 On first boot the Droplet:
 
-1. Waits for the managed cluster (up to a few minutes)
-2. Points Supabase at Managed Postgres and disables the local `db` container
-3. Bootstraps Supabase roles/schemas (`auth`, `storage`, `_supabase`, etc.) and TLS for analytics/auth/storage
+1. Waits for the managed cluster (up to a few minutes) and **aborts** if unreachable (e.g. Trusted Sources)
+2. Points Supabase at Managed Postgres and removes only the local `db` service (keeps `vector`)
+3. Fail-fast bootstraps required roles/schemas (`auth`, `storage`, `_supabase`, etc.) and TLS for analytics/auth/storage
 4. Saves connection details to `/root/.digitalocean_passwords` and `DATABASE_URL` in `/etc/environment`
 
-Add the Droplet IP under the database cluster’s **Trusted Sources** in the [control panel](https://cloud.digitalocean.com/databases) if connections time out.
+Add the Droplet IP under the database cluster’s **Trusted Sources** in the [control panel](https://cloud.digitalocean.com/databases). If the DB is unreachable on first boot, DBaaS setup aborts instead of starting a broken stack — see `/var/log/one_click_setup.log`, then re-run `/var/lib/digitalocean/setup-dbaas.sh` and `docker compose … up -d`.
 
 Prefer a **2GB+** Managed Database. Small plans (~25 connections/GB) can be exhausted by the Supabase stack; this 1-Click lowers pool sizes on DBaaS first boot. If you see `remaining connection slots are reserved…`, resize the DB or reduce `POOLER_DEFAULT_POOL_SIZE` in `/srv/supabase/supabase/docker/.env` and restart Compose.
 
