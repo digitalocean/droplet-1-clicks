@@ -15,6 +15,27 @@ mysqladmin -u root -h localhost password ${root_mysql_pass}
 mysql -uroot -p${root_mysql_pass} \
       -e "ALTER USER 'debian-sys-maint'@'localhost' IDENTIFIED BY '${debian_sys_maint_mysql_pass}'"
 
+# Run mysql_secure_installation
+SECURE_MYSQL=$(expect -c "
+set timeout 10
+spawn mysql_secure_installation
+expect \"Enter current password for root (enter for none):\"
+send \"${root_mysql_pass}\r\"
+expect \"Change the root password?\"
+send \"n\r\"
+expect \"Remove anonymous users?\"
+send \"y\r\"
+expect \"Disallow root login remotely?\"
+send \"y\r\"
+expect \"Remove test database and access to it?\"
+send \"y\r\"
+expect \"Reload privilege tables now?\"
+send \"y\r\"
+expect eof
+")
+
+echo "$SECURE_MYSQL"
+
 cat > /etc/mysql/debian.cnf <<EOM
 # Automatically generated for Debian scripts. DO NOT TOUCH!
 [client]
@@ -30,8 +51,8 @@ socket   = /var/run/mysqld/mysqld.sock
 EOM
 
 myip=$(hostname -I | awk '{print$1}')
-sed -e "s|server_name localhost|servername ${myip}|g" \
-    -i /etc/nginx/sites-available/00-digitalocean
+sed -e "s|server_name localhost|server_name ${myip}|g" \
+    -i /etc/nginx/sites-available/digitalocean
 
 systemctl restart nginx
 

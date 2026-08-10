@@ -1,9 +1,8 @@
-
 {
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
-    "image_name": "lemp-24-04-snapshot-{{timestamp}}",
-    "apt_packages": "fail2ban mysql-server nginx php8.0-apcu php8.0-curl php8.0-mysql php8.0-fpm postfix python3-certbot-nginx software-properties-common",
+    "image_name": "lemp-26-04-snapshot-{{timestamp}}",
+    "apt_packages": "expect fail2ban mysql-server nginx php8.5-apcu php8.5-curl php8.5-mysql php8.5-fpm postfix python3-certbot-nginx",
     "application_name": "LEMP",
     "application_version": ""
   },
@@ -12,7 +11,7 @@
     {
       "type": "digitalocean",
       "api_token": "{{user `do_api_token`}}",
-      "image": "ubuntu-24-04-x64",
+      "image": "ubuntu-26-04-x64",
       "region": "nyc3",
       "size": "s-1vcpu-1gb",
       "ssh_username": "root",
@@ -33,12 +32,12 @@
     },
     {
       "type": "file",
-      "source": "lemp-24-04/files/etc/",
+      "source": "lemp-26-04/files/etc/",
       "destination": "/etc/"
     },
     {
       "type": "file",
-      "source": "lemp-24-04/files/var/",
+      "source": "lemp-26-04/files/var/",
       "destination": "/var/"
     },
     {
@@ -52,8 +51,6 @@
       "inline": [
         "apt -qqy update",
         "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' full-upgrade",
-        "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' install software-properties-common",
-        "add-apt-repository -y ppa:ondrej/php",
         "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' install {{user `apt_packages`}}",
         "apt-get -qqy clean"
       ]
@@ -69,7 +66,7 @@
         "LC_CTYPE=en_US.UTF-8"
       ],
       "scripts": [
-        "lemp-24-04/scripts/011-lemp.sh",
+        "lemp-26-04/scripts/011-lemp.sh",
         "common/scripts/014-ufw-nginx.sh",
         "common/scripts/018-force-ssh-logout.sh",
         "common/scripts/020-application-tag.sh",
