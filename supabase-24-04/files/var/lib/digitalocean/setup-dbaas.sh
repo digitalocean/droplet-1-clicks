@@ -25,16 +25,60 @@ shell_quote() {
   printf "'"
 }
 
+# Write KEY=value for Docker Compose .env (single-quoted so # $ spaces are safe).
 update_env_var() {
   local key="$1"
   local value="$2"
   sed -i "/^${key}=/d" "${ENV_FILE}"
-  printf '%s=%s\n' "${key}" "${value}" >> "${ENV_FILE}"
+  printf '%s=%s\n' "${key}" "$(shell_quote "${value}")" >> "${ENV_FILE}"
 }
 
+# Read .env value; strip surrounding single quotes produced by update_env_var.
 read_env_var() {
   local key="$1"
-  sed -n "s/^${key}=//p" "${ENV_FILE}" | tail -n1
+  local v
+  v=$(sed -n "s/^${key}=//p" "${ENV_FILE}" | tail -n1)
+  case "${v}" in
+    \'*\')
+      v="${v#\'}"
+      v="${v%\'}"
+      v=$(printf '%s' "${v}" | sed "s/'\\\\''/'/g")
+      ;;
+  esac
+  printf '%s' "${v}"
+}
+
+# Idempotent upsert into /root/.digitalocean_passwords (value stored shell-quoted).
+upsert_password_var() {
+  local key="$1"
+  local value="$2"
+  local file="${3:-/root/.digitalocean_passwords}"
+  touch "${file}"
+  sed -i "/^${key}=/d" "${file}"
+  printf '%s=%s\n' "${key}" "$(shell_quote "${value}")" >> "${file}"
+}
+
+mark_dbaas_status() {
+  local status="$1"
+  local err="${2:-}"
+  upsert_password_var SUPABASE_DBAAS "${status}"
+  if [ -n "${err}" ]; then
+    upsert_password_var SUPABASE_DBAAS_ERROR "${err}"
+  else
+    sed -i '/^SUPABASE_DBAAS_ERROR=/d' /root/.digitalocean_passwords 2>/dev/null || true
+  fi
+}
+
+dbaas_die() {
+  echo "ERROR: $*" >&2
+  mark_dbaas_status failed "$*"
+  if [ -n "${PG_HOST:-}" ]; then
+    upsert_password_var POSTGRES_HOST "${PG_HOST}"
+    upsert_password_var POSTGRES_PORT "${PG_PORT:-}"
+    upsert_password_var POSTGRES_DB "${PG_DB:-}"
+    upsert_password_var POSTGRES_USER "${PG_USER:-}"
+  fi
+  exit 1
 }
 
 # Remove a single top-level Compose service by name (2-space indent).
@@ -79,12 +123,12 @@ remove_compose_service() {
   if grep -qE "^  ${service}:" "${tmp}"; then
     echo "ERROR: failed to remove Compose service '${service}' from ${file}" >&2
     rm -f "${tmp}"
-    exit 1
+    return 1
   fi
   if [ "${had_vector}" -eq 1 ] && ! grep -qE '^  vector:' "${tmp}"; then
     echo "ERROR: compose edit removed vector while stripping '${service}' — aborting" >&2
     rm -f "${tmp}"
-    exit 1
+    return 1
   fi
   mv "${tmp}" "${file}"
   echo "Removed local Compose service '${service}' (vector preserved if present)"
@@ -116,21 +160,16 @@ if [ -f "${DBAAS_FILE}" ] && [ "$(sed -n "s/^db_protocol=\"\(.*\)\"$/\1/p" "${DB
       echo "ERROR: Refusing to rewire Supabase to an unreachable database." >&2
       echo "ERROR: Add this Droplet's public IP under the database Trusted Sources," >&2
       echo "ERROR: then re-run: /var/lib/digitalocean/setup-dbaas.sh && cd /srv/supabase/supabase/docker && docker compose -f docker-compose.yml -f docker-compose.dbaas.yml up -d" >&2
-      cat >> /root/.digitalocean_passwords <<EOM
-SUPABASE_DBAAS=failed
-SUPABASE_DBAAS_ERROR='Timed out waiting for Managed Postgres — check Trusted Sources'
-POSTGRES_HOST=$(shell_quote "${PG_HOST}")
-POSTGRES_PORT=$(shell_quote "${PG_PORT}")
-POSTGRES_DB=$(shell_quote "${PG_DB}")
-POSTGRES_USER=$(shell_quote "${PG_USER}")
-EOM
-      exit 1
+      dbaas_die "Timed out waiting for Managed Postgres — check Trusted Sources"
     fi
     printf .
     sleep 2
     elapsed=$((elapsed + 2))
   done
   echo -e "\nManaged database available!\n"
+
+  # Any later failure in this DBaaS path marks MOTD as failed (idempotent upsert).
+  trap 'rc=$?; mark_dbaas_status failed "DBaaS setup aborted — see /var/log/one_click_setup.log"; [ -n "${PG_HOST:-}" ] && upsert_password_var POSTGRES_HOST "${PG_HOST}"; [ -n "${PG_PORT:-}" ] && upsert_password_var POSTGRES_PORT "${PG_PORT}"; [ -n "${PG_DB:-}" ] && upsert_password_var POSTGRES_DB "${PG_DB}"; [ -n "${PG_USER:-}" ] && upsert_password_var POSTGRES_USER "${PG_USER}"; exit "${rc}"' ERR
 
   # Point Supabase services at the managed Postgres instance
   update_env_var POSTGRES_HOST "${PG_HOST}"
@@ -151,7 +190,9 @@ EOM
   # Remove empty depends_on keys left behind
   perl -i -0pe 's/\n(    depends_on:)\n(    [a-z#])/\n$2/g' "${COMPOSE_FILE}"
 
-  remove_compose_service db "${COMPOSE_FILE}"
+  if ! remove_compose_service db "${COMPOSE_FILE}"; then
+    dbaas_die "Failed to remove local db service from compose while preserving vector"
+  fi
 
   # Require SSL for managed database connection strings in compose
   # Ecto uses ssl=true; libpq URLs use sslmode=require (apply ecto first)
@@ -284,8 +325,7 @@ SQL
   # jwt.sql equivalent. Custom GUCs like app.settings.* are often denied for doadmin
   # on Managed Postgres; Auth/Realtime still get JWT from container env — warn, don't abort.
   if [ -z "${JWT_SECRET}" ]; then
-    echo "ERROR: JWT_SECRET missing from ${ENV_FILE}; run generate-keys before setup-dbaas" >&2
-    exit 1
+    dbaas_die "JWT_SECRET missing from ${ENV_FILE}; run generate-keys before setup-dbaas"
   fi
   if ! psql_admin -v ON_ERROR_STOP=1 \
     -c "ALTER DATABASE \"${PG_DB}\" SET \"app.settings.jwt_secret\" TO '${JWT_SECRET_SQL}';" 2>/tmp/supabase-jwt-guc.err; then
@@ -303,24 +343,20 @@ SQL
   for role in supabase_admin authenticator supabase_auth_admin supabase_storage_admin \
               anon authenticated service_role pgbouncer; do
     if ! psql_admin -tAc "SELECT 1 FROM pg_roles WHERE rolname = '${role}'" | grep -q 1; then
-      echo "ERROR: required role missing after bootstrap: ${role}" >&2
-      exit 1
+      dbaas_die "required role missing after bootstrap: ${role}"
     fi
   done
   for schema in auth storage realtime _realtime graphql_public extensions; do
     if ! psql_admin -tAc "SELECT 1 FROM pg_namespace WHERE nspname = '${schema}'" | grep -q 1; then
-      echo "ERROR: required schema missing after bootstrap: ${schema}" >&2
-      exit 1
+      dbaas_die "required schema missing after bootstrap: ${schema}"
     fi
   done
   if ! psql_admin -tAc "SELECT 1 FROM pg_database WHERE datname = '_supabase'" | grep -q 1; then
-    echo "ERROR: database _supabase was not created" >&2
-    exit 1
+    dbaas_die "database _supabase was not created"
   fi
   for schema in _analytics _supavisor; do
     if ! psql_supabase_db -tAc "SELECT 1 FROM pg_namespace WHERE nspname = '${schema}'" | grep -q 1; then
-      echo "ERROR: required _supabase schema missing: ${schema}" >&2
-      exit 1
+      dbaas_die "required _supabase schema missing: ${schema}"
     fi
   done
 
@@ -350,17 +386,13 @@ SQL
   PREPARE="/var/lib/digitalocean/prepare-logflare-ssl.sh"
 
   if [ ! -x "${PREPARE}" ]; then
-    echo "ERROR: missing ${PREPARE}" >&2
-    exit 1
+    dbaas_die "missing ${PREPARE}"
   fi
   if ! "${PREPARE}" "${COMPOSE_DIR}"; then
-    echo "ERROR: Failed to prepare Logflare SSL patch for Managed Postgres." >&2
-    echo "ERROR: Refusing to mark DBaaS setup successful — analytics would block Studio/Kong." >&2
-    exit 1
+    dbaas_die "Failed to prepare Logflare SSL patch for Managed Postgres — analytics would block Studio/Kong"
   fi
   if [ ! -f "${RUNTIME_EXS}" ]; then
-    echo "ERROR: Logflare runtime.exs missing after prepare step." >&2
-    exit 1
+    dbaas_die "Logflare runtime.exs missing after prepare step"
   fi
 
   # Match top-level analytics service only (not nested depends_on: analytics:).
@@ -378,6 +410,8 @@ SQL
   # SSL / TLS for services that talk to Managed Postgres outside URL query params.
   # Cap per-service pools so the stack fits small Managed DB plans.
   # Studio must not wait on analytics healthy — otherwise Logflare issues hide Studio.
+  # Storage: TLS via compose DATABASE_URL ?sslmode=require (patched above) — do not use
+  # NODE_TLS_REJECT_UNAUTHORIZED (process-wide disable).
   cat > "${COMPOSE_DIR}/docker-compose.dbaas.yml" <<EOF
 services:
   realtime:
@@ -398,7 +432,7 @@ services:
       - ./volumes/analytics/runtime.exs:/opt/app/rel/logflare/releases/${LOGFLARE_VER}/runtime.exs:ro
   storage:
     environment:
-      NODE_TLS_REJECT_UNAUTHORIZED: "0"
+      PGSSLMODE: require
   auth:
     environment:
       GOTRUE_DB_SSLMODE: require
@@ -409,7 +443,7 @@ services:
         condition: service_started
 EOF
 
-  # Persist credentials for MOTD / operators
+  # Persist credentials for MOTD / operators (idempotent upserts)
   if command -v jq >/dev/null 2>&1; then
     PG_PASS_ENC=$(jq -nr --arg p "${PG_PASS}" '$p|@uri')
   else
@@ -417,23 +451,22 @@ EOF
   fi
   DATABASE_URL="postgresql://${PG_USER}:${PG_PASS_ENC}@${PG_HOST}:${PG_PORT}/${PG_DB}?sslmode=require"
 
-  cat >> /root/.digitalocean_passwords <<EOM
-SUPABASE_DBAAS=true
-POSTGRES_HOST=$(shell_quote "${PG_HOST}")
-POSTGRES_PORT=$(shell_quote "${PG_PORT}")
-POSTGRES_DB=$(shell_quote "${PG_DB}")
-POSTGRES_USER=$(shell_quote "${PG_USER}")
-POSTGRES_PASSWORD=$(shell_quote "${PG_PASS}")
-DATABASE_URL=$(shell_quote "${DATABASE_URL}")
-EOM
+  mark_dbaas_status true
+  upsert_password_var POSTGRES_HOST "${PG_HOST}"
+  upsert_password_var POSTGRES_PORT "${PG_PORT}"
+  upsert_password_var POSTGRES_DB "${PG_DB}"
+  upsert_password_var POSTGRES_USER "${PG_USER}"
+  upsert_password_var POSTGRES_PASSWORD "${PG_PASS}"
+  upsert_password_var DATABASE_URL "${DATABASE_URL}"
 
   if ! grep -q '^DATABASE_URL=' /etc/environment 2>/dev/null; then
-    echo "DATABASE_URL=\"${DATABASE_URL}\"" >> /etc/environment
+    echo "DATABASE_URL=$(shell_quote "${DATABASE_URL}")" >> /etc/environment
   else
     sed -i "/^DATABASE_URL=/d" /etc/environment
-    echo "DATABASE_URL=\"${DATABASE_URL}\"" >> /etc/environment
+    echo "DATABASE_URL=$(shell_quote "${DATABASE_URL}")" >> /etc/environment
   fi
 
+  trap - ERR
   echo "Supabase configured to use Managed PostgreSQL at ${PG_HOST}:${PG_PORT}/${PG_DB}"
 fi
 
@@ -441,11 +474,9 @@ if [ "${using_dbaas}" = false ]; then
   LOCAL_PG_PASS=$(read_env_var POSTGRES_PASSWORD)
   LOCAL_PG_DB=$(read_env_var POSTGRES_DB)
   LOCAL_PG_DB="${LOCAL_PG_DB:-postgres}"
-  cat >> /root/.digitalocean_passwords <<EOM
-SUPABASE_DBAAS=false
-POSTGRES_HOST='db'
-POSTGRES_PORT='5432'
-POSTGRES_DB=$(shell_quote "${LOCAL_PG_DB}")
-POSTGRES_PASSWORD=$(shell_quote "${LOCAL_PG_PASS}")
-EOM
+  mark_dbaas_status false
+  upsert_password_var POSTGRES_HOST "db"
+  upsert_password_var POSTGRES_PORT "5432"
+  upsert_password_var POSTGRES_DB "${LOCAL_PG_DB}"
+  upsert_password_var POSTGRES_PASSWORD "${LOCAL_PG_PASS}"
 fi

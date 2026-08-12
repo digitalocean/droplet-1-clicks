@@ -68,6 +68,10 @@ docker compose -f docker-compose.yml -f docker-compose.dbaas.yml up -d
 
 DigitalOcean Managed Postgres allows about **25 connections per 1GB RAM** (minus 3 reserved for maintenance). The Supabase stack opens many pools (Supavisor, PostgREST, Auth, Storage, Realtime, Logflare). On first boot with DBaaS, this 1-Click lowers pool sizes so a small Marketplace DB can start. Prefer a **2GB+** Managed Database for production; if you see `remaining connection slots are reserved for roles with the SUPERUSER attribute`, resize the DB or lower `POOLER_DEFAULT_POOL_SIZE` in `/srv/supabase/supabase/docker/.env` and restart Compose.
 
+### TLS to Managed Postgres
+
+Compose connection URLs are patched with `sslmode=require`. Auth/Realtime/Meta/Analytics use service SSL flags (`GOTRUE_DB_SSLMODE`, `DB_SSL`, `PGSSLMODE`). Storage relies on the same `DATABASE_URL` SSL query param (and `PGSSLMODE=require` in the DBaaS overlay) — **not** `NODE_TLS_REJECT_UNAUTHORIZED=0`, which would disable TLS verification process-wide for the Storage container.
+
 ### Modifying database settings later
 
 - **Managed DB credentials:** `/root/.digitalocean_dbaas_credentials` and `/root/.digitalocean_passwords` (`POSTGRES_*`, `DATABASE_URL`)

@@ -88,6 +88,8 @@ Add the Droplet IP under the database cluster’s **Trusted Sources** in the [co
 
 Prefer a **2GB+** Managed Database. Small plans (~25 connections/GB) can be exhausted by the Supabase stack; this 1-Click lowers pool sizes on DBaaS first boot. If you see `remaining connection slots are reserved…`, resize the DB or reduce `POOLER_DEFAULT_POOL_SIZE` in `/srv/supabase/supabase/docker/.env` and restart Compose.
 
+Storage talks to Managed Postgres over TLS via `DATABASE_URL?sslmode=require` (and `PGSSLMODE=require`); this image does **not** set `NODE_TLS_REJECT_UNAUTHORIZED=0`.
+
 ## Marketplace release note (Vendor Portal)
 
 Image code alone does **not** show **Add a Database** to customers. Before publishing or updating this 1-Click in the Marketplace:

@@ -7,20 +7,26 @@
 dbaas_text=""
 if [ -f "/root/.digitalocean_dbaas_credentials" ]; then
     . /root/.digitalocean_dbaas_credentials
-    if [ "${SUPABASE_DBAAS}" = "failed" ]; then
-        dbaas_text="Managed Postgres was selected but first-boot DBaaS setup FAILED (often Trusted Sources).
-    Check /var/log/one_click_setup.log, add this Droplet IP under the database Trusted Sources,
-    then re-run:
-      /var/lib/digitalocean/setup-dbaas.sh
-      cd /srv/supabase/supabase/docker && docker compose -f docker-compose.yml -f docker-compose.dbaas.yml up -d
-    Host: ${db_host}  Port: ${db_port}  Database: ${db_database}  User: ${db_username}"
-    else
+    # Only claim Managed DB success when setup completed (SUPABASE_DBAAS=true).
+    if [ "${SUPABASE_DBAAS}" = "true" ]; then
         dbaas_text="Supabase is configured to use managed Postgres as its database. Use the following credentials to manage the database:
     Database: ${db_database}
     Host:     ${db_host}
     Port:     ${db_port}
     User:     ${db_username}
     Pass:     ${POSTGRES_PASSWORD}"
+    else
+        err_extra=""
+        if [ -n "${SUPABASE_DBAAS_ERROR}" ]; then
+            err_extra=" — ${SUPABASE_DBAAS_ERROR}"
+        fi
+        dbaas_text="Managed Postgres was selected but DBaaS setup did NOT complete successfully.
+    Status: ${SUPABASE_DBAAS:-unknown}${err_extra}
+    Check /var/log/one_click_setup.log, add this Droplet IP under the database Trusted Sources if needed,
+    then re-run:
+      /var/lib/digitalocean/setup-dbaas.sh
+      cd /srv/supabase/supabase/docker && docker compose -f docker-compose.yml -f docker-compose.dbaas.yml up -d
+    Host: ${db_host}  Port: ${db_port}  Database: ${db_database}  User: ${db_username}"
     fi
 else
     dbaas_text="Supabase is configured to use local Postgres as its database. Use the following credentials to manage the database:

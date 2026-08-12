@@ -19,6 +19,21 @@ set -euo pipefail
 COMPOSE_DIR="/srv/supabase/supabase/docker"
 ENV_FILE="${COMPOSE_DIR}/.env"
 GENERATE_KEYS="${COMPOSE_DIR}/utils/generate-keys.sh"
+PASSWORDS_FILE="/root/.digitalocean_passwords"
+
+shell_quote() {
+  printf "'"
+  printf '%s' "$1" | sed "s/'/'\\\\''/g"
+  printf "'"
+}
+
+upsert_password_var() {
+  local key="$1"
+  local value="$2"
+  touch "${PASSWORDS_FILE}"
+  sed -i "/^${key}=/d" "${PASSWORDS_FILE}"
+  printf '%s=%s\n' "${key}" "$(shell_quote "${value}")" >> "${PASSWORDS_FILE}"
+}
 
 cd "${COMPOSE_DIR}"
 
@@ -35,15 +50,25 @@ sh "${GENERATE_KEYS}" --update-env
 rm -f "${ENV_FILE}.old"
 
 # Ensure dashboard user and a unique pooler tenant (not covered by generate-keys).
+# Quote values so special characters cannot break Compose .env parsing.
 sed -i '/^DASHBOARD_USERNAME=/d' "${ENV_FILE}"
-printf 'DASHBOARD_USERNAME=supabase\n' >> "${ENV_FILE}"
+printf 'DASHBOARD_USERNAME=%s\n' "$(shell_quote "supabase")" >> "${ENV_FILE}"
 sed -i '/^POOLER_TENANT_ID=/d' "${ENV_FILE}"
-printf 'POOLER_TENANT_ID=%s\n' "$(openssl rand -hex 16)" >> "${ENV_FILE}"
+printf 'POOLER_TENANT_ID=%s\n' "$(shell_quote "$(openssl rand -hex 16)")" >> "${ENV_FILE}"
 
-# Prefer last assignment if duplicates exist
+# Prefer last assignment if duplicates exist; strip surrounding single quotes.
 read_env() {
   local key="$1"
-  sed -n "s/^${key}=//p" "${ENV_FILE}" | tail -n1
+  local v
+  v=$(sed -n "s/^${key}=//p" "${ENV_FILE}" | tail -n1)
+  case "${v}" in
+    \'*\')
+      v="${v#\'}"
+      v="${v%\'}"
+      v=$(printf '%s' "${v}" | sed "s/'\\\\''/'/g")
+      ;;
+  esac
+  printf '%s' "${v}"
 }
 
 DASHBOARD_PASSWORD="$(read_env DASHBOARD_PASSWORD)"
@@ -52,12 +77,21 @@ if [ -z "${DASHBOARD_PASSWORD}" ]; then
   exit 1
 fi
 
-cat > /root/.digitalocean_passwords <<EOM
-DASHBOARD_USERNAME=supabase
-DASHBOARD_PASSWORD=${DASHBOARD_PASSWORD}
-EOM
+# Re-quote dashboard password in .env (generate-keys writes unquoted).
+sed -i '/^DASHBOARD_PASSWORD=/d' "${ENV_FILE}"
+printf 'DASHBOARD_PASSWORD=%s\n' "$(shell_quote "${DASHBOARD_PASSWORD}")" >> "${ENV_FILE}"
+
+upsert_password_var DASHBOARD_USERNAME supabase
+upsert_password_var DASHBOARD_PASSWORD "${DASHBOARD_PASSWORD}"
+
+# Enable supabase nginx ASAP so a later Compose health race never leaves the
+# default "Welcome to nginx!" page (no Basic-auth popup).
+ln -sf /etc/nginx/sites-available/supabase /etc/nginx/sites-enabled/supabase
+unlink /etc/nginx/sites-enabled/default 2>/dev/null || true
+systemctl restart nginx
 
 chmod +x /var/lib/digitalocean/setup-dbaas.sh
+# On DBaaS failure setup-dbaas exits 1 after writing SUPABASE_DBAAS=failed for MOTD.
 /var/lib/digitalocean/setup-dbaas.sh
 
 COMPOSE_ARGS=(-f docker-compose.yml)
@@ -65,14 +99,8 @@ if [ -f docker-compose.dbaas.yml ]; then
   COMPOSE_ARGS+=(-f docker-compose.dbaas.yml)
 fi
 
-# Switch nginx first so users never see the default "Welcome to nginx!" page if
-# Compose is still pulling images / waiting on Studio health.
-ln -sf /etc/nginx/sites-available/supabase /etc/nginx/sites-enabled/supabase
-unlink /etc/nginx/sites-enabled/default 2>/dev/null || true
-systemctl restart nginx
-
-# First boot often pulls many images; Studio health can lag behind "Started"
-# (Kong waits on studio healthy). Retry instead of aborting mid-stack.
+# First boot often pulls many images; Studio health can lag (Kong waits on studio
+# healthy). Retry instead of aborting mid-stack with Kong never started.
 compose_up_with_retry() {
   local attempt rc
   for attempt in 1 2 3; do
@@ -87,6 +115,7 @@ compose_up_with_retry() {
     sleep 30
   done
   echo "ERROR: docker compose up failed after retries" >&2
+  echo "ERROR: nginx already points at Kong — check: docker compose ${COMPOSE_ARGS[*]} ps" >&2
   return 1
 }
 
