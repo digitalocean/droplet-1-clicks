@@ -12,9 +12,5 @@ rm -rf /var/www/html/index*debian.html
 
 chown -R www-data: /var/www
 
-# Enable fail2ban with sshd jail
 systemctl enable fail2ban
 systemctl start fail2ban
-printf '[sshd]\nenabled = true\nport = 22\nfilter = sshd\nlogpath = /var/log/auth.log\nmaxretry = 5\n' \
-  > /etc/fail2ban/jail.local
-systemctl restart fail2ban

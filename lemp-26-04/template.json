@@ -2,7 +2,7 @@
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "lemp-26-04-snapshot-{{timestamp}}",
-    "apt_packages": "expect fail2ban mysql-server nginx php8.5-apcu php8.5-curl php8.5-mysql php8.5-fpm postfix python3-certbot-nginx",
+    "apt_packages": "fail2ban mysql-server nginx php8.5-apcu php8.5-curl php8.5-mysql php8.5-fpm postfix python3-certbot-nginx",
     "application_name": "LEMP",
     "application_version": ""
   },

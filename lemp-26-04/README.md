@@ -32,7 +32,7 @@ In addition to the package installation, the 1-Click also:
 
 - Enables the UFW firewall to allow only SSH (port `22`, rate limited), HTTP (port `80`), and HTTPS (port `443`) access
 - Enables fail2ban with an sshd jail
-- Sets the MySQL root password and runs `mysql_secure_installation`
+- Sets the MySQL root password and hardens MySQL (removes anonymous users, remote root, and the test database)
 - Sets up the `debian-sys-maint` user in MySQL so the system's init scripts for MySQL will work without requiring the MySQL `root` user password
 - Configures Nginx with PHP 8.5 FPM
 
