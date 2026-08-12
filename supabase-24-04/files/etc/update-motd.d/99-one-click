@@ -2,16 +2,60 @@
 #
 # Configured as part of the DigitalOcean 1-Click Image build process
 
+. /root/.digitalocean_passwords
+
+dbaas_text=""
+if [ -f "/root/.digitalocean_dbaas_credentials" ]; then
+    . /root/.digitalocean_dbaas_credentials
+    # Only claim Managed DB success when setup completed (SUPABASE_DBAAS=true).
+    if [ "${SUPABASE_DBAAS}" = "true" ]; then
+        dbaas_text="Supabase is configured to use managed Postgres as its database. Use the following credentials to manage the database:
+    Database: ${db_database}
+    Host:     ${db_host}
+    Port:     ${db_port}
+    User:     ${db_username}
+    Pass:     ${POSTGRES_PASSWORD}"
+    else
+        err_extra=""
+        if [ -n "${SUPABASE_DBAAS_ERROR}" ]; then
+            err_extra=" — ${SUPABASE_DBAAS_ERROR}"
+        fi
+        dbaas_text="Managed Postgres was selected but DBaaS setup did NOT complete successfully.
+    Status: ${SUPABASE_DBAAS:-unknown}${err_extra}
+    Check /var/log/one_click_setup.log, add this Droplet IP under the database Trusted Sources if needed,
+    then re-run:
+      /var/lib/digitalocean/setup-dbaas.sh
+      cd /srv/supabase/supabase/docker && docker compose -f docker-compose.yml -f docker-compose.dbaas.yml up -d
+    Host: ${db_host}  Port: ${db_port}  Database: ${db_database}  User: ${db_username}"
+    fi
+else
+    dbaas_text="Supabase is configured to use local Postgres as its database. Use the following credentials to manage the database:
+    Database: ${POSTGRES_DB}
+    User:     postgres
+    Pass:     ${POSTGRES_PASSWORD}"
+fi
+
 myip=$(hostname -I | awk '{print$1}')
 cat <<EOF
 ********************************************************************************
 
 Welcome to the DigitalOcean Supabase 1-Click Application
 
-On your first login you will be prompted to configure your Supabase installation.
+Supabase Studio / API (via Nginx):
+    URL: http://${myip}
+    Dashboard user: ${DASHBOARD_USERNAME}
+    Dashboard pass: ${DASHBOARD_PASSWORD}
+
+${dbaas_text}
+
+Run setup manually when you are ready to configure a custom domain and TLS:
+    /var/supabase/supabase-setup.sh
 
 All Supabase scripts and files may be found in /srv/supabase and the setup
 utility can be run again by launching supabase-setup in that directory.
+
+Passwords are saved in /root/.digitalocean_passwords
+Setup log: /var/log/one_click_setup.log
 
 For help and more information, visit https://marketplace.digitalocean.com/apps/supabase
 
