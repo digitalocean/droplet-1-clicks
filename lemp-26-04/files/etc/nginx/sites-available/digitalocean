@@ -19,7 +19,7 @@
 
 server {
 	listen 80 default_server;
-	listen [::]:80 default_server ipv6only=on;
+	listen [::]:80 default_server;
 
 	root /var/www/html;
 	index index.php index.html index.htm;
@@ -43,7 +43,7 @@ server {
 
 	location ~ \.php$ {
         include snippets/fastcgi-php.conf;
-        fastcgi_pass unix:/run/php/php8.0-fpm.sock;
+        fastcgi_pass unix:/run/php/php8.5-fpm.sock;
 	}
 
 	# deny access to .htaccess files, if Apache's document root

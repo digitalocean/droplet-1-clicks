@@ -15,6 +15,15 @@ mysqladmin -u root -h localhost password ${root_mysql_pass}
 mysql -uroot -p${root_mysql_pass} \
       -e "ALTER USER 'debian-sys-maint'@'localhost' IDENTIFIED BY '${debian_sys_maint_mysql_pass}'"
 
+# Harden MySQL (equivalent to mysql_secure_installation; non-interactive for MySQL 8.4)
+mysql -uroot -p${root_mysql_pass} <<EOSQL
+DELETE FROM mysql.user WHERE User='';
+DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
+DROP DATABASE IF EXISTS test;
+DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
+FLUSH PRIVILEGES;
+EOSQL
+
 cat > /etc/mysql/debian.cnf <<EOM
 # Automatically generated for Debian scripts. DO NOT TOUCH!
 [client]
@@ -30,8 +39,8 @@ socket   = /var/run/mysqld/mysqld.sock
 EOM
 
 myip=$(hostname -I | awk '{print$1}')
-sed -e "s|server_name localhost|servername ${myip}|g" \
-    -i /etc/nginx/sites-available/00-digitalocean
+sed -e "s|server_name localhost|server_name ${myip}|g" \
+    -i /etc/nginx/sites-available/digitalocean
 
 systemctl restart nginx
 
