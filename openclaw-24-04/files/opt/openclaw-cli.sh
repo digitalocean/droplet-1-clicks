@@ -1,7 +1,8 @@
 #!/bin/bash
 # Run OpenClaw CLI as the openclaw user (arguments preserved and shell-safe).
 # Injects --token from /opt/openclaw.env only for gateway RPC commands (devices,
-# tui, status, …). Subcommands like `skills` do not accept --token.
+# tui, status, agent, …). Local subcommands like `skills` and `agents` (add/list
+# /bind/delete) do not accept --token.
 
 OPENCLAW_BIN=${OPENCLAW_BIN:-/usr/bin/openclaw}
 
@@ -23,7 +24,7 @@ read_gateway_token_from_env() {
 # openclaw subcommands that talk to the gateway and accept --token
 openclaw_cli_accepts_gateway_token() {
     case "${1:-}" in
-        devices|tui|status|cron|gateway|health|logs|agent|agents|sessions|browser)
+        devices|tui|status|cron|gateway|health|logs|agent|sessions|browser)
             return 0
             ;;
     esac
