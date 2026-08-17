@@ -59,11 +59,12 @@ make build-buzz-24-04
 ## First Boot
 
 1. Unlock SSH (remove Packer `ForceCommand`)
-2. Generate owner + relay Nostr keys via `buzz-admin generate-key`
-3. Fill `/opt/buzz/.env` secrets and set `RELAY_URL` / CORS to the droplet IP
-4. Install Caddyfile for the public IP
-5. `systemctl start buzz` + `caddy`
-6. Write `/root/buzz_credentials.txt` and `/root/buzz_info.txt`
+2. Generate owner + relay Nostr keys via `buzz-admin generate-key` (hex for `.env`)
+3. Encode the same owner keypair as `nsec1` / `npub` for Desktop-friendly credentials
+4. Fill `/opt/buzz/.env` secrets and set `RELAY_URL` / CORS to the droplet IP
+5. Install Caddyfile for the public IP
+6. `systemctl start buzz` + `caddy`
+7. Write `/root/buzz_credentials.txt` (hex + `nsec1`/`npub`) and `/root/buzz_info.txt`
 
 ## Version Pinning
 

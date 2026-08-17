@@ -30,9 +30,9 @@ This 1-Click defaults to a **2 vCPU / 4 GB** Droplet.
 ## Getting Started
 
 1. **Create the Droplet** from this 1-Click, attach an SSH key, and wait for first-boot init (SSH is locked until `001_onboot` finishes).
-2. **Read credentials**: `/root/buzz_credentials.txt` (also shown in the MOTD) — note the **owner secret key** and Relay URL `wss://YOUR_DROPLET_IP`.
+2. **Read credentials**: `/root/buzz_credentials.txt` (also shown in the MOTD) — copy the **`nsec1` owner secret** (for Desktop) and Relay URL `wss://YOUR_DROPLET_IP`. Hex forms are also listed for the relay/CLI; Buzz Desktop only accepts `nsec1`.
 3. **Install [Buzz Desktop](https://github.com/block/buzz/releases)** (macOS / Windows / Linux). The browser page at `https://YOUR_DROPLET_IP` is only a relay landing page; it does **not** offer key import or chat.
-4. **Claim the relay** in Buzz Desktop: import the owner secret key, then add/connect to `wss://YOUR_DROPLET_IP`.
+4. **Claim the relay** in Buzz Desktop: **Use an existing key**, paste the `nsec1` from credentials, then Join a Community with `wss://YOUR_DROPLET_IP`.
 5. **Optional domain**: point DNS at the Droplet, then run `/opt/setup-buzz-domain.sh`.
 
 The relay starts in **closed membership mode**. Random visitors cannot join until you add them.
@@ -77,7 +77,7 @@ Member management:
 
 - Port **3000** is bound to **localhost only**; public access is via Caddy on **80/443**.
 - Secrets are generated on **first boot** (not baked into the snapshot).
-- Back up `.env`, the owner secret key, Postgres, and MinIO volumes together before upgrades.
+- Back up `.env`, `/root/buzz_credentials.txt` (owner `nsec1`/hex), Postgres, and MinIO volumes together before upgrades.
 
 ## Software License
 

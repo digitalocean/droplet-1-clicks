@@ -27,7 +27,7 @@ backup_hint() {
 Back up these before upgrades and on a regular schedule:
 
 - /opt/buzz/.env (BUZZ_RELAY_PRIVATE_KEY, DB/Redis/S3 secrets, BUZZ_GIT_HOOK_HMAC_SECRET)
-- /root/buzz_credentials.txt (owner secret key for RELAY_OWNER_PUBKEY)
+- /root/buzz_credentials.txt (owner nsec1 + hex for RELAY_OWNER_PUBKEY)
 - Postgres data volume (buzz-postgres-data)
 - MinIO/S3 bucket contents (media + git objects)
 - buzz-git-data volume

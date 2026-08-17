@@ -26,8 +26,8 @@ relay you own (https://buzz.xyz / https://github.com/block/buzz).
 
 📝 First steps:
   1. Download Buzz Desktop: https://github.com/block/buzz/releases (or https://buzz.xyz/)
-  2. Import the owner secret key from $creds (Identity / import key in the desktop app)
-  3. Add this relay: wss://$myip
+  2. Open $creds and copy the nsec1 owner secret (Desktop rejects hex)
+  3. In Desktop: Use an existing key → paste nsec1 → Join a Community: wss://$myip
   4. Optionally attach a domain: /opt/setup-buzz-domain.sh
   5. Add members: /opt/buzz/run.sh add-member <npub-or-hex>
 
