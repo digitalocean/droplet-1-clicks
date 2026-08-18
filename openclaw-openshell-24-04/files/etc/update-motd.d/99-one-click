@@ -1,0 +1,32 @@
+#!/bin/sh
+# OpenClaw + OpenShell 1-Click MOTD
+
+myip=$(hostname -I | awk '{print$1}')
+gateway_token=$(grep "^OPENCLAW_GATEWAY_TOKEN=" /opt/openclaw.env 2>/dev/null | cut -d'=' -f2)
+
+cat <<EOF
+********************************************************************************
+Welcome to OpenClaw (OpenShell)
+
+OpenClaw runs inside an OpenShell sandbox with port 18789 forwarded.
+
+Dashboard: https://$myip
+Gateway Token: $gateway_token
+
+Config: /opt/openclaw.env
+Sandbox config is uploaded via setup wizard (GradientAI).
+
+Management:
+  systemctl restart openclaw-sandbox
+  systemctl status openclaw-sandbox
+  journalctl -u openclaw-sandbox -f
+
+Helpers:
+  /opt/restart-openclaw-sandbox.sh
+  /opt/status-openclaw-sandbox.sh
+  /opt/update-openclaw-sandbox.sh
+  /opt/setup-openclaw-domain.sh
+
+********************************************************************************
+To delete this message: rm -rf $(readlink -f ${0})
+EOF
