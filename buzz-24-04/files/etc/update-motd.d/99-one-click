@@ -1,0 +1,54 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+pub=$(curl -fsS --retry 3 --retry-connrefused --max-time 3 \
+  http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)
+myip="${pub:-$(hostname -I | awk '{print$1}')}"
+
+owner_pub=$(grep -E '^RELAY_OWNER_PUBKEY=' /opt/buzz/.env 2>/dev/null | cut -d= -f2-)
+creds=/root/buzz_credentials.txt
+
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's One-Click Buzz Droplet.
+
+Buzz is a self-hostable workspace where humans and AI agents share rooms on a
+relay you own (https://buzz.xyz / https://github.com/block/buzz).
+
+🌐 Access:
+  Web UI:     https://$myip
+  Relay URL:  wss://$myip
+
+  Credentials: $creds
+  Owner pubkey: ${owner_pub:-see credentials file}
+
+📝 First steps:
+  1. Download Buzz Desktop: https://github.com/block/buzz/releases (or https://buzz.xyz/)
+  2. Open $creds and copy the nsec1 owner secret (Desktop rejects hex)
+  3. In Desktop: Use an existing key → paste nsec1 → Join a Community: wss://$myip
+  4. Optionally attach a domain: /opt/setup-buzz-domain.sh
+  5. Add members: /opt/buzz/run.sh add-member <npub-or-hex>
+
+  Note: The browser page at https://$myip is a read-only relay landing page.
+  Claiming ownership and chatting happen in Buzz Desktop, not in that web UI.
+
+🔧 Management:
+  Start:    /opt/start-buzz.sh
+  Stop:     /opt/stop-buzz.sh
+  Restart:  /opt/restart-buzz.sh
+  Status:   /opt/status-buzz.sh
+  Update:   /opt/update-buzz.sh [version]
+  Domain:   /opt/setup-buzz-domain.sh
+  Logs:     /opt/buzz/run.sh logs
+
+  systemctl {start|stop|restart|status} buzz
+  systemctl {start|stop|restart|status} caddy
+
+📚 Docs: https://github.com/block/buzz
+🔗 Site: https://buzz.xyz/
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF

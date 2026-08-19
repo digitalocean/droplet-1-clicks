@@ -1,0 +1,19 @@
+[Unit]
+Description=Buzz — self-hosted humans + agents workspace relay
+Documentation=https://github.com/block/buzz
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/buzz
+ExecStart=/opt/start-buzz.sh
+ExecStop=/opt/stop-buzz.sh
+TimeoutStartSec=300
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
