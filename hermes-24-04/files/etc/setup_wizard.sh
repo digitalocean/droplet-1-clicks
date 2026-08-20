@@ -74,26 +74,21 @@ cat <<'EOF'
 
 Hermes is installed for the dedicated 'hermes' user.
 
-Choose how to configure a model provider:
-  1) DigitalOcean Serverless Inference (model access key)
-  2) Another provider via Hermes setup (OpenAI, Anthropic, OpenRouter,
-     custom endpoint, and the rest of Hermes tools / gateway setup)
+How do you want to connect a model?
 
-Create a DigitalOcean model access key:
-  1. Go to https://cloud.digitalocean.com/model-studio/manage-keys
-  2. Or from the cloud console, navigate to Inference > Manage
-  3. Click 'Create Model Access Key'
+  1) DigitalOcean Serverless Inference
+  2) Hermes setup
 
 Docs: https://hermes-agent.nousresearch.com/docs/
 GitHub: https://github.com/NousResearch/hermes-agent
 
 EOF
 
-read -rp "Selection [1/2, or Enter for 1]: " PROVIDER_SEL
+read -rp "Enter 1 or 2 [default: 1]: " PROVIDER_SEL
 case "${PROVIDER_SEL}" in
   2)
     echo ""
-    echo "Launching Hermes built-in setup..."
+    echo "Launching Hermes setup..."
     echo ""
     run_builtin_hermes_setup
     finish_setup
@@ -101,15 +96,23 @@ case "${PROVIDER_SEL}" in
     ;;
 esac
 
+cat <<'EOF'
+
+Create a DigitalOcean model access key:
+  https://cloud.digitalocean.com/model-studio/manage-keys
+  (cloud console: Inference > Manage > Create Model Access Key)
+
+EOF
+
 old_histfile="${HISTFILE-}"
 unset HISTFILE
-read -rsp "Enter your DigitalOcean model access key (or press Enter for Hermes built-in setup): " MODEL_ACCESS_KEY
+read -rsp "Enter your DigitalOcean model access key (or press Enter for Hermes setup): " MODEL_ACCESS_KEY
 echo ""
 [ -n "${old_histfile:-}" ] && export HISTFILE="$old_histfile"
 
 if [ -z "${MODEL_ACCESS_KEY}" ]; then
   echo ""
-  echo "No model access key entered. Launching Hermes built-in setup..."
+  echo "No model access key entered. Launching Hermes setup..."
   echo ""
   run_builtin_hermes_setup
   finish_setup
@@ -153,14 +156,14 @@ while true; do
     continue
   fi
 
-  read -rp "Enter a DigitalOcean model id (or press Enter for Hermes built-in setup): " MODEL_ACCESS_MODEL
+  read -rp "Enter a DigitalOcean model id (or press Enter for Hermes setup): " MODEL_ACCESS_MODEL
   if [ -n "${MODEL_ACCESS_MODEL}" ]; then
     chat_ids=""
     break
   fi
 
   echo ""
-  echo "Launching Hermes built-in setup..."
+  echo "Launching Hermes setup..."
   echo ""
   run_builtin_hermes_setup
   finish_setup
