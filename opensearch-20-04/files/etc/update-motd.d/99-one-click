@@ -1,0 +1,23 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+admin_password=$(cat /home/opensearch/admin_password.txt)
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's 1-Click OpenSearch/OpenSearch Dashboards Droplet.
+To keep this Droplet secure, the UFW firewall is enabled.
+All ports are BLOCKED except 22 (SSH), 9200, 5601.
+
+ * OpenSearch Dashboards: https://$myip:5601/
+    Username: admin
+    Password: $admin_password
+
+On the server:
+ * The OpenSearch admin password is saved in /home/opensearch/admin_password.txt
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
