@@ -8,8 +8,8 @@ cat <<'EOF'
 Welcome to Hermes Agent - The self-improving AI agent from Nous Research
 
 Hermes is installed for the dedicated 'hermes' user. On first SSH login, the
-setup wizard runs automatically so you can choose a DigitalOcean Serverless
-Inference model from the live catalog (or continue with Hermes built-in setup).
+setup wizard runs automatically so you can use DigitalOcean Serverless
+Inference or another provider via Hermes built-in setup.
 
 Quick start:
   hermes                    Start an interactive Hermes chat

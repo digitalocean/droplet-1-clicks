@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Unit tests for the shared DigitalOcean inference catalog helpers.
+# Unit tests for the shared DigitalOcean inference model-list helpers.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -49,7 +49,7 @@ assert_fail() {
     fi
 }
 
-echo "=== common inference-models.sh catalog parsing ==="
+echo "=== common inference-models.sh model list parsing ==="
 
 FIXTURE='{
   "object": "list",
@@ -89,7 +89,7 @@ assert_eq "$chosen" "anthropic-claude-4.5-sonnet" \
 
 chosen="$(printf '%s\n' "$chat_ids" | resolve_inference_model_choice kimi-k2.5)"
 assert_eq "$chosen" "kimi-k2.5" \
-    "typed model id is accepted when it is in the catalog"
+    "typed model id is accepted when it is in the list"
 
 if ! printf '%s\n' "$chat_ids" | resolve_inference_model_choice 99 >/dev/null 2>&1; then
     echo "OK: out-of-range selection is rejected"
@@ -99,7 +99,7 @@ else
 fi
 
 empty="$(printf '%s' '{"object":"list","data":[]}' | parse_inference_model_ids)"
-assert_eq "$empty" "" "empty catalog parses to no ids"
+assert_eq "$empty" "" "empty model list parses to no ids"
 
 if [ "$FAILURES" -ne 0 ]; then
     echo

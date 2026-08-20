@@ -34,6 +34,9 @@ Hermes Agent setup finished.
 Start chatting:
   hermes
 
+Reconfigure provider or tools:
+  hermes setup
+
 Change model later:
   hermes model
 
@@ -70,11 +73,13 @@ cat <<'EOF'
 ========================================================================
 
 Hermes is installed for the dedicated 'hermes' user.
-This wizard configures DigitalOcean Serverless Inference from a live
-model catalog. Press Enter without a key to use Hermes built-in setup
-instead (tools, terminal backend, and optional messaging gateway).
 
-Create a model access key:
+Choose how to configure a model provider:
+  1) DigitalOcean Serverless Inference (model access key)
+  2) Another provider via Hermes setup (OpenAI, Anthropic, OpenRouter,
+     custom endpoint, and the rest of Hermes tools / gateway setup)
+
+Create a DigitalOcean model access key:
   1. Go to https://cloud.digitalocean.com/model-studio/manage-keys
   2. Or from the cloud console, navigate to Inference > Manage
   3. Click 'Create Model Access Key'
@@ -83,6 +88,18 @@ Docs: https://hermes-agent.nousresearch.com/docs/
 GitHub: https://github.com/NousResearch/hermes-agent
 
 EOF
+
+read -rp "Selection [1/2, or Enter for 1]: " PROVIDER_SEL
+case "${PROVIDER_SEL}" in
+  2)
+    echo ""
+    echo "Launching Hermes built-in setup..."
+    echo ""
+    run_builtin_hermes_setup
+    finish_setup
+    exit 0
+    ;;
+esac
 
 old_histfile="${HISTFILE-}"
 unset HISTFILE
@@ -176,6 +193,4 @@ export MODEL_ACCESS_MODEL
 
 echo ""
 echo "Default model set to: ${MODEL_ACCESS_MODEL}"
-echo "To configure Hermes tools, terminal backend, or a messaging gateway later:"
-echo "  hermes setup"
 finish_setup

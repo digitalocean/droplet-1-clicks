@@ -1,5 +1,5 @@
 #!/bin/bash
-# Shared DigitalOcean Serverless Inference catalog helpers for Droplet 1-Clicks.
+# Shared DigitalOcean Serverless Inference model-list helpers for Droplet 1-Clicks.
 #
 # Packer copies this file to /var/lib/digitalocean/inference-models.sh on every
 # image that provisions common/files/var/. Other 1-Clicks should source that
@@ -9,7 +9,7 @@
 #   json="$(fetch_inference_models_json "$MODEL_ACCESS_KEY")" || return 1
 #   chat_ids="$(printf '%s' "$json" | parse_inference_model_ids | filter_chat_inference_models)"
 #
-# Live catalog: GET https://inference.do-ai.run/v1/models
+# Lists models with GET https://inference.do-ai.run/v1/models
 # Authenticate with a model access key (Bearer). Response shape:
 # https://docs.digitalocean.com/products/inference/how-to/retrieve-available-models/
 #
