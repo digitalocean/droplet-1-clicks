@@ -65,8 +65,13 @@ write_env_file_kv() {
     chmod 600 "$file"
 }
 
+# Canonical env vars:
+#   MODEL_ACCESS_KEY  official model access key
+#   INFERENCE_MODEL   default model id from GET /v1/models
+# Aliases still accepted from droplet environment:
+#   GRADIENT_KEY, MODEL_ACCESS_MODEL, DO_INFERENCE_MODEL, GRADIENT_MODEL
 MODEL_ACCESS_KEY=$(read_first_usable MODEL_ACCESS_KEY GRADIENT_KEY || true)
-MODEL_ACCESS_MODEL=$(read_first_usable MODEL_ACCESS_MODEL DO_INFERENCE_MODEL GRADIENT_MODEL || true)
+INFERENCE_MODEL=$(read_first_usable INFERENCE_MODEL MODEL_ACCESS_MODEL DO_INFERENCE_MODEL GRADIENT_MODEL || true)
 
 if ! env_value_usable "$MODEL_ACCESS_KEY"; then
     exit 1
@@ -79,21 +84,21 @@ if [ -f "$INFERENCE_MODELS_LIB" ]; then
     CHAT_IDS="$(list_chat_inference_models "$MODEL_ACCESS_KEY" || true)"
 fi
 
-if ! env_value_usable "$MODEL_ACCESS_MODEL"; then
+if ! env_value_usable "$INFERENCE_MODEL"; then
     if [ -z "$CHAT_IDS" ]; then
-        echo "Could not list DigitalOcean inference models and no MODEL_ACCESS_MODEL was set." >&2
+        echo "Could not list Serverless Inference models and no INFERENCE_MODEL was set." >&2
         exit 1
     fi
-    MODEL_ACCESS_MODEL="$(printf '%s\n' "$CHAT_IDS" | pick_default_inference_model)"
+    INFERENCE_MODEL="$(printf '%s\n' "$CHAT_IDS" | pick_default_inference_model)"
 fi
 
 if [ -n "$CHAT_IDS" ]; then
     MODELS_JSON="$(printf '%s\n' "$CHAT_IDS" | jq -R -s -c 'split("\n") | map(select(length>0))')"
-    if ! printf '%s\n' "$CHAT_IDS" | grep -Fxq "$MODEL_ACCESS_MODEL"; then
-        MODELS_JSON="$(jq -c --arg m "$MODEL_ACCESS_MODEL" '[$m] + .' <<<"$MODELS_JSON")"
+    if ! printf '%s\n' "$CHAT_IDS" | grep -Fxq "$INFERENCE_MODEL"; then
+        MODELS_JSON="$(jq -c --arg m "$INFERENCE_MODEL" '[$m] + .' <<<"$MODELS_JSON")"
     fi
 else
-    MODELS_JSON="$(jq -nc --arg m "$MODEL_ACCESS_MODEL" '[$m]')"
+    MODELS_JSON="$(jq -nc --arg m "$INFERENCE_MODEL" '[$m]')"
 fi
 
 mkdir -p "$HERMES_HOME"
@@ -101,10 +106,16 @@ chown hermes:hermes "$HERMES_HOME"
 chmod 700 "$HERMES_HOME"
 
 write_env_file_kv "$ENV_FILE" MODEL_ACCESS_KEY "$MODEL_ACCESS_KEY"
-write_env_file_kv "$ENV_FILE" MODEL_ACCESS_MODEL "$MODEL_ACCESS_MODEL"
+write_env_file_kv "$ENV_FILE" INFERENCE_MODEL "$INFERENCE_MODEL"
 write_env_file_kv "$HERMES_ENV" MODEL_ACCESS_KEY "$MODEL_ACCESS_KEY"
 
-HERMES_MODELS_JSON="$MODELS_JSON" python3 - "$HERMES_CONFIG" "$MODEL_ACCESS_MODEL" <<'PY'
+# Keep /opt/hermes/hermes.env on the canonical names.
+tmp="${ENV_FILE}.tmp"
+grep -v -E '^(MODEL_ACCESS_MODEL|GRADIENT_KEY|GRADIENT_MODEL|DO_INFERENCE_MODEL)=' "$ENV_FILE" >"$tmp" 2>/dev/null || : >"$tmp"
+mv "$tmp" "$ENV_FILE"
+chmod 600 "$ENV_FILE"
+
+HERMES_MODELS_JSON="$MODELS_JSON" python3 - "$HERMES_CONFIG" "$INFERENCE_MODEL" <<'PY'
 import json
 import os
 import sys
@@ -139,5 +150,5 @@ printf '%s\n' "DigitalOcean Serverless Inference" > "$SETUP_DONE_MARKER"
 chown -R hermes:hermes "$HERMES_HOME"
 chmod 600 "$HERMES_ENV" "$HERMES_CONFIG" "$SETUP_DONE_MARKER"
 
-echo "Hermes configured for DigitalOcean Serverless Inference: ${MODEL_ACCESS_MODEL}"
+echo "Hermes configured for DigitalOcean Serverless Inference: ${INFERENCE_MODEL}"
 exit 0

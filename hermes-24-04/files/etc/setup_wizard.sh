@@ -98,7 +98,7 @@ esac
 
 cat <<'EOF'
 
-Create a DigitalOcean model access key:
+Configure Your Model Access Key:
   https://cloud.digitalocean.com/model-studio/manage-keys
   (cloud console: Inference > Manage > Create Model Access Key)
 
@@ -106,7 +106,7 @@ EOF
 
 old_histfile="${HISTFILE-}"
 unset HISTFILE
-read -rsp "Enter your DigitalOcean model access key (or press Enter for Hermes setup): " MODEL_ACCESS_KEY
+read -rsp "Enter your model access key (or press Enter for Hermes setup): " MODEL_ACCESS_KEY
 echo ""
 [ -n "${old_histfile:-}" ] && export HISTFILE="$old_histfile"
 
@@ -124,7 +124,7 @@ echo "Fetching available models from DigitalOcean Serverless Inference..."
 
 json=""
 chat_ids=""
-MODEL_ACCESS_MODEL=""
+INFERENCE_MODEL=""
 while true; do
   if json="$(fetch_inference_models_json "$MODEL_ACCESS_KEY")"; then
     chat_ids="$(printf '%s' "$json" | parse_inference_model_ids | filter_chat_inference_models)"
@@ -134,7 +134,7 @@ while true; do
     if [ -n "$chat_ids" ]; then
       break
     fi
-    echo "The inference API returned no models for this key."
+    echo "The serverless inference API returned no models for this key."
   else
     status="${INFERENCE_MODELS_HTTP_STATUS:-000}"
     if [ "$status" = "401" ] || [ "$status" = "403" ]; then
@@ -156,8 +156,8 @@ while true; do
     continue
   fi
 
-  read -rp "Enter a DigitalOcean model id (or press Enter for Hermes setup): " MODEL_ACCESS_MODEL
-  if [ -n "${MODEL_ACCESS_MODEL}" ]; then
+  read -rp "Enter a DigitalOcean model id (or press Enter for Hermes setup): " INFERENCE_MODEL
+  if [ -n "${INFERENCE_MODEL}" ]; then
     chat_ids=""
     break
   fi
@@ -184,16 +184,16 @@ if [ -n "$chat_ids" ]; then
   echo ""
   count=$((i - 1))
   read -rp "Selection [1-${count}, or Enter for ${default_model}]: " SEL
-  if ! MODEL_ACCESS_MODEL="$(printf '%s\n' "$chat_ids" | resolve_inference_model_choice "$SEL")"; then
+  if ! INFERENCE_MODEL="$(printf '%s\n' "$chat_ids" | resolve_inference_model_choice "$SEL")"; then
     echo "Invalid selection; using ${default_model}."
-    MODEL_ACCESS_MODEL="$default_model"
+    INFERENCE_MODEL="$default_model"
   fi
 fi
 
 export MODEL_ACCESS_KEY
-export MODEL_ACCESS_MODEL
+export INFERENCE_MODEL
 /opt/hermes/apply-inference-from-env.sh
 
 echo ""
-echo "Default model set to: ${MODEL_ACCESS_MODEL}"
+echo "Default model set to: ${INFERENCE_MODEL}"
 finish_setup

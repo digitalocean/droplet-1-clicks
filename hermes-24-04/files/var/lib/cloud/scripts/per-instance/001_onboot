@@ -19,7 +19,7 @@ source /etc/environment 2>/dev/null || true
 set +a
 
 if /opt/hermes/apply-inference-from-env.sh; then
-    echo "Hermes Serverless Inference preconfigured from droplet environment."
+    echo "Pre-configured inference via Serverless Inference from droplet environment."
 elif ! grep -q 'setup_wizard.sh' /root/.bashrc 2>/dev/null; then
     cat >>/root/.bashrc <<'EOM'
 
