@@ -2,6 +2,7 @@
 set -euo pipefail
 
 SETUP_DONE_MARKER=/home/hermes/.hermes/provider-configured
+INFERENCE_MODELS_LIB=/var/lib/digitalocean/inference-models.sh
 
 remove_first_login_hook() {
   if [ -f /root/.bashrc ]; then
@@ -10,22 +11,60 @@ remove_first_login_hook() {
   fi
 }
 
-if [ -f "$SETUP_DONE_MARKER" ]; then
+run_builtin_hermes_setup() {
+  if [ ! -x /home/hermes/.local/bin/hermes ]; then
+    echo "ERROR: Hermes CLI is not installed at /home/hermes/.local/bin/hermes." >&2
+    exit 1
+  fi
+
+  su - hermes -c 'cd /home/hermes/workspace && HERMES_HOME=/home/hermes/.hermes /home/hermes/.local/bin/hermes setup'
+
+  printf '%s\n' "configured" > "$SETUP_DONE_MARKER"
+  chown hermes:hermes "$SETUP_DONE_MARKER"
+  chmod 0600 "$SETUP_DONE_MARKER"
+}
+
+finish_setup() {
+  remove_first_login_hook
+
+  cat <<'EOF'
+
+Hermes Agent setup finished.
+
+Start chatting:
+  hermes
+
+Reconfigure provider or tools:
+  hermes setup
+
+Change model later:
+  hermes model
+
+Run diagnostics:
+  hermes doctor
+
+EOF
+}
+
+if [ "${1:-}" != "--force" ] && [ -f "$SETUP_DONE_MARKER" ]; then
   echo "Hermes Agent is already configured. Skipping first-login setup."
   remove_first_login_hook
   exit 0
 fi
 
-if [ -x /opt/hermes/apply-gradient-from-env.sh ] && /opt/hermes/apply-gradient-from-env.sh; then
-  echo "Hermes Agent is already configured for DigitalOcean Gradient. Skipping first-login setup."
+if [ "${1:-}" != "--force" ] && [ -x /opt/hermes/apply-inference-from-env.sh ] && /opt/hermes/apply-inference-from-env.sh; then
+  echo "Hermes Agent is already configured for DigitalOcean Serverless Inference. Skipping first-login setup."
   remove_first_login_hook
   exit 0
 fi
 
-if [ ! -x /home/hermes/.local/bin/hermes ]; then
-  echo "ERROR: Hermes CLI is not installed at /home/hermes/.local/bin/hermes." >&2
+if [ ! -f "$INFERENCE_MODELS_LIB" ]; then
+  echo "ERROR: missing $INFERENCE_MODELS_LIB" >&2
   exit 1
 fi
+
+# shellcheck source=/var/lib/digitalocean/inference-models.sh
+. "$INFERENCE_MODELS_LIB"
 
 cat <<'EOF'
 
@@ -34,30 +73,127 @@ cat <<'EOF'
 ========================================================================
 
 Hermes is installed for the dedicated 'hermes' user.
-The setup wizard will configure your model provider, tools, terminal backend,
-and optional messaging gateway.
+
+How do you want to connect a model?
+
+  1) DigitalOcean Serverless Inference
+  2) Hermes setup
 
 Docs: https://hermes-agent.nousresearch.com/docs/
 GitHub: https://github.com/NousResearch/hermes-agent
 
 EOF
 
-su - hermes -c 'cd /home/hermes/workspace && HERMES_HOME=/home/hermes/.hermes /home/hermes/.local/bin/hermes setup'
-
-printf '%s\n' "configured" > "$SETUP_DONE_MARKER"
-chown hermes:hermes "$SETUP_DONE_MARKER"
-chmod 0600 "$SETUP_DONE_MARKER"
-
-remove_first_login_hook
+read -rp "Enter 1 or 2 [default: 1]: " PROVIDER_SEL
+case "${PROVIDER_SEL}" in
+  2)
+    echo ""
+    echo "Launching Hermes setup..."
+    echo ""
+    run_builtin_hermes_setup
+    finish_setup
+    exit 0
+    ;;
+esac
 
 cat <<'EOF'
 
-Hermes Agent setup finished.
-
-Start chatting:
-  hermes
-
-Run diagnostics:
-  hermes doctor
+Configure Your Model Access Key:
+  https://cloud.digitalocean.com/model-studio/manage-keys
+  (cloud console: Inference > Manage > Create Model Access Key)
 
 EOF
+
+old_histfile="${HISTFILE-}"
+unset HISTFILE
+read -rsp "Enter your model access key (or press Enter for Hermes setup): " MODEL_ACCESS_KEY
+echo ""
+[ -n "${old_histfile:-}" ] && export HISTFILE="$old_histfile"
+
+if [ -z "${MODEL_ACCESS_KEY}" ]; then
+  echo ""
+  echo "No model access key entered. Launching Hermes setup..."
+  echo ""
+  run_builtin_hermes_setup
+  finish_setup
+  exit 0
+fi
+
+echo ""
+echo "Fetching available models from DigitalOcean Serverless Inference..."
+
+json=""
+chat_ids=""
+INFERENCE_MODEL=""
+while true; do
+  if json="$(fetch_inference_models_json "$MODEL_ACCESS_KEY")"; then
+    chat_ids="$(printf '%s' "$json" | parse_inference_model_ids | filter_chat_inference_models)"
+    if [ -z "$chat_ids" ]; then
+      chat_ids="$(printf '%s' "$json" | parse_inference_model_ids)"
+    fi
+    if [ -n "$chat_ids" ]; then
+      break
+    fi
+    echo "The serverless inference API returned no models for this key."
+  else
+    status="${INFERENCE_MODELS_HTTP_STATUS:-000}"
+    if [ "$status" = "401" ] || [ "$status" = "403" ]; then
+      echo "That key was rejected (HTTP ${status})."
+    else
+      echo "Could not list models from https://inference.do-ai.run/v1/models (HTTP ${status})."
+    fi
+  fi
+
+  echo ""
+  echo "You can re-enter the key, type a model id to use this key anyway, or skip."
+  old_histfile="${HISTFILE-}"
+  unset HISTFILE
+  read -rsp "Re-enter your model access key (or press Enter to keep the current key): " NEW_KEY
+  echo ""
+  [ -n "${old_histfile:-}" ] && export HISTFILE="$old_histfile"
+  if [ -n "${NEW_KEY}" ]; then
+    MODEL_ACCESS_KEY="$NEW_KEY"
+    continue
+  fi
+
+  read -rp "Enter a DigitalOcean model id (or press Enter for Hermes setup): " INFERENCE_MODEL
+  if [ -n "${INFERENCE_MODEL}" ]; then
+    chat_ids=""
+    break
+  fi
+
+  echo ""
+  echo "Launching Hermes setup..."
+  echo ""
+  run_builtin_hermes_setup
+  finish_setup
+  exit 0
+done
+
+if [ -n "$chat_ids" ]; then
+  default_model="$(printf '%s\n' "$chat_ids" | pick_default_inference_model)"
+  echo ""
+  echo "Choose a default model (you can switch later with 'hermes model'):"
+  echo ""
+  i=1
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    printf "  %2d) %s\n" "$i" "$line"
+    i=$((i + 1))
+  done <<<"$chat_ids"
+  echo ""
+  count=$((i - 1))
+  read -rp "Selection [1-${count}, or Enter for ${default_model}]: " SEL
+  if ! INFERENCE_MODEL="$(printf '%s\n' "$chat_ids" | resolve_inference_model_choice "$SEL")"; then
+    echo "Invalid selection; using ${default_model}."
+    INFERENCE_MODEL="$default_model"
+  fi
+fi
+
+export MODEL_ACCESS_KEY
+export INFERENCE_MODEL
+/opt/hermes/apply-inference-from-env.sh
+
+echo ""
+echo "Default model set to: ${INFERENCE_MODEL}"
+finish_setup

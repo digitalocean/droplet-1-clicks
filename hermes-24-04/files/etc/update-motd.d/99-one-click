@@ -8,8 +8,8 @@ cat <<'EOF'
 Welcome to Hermes Agent - The self-improving AI agent from Nous Research
 
 Hermes is installed for the dedicated 'hermes' user. On first SSH login, the
-setup wizard runs automatically so you can configure your model provider,
-terminal backend, tools, and optional messaging gateway.
+setup wizard runs automatically so you can use DigitalOcean Serverless
+Inference or Hermes setup.
 
 Quick start:
   hermes                    Start an interactive Hermes chat
@@ -23,6 +23,8 @@ Files and directories:
   Hermes home:  /home/hermes/.hermes
   Config:       /home/hermes/.hermes/config.yaml
   Env keys:     /home/hermes/.hermes/.env
+  Env template: /opt/hermes/hermes.env
+  Model list:   /var/lib/digitalocean/inference-models.sh
   Workspace:    /home/hermes/workspace
 
 Helper scripts:
@@ -30,6 +32,7 @@ Helper scripts:
   /opt/hermes/update-hermes.sh
   /opt/hermes/doctor-hermes.sh
   /opt/hermes/hermes-cli.sh
+  /opt/hermes/apply-inference-from-env.sh
 
 Documentation: https://hermes-agent.nousresearch.com/docs/
 GitHub:        https://github.com/NousResearch/hermes-agent

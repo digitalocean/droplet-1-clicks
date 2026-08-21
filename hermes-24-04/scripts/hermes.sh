@@ -60,7 +60,8 @@ chmod +x /opt/hermes/hermes-cli.sh
 chmod +x /opt/hermes/status-hermes.sh
 chmod +x /opt/hermes/update-hermes.sh
 chmod +x /opt/hermes/doctor-hermes.sh
-chmod +x /opt/hermes/apply-gradient-from-env.sh
+chmod +x /opt/hermes/apply-inference-from-env.sh
+chmod +x /var/lib/digitalocean/inference-models.sh
 chmod +x /etc/setup_wizard.sh
 chmod +x /etc/update-motd.d/99-one-click
 chmod +x /var/lib/cloud/scripts/per-instance/001_onboot
