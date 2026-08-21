@@ -22,7 +22,7 @@ sudo -u superset bash -c "
   set -euo pipefail
   cd /home/superset/superset-project
   . superset-env/bin/activate
-  pip install --upgrade \"apache-superset==${TARGET}\" pillow psycopg2-binary gunicorn
+  pip install --upgrade \"apache-superset==${TARGET}\" pillow psycopg2-binary gunicorn rich cachetools
   export SUPERSET_CONFIG_PATH=/home/superset/superset/superset_config.py
   superset db upgrade
   superset init

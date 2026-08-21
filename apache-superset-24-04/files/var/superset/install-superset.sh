@@ -11,4 +11,6 @@ python3 -m venv superset-env
 # shellcheck disable=SC1091
 . superset-env/bin/activate
 pip install --upgrade pip setuptools wheel
-pip install pillow "apache-superset==${VERSION}" psycopg2-binary gunicorn
+# rich and cachetools are required at runtime but not always pulled in as
+# transitive deps of apache-superset (CLI import and engine-spec loading).
+pip install pillow "apache-superset==${VERSION}" psycopg2-binary gunicorn rich cachetools
