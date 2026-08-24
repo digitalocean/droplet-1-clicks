@@ -1,0 +1,72 @@
+{
+  "variables": {
+    "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
+    "image_name": "stackstorm-20-04-snapshot-{{timestamp}}",
+    "apt_packages": "curl",
+    "application_name": "StackStorm",
+    "application_version": "3.8.0-2",
+    "st2_auth_username": "st2admin",
+    "st2_auth_password": "ThisW1lBeCh4ng3d"
+  },
+  "sensitive-variables": ["do_api_token", "st2_auth_password"],
+  "builders": [
+    {
+      "type": "digitalocean",
+      "api_token": "{{user `do_api_token`}}",
+      "image": "ubuntu-20-04-x64",
+      "region": "nyc3",
+      "size": "g-2vcpu-8gb",
+      "ssh_username": "root",
+      "snapshot_name": "{{user `image_name`}}"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "inline": [
+        "cloud-init status --wait"
+      ]
+    },
+    {
+      "type": "file",
+      "source": "common/files/var/",
+      "destination": "/var/"
+    },
+    {
+      "type": "ansible",
+      "galaxy_file": "stackstorm-20-04/ansible/requirements.yml",
+      "playbook_file": "stackstorm-20-04/ansible/stackstorm.yml",
+      "user": "root",
+      "ansible_env_vars": [
+        "ANSIBLE_HOST_KEY_CHECKING=False",
+        "ANSIBLE_SSH_ARGS='-o ForwardAgent=yes -o ControlMaster=auto -o ControlPersist=60s'",
+        "ANSIBLE_NOCOLOR=True",
+        "ST2_VERSION='{{user `application_version`}}'",
+        "ST2_AUTH_USERNAME='{{user `st2_auth_username`}}'",
+        "ST2_AUTH_PASSWORD='{{user `st2_auth_password`}}'"
+      ]
+    },
+    {
+      "type": "shell",
+      "environment_vars": [
+        "application_name={{user `application_name`}}",
+        "application_version={{user `application_version`}}",
+        "DEBIAN_FRONTEND=noninteractive",
+        "LC_ALL=C",
+        "LANG=en_US.UTF-8",
+        "LC_CTYPE=en_US.UTF-8"
+      ],
+      "scripts": [
+        "common/scripts/018-force-ssh-logout.sh",
+        "common/scripts/020-application-tag.sh",
+        "common/scripts/900-cleanup.sh"
+      ]
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "rm -rf /root/.ansible"
+      ]
+    }
+  ]
+}

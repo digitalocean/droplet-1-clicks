@@ -1,0 +1,7 @@
+---
+- name: stackstorm | install
+  ansible.builtin.include_role:
+    name: "{{ stackstorm_role }}"
+  loop: "{{ stackstorm_roles }}"
+  loop_control:
+    loop_var: stackstorm_role
