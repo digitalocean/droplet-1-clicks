@@ -48,14 +48,15 @@ chmod 600 /home/openclaw/.openclaw/openclaw.json 2>/dev/null || true
 # Remove the ssh force logout command
 sed -e '/Match User root/d' -e '/.*ForceCommand.*droplet.*/d' -i /etc/ssh/sshd_config
 
-chmod +x /opt/apply-gradient-from-env.sh
+chmod +x /opt/apply-inference-from-env.sh
+chmod +x /var/lib/digitalocean/inference-models.sh
 chmod +x /opt/install-openclaw-pairing-hook.sh
 chmod +x /opt/openclaw-control-ui-pairing.sh
 
-GRADIENT_APPLIED=0
-if /opt/apply-gradient-from-env.sh; then
-    GRADIENT_APPLIED=1
-    echo "Gradient pre-configured from droplet environment."
+INFERENCE_APPLIED=0
+if /opt/apply-inference-from-env.sh; then
+    INFERENCE_APPLIED=1
+    echo "Pre-configured inference via Serverless Inference from droplet environment."
     echo "Skipping provider setup wizard; Control UI pairing runs on first SSH login."
     /opt/install-openclaw-pairing-hook.sh
 elif ! grep -q 'setup_wizard.sh' /root/.bashrc 2>/dev/null; then

@@ -72,9 +72,9 @@ configured_provider_reason() {
   fi
 
   if [ -f /home/openclaw/.openclaw/openclaw.json ]; then
-    configured_key=$(jq -r '.models.providers.gradient.apiKey // empty' /home/openclaw/.openclaw/openclaw.json 2>/dev/null || true)
+    configured_key=$(jq -r '.models.providers.digitalocean.apiKey // .models.providers.gradient.apiKey // empty' /home/openclaw/.openclaw/openclaw.json 2>/dev/null || true)
     if [ -n "$configured_key" ] && [ "$configured_key" != "PLACEHOLDER" ] && [ "$configured_key" != "null" ]; then
-      echo "DigitalOcean Gradient is already configured"
+      echo "DigitalOcean Serverless Inference is already configured"
       return 0
     fi
   fi
@@ -197,9 +197,113 @@ ensure_gateway_reachable_for_onboard() {
   return 1
 }
 
+configure_digitalocean_inference() {
+  local INFERENCE_MODELS_LIB=/var/lib/digitalocean/inference-models.sh
+  local json chat_ids default_model SEL NEW_KEY
+
+  if [ ! -f "$INFERENCE_MODELS_LIB" ]; then
+    echo "ERROR: missing $INFERENCE_MODELS_LIB" >&2
+    exit 1
+  fi
+  # shellcheck source=/var/lib/digitalocean/inference-models.sh
+  . "$INFERENCE_MODELS_LIB"
+
+  cat <<'EOF'
+
+Configure Your Model Access Key:
+  https://cloud.digitalocean.com/model-studio/manage-keys
+  (cloud console: Inference > Manage > Create Model Access Key)
+
+EOF
+
+  old_histfile="${HISTFILE-}"
+  unset HISTFILE
+  read -rsp "Enter your model access key: " MODEL_ACCESS_KEY
+  echo ""
+  [ -n "${old_histfile:-}" ] && export HISTFILE="$old_histfile"
+
+  while [ -z "${MODEL_ACCESS_KEY}" ]; do
+    echo "A model access key is required for DigitalOcean Serverless Inference."
+    old_histfile="${HISTFILE-}"
+    unset HISTFILE
+    read -rsp "Enter your model access key: " MODEL_ACCESS_KEY
+    echo ""
+    [ -n "${old_histfile:-}" ] && export HISTFILE="$old_histfile"
+  done
+
+  echo ""
+  echo "Fetching available models from DigitalOcean Serverless Inference..."
+
+  json=""
+  chat_ids=""
+  INFERENCE_MODEL=""
+  while true; do
+    if json="$(fetch_inference_models_json "$MODEL_ACCESS_KEY")"; then
+      chat_ids="$(printf '%s' "$json" | parse_inference_model_ids | filter_chat_inference_models)"
+      if [ -z "$chat_ids" ]; then
+        chat_ids="$(printf '%s' "$json" | parse_inference_model_ids)"
+      fi
+      if [ -n "$chat_ids" ]; then
+        break
+      fi
+      echo "The serverless inference API returned no models for this key."
+    else
+      status="${INFERENCE_MODELS_HTTP_STATUS:-000}"
+      if [ "$status" = "401" ] || [ "$status" = "403" ]; then
+        echo "That key was rejected (HTTP ${status})."
+      else
+        echo "Could not list models from https://inference.do-ai.run/v1/models (HTTP ${status})."
+      fi
+    fi
+
+    echo ""
+    echo "You can re-enter the key, or type a model id to use this key anyway."
+    old_histfile="${HISTFILE-}"
+    unset HISTFILE
+    read -rsp "Re-enter your model access key (or press Enter to keep the current key): " NEW_KEY
+    echo ""
+    [ -n "${old_histfile:-}" ] && export HISTFILE="$old_histfile"
+    if [ -n "${NEW_KEY}" ]; then
+      MODEL_ACCESS_KEY="$NEW_KEY"
+      continue
+    fi
+
+    read -rp "Enter a DigitalOcean model id: " INFERENCE_MODEL
+    if [ -n "${INFERENCE_MODEL}" ]; then
+      chat_ids=""
+      break
+    fi
+  done
+
+  if [ -n "$chat_ids" ]; then
+    default_model="$(printf '%s\n' "$chat_ids" | pick_default_inference_model)"
+    echo ""
+    echo "Choose a default model:"
+    echo ""
+    i=1
+    while IFS= read -r line; do
+      [ -n "$line" ] || continue
+      printf "  %2d) %s\n" "$i" "$line"
+      i=$((i + 1))
+    done <<<"$chat_ids"
+    echo ""
+    count=$((i - 1))
+    read -rp "Enter 1-${count} [default: 1]: " SEL
+    if ! INFERENCE_MODEL="$(printf '%s\n' "$chat_ids" | resolve_inference_model_choice "$SEL")"; then
+      echo "Invalid selection; using ${default_model}."
+      INFERENCE_MODEL="$default_model"
+    fi
+  fi
+
+  export MODEL_ACCESS_KEY
+  export INFERENCE_MODEL
+  /opt/apply-inference-from-env.sh
+  echo "Default model set to: ${INFERENCE_MODEL}"
+}
+
 PS3="Select a provider (1-6): "
 options=(
-  "GradientAI"
+  "DigitalOcean Serverless Inference"
   "OpenAI (API key — usage billing)"
   "OpenAI Codex (ChatGPT / subscription OAuth)"
   "Anthropic"
@@ -228,11 +332,10 @@ target_config="n/a"
 select opt in "${options[@]}"
 do
   case $opt in
-    "GradientAI")
-        selected_provider="GradientAI"
-        target_config="/etc/config/gradientai.json"
-        echo "You selected DigitalOcean GradientAI."
-        echo "Default model: MiniMax M2.5. Also available: Kimi K2.5, GLM 5, Llama 3.3 70B, DeepSeek, GPT OSS, Claude 4.5 Sonnet (see /etc/config/gradientai.json)."
+    "DigitalOcean Serverless Inference")
+        selected_provider="DigitalOcean Serverless Inference"
+        target_config="/etc/config/digitalocean-inference.json"
+        echo "You selected DigitalOcean Serverless Inference."
         break
         ;;
     "OpenAI (API key — usage billing)")
@@ -313,24 +416,14 @@ elif [[ "$selected_provider" == "OpenAI Codex" ]]; then
     chown openclaw:openclaw /home/openclaw/.openclaw/openclaw.json
   fi
   sync_openclaw_gateway_or_exit
+elif [[ "$selected_provider" == "DigitalOcean Serverless Inference" ]]; then
+  configure_digitalocean_inference
 else
   while [ -z "${model_access_key:-}" ]
     do
       read -p "Enter ${selected_provider} model access key: " model_access_key
     done
-  if [[ "$selected_provider" == "GradientAI" ]]; then
-      GATEWAY_TOKEN_PRE=$(read_openclaw_gateway_token 2>/dev/null || true)
-      if [ -n "$GATEWAY_TOKEN_PRE" ]; then
-        jq --arg key "$model_access_key" --arg token "$GATEWAY_TOKEN_PRE" \
-          '.models.providers.gradient.apiKey = $key
-           | .gateway.remote = ((.gateway.remote // {}) + {})
-           | .gateway.auth.token = $token
-           | .gateway.remote.token = $token' \
-          "$target_config" > /home/openclaw/.openclaw/openclaw.json
-      else
-        jq --arg key "$model_access_key" '.models.providers.gradient.apiKey = $key' "$target_config" > /home/openclaw/.openclaw/openclaw.json
-      fi
-  elif [[ "$selected_provider" == "OpenRouter" ]]; then
+  if [[ "$selected_provider" == "OpenRouter" ]]; then
       jq --arg key "$model_access_key" '.models.providers.openrouter.apiKey = $key' "$target_config" > /home/openclaw/.openclaw/openclaw.json
   else
       cp ${target_config} /home/openclaw/.openclaw/openclaw.json

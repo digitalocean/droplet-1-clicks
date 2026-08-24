@@ -27,6 +27,8 @@ on the channels you already use (WhatsApp, Telegram, Slack, Discord, and more).
 📝 Configuration:
   Edit settings: /opt/openclaw.env
   User config: /home/openclaw/.openclaw/openclaw.json
+  Apply inference: /opt/apply-inference-from-env.sh
+  Model list: /var/lib/digitalocean/inference-models.sh
   
 🔧 Management Commands:
   Restart service: systemctl restart openclaw
