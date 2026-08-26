@@ -170,6 +170,10 @@ elif [ -f /etc/config/openai.json ]; then
     mkdir -p /home/openclaw/.openclaw
     cp /etc/config/openai.json /home/openclaw/.openclaw/openclaw.json
     echo "Using openai.json from image config"
+elif [ -f /etc/config/digitalocean-inference.json ]; then
+    mkdir -p /home/openclaw/.openclaw
+    cp /etc/config/digitalocean-inference.json /home/openclaw/.openclaw/openclaw.json
+    echo "Using digitalocean-inference.json from image config"
 elif [ -f /etc/config/gradientai.json ]; then
     mkdir -p /home/openclaw/.openclaw
     cp /etc/config/gradientai.json /home/openclaw/.openclaw/openclaw.json

@@ -1,0 +1,59 @@
+{
+  "models": {
+    "mode": "merge",
+    "providers": {
+      "digitalocean": {
+        "baseUrl": "https://inference.do-ai.run/v1",
+        "apiKey": "PLACEHOLDER",
+        "api": "openai-completions",
+        "models": []
+      }
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": ""
+      },
+      "models": {},
+      "maxConcurrent": 4,
+      "subagents": {
+        "maxConcurrent": 8
+      },
+      "sandbox": {
+        "workspaceAccess": "rw",
+        "mode": "all",
+        "docker": {
+          "network": "bridge",
+          "binds": [
+            "/home/openclaw/.openclaw/workspace/homebrew:/home/openclaw/.openclaw/workspace/homebrew:ro",
+            "/home/openclaw/.openclaw/workspace/skills:/home/openclaw/.openclaw/workspace/skills:ro",
+            "/home/openclaw/.openclaw/workspace/npm:/home/openclaw/.openclaw/workspace/npm:ro"
+          ]
+        }
+      }
+    }
+  },
+  "tools": {
+    "deny": ["sessions_send"]
+  },
+  "session": {
+    "agentToAgent": {
+      "maxPingPongTurns": 0
+    }
+  },
+  "gateway": {
+    "mode": "local",
+    "bind": "loopback",
+    "auth": {
+      "token": "${OPENCLAW_GATEWAY_TOKEN}"
+    },
+    "remote": {
+      "token": "${OPENCLAW_GATEWAY_TOKEN}"
+    },
+    "trustedProxies": ["127.0.0.1"],
+    "controlUi": {
+      "enabled": true
+    }
+  }
+}

@@ -62,7 +62,8 @@ chmod +x /opt/openclaw-cli.sh
 chmod +x /opt/setup-openclaw-domain.sh
 chmod +x /etc/setup_wizard.sh
 chmod +x /opt/openclaw-tui.sh
-chmod +x /opt/apply-gradient-from-env.sh
+chmod +x /opt/apply-inference-from-env.sh
+chmod +x /var/lib/digitalocean/inference-models.sh
 chmod +x /opt/sync-openclaw-gateway.sh
 chmod +x /opt/openclaw-approve-ui-pairing.sh
 chmod +x /opt/openclaw-control-ui-pairing.sh

@@ -10,7 +10,7 @@ fi
 chmod +x /opt/sync-openclaw-gateway.sh /opt/build-openclaw-sandbox.sh
 
 if [ ! -f /home/openclaw/.openclaw/openclaw.json ]; then
-    echo "Missing /home/openclaw/.openclaw/openclaw.json — run setup or apply-gradient first." >&2
+    echo "Missing /home/openclaw/.openclaw/openclaw.json — run setup or apply-inference-from-env first." >&2
     exit 1
 fi
 
