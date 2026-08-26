@@ -82,13 +82,9 @@ normalize_model() {
   esac
 }
 
-# Canonical env vars:
-#   MODEL_ACCESS_KEY  official model access key
-#   INFERENCE_MODEL   default model id
-# Aliases still accepted from droplet environment:
-#   GRADIENT_KEY, GRADIENT_MODEL, MODEL_ACCESS_MODEL, DO_INFERENCE_MODEL
-MODEL_ACCESS_KEY=$(read_first_usable MODEL_ACCESS_KEY GRADIENT_KEY || true)
-INFERENCE_MODEL=$(read_first_usable INFERENCE_MODEL GRADIENT_MODEL MODEL_ACCESS_MODEL DO_INFERENCE_MODEL || true)
+# Canonical env vars: MODEL_ACCESS_KEY, INFERENCE_MODEL
+MODEL_ACCESS_KEY=$(read_config_value MODEL_ACCESS_KEY || true)
+INFERENCE_MODEL=$(read_config_value INFERENCE_MODEL || true)
 
 if ! env_value_usable "$MODEL_ACCESS_KEY"; then
   exit 1
@@ -99,16 +95,10 @@ if ! env_value_usable "$INFERENCE_MODEL"; then
 fi
 
 INFERENCE_MODEL="${INFERENCE_MODEL#openai/}"
-INFERENCE_MODEL="${INFERENCE_MODEL#gradient/}"
 
 PRIMARY_MODEL=$(normalize_model "$INFERENCE_MODEL")
 write_env_file_kv MODEL_ACCESS_KEY "$MODEL_ACCESS_KEY"
 write_env_file_kv INFERENCE_MODEL "$INFERENCE_MODEL"
-tmp="${ENV_FILE}.tmp"
-grep -v -E '^(GRADIENT_KEY|GRADIENT_MODEL|MODEL_ACCESS_MODEL|DO_INFERENCE_MODEL)=' "$ENV_FILE" \
-  >"$tmp" 2>/dev/null || : >"$tmp"
-mv "$tmp" "$ENV_FILE"
-chmod 600 "$ENV_FILE"
 
 mkdir -p "${OPENHANDS_HOME}/.openhands"
 

@@ -97,7 +97,7 @@ MODEL_ID="${MODEL_ID:-minimax-m2.5}"
 # Persist into env file, then apply (plain KEY=value for systemd EnvironmentFile)
 tmp="${ENV_FILE}.tmp"
 touch "$ENV_FILE"
-grep -v -E '^(MODEL_ACCESS_KEY|INFERENCE_MODEL|GRADIENT_KEY|GRADIENT_MODEL)=' "$ENV_FILE" >"$tmp" 2>/dev/null || : >"$tmp"
+grep -v -E '^(MODEL_ACCESS_KEY|INFERENCE_MODEL)=' "$ENV_FILE" >"$tmp" 2>/dev/null || : >"$tmp"
 printf 'MODEL_ACCESS_KEY=%s\n' "$MODEL_KEY" >>"$tmp"
 printf 'INFERENCE_MODEL=%s\n' "$MODEL_ID" >>"$tmp"
 mv "$tmp" "$ENV_FILE"

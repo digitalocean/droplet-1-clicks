@@ -23,7 +23,7 @@ openhands-24-04/
     │   ├── systemd/system/openhands-apply-inference.service
     │   └── update-motd.d/99-one-click
     ├── opt/
-    │   ├── openhands.env            # Secrets + optional GRADIENT_* vars
+    │   ├── openhands.env            # Secrets + optional inference env vars
     │   ├── apply-inference-from-env.sh
     │   ├── retry-apply-inference-after-cloud-init.sh
     │   ├── start-openhands.sh

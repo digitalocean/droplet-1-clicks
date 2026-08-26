@@ -72,7 +72,7 @@ configured_provider_reason() {
   fi
 
   if [ -f /home/openclaw/.openclaw/openclaw.json ]; then
-    configured_key=$(jq -r '.models.providers.digitalocean.apiKey // .models.providers.gradient.apiKey // empty' /home/openclaw/.openclaw/openclaw.json 2>/dev/null || true)
+    configured_key=$(jq -r '.models.providers.digitalocean.apiKey // empty' /home/openclaw/.openclaw/openclaw.json 2>/dev/null || true)
     if [ -n "$configured_key" ] && [ "$configured_key" != "PLACEHOLDER" ] && [ "$configured_key" != "null" ]; then
       echo "DigitalOcean Serverless Inference is already configured"
       return 0

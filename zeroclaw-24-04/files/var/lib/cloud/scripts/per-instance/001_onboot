@@ -10,11 +10,11 @@ sed "s/PLACEHOLDER_IP/${DROPL_IP}/" /etc/caddy/Caddyfile.tmp > /etc/caddy/Caddyf
 # Remove the ssh force logout command
 sed -e '/Match User root/d' -e '/.*ForceCommand.*droplet.*/d' -i /etc/ssh/sshd_config
 
-chmod +x /opt/apply-gradient-from-env.sh
+chmod +x /opt/apply-inference-from-env.sh
 
-GRADIENT_APPLIED=0
-if /opt/apply-gradient-from-env.sh; then
-    GRADIENT_APPLIED=1
+INFERENCE_APPLIED=0
+if /opt/apply-inference-from-env.sh; then
+    INFERENCE_APPLIED=1
     echo "Serverless Inference pre-configured from droplet environment."
 elif ! grep -q 'setup_wizard.sh' /root/.bashrc 2>/dev/null; then
     cat >> /root/.bashrc <<EOM

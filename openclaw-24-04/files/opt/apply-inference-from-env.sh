@@ -75,19 +75,13 @@ normalize_inference_model() {
     local m="$1"
     case "$m" in
         "${PROVIDER_PREFIX}"/*) printf '%s' "$m" ;;
-        gradient/*) printf '%s/%s' "$PROVIDER_PREFIX" "${m#gradient/}" ;;
         "") return 1 ;;
         *) printf '%s/%s' "$PROVIDER_PREFIX" "$m" ;;
     esac
 }
 
-# Canonical env vars:
-#   MODEL_ACCESS_KEY  official model access key
-#   INFERENCE_MODEL   default model id from GET /v1/models
-# Aliases still accepted from droplet environment:
-#   GRADIENT_KEY, MODEL_ACCESS_MODEL, DO_INFERENCE_MODEL, GRADIENT_MODEL
-MODEL_ACCESS_KEY=$(read_first_usable MODEL_ACCESS_KEY GRADIENT_KEY || true)
-INFERENCE_MODEL=$(read_first_usable INFERENCE_MODEL MODEL_ACCESS_MODEL DO_INFERENCE_MODEL GRADIENT_MODEL || true)
+MODEL_ACCESS_KEY=$(read_config_value MODEL_ACCESS_KEY || true)
+INFERENCE_MODEL=$(read_config_value INFERENCE_MODEL || true)
 
 if ! env_value_usable "$MODEL_ACCESS_KEY"; then
     exit 1
@@ -109,7 +103,6 @@ if ! env_value_usable "$INFERENCE_MODEL"; then
 fi
 
 INFERENCE_MODEL="${INFERENCE_MODEL#${PROVIDER_PREFIX}/}"
-INFERENCE_MODEL="${INFERENCE_MODEL#gradient/}"
 
 if [ -n "$CHAT_IDS" ]; then
     if ! printf '%s\n' "$CHAT_IDS" | grep -Fxq "$INFERENCE_MODEL"; then
@@ -150,10 +143,6 @@ fi
 
 write_env_file_kv MODEL_ACCESS_KEY "$MODEL_ACCESS_KEY"
 write_env_file_kv INFERENCE_MODEL "$INFERENCE_MODEL"
-tmp="${ENV_FILE}.tmp"
-grep -v -E '^(MODEL_ACCESS_MODEL|GRADIENT_KEY|GRADIENT_MODEL|DO_INFERENCE_MODEL)=' "$ENV_FILE" >"$tmp" 2>/dev/null || : >"$tmp"
-mv "$tmp" "$ENV_FILE"
-chmod 600 "$ENV_FILE"
 
 mkdir -p /home/openclaw/.openclaw
 
