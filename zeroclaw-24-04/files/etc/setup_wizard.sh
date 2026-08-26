@@ -51,7 +51,7 @@ if [ "$1" != "--force" ]; then
 fi
 
 PS3="Select a provider (1-4): "
-options=("DigitalOcean Gradient" "OpenAI" "Anthropic" "OpenRouter")
+options=("DigitalOcean Serverless Inference" "OpenAI" "Anthropic" "OpenRouter")
 
 echo "--- ZeroClaw AI Provider Setup ---"
 
@@ -62,12 +62,12 @@ onboard_model=""
 select opt in "${options[@]}"
 do
   case $opt in
-    "DigitalOcean Gradient")
-        selected_provider="DigitalOcean Gradient"
+    "DigitalOcean Serverless Inference")
+        selected_provider="DigitalOcean Serverless Inference"
         onboard_provider="custom:https://inference.do-ai.run/v1"
-        echo "You selected DigitalOcean Gradient."
+        echo "You selected DigitalOcean Serverless Inference."
         echo ""
-        echo "Choose a Gradient inference model (default: Kimi K2.5):"
+        echo "Choose a serverless inference model (default: Kimi K2.5):"
         PS3="Select model (1-4): "
         gradient_options=("Kimi K2.5" "MiniMax M2.5" "GLM 5" "Claude Sonnet 4.5")
         select gopt in "${gradient_options[@]}"

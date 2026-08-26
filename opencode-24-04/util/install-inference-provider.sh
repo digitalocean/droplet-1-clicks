@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# install-gradient-provider.sh
-# Configures DigitalOcean Gradient AI as a provider in an existing local
+# install-inference-provider.sh
+# Configures DigitalOcean Serverless Inference as a provider in an existing local
 # OpenCode installation. Works on macOS, Linux, and Windows (WSL / Git Bash).
 #
 # Usage:
 #   curl -fsSL <raw-github-url> | bash
-#   ./install-gradient-provider.sh
+#   ./install-inference-provider.sh
 
 NC='\033[0m'
 BOLD='\033[1m'
@@ -129,12 +129,12 @@ check_jq() {
   exit 1
 }
 
-# ── 5. Gradient provider JSON (embedded) ─────────────────────────────────────
+# ── 5. Serverless Inference provider JSON (embedded) ─────────────────────────────────────
 
-GRADIENT_PROVIDER_JSON='{
+INFERENCE_PROVIDER_JSON='{
   "digitalocean": {
     "npm": "@ai-sdk/openai-compatible",
-    "name": "DigitalOcean Gradient",
+    "name": "DigitalOcean Serverless Inference",
     "options": {
       "baseURL": "https://inference.do-ai.run/v1"
     },
@@ -165,16 +165,16 @@ merge_provider_config() {
   mkdir -p "$CONFIG_DIR"
 
   if [ -f "$CONFIG_FILE" ]; then
-    info "Merging DigitalOcean Gradient provider into existing config..."
+    info "Merging DigitalOcean Serverless Inference provider into existing config..."
     local tmp
     tmp="$(mktemp)"
-    jq --argjson provider "$GRADIENT_PROVIDER_JSON" \
+    jq --argjson provider "$INFERENCE_PROVIDER_JSON" \
        '.provider = (.provider // {}) * $provider | .model = "'"$DEFAULT_MODEL"'"' \
        "$CONFIG_FILE" > "$tmp"
     mv "$tmp" "$CONFIG_FILE"
   else
-    info "Creating new OpenCode config with DigitalOcean Gradient provider..."
-    jq -n --argjson provider "$GRADIENT_PROVIDER_JSON" \
+    info "Creating new OpenCode config with DigitalOcean Serverless Inference provider..."
+    jq -n --argjson provider "$INFERENCE_PROVIDER_JSON" \
        '{"$schema": "https://opencode.ai/config.json", "provider": $provider, "model": "'"$DEFAULT_MODEL"'"}' \
        > "$CONFIG_FILE"
   fi
@@ -187,16 +187,16 @@ merge_provider_config() {
 prompt_and_save_key() {
   echo ""
   echo "========================================================================"
-  echo "  DigitalOcean Gradient AI - API Key Setup"
+  echo "  DigitalOcean Serverless Inference - API Key Setup"
   echo "========================================================================"
   echo ""
-  echo "You need a Gradient model access key. To create one:"
+  echo "You need a DigitalOcean model access key. To create one:"
   echo "  1. Go to https://cloud.digitalocean.com/gen-ai"
   echo "  2. Navigate to API Keys > Model Access Keys"
   echo "  3. Click 'Create Model Access Key'"
   echo ""
 
-  read -rp "Enter your Gradient model access key (or press Enter to skip): " MODEL_KEY
+  read -rp "Enter your DigitalOcean model access key (or press Enter to skip): " MODEL_KEY
 
   if [ -z "$MODEL_KEY" ]; then
     warn "Skipped API key setup."
@@ -208,7 +208,7 @@ prompt_and_save_key() {
   mkdir -p "$DATA_DIR"
 
   if [ -f "$AUTH_FILE" ]; then
-    info "Merging Gradient key into existing auth.json..."
+    info "Merging Serverless Inference key into existing auth.json..."
     local tmp
     tmp="$(mktemp)"
     jq --arg key "$MODEL_KEY" \
@@ -234,7 +234,7 @@ prompt_and_save_key() {
 
 test_connection() {
   echo ""
-  info "Testing connection to DigitalOcean Gradient..."
+  info "Testing connection to DigitalOcean Serverless Inference..."
 
   local header_file http_status
   header_file="$(mktemp)"
@@ -255,7 +255,7 @@ test_connection() {
   if [ "$http_status" = "200" ]; then
     ok "Connection successful! Your key is valid."
   else
-    warn "Received HTTP $http_status from the Gradient API."
+    warn "Received HTTP $http_status from the Serverless Inference API."
     warn "Your key has been saved. If it's incorrect, re-run this script."
   fi
 }
@@ -265,11 +265,11 @@ test_connection() {
 print_success() {
   echo ""
   echo "========================================================================"
-  echo "  DigitalOcean Gradient is now configured for OpenCode!"
+  echo "  DigitalOcean Serverless Inference is now configured for OpenCode!"
   echo ""
   echo "  Default model: Kimi K2.5 (digitalocean/kimi-k2.5)"
   echo ""
-  echo "  Available models via Gradient:"
+  echo "  Available models via Serverless Inference:"
   echo "    digitalocean/:  GPT-5.2, GPT-5, GPT-4.1, o3,"
   echo "                    DeepSeek R1 70B, Qwen3 32B, Llama 3.3 70B, Kimi K2.5, glm-5, MiniMax M2.5,"
   echo "                    Claude Opus 4.6, Opus 4.5, Sonnet 4.5, Sonnet 4"
@@ -287,7 +287,7 @@ print_success() {
 
 main() {
   echo ""
-  info "DigitalOcean Gradient AI Provider Installer for OpenCode"
+  info "DigitalOcean Serverless Inference Provider Installer for OpenCode"
   echo ""
 
   detect_platform

@@ -1,13 +1,13 @@
 # OpenCode 1-Click Application
 
-Deploy OpenCode, an open-source AI coding agent that runs in your terminal, pre-configured to use DigitalOcean Gradient AI for inference. Use natural language to write, debug, and refactor code. Code and context stay local by default.
+Deploy OpenCode, an open-source AI coding agent that runs in your terminal, pre-configured to use DigitalOcean Serverless Inference for inference. Use natural language to write, debug, and refactor code. Code and context stay local by default.
 
 ## What is OpenCode?
 
-OpenCode brings AI assistance into the command line. It's a terminal-based coding agent pre-configured with DigitalOcean Gradient AI, giving you access to Llama 3.3 70B, Qwen3, DeepSeek, and more using a single Gradient model access key.
+OpenCode brings AI assistance into the command line. It's a terminal-based coding agent pre-configured with DigitalOcean Serverless Inference, giving you access to Llama 3.3 70B, Qwen3, DeepSeek, and more using a single DigitalOcean model access key.
 
 - **Terminal-first** – Works natively in your shell, no web interface required
-- **DigitalOcean Gradient AI** – Pre-configured with open-source models via Gradient inference
+- **DigitalOcean Serverless Inference** – Pre-configured with open-source models via serverless inference
 - **Multiple sessions** – Run multiple agents for different tasks
 - **File references** – Use `@filename` to include files in context
 - **Shell commands** – Execute commands with `!` prefix
@@ -17,7 +17,7 @@ OpenCode brings AI assistance into the command line. It's a terminal-based codin
 ## Key Features
 
 - Natural language coding assistance in the terminal
-- Pre-configured with DigitalOcean Gradient AI (Claude, GPT, DeepSeek, Llama, and more)
+- Pre-configured with DigitalOcean Serverless Inference (Claude, GPT, DeepSeek, Llama, and more)
 - Works with existing projects—navigate, edit, and run code
 - No IDE required—pure terminal workflow
 
@@ -34,7 +34,7 @@ OpenCode is lightweight; most compute happens at the LLM provider.
 
 - **Ubuntu 24.04 LTS** – Base operating system
 - **OpenCode** – AI coding agent (version 1.2.6)
-- **DigitalOcean Gradient AI** – Pre-configured inference provider
+- **DigitalOcean Serverless Inference** – Pre-configured inference provider
 - **Git** – Version control
 - **UFW Firewall** – SSH only (rate-limited)
 
@@ -55,9 +55,9 @@ ssh root@your-droplet-ip
 
 ### 3. Complete the Setup Wizard
 
-If you passed `GRADIENT_KEY` as a droplet environment variable, OpenCode is already configured — skip to step 4.
+If you passed `MODEL_ACCESS_KEY` as a droplet environment variable, OpenCode is already configured — skip to step 4.
 
-Otherwise, on first login the setup wizard will prompt for your DigitalOcean Gradient model access key. To create one:
+Otherwise, on first login the setup wizard will prompt for your DigitalOcean Serverless Inference model access key. To create one:
 
 1. Go to https://cloud.digitalocean.com/gen-ai/model-access-keys
 2. Click **Create Model Access Key**
@@ -73,7 +73,7 @@ cd /path/to/your/project
 opencode
 ```
 
-The default model is **Kimi K2.5** (`digitalocean/kimi-k2.5` via DigitalOcean Gradient). You can change it in `/root/.config/opencode/opencode.json` or use the `/models` command inside OpenCode.
+The default model is **Kimi K2.5** (`digitalocean/kimi-k2.5` via DigitalOcean Serverless Inference). You can change it in `/root/.config/opencode/opencode.json` or use the `/models` command inside OpenCode.
 
 ## Managing OpenCode
 
@@ -84,22 +84,22 @@ The default model is **Kimi K2.5** (`digitalocean/kimi-k2.5` via DigitalOcean Gr
 | Check version | `/opt/opencode-version.sh` |
 | Update to latest | `/opt/update-opencode.sh` |
 | Re-run setup wizard | `/opt/setup-opencode.sh` |
-| Apply Gradient from env | `/opt/apply-gradient-from-env.sh` |
+| Apply inference from env | `/opt/apply-inference-from-env.sh` |
 
 ### Configuration
 
 - **OpenCode config**: `/root/.config/opencode/opencode.json`
 - **Auth / API key**: `/root/.local/share/opencode/auth.json`
-- **Gradient env vars**: `/opt/opencode.env` (`GRADIENT_KEY`, `GRADIENT_MODEL`)
+- **Inference env vars**: `/opt/opencode.env` (`MODEL_ACCESS_KEY`, `INFERENCE_MODEL`)
 - **Getting started guide**: `cat /root/opencode_info.txt`
 
-### Inference usage (Gradient)
+### Inference usage (Serverless Inference)
 
-API `usage` may list cache-related fields, but on DigitalOcean Gradient’s OpenAI-compatible inference they are **often zero** regardless of model. Treat **DigitalOcean billing and documentation** as the source of truth for charges. The same note is in `/root/opencode_info.txt`. If you add providers with `/connect`, their APIs define usage and any prompt-cache behavior.
+API `usage` may list cache-related fields, but on DigitalOcean Serverless Inference’s OpenAI-compatible inference they are **often zero** regardless of model. Treat **DigitalOcean billing and documentation** as the source of truth for charges. The same note is in `/root/opencode_info.txt`. If you add providers with `/connect`, their APIs define usage and any prompt-cache behavior.
 
 ### Pre-Configured Models
 
-The following models are available via DigitalOcean Gradient (only a Gradient model access key is required). Use the full `provider/model-id` value in OpenCode or in `"model"` in `opencode.json`.
+The following models are available via DigitalOcean Serverless Inference (only a DigitalOcean model access key is required). Use the full `provider/model-id` value in OpenCode or in `"model"` in `opencode.json`.
 
 **`digitalocean`** (OpenAI-compatible; default **Kimi K2.5**)
 
@@ -124,7 +124,7 @@ To change the default model, edit `"model"` in `/root/.config/opencode/opencode.
 
 ### Using OpenCode's Built-in Providers
 
-If you prefer to use OpenCode's standard providers (Anthropic, OpenAI, Google, etc.) with your own API keys instead of Gradient, skip the setup wizard by pressing Enter, then use the `/connect` command inside OpenCode to add your API keys for any of 75+ supported providers.
+If you prefer to use OpenCode's standard providers (Anthropic, OpenAI, Google, etc.) with your own API keys instead of Serverless Inference, skip the setup wizard by pressing Enter, then use the `/connect` command inside OpenCode to add your API keys for any of 75+ supported providers.
 
 ## Updating
 
@@ -146,7 +146,7 @@ Ensure you're in a login shell (SSH session) where PATH is set. Or run directly:
 
 ### AI features not working
 
-Re-run the setup wizard to reconfigure your Gradient model access key:
+Re-run the setup wizard to reconfigure your DigitalOcean model access key:
 
 ```bash
 /opt/setup-opencode.sh
@@ -172,4 +172,4 @@ For DigitalOcean Droplet issues:
 
 ---
 
-**Note**: This 1-Click installs OpenCode via the official install script and pre-configures DigitalOcean Gradient AI as the inference provider. SSH is the only exposed port; there is no web interface. Commercial models (Anthropic Claude, OpenAI GPT) are also available through Gradient but require their respective provider API keys configured in the DigitalOcean console.
+**Note**: This 1-Click installs OpenCode via the official install script and pre-configures DigitalOcean Serverless Inference as the inference provider. SSH is the only exposed port; there is no web interface. Commercial models (Anthropic Claude, OpenAI GPT) are also available through Serverless Inference but require their respective provider API keys configured in the DigitalOcean console.

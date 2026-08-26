@@ -15,7 +15,7 @@ chmod +x /opt/apply-gradient-from-env.sh
 GRADIENT_APPLIED=0
 if /opt/apply-gradient-from-env.sh; then
     GRADIENT_APPLIED=1
-    echo "Gradient pre-configured from droplet environment."
+    echo "Serverless Inference pre-configured from droplet environment."
 elif ! grep -q 'setup_wizard.sh' /root/.bashrc 2>/dev/null; then
     cat >> /root/.bashrc <<EOM
 chmod +x /etc/setup_wizard.sh

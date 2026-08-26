@@ -1,5 +1,5 @@
 #!/bin/bash
-# Apply DigitalOcean Gradient from droplet env or /opt/zeroclaw.env (GRADIENT_KEY, GRADIENT_MODEL).
+# Apply DigitalOcean Serverless Inference from droplet env or /opt/zeroclaw.env (GRADIENT_KEY, GRADIENT_MODEL).
 # Returns 0 when a key was applied; 1 when skipped (empty or unset placeholder).
 set -euo pipefail
 
@@ -111,17 +111,17 @@ umask 077
 touch "$SETUP_MARKER"
 chmod 600 "$SETUP_MARKER"
 
-echo "Testing connection to DigitalOcean Gradient..."
+echo "Testing connection to DigitalOcean Serverless Inference..."
 HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
     -H "Authorization: Bearer ${GRADIENT_KEY}" \
     -H "Content-Type: application/json" \
     https://inference.do-ai.run/v1/models 2>/dev/null || true)
 
 if [ "$HTTP_STATUS" = "200" ]; then
-    echo "Gradient configured from ${ENV_FILE}: model ${PRIMARY_MODEL}"
+    echo "Serverless Inference configured from ${ENV_FILE}: model ${PRIMARY_MODEL}"
 else
-    echo "Gradient configured from ${ENV_FILE}: model ${PRIMARY_MODEL}"
-    echo "Warning: Received HTTP ${HTTP_STATUS:-000} from the Gradient API." >&2
+    echo "Serverless Inference configured from ${ENV_FILE}: model ${PRIMARY_MODEL}"
+    echo "Warning: Received HTTP ${HTTP_STATUS:-000} from the Serverless Inference API." >&2
 fi
 
 exit 0
