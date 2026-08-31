@@ -29,7 +29,7 @@ With a memory footprint under 5MB and cold start times under 10ms, ZeroClaw is d
 
 1. **Create a Droplet** using this 1-Click image
 2. **Configure inference** using one of:
-   - Set `GRADIENT_KEY` (and optional `GRADIENT_MODEL`) as droplet environment variables at create time — Gradient is applied on first boot with no wizard
+   - Set `GRADIENT_KEY` (and optional `GRADIENT_MODEL` / `DO_INFERENCE_ROUTER`) as droplet environment variables at create time — Gradient is applied on first boot with no wizard
    - Edit `/opt/zeroclaw.env`, then reboot or run `sudo /opt/apply-gradient-from-env.sh`
    - SSH in and complete the interactive setup wizard on first login
 3. **Access the gateway** at `https://your-droplet-ip`
@@ -42,8 +42,9 @@ Gradient uses a single model access key for serverless inference at `https://inf
 |----------|---------|
 | `GRADIENT_KEY` | Gradient model access key (required for auto-config) |
 | `GRADIENT_MODEL` | Optional model id (default: `kimi-k2.5`) |
+| `DO_INFERENCE_ROUTER` | Optional Intelligent Inference Router name (`router:<name>`) |
 
-Supported model IDs include **kimi-k2.5**, **minimax-m2.5**, **glm-5**, and **anthropic-claude-4.5-sonnet**. During interactive setup you can pick a model from the menu. Re-run `sudo /etc/setup_wizard.sh` to switch providers, or edit `default_model` in `/home/zeroclaw/.zeroclaw/config.toml`.
+Supported model IDs include **kimi-k2.5**, **minimax-m2.5**, **glm-5**, and **anthropic-claude-4.5-sonnet**. During interactive setup you can pick a model from the menu, or choose the Intelligent Inference Router. Re-run `sudo /etc/setup_wizard.sh` to switch providers, or edit `default_model` in `/home/zeroclaw/.zeroclaw/config.toml`.
 
 ## Managing ZeroClaw
 

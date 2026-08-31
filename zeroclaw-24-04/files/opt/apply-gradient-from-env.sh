@@ -1,5 +1,6 @@
 #!/bin/bash
-# Apply DigitalOcean Gradient from droplet env or /opt/zeroclaw.env (GRADIENT_KEY, GRADIENT_MODEL).
+# Apply DigitalOcean Gradient from droplet env or /opt/zeroclaw.env
+# (GRADIENT_KEY, GRADIENT_MODEL, DO_INFERENCE_ROUTER).
 # Returns 0 when a key was applied; 1 when skipped (empty or unset placeholder).
 set -euo pipefail
 
@@ -58,10 +59,22 @@ env_value_usable() {
 
 gradient_model_allowed() {
     local m="$1" allowed
+    case "$m" in
+        router:*) return 0 ;;
+    esac
     for allowed in $ALLOWED_MODELS; do
         [ "$m" = "$allowed" ] && return 0
     done
     return 1
+}
+
+# Accept "my-router", "router:my-router", or "digitalocean/router:my-router".
+normalize_router_name() {
+    local n="$1"
+    n="${n#digitalocean/}"
+    n="${n#openai/}"
+    n="${n#router:}"
+    printf '%s' "$n"
 }
 
 normalize_gradient_model() {
@@ -87,18 +100,34 @@ redact_gradient_secrets_from_system_environment() {
 
 GRADIENT_KEY=$(read_config_value GRADIENT_KEY || true)
 GRADIENT_MODEL=$(read_config_value GRADIENT_MODEL || true)
+DO_INFERENCE_ROUTER=$(read_config_value DO_INFERENCE_ROUTER || true)
 
 if ! env_value_usable "$GRADIENT_KEY"; then
     exit 1
 fi
 
-if ! env_value_usable "$GRADIENT_MODEL"; then
-    GRADIENT_MODEL="$DEFAULT_MODEL"
+write_env_file_kv GRADIENT_KEY "$GRADIENT_KEY"
+
+if env_value_usable "$DO_INFERENCE_ROUTER"; then
+    ROUTER_NAME=$(normalize_router_name "$DO_INFERENCE_ROUTER")
+    if [ -n "$ROUTER_NAME" ]; then
+        PRIMARY_MODEL="router:${ROUTER_NAME}"
+        if ! env_value_usable "$GRADIENT_MODEL"; then
+            GRADIENT_MODEL="$DEFAULT_MODEL"
+        fi
+        write_env_file_kv GRADIENT_MODEL "$(normalize_gradient_model "$GRADIENT_MODEL")"
+        write_env_file_kv DO_INFERENCE_ROUTER "$ROUTER_NAME"
+    fi
 fi
 
-PRIMARY_MODEL=$(normalize_gradient_model "$GRADIENT_MODEL")
-write_env_file_kv GRADIENT_KEY "$GRADIENT_KEY"
-write_env_file_kv GRADIENT_MODEL "$PRIMARY_MODEL"
+if [ -z "${PRIMARY_MODEL:-}" ]; then
+    if ! env_value_usable "$GRADIENT_MODEL"; then
+        GRADIENT_MODEL="$DEFAULT_MODEL"
+    fi
+    PRIMARY_MODEL=$(normalize_gradient_model "$GRADIENT_MODEL")
+    write_env_file_kv GRADIENT_MODEL "$PRIMARY_MODEL"
+    write_env_file_kv DO_INFERENCE_ROUTER ""
+fi
 
 /opt/zeroclaw-run-onboard.sh "$GRADIENT_KEY" "$GRADIENT_PROVIDER" "$PRIMARY_MODEL"
 

@@ -1,5 +1,6 @@
 #!/bin/bash
-# Apply DigitalOcean Gradient from droplet env or /opt/openhands.env.
+# Apply DigitalOcean Gradient from droplet env or /opt/openhands.env
+# (GRADIENT_KEY, GRADIENT_MODEL, DO_INFERENCE_ROUTER).
 # Returns 0 when a key was applied; 1 when skipped (empty or unset placeholder).
 set -euo pipefail
 
@@ -69,20 +70,45 @@ normalize_model() {
   esac
 }
 
+# Accept "my-router", "router:my-router", or "openai/router:my-router".
+normalize_router_name() {
+  local n="$1"
+  n="${n#openai/}"
+  n="${n#digitalocean/}"
+  n="${n#router:}"
+  printf '%s' "$n"
+}
+
 GRADIENT_KEY=$(read_config_value GRADIENT_KEY || true)
 GRADIENT_MODEL=$(read_config_value GRADIENT_MODEL || true)
+DO_INFERENCE_ROUTER=$(read_config_value DO_INFERENCE_ROUTER || true)
 
 if ! env_value_usable "$GRADIENT_KEY"; then
   exit 1
 fi
 
-if ! env_value_usable "$GRADIENT_MODEL"; then
-  GRADIENT_MODEL="minimax-m2.5"
+write_env_file_kv GRADIENT_KEY "$GRADIENT_KEY"
+
+if env_value_usable "$DO_INFERENCE_ROUTER"; then
+  ROUTER_NAME=$(normalize_router_name "$DO_INFERENCE_ROUTER")
+  if [ -n "$ROUTER_NAME" ]; then
+    if ! env_value_usable "$GRADIENT_MODEL"; then
+      GRADIENT_MODEL="minimax-m2.5"
+    fi
+    PRIMARY_MODEL="openai/router:${ROUTER_NAME}"
+    write_env_file_kv GRADIENT_MODEL "${GRADIENT_MODEL#openai/}"
+    write_env_file_kv DO_INFERENCE_ROUTER "$ROUTER_NAME"
+  fi
 fi
 
-PRIMARY_MODEL=$(normalize_model "$GRADIENT_MODEL")
-write_env_file_kv GRADIENT_KEY "$GRADIENT_KEY"
-write_env_file_kv GRADIENT_MODEL "${PRIMARY_MODEL#openai/}"
+if [ -z "${PRIMARY_MODEL:-}" ]; then
+  if ! env_value_usable "$GRADIENT_MODEL"; then
+    GRADIENT_MODEL="minimax-m2.5"
+  fi
+  PRIMARY_MODEL=$(normalize_model "$GRADIENT_MODEL")
+  write_env_file_kv GRADIENT_MODEL "${PRIMARY_MODEL#openai/}"
+  write_env_file_kv DO_INFERENCE_ROUTER ""
+fi
 
 mkdir -p "${OPENHANDS_HOME}/.openhands"
 

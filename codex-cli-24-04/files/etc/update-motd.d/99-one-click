@@ -19,7 +19,7 @@ PRE-CONFIGURED MODELS (via DigitalOcean Gradient):
 GETTING STARTED:
 
   1. Configure your Gradient model access key:
-     - Set GRADIENT_KEY (optional GRADIENT_MODEL) as droplet env vars, or
+     - Set GRADIENT_KEY (optional GRADIENT_MODEL / DO_INFERENCE_ROUTER), or
      - Edit /opt/codex-cli.env and reboot, or
      - On first login, run the setup wizard when prompted
      Create a key at: https://cloud.digitalocean.com/gen-ai
