@@ -1,0 +1,18 @@
+[Unit]
+Description=Exa MCP Server (streamable HTTP)
+Documentation=https://docs.exa.ai/reference/exa-mcp
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=PORT=8081
+Environment=NODE_ENV=production
+ExecStart=/opt/run-exa-mcp-http.sh
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

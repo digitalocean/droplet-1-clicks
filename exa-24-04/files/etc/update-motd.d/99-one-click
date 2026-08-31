@@ -2,16 +2,21 @@
 #
 # Configured as part of the DigitalOcean 1-Click Image build process
 
+pub=$(curl -fsS --retry 3 --retry-connrefused --max-time 3 \
+  http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)
+myip="${pub:-$(hostname -I | awk '{print$1}')}"
+
 cat <<EOF
 ********************************************************************************
 
 Welcome to DigitalOcean's 1-Click Exa MCP Server Droplet.
 To keep this Droplet secure, the UFW firewall is enabled.
-All ports are BLOCKED except 22 (SSH).
+All ports are BLOCKED except 22 (SSH), 80 (HTTP), and 443 (HTTPS).
 
-Exa MCP uses stdio transport (no public HTTP UI). Your MCP client
-spawns the server locally on this Droplet.
+Exa MCP is served over HTTPS via Caddy (Let's Encrypt shortlived TLS).
+The MCP process listens on localhost only; Caddy terminates TLS on 80/443.
 
+- MCP endpoint: https://$myip/mcp
 - On first SSH login as root, you will be prompted for your Exa API key.
   Get a key at: https://dashboard.exa.ai/api-keys
 
@@ -19,8 +24,16 @@ spawns the server locally on this Droplet.
   /opt/setup-exa.sh
   /opt/status-exa.sh
   /opt/update-exa.sh
+  /opt/setup-exa-domain.sh
 
-- MCP client entrypoint:
+- Management:
+  /opt/start-exa.sh
+  /opt/stop-exa.sh
+  /opt/restart-exa.sh
+  systemctl {start|stop|restart|status} exa-mcp
+  systemctl {start|stop|restart|status} caddy
+
+- Optional local stdio entrypoint:
   /opt/run-exa-mcp.sh
 
 On the server:

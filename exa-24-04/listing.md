@@ -1,18 +1,18 @@
 # Exa MCP Server 1-Click Application
 
-Deploy [Exa](https://exa.ai/) MCP Server on Ubuntu 24.04. Exa gives AI agents web search and content retrieval over the Model Context Protocol (MCP). This Droplet pre-installs the official `exa-mcp-server` npm package for **stdio** use with clients such as Cursor, Claude Desktop, and Claude Code.
+Deploy [Exa](https://exa.ai/) MCP Server on Ubuntu 24.04. Exa gives AI agents web search and content retrieval over the Model Context Protocol (MCP). This Droplet pre-installs the official `exa-mcp-server` npm package and serves it over **HTTPS** with Caddy (Let's Encrypt shortlived TLS).
 
 ## What is Exa MCP?
 
-Exa MCP exposes Exa search tools to MCP-compatible AI clients. The local npm package speaks **stdio** (your client starts the process). There is no public HTTP UI on this Droplet; only SSH is exposed.
+Exa MCP exposes Exa search tools to MCP-compatible AI clients. This image runs the streamable HTTP transport on localhost and terminates TLS with Caddy so clients can connect to `https://<droplet-ip>/mcp`.
 
 ## Key Features
 
 - Pinned `exa-mcp-server` install (version from the image build)
+- HTTPS via Caddy with shortlived Let's Encrypt TLS (works with the Droplet IP)
 - First-SSH API key setup (key never baked into the snapshot)
-- `/opt/run-exa-mcp.sh` entrypoint for MCP client configs
-- Helper scripts for status and updates
-- UFW: SSH only
+- Helper scripts for start/stop/restart/status/update and custom domains
+- UFW: SSH + HTTP/HTTPS only (MCP backend bound for local proxy use)
 
 ## System Requirements
 
@@ -25,8 +25,9 @@ Exa MCP exposes Exa search tools to MCP-compatible AI clients. The local npm pac
 
 - **Ubuntu 24.04 LTS** – Base operating system
 - **Node.js 20** – Runtime (Nodesource)
-- **exa-mcp-server** – Exa MCP stdio server (pinned at build time)
-- **UFW Firewall** – SSH only (rate-limited)
+- **exa-mcp-server** – Exa MCP server (pinned at build time)
+- **Caddy** – Reverse proxy with shortlived Let's Encrypt TLS
+- **UFW Firewall** – SSH + HTTP/HTTPS (rate-limited SSH)
 
 ## Getting Started
 
@@ -37,7 +38,7 @@ Exa MCP exposes Exa search tools to MCP-compatible AI clients. The local npm pac
 3. Add your SSH key for secure access
 4. Create the Droplet
 
-### 2. SSH In
+### 2. SSH In and set your API key
 
 ```bash
 ssh root@your-droplet-ip
@@ -53,45 +54,42 @@ Press Enter to skip once (the login hook is removed). Configure later with:
 
 ### 3. Point your MCP client at this Droplet
 
-Use the Droplet as the host that runs the stdio server (for example SSH + local client config on the server, or any workflow where the client can execute `/opt/run-exa-mcp.sh`).
-
-Configure the MCP client **on this Droplet** (or any host that can execute the entrypoint) to run:
+Use the HTTPS endpoint:
 
 ```text
-/opt/run-exa-mcp.sh
+https://your-droplet-ip/mcp
 ```
 
-**Cursor** example (`~/.cursor/mcp.json` on the Droplet):
+**Cursor** example (`~/.cursor/mcp.json`):
 
 ```json
 {
   "mcpServers": {
     "exa": {
-      "command": "/opt/run-exa-mcp.sh"
+      "url": "https://your-droplet-ip/mcp"
     }
   }
 }
 ```
 
-**Claude Code** example (on the Droplet):
+**Claude Code** example:
 
 ```bash
-claude mcp add --transport stdio exa -- /opt/run-exa-mcp.sh
+claude mcp add --transport http exa https://your-droplet-ip/mcp
 ```
 
-Prefer Exa's hosted HTTP MCP instead? Use `https://mcp.exa.ai/mcp` in clients that support remote MCP (no Droplet required).
+Optional: for local stdio on the Droplet itself, use `/opt/run-exa-mcp.sh`.
 
 ## Managing Exa MCP
 
-Exa MCP is **not** a long-running systemd daemon. Your MCP client starts and stops the stdio process.
-
 | Action | How |
 |--------|-----|
-| Start | MCP client runs `/opt/run-exa-mcp.sh` (or `exa-mcp-server` with `EXA_API_KEY` set) |
-| Stop | Disconnect / quit the MCP client (ends the stdio process) |
-| Restart | Restart the MCP client or reconnect the Exa server in the client |
+| Start | `/opt/start-exa.sh` or `systemctl start exa-mcp` |
+| Stop | `/opt/stop-exa.sh` or `systemctl stop exa-mcp` |
+| Restart | `/opt/restart-exa.sh` or `systemctl restart exa-mcp` |
 | Status | `/opt/status-exa.sh` |
 | Update | `/opt/update-exa.sh` (reinstalls pin) or `/opt/update-exa.sh 3.2.1` (bump) |
+| Custom domain | `/opt/setup-exa-domain.sh` |
 | Re-run setup | `/opt/setup-exa.sh --force` |
 
 ### Paths
@@ -99,13 +97,15 @@ Exa MCP is **not** a long-running systemd daemon. Your MCP client starts and sto
 - **API key**: `/etc/exa/mcp.env` (`EXA_API_KEY`)
 - **Configured marker**: `/etc/exa/.configured`
 - **Version pin**: `/etc/exa/version`
-- **Client entrypoint**: `/opt/run-exa-mcp.sh`
+- **HTTP runner**: `/opt/run-exa-mcp-http.sh`
+- **Stdio entrypoint**: `/opt/run-exa-mcp.sh`
 
 ## Security Notes
 
-- UFW allows **SSH only**. Ports 80/443 are not opened.
+- UFW allows **SSH, HTTP, and HTTPS** only. Port 8081 is not opened publicly; Caddy proxies to `127.0.0.1:8081`.
+- TLS is terminated by Caddy using Let's Encrypt shortlived certificates (IP or custom domain).
 - The API key is collected on first boot/login and is unique per Droplet.
-- Do not commit or share `/etc/exa/mcp.env`.
+- Do not commit or share `/etc/exa/mcp.env`. Prefer restricting access with a Cloud Firewall when possible.
 
 ## Support
 

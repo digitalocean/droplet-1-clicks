@@ -1,5 +1,5 @@
 #!/bin/bash
-# First-login (or manual) setup: store Exa API key for local stdio MCP.
+# First-login (or manual) setup: store Exa API key and start HTTP MCP behind Caddy.
 
 set -euo pipefail
 
@@ -12,6 +12,12 @@ remove_bashrc_hook() {
   fi
 }
 
+droplet_ip() {
+  pub=$(curl -fsS --retry 3 --retry-connrefused --max-time 3 \
+    http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)
+  echo "${pub:-$(hostname -I | awk '{print $1}')}"
+}
+
 if [ -f "$CONFIGURED_MARKER" ] && [ "${1:-}" != "--force" ]; then
   remove_bashrc_hook
   exit 0
@@ -22,8 +28,8 @@ echo "================================================================"
 echo "       Welcome to the Exa MCP Server 1-Click Droplet!"
 echo "================================================================"
 echo ""
-echo "Exa MCP runs over stdio and is started by your MCP client"
-echo "(for example Cursor, Claude Desktop, or Claude Code)."
+echo "Exa MCP is served over HTTPS (Caddy + shortlived TLS) at:"
+echo "  https://$(droplet_ip)/mcp"
 echo ""
 echo "To get started, you need an API key from Exa:"
 echo "  https://dashboard.exa.ai/api-keys"
@@ -54,13 +60,21 @@ touch "$CONFIGURED_MARKER"
 chmod 644 "$CONFIGURED_MARKER"
 remove_bashrc_hook
 
+systemctl enable exa-mcp
+systemctl restart exa-mcp
+systemctl restart caddy || true
+
+IP="$(droplet_ip)"
 echo ""
 echo "Exa API key saved to ${ENV_FILE}."
+echo "Exa MCP is running behind Caddy with TLS."
 echo ""
-echo "Point your MCP client at: /opt/run-exa-mcp.sh"
+echo "Remote MCP URL: https://${IP}/mcp"
 echo "Example (Cursor ~/.cursor/mcp.json):"
-echo '  {"mcpServers":{"exa":{"command":"/opt/run-exa-mcp.sh"}}}'
+echo "  {\"mcpServers\":{\"exa\":{\"url\":\"https://${IP}/mcp\"}}}"
 echo ""
+echo "Optional local stdio entrypoint: /opt/run-exa-mcp.sh"
 echo "Status:  /opt/status-exa.sh"
 echo "Update:  /opt/update-exa.sh"
+echo "Domain:  /opt/setup-exa-domain.sh"
 echo ""

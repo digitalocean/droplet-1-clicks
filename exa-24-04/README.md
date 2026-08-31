@@ -2,7 +2,7 @@
 
 Packer builder for a DigitalOcean Marketplace 1-Click image that installs [exa-mcp-server](https://www.npmjs.com/package/exa-mcp-server) on Ubuntu 24.04 LTS.
 
-Exa MCP uses **stdio** transport. This image does not expose an HTTP UI; UFW allows SSH only. Users set an API key on first SSH login and point MCP clients at `/opt/run-exa-mcp.sh`.
+Exa MCP is served over **streamable HTTP** on `127.0.0.1:8081`, with **Caddy** terminating Let's Encrypt **shortlived** TLS on ports 80/443. Clients connect to `https://<droplet-ip>/mcp`.
 
 ## Directory Structure
 
@@ -14,12 +14,20 @@ exa-24-04/
 ├── scripts/
 │   └── 01-exa.sh
 └── files/
-    ├── etc/update-motd.d/99-one-click
+    ├── etc/
+    │   ├── caddy/Caddyfile.tmp
+    │   ├── systemd/system/exa-mcp.service
+    │   └── update-motd.d/99-one-click
     ├── opt/
     │   ├── setup-exa.sh
+    │   ├── setup-exa-domain.sh
     │   ├── status-exa.sh
     │   ├── update-exa.sh
-    │   └── run-exa-mcp.sh
+    │   ├── start-exa.sh
+    │   ├── stop-exa.sh
+    │   ├── restart-exa.sh
+    │   ├── run-exa-mcp.sh
+    │   └── run-exa-mcp-http.sh
     └── var/lib/cloud/scripts/per-instance/001_onboot
 ```
 
@@ -45,17 +53,21 @@ make build-exa-24-04
 
 - Node.js 20 (Nodesource)
 - `exa-mcp-server` at the version in `application_version` (`template.json`)
-- UFW limited to SSH
-- First-boot SSH unlock + first-login API key wizard
+- Caddy reverse proxy with shortlived TLS template
+- systemd unit `exa-mcp` (streamable HTTP on port 8081)
+- UFW: SSH + HTTP/HTTPS (`common/scripts/014-ufw-http.sh`)
+- First-boot SSH unlock, Caddy IP cert, and first-login API key wizard
 
 ## Version bumps
 
 1. Set `application_version` in `template.json` to the desired npm version (for example `3.2.1`).
-2. Rebuild the image.
-3. On existing Droplets, run `/opt/update-exa.sh <version>`.
+2. Confirm that release still ships `smithery/shttp` (required for the HTTP service).
+3. Rebuild the image.
+4. On existing Droplets, run `/opt/update-exa.sh <version>`.
 
 ## First boot / first login
 
-1. `001_onboot` removes SSH `ForceCommand` and hooks `/opt/setup-exa.sh` into root's `.bashrc` when not configured.
+1. `001_onboot` removes SSH `ForceCommand`, installs the Caddyfile with the Droplet IP, and starts Caddy.
 2. First SSH login prompts for `EXA_API_KEY`. Enter skips once (removes the `.bashrc` hook); re-run `/opt/setup-exa.sh` later.
-3. Key is written to `/etc/exa/mcp.env` (mode `600`).
+3. Key is written to `/etc/exa/mcp.env` (mode `600`); `exa-mcp` is started.
+4. Clients use `https://<droplet-ip>/mcp`. Optional custom domain: `/opt/setup-exa-domain.sh`.
