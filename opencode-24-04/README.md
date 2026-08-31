@@ -20,7 +20,7 @@ opencode-24-04/
     │   └── update-motd.d/
     │       └── 99-one-click         # Message of the Day
     ├── opt/
-    │   ├── apply-gradient-from-env.sh # Auto-config from GRADIENT_KEY / GRADIENT_MODEL
+    │   ├── apply-gradient-from-env.sh # Auto-config from GRADIENT_KEY / GRADIENT_MODEL / DO_INFERENCE_ROUTER
     │   ├── opencode.env              # Optional Gradient env vars (see 001_onboot)
     │   ├── setup-opencode.sh       # First-login setup wizard (Gradient key)
     │   ├── update-opencode.sh      # Update to latest version
@@ -81,16 +81,17 @@ Field testing shows **cache-related usage fields are often zero** on `https://in
 
 1. Removes SSH force-logout (allows normal login)
 2. Creates `/root/opencode_info.txt` with getting-started instructions
-3. If `GRADIENT_KEY` is set in droplet environment (`/etc/environment`) or `/opt/opencode.env`, applies Gradient config automatically and skips the setup wizard
+3. If `GRADIENT_KEY` is set in droplet environment (`/etc/environment`) or `/opt/opencode.env`, applies Gradient config automatically (honoring `GRADIENT_MODEL` or `DO_INFERENCE_ROUTER`) and skips the setup wizard
 4. Otherwise hooks the Gradient setup wizard (`/opt/setup-opencode.sh`) into `.bashrc` for first login
 
 ## First Login Experience
 
 If `GRADIENT_KEY` was not passed at droplet creation, on first SSH login the setup wizard runs and:
 1. Prompts the user for their DigitalOcean Gradient model access key
-2. Writes the key to `/root/.local/share/opencode/auth.json` under **`digitalocean`**
-3. Tests the connection to `https://inference.do-ai.run/v1/models`
-4. Self-removes from `.bashrc` (one-time only)
+2. Presents a numbered list of DigitalOcean models to pick the default from — or `R` to use an Intelligent Inference Router (and prompts for its name)
+3. Writes the key to `/root/.local/share/opencode/auth.json` under **`digitalocean`** and sets the default model (or `digitalocean/router:<name>`) in `opencode.json`
+4. Tests the connection to `https://inference.do-ai.run/v1/models`
+5. Self-removes from `.bashrc` (one-time only)
 
 ### Auto-configuration from droplet environment
 
@@ -100,11 +101,12 @@ Pass these environment variables when creating the droplet (or set them in `/opt
 |----------|----------|-------------|
 | `GRADIENT_KEY` | Yes | Gradient model access key from the control panel |
 | `GRADIENT_MODEL` | No | Model id, e.g. `minimax-m2.5`, `kimi-k2.5` (default: `minimax-m2.5`) |
+| `DO_INFERENCE_ROUTER` | No | Optional Intelligent Inference Router name (`router:<name>`). If set, becomes the default. |
 
 On first boot, `/opt/apply-gradient-from-env.sh` writes `/root/.local/share/opencode/auth.json`, sets the default model in `opencode.json`, and skips the interactive wizard.
 
 Pre-configured models (no separate provider key needed, all via Gradient):
-- **`digitalocean/`** (OpenAI-compatible): GPT-5.2, GPT-5, GPT-4.1, o3, DeepSeek R1 70B, Qwen3 32B, Llama 3.3 70B, **Kimi K2.5 (default)**, glm-5, MiniMax M2.5, Claude Opus 4.6, Opus 4.5, Sonnet 4.5, Sonnet 4
+- **`digitalocean/`** (OpenAI-compatible): GPT-5.2, GPT-5, GPT-4.1, o3, DeepSeek R1 70B, Qwen3 32B, Llama 3.3 70B, Kimi K2.5, glm-5, **MiniMax M2.5 (default)**, Claude Opus 4.6, Opus 4.5, Sonnet 4.5, Sonnet 4, plus the Intelligent Inference Router (`digitalocean/router:<name>`)
 
 If the user chooses option 2 in the setup wizard, the custom Gradient config is removed and OpenCode falls back to its standard built-in providers (75+ options via `/connect`).
 

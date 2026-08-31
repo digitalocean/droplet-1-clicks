@@ -8,6 +8,7 @@ OpenCode brings AI assistance into the command line. It's a terminal-based codin
 
 - **Terminal-first** – Works natively in your shell, no web interface required
 - **DigitalOcean Gradient AI** – Pre-configured with open-source models via Gradient inference
+- **Intelligent Inference Router** – Optionally route each prompt to the best-fit model
 - **Multiple sessions** – Run multiple agents for different tasks
 - **File references** – Use `@filename` to include files in context
 - **Shell commands** – Execute commands with `!` prefix
@@ -18,6 +19,7 @@ OpenCode brings AI assistance into the command line. It's a terminal-based codin
 
 - Natural language coding assistance in the terminal
 - Pre-configured with DigitalOcean Gradient AI (Claude, GPT, DeepSeek, Llama, and more)
+- Optional DigitalOcean Intelligent Inference Router (`router:<name>`)
 - Works with existing projects—navigate, edit, and run code
 - No IDE required—pure terminal workflow
 
@@ -64,7 +66,7 @@ Otherwise, on first login the setup wizard will prompt for your DigitalOcean Gra
 3. Copy the new key
 4. Paste the key when prompted by the setup wizard
 
-The wizard verifies your key and configures OpenCode automatically.
+The wizard verifies your key, lets you pick a default model (or the Intelligent Inference Router), and configures OpenCode automatically.
 
 ### 4. Run OpenCode
 
@@ -73,7 +75,7 @@ cd /path/to/your/project
 opencode
 ```
 
-The default model is **Kimi K2.5** (`digitalocean/kimi-k2.5` via DigitalOcean Gradient). You can change it in `/root/.config/opencode/opencode.json` or use the `/models` command inside OpenCode.
+The default model is **MiniMax M2.5** (`digitalocean/minimax-m2.5` via DigitalOcean Gradient). You can change it in `/root/.config/opencode/opencode.json` or use the `/models` command inside OpenCode. To use an Intelligent Inference Router, pick `R` in the setup wizard or set `DO_INFERENCE_ROUTER`.
 
 ## Managing OpenCode
 
@@ -90,7 +92,7 @@ The default model is **Kimi K2.5** (`digitalocean/kimi-k2.5` via DigitalOcean Gr
 
 - **OpenCode config**: `/root/.config/opencode/opencode.json`
 - **Auth / API key**: `/root/.local/share/opencode/auth.json`
-- **Gradient env vars**: `/opt/opencode.env` (`GRADIENT_KEY`, `GRADIENT_MODEL`)
+- **Gradient env vars**: `/opt/opencode.env` (`GRADIENT_KEY`, `GRADIENT_MODEL`, `DO_INFERENCE_ROUTER`)
 - **Getting started guide**: `cat /root/opencode_info.txt`
 
 ### Inference usage (Gradient)
@@ -101,11 +103,12 @@ API `usage` may list cache-related fields, but on DigitalOcean Gradient’s Open
 
 The following models are available via DigitalOcean Gradient (only a Gradient model access key is required). Use the full `provider/model-id` value in OpenCode or in `"model"` in `opencode.json`.
 
-**`digitalocean`** (OpenAI-compatible; default **Kimi K2.5**)
+**`digitalocean`** (OpenAI-compatible; default **MiniMax M2.5**)
 
 | Model | Full model id |
 |-------|---------------|
-| Kimi K2.5 (default) | `digitalocean/kimi-k2.5` |
+| MiniMax M2.5 (default) | `digitalocean/minimax-m2.5` |
+| Kimi K2.5 | `digitalocean/kimi-k2.5` |
 | GPT-5.2 | `digitalocean/openai-gpt-5.2` |
 | GPT-5 | `digitalocean/openai-gpt-5` |
 | GPT-4.1 | `digitalocean/openai-gpt-4.1` |
@@ -114,13 +117,22 @@ The following models are available via DigitalOcean Gradient (only a Gradient mo
 | Qwen3 32B | `digitalocean/alibaba-qwen3-32b` |
 | Llama 3.3 70B Instruct | `digitalocean/llama3.3-70b-instruct` |
 | glm-5 | `digitalocean/glm-5` |
-| MiniMax M2.5 | `digitalocean/minimax-m2.5` |
 | Claude Opus 4.6 | `digitalocean/claude-opus-4-6` |
 | Claude Opus 4.5 | `digitalocean/claude-opus-4-5` |
 | Claude Sonnet 4.5 | `digitalocean/claude-sonnet-4-5` |
 | Claude Sonnet 4 | `digitalocean/claude-sonnet-4-6` |
+| Intelligent Inference Router | `digitalocean/router:<name>` |
 
 To change the default model, edit `"model"` in `/root/.config/opencode/opencode.json`.
+
+### Intelligent Inference Router
+
+DigitalOcean's Inference Router classifies each prompt and sends it to the best-fit model based on rules you define (optimizing for cost or latency).
+
+1. Create a router under **Inference > Routers** in the control panel (or via the API) and attach it to the same model access key you use for the droplet.
+2. Set `DO_INFERENCE_ROUTER=<router-name>` in `/opt/opencode.env` (or as a droplet env var) and run `/opt/apply-gradient-from-env.sh`, **or** enter the router name in the setup wizard (`R`).
+
+This points OpenCode at `digitalocean/router:<router-name>` on `https://inference.do-ai.run/v1` and makes it the default. The router authenticates with the same `GRADIENT_KEY` as the direct models — no extra key needed.
 
 ### Using OpenCode's Built-in Providers
 
@@ -159,6 +171,7 @@ Or manually edit `/root/.local/share/opencode/auth.json` — set `digitalocean` 
 - **Documentation**: https://opencode.ai/docs
 - **CLI Reference**: https://opencode.ai/docs/cli/
 - **GitHub**: https://github.com/anomalyco/opencode
+- **DigitalOcean Inference Router**: https://docs.digitalocean.com/products/inference/how-to/use-inference-router/
 
 ## Support
 

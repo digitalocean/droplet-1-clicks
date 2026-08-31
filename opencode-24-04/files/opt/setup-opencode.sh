@@ -6,9 +6,19 @@
 SETUP_MARKER="/root/.opencode_setup_complete"
 CONFIG_FILE="/root/.config/opencode/opencode.json"
 AUTH_FILE="/root/.local/share/opencode/auth.json"
+ENV_FILE="/opt/opencode.env"
 
 remove_first_login_hook() {
   sed -i '/\/opt\/setup-opencode\.sh/d' /root/.bashrc 2>/dev/null || true
+}
+
+save_env_kv() {
+  local key="$1" val="$2"
+  touch "$ENV_FILE"
+  grep -v "^${key}=" "$ENV_FILE" > "${ENV_FILE}.tmp" 2>/dev/null || : > "${ENV_FILE}.tmp"
+  printf '%s=%q\n' "$key" "$val" >> "${ENV_FILE}.tmp"
+  mv "${ENV_FILE}.tmp" "$ENV_FILE"
+  chmod 600 "$ENV_FILE"
 }
 
 try_apply_gradient_from_env() {
@@ -66,8 +76,9 @@ echo "This droplet is pre-configured with DigitalOcean Gradient AI, which gives"
 echo "you access to top coding models through a single Gradient model access key:"
 echo ""
 echo "  digitalocean/ (OpenAI-compatible):  GPT-5.2, GPT-5, GPT-4.1, o3,"
-echo "    DeepSeek R1 70B, Qwen3 32B, Llama 3.3 70B, Kimi K2.5 (default),"
-echo "    glm-5, MiniMax M2.5, Claude Opus 4.6, Opus 4.5, Sonnet 4.5, Sonnet 4"
+echo "    DeepSeek R1 70B, Qwen3 32B, Llama 3.3 70B, Kimi K2.5,"
+echo "    glm-5, MiniMax M2.5 (default), Claude Opus 4.6, Opus 4.5,"
+echo "    Sonnet 4.5, Sonnet 4, plus the Intelligent Inference Router."
 echo ""
 echo "To create a Gradient model access key:"
 echo "  1. Go to https://cloud.digitalocean.com/gen-ai"
@@ -86,21 +97,64 @@ if [ -z "$MODEL_KEY" ]; then
   exit 0
 fi
 
-# Write the auth.json file for the Gradient OpenAI-compatible provider.
-mkdir -p /root/.local/share/opencode
-cat > /root/.local/share/opencode/auth.json << EOF
-{
-  "digitalocean": {
-    "type": "api",
-    "key": "${MODEL_KEY}"
-  },
-  "do-anthropic": {
-    "type": "api",
-    "key": "${MODEL_KEY}"
-  }
-}
-EOF
-chmod 600 /root/.local/share/opencode/auth.json
+save_env_kv GRADIENT_KEY "$MODEL_KEY"
+export GRADIENT_KEY="$MODEL_KEY"
+
+# Short list of the latest, most popular coding models. The full catalog lives
+# in /root/.config/opencode/opencode.json and can be selected any time with /models.
+MENU_IDS=(
+  minimax-m2.5 kimi-k2.5 openai-gpt-5.2 openai-gpt-5
+  glm-5 llama3.3-70b-instruct alibaba-qwen3-32b deepseek-r1-distill-llama-70b
+)
+MENU_LABELS=(
+  "MiniMax M2.5 (default)" "Kimi K2.5" "GPT-5.2" "GPT-5"
+  "glm-5" "Llama 3.3 70B Instruct" "Qwen3 32B" "DeepSeek R1 Distill Llama 70B"
+)
+
+echo ""
+echo "Choose a default model (you can switch later with /models):"
+echo ""
+for i in "${!MENU_IDS[@]}"; do
+  printf "  %2d) %-28s (%s)\n" "$((i + 1))" "${MENU_LABELS[$i]}" "${MENU_IDS[$i]}"
+done
+echo "   R) DigitalOcean Intelligent Inference Router (auto-picks the best model)"
+echo ""
+read -rp "Selection [1-${#MENU_IDS[@]} / R, or Enter for MiniMax M2.5]: " SEL
+
+CHOSEN_LABEL="MiniMax M2.5 (digitalocean/minimax-m2.5)"
+
+if [ "$SEL" = "R" ] || [ "$SEL" = "r" ]; then
+  echo ""
+  echo "Create a router under Inference > Routers, then enter its name."
+  read -rp "Router name: " ROUTER_NAME
+  if [ -n "$ROUTER_NAME" ]; then
+    ROUTER_NAME="${ROUTER_NAME#digitalocean/}"
+    ROUTER_NAME="${ROUTER_NAME#router:}"
+    save_env_kv DO_INFERENCE_ROUTER "$ROUTER_NAME"
+    export DO_INFERENCE_ROUTER="$ROUTER_NAME"
+    CHOSEN_LABEL="Intelligent Inference Router (digitalocean/router:${ROUTER_NAME})"
+  else
+    echo "No router name entered; keeping the MiniMax M2.5 default."
+    save_env_kv GRADIENT_MODEL "minimax-m2.5"
+    save_env_kv DO_INFERENCE_ROUTER ""
+    export DO_INFERENCE_ROUTER=""
+  fi
+elif [ -n "$SEL" ] && [ "$SEL" -ge 1 ] 2>/dev/null && [ "$SEL" -le "${#MENU_IDS[@]}" ] 2>/dev/null; then
+  CHOSEN="${MENU_IDS[$((SEL - 1))]}"
+  save_env_kv GRADIENT_MODEL "$CHOSEN"
+  save_env_kv DO_INFERENCE_ROUTER ""
+  export GRADIENT_MODEL="$CHOSEN"
+  export DO_INFERENCE_ROUTER=""
+  echo "Default model set to: $CHOSEN"
+  CHOSEN_LABEL="${MENU_LABELS[$((SEL - 1))]} (digitalocean/${CHOSEN})"
+else
+  save_env_kv GRADIENT_MODEL "minimax-m2.5"
+  save_env_kv DO_INFERENCE_ROUTER ""
+  export DO_INFERENCE_ROUTER=""
+  echo "Default model set to: minimax-m2.5 (MiniMax M2.5)"
+fi
+
+/opt/apply-gradient-from-env.sh
 
 # Substitute Gradient key into opencode.json (do-anthropic authToken placeholder).
 if [ -f "$CONFIG_FILE" ] && grep -q '%API_TOKEN%' "$CONFIG_FILE" 2>/dev/null; then
@@ -132,7 +186,7 @@ echo ""
 echo "========================================================================"
 echo "  Setup complete! OpenCode is ready to use."
 echo ""
-echo "  Default model: Kimi K2.5 (digitalocean/kimi-k2.5)"
+echo "  Default model: ${CHOSEN_LABEL}"
 echo ""
 echo "  To start:  cd /path/to/your/project && opencode"
 echo "  Config:    /root/.config/opencode/opencode.json"

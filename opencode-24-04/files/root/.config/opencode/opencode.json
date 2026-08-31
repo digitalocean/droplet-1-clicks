@@ -17,7 +17,8 @@
         "llama3.3-70b-instruct": { "name": "Llama 3.3 70B Instruct" },
         "kimi-k2.5": { "name": "Kimi K2.5" },
         "glm-5": { "name": "glm-5" },
-        "minimax-m2.5": { "name": "MiniMax M2.5" }        
+        "minimax-m2.5": { "name": "MiniMax M2.5" },
+        "router:REPLACE_WITH_ROUTER_NAME": { "name": "DigitalOcean Intelligent Inference Router" }
       }
     }, 
     "do-anthropic": {

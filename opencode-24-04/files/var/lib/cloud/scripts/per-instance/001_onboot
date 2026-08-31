@@ -71,18 +71,19 @@ PRE-CONFIGURED MODELS (via DigitalOcean Gradient):
   digitalocean/ (default: MiniMax M2.5):
     GPT-5.2, GPT-5, GPT-4.1, o3, DeepSeek R1 70B, Qwen3 32B,
     Llama 3.3 70B, Kimi K2.5, glm-5, MiniMax M2.5,
-    Claude Opus 4.6, Opus 4.5, Sonnet 4.5, Sonnet 4
+    Claude Opus 4.6, Opus 4.5, Sonnet 4.5, Sonnet 4, router
 
 AUTO-CONFIGURATION (optional):
 
-  If GRADIENT_KEY (and optionally GRADIENT_MODEL) are passed as droplet
-  environment variables, OpenCode configures Gradient automatically on first
-  boot and skips the interactive setup wizard.
+  If GRADIENT_KEY (and optionally GRADIENT_MODEL / DO_INFERENCE_ROUTER) are
+  passed as droplet environment variables, OpenCode configures Gradient
+  automatically on first boot and skips the interactive setup wizard.
 
 NEXT STEPS:
 
 1. If Gradient was not auto-configured, the setup wizard runs on first login
-   to configure your Gradient model access key. To create one:
+   to configure your Gradient model access key and pick a default model
+   (or the Intelligent Inference Router). To create a key:
      https://cloud.digitalocean.com/gen-ai
      Navigate to API Keys > Model Access Keys
 
@@ -90,7 +91,12 @@ NEXT STEPS:
    cd /path/to/your/project
    opencode
 
-3. Helper commands:
+3. Intelligent Inference Router:
+   Create a router under Inference > Routers attached to your model access
+   key, set DO_INFERENCE_ROUTER=<name> in /opt/opencode.env, then run
+   /opt/apply-gradient-from-env.sh (routes via model "router:<name>", same key).
+
+4. Helper commands:
    Check version:    /opt/opencode-version.sh
    Update OpenCode:  /opt/update-opencode.sh
    Re-run setup:     /opt/setup-opencode.sh
@@ -100,7 +106,7 @@ Other providers: use /connect inside OpenCode to add your own API keys
 
 Configuration:  /root/.config/opencode/opencode.json
 Auth:           /root/.local/share/opencode/auth.json
-Gradient env:   /opt/opencode.env
+Gradient env:   /opt/opencode.env (GRADIENT_KEY, GRADIENT_MODEL, DO_INFERENCE_ROUTER)
 
 For documentation: https://opencode.ai/docs
 

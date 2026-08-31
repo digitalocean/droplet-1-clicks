@@ -149,6 +149,7 @@ GRADIENT_PROVIDER_JSON='{
       "kimi-k2.5": { "name": "Kimi K2.5" },
       "glm-5": { "name": "glm-5" },
       "minimax-m2.5": { "name": "MiniMax M2.5" },
+      "router:REPLACE_WITH_ROUTER_NAME": { "name": "DigitalOcean Intelligent Inference Router" },
       "claude-opus-4-6": { "name": "Claude Opus 4.6" },
       "claude-opus-4-5": { "name": "Claude Opus 4.5" },
       "claude-sonnet-4-5": { "name": "Claude Sonnet 4.5" },
