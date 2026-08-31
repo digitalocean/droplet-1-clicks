@@ -8,12 +8,22 @@ ENV_FILE=/opt/opencode.env
 CONFIG_FILE=/root/.config/opencode/opencode.json
 AUTH_FILE=/root/.local/share/opencode/auth.json
 SETUP_MARKER=/root/.opencode_setup_complete
+INFERENCE_MODELS_LIB=/var/lib/digitalocean/inference-models.sh
 DEFAULT_MODEL=minimax-m2.5
 ROUTER_DISPLAY_NAME="DigitalOcean Intelligent Inference Router"
 
 remove_setup_bashrc_hook() {
     [ -f /root/.bashrc ] || return 0
     sed -i '/\/opt\/setup-opencode\.sh/d' /root/.bashrc
+}
+
+env_value_usable() {
+    local v="$1"
+    [ -n "$v" ] || return 1
+    case "$v" in
+        *'${'*|PLACEHOLDER*|your_*_here) return 1 ;;
+    esac
+    return 0
 }
 
 read_file_kv() {
@@ -61,15 +71,6 @@ normalize_router_name() {
     printf '%s' "$n"
 }
 
-env_value_usable() {
-    local v="$1"
-    [ -n "$v" ] || return 1
-    case "$v" in
-        *'${'*|PLACEHOLDER*|your_*_here) return 1 ;;
-    esac
-    return 0
-}
-
 write_auth_file() {
     mkdir -p /root/.config/opencode /root/.local/share/opencode
     jq -n --arg key "$GRADIENT_KEY" \
@@ -80,24 +81,28 @@ write_auth_file() {
     chmod 600 "$AUTH_FILE"
 }
 
-# Point the digitalocean router model at router:<name> and make it the default.
-set_router_model() {
-    local name="$1"
-    local rid="router:${name}"
-    local primary="digitalocean/${rid}"
-    [ -f "$CONFIG_FILE" ] || return 0
-    jq --arg model "$primary" --arg rid "$rid" --arg dname "$ROUTER_DISPLAY_NAME" '
-      .model = $model
-      | .provider.digitalocean.models |= with_entries(select(.key | startswith("router:") | not))
-      | .provider.digitalocean.models[$rid] = {"name": $dname}
-    ' "$CONFIG_FILE" >"${CONFIG_FILE}.tmp"
-    mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
-}
-
-set_default_model() {
+# Replace digitalocean.models with the live catalog (plus an optional extra id).
+sync_digitalocean_models() {
     local primary="$1"
+    local extra_id="${2-}"
+    local models_obj
     [ -f "$CONFIG_FILE" ] || return 0
-    jq --arg model "$primary" '.model = $model' "$CONFIG_FILE" >"${CONFIG_FILE}.tmp"
+
+    models_obj="$(printf '%s\n' "${CHAT_IDS:-}" | jq -R -s -c \
+        --arg extra "$extra_id" \
+        --arg dname "$ROUTER_DISPLAY_NAME" \
+        --arg primary_id "${primary#digitalocean/}" '
+      (split("\n") | map(select(length>0))) as $ids
+      | (if ($primary_id != "" and ($ids | index($primary_id) | not))
+         then [$primary_id] + $ids else $ids end) as $all
+      | reduce $all[] as $id ({}; .[$id] = {"name": $id})
+      | if $extra != "" then .[$extra] = {"name": $dname} else . end
+    ')"
+
+    jq --arg model "$primary" --argjson models "$models_obj" '
+      .model = $model
+      | .provider.digitalocean.models = $models
+    ' "$CONFIG_FILE" >"${CONFIG_FILE}.tmp"
     mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
 }
 
@@ -109,6 +114,13 @@ if ! env_value_usable "$GRADIENT_KEY"; then
     exit 1
 fi
 
+CHAT_IDS=""
+if [ -f "$INFERENCE_MODELS_LIB" ]; then
+    # shellcheck source=/var/lib/digitalocean/inference-models.sh
+    . "$INFERENCE_MODELS_LIB"
+    CHAT_IDS="$(list_chat_inference_models "$GRADIENT_KEY" || true)"
+fi
+
 write_env_file_kv GRADIENT_KEY "$GRADIENT_KEY"
 write_auth_file
 
@@ -116,11 +128,15 @@ if env_value_usable "$DO_INFERENCE_ROUTER"; then
     ROUTER_NAME=$(normalize_router_name "$DO_INFERENCE_ROUTER")
     if [ -n "$ROUTER_NAME" ]; then
         if ! env_value_usable "$GRADIENT_MODEL"; then
-            GRADIENT_MODEL="$DEFAULT_MODEL"
+            if [ -n "$CHAT_IDS" ]; then
+                GRADIENT_MODEL="$(printf '%s\n' "$CHAT_IDS" | pick_default_inference_model)"
+            else
+                GRADIENT_MODEL="$DEFAULT_MODEL"
+            fi
         fi
         write_env_file_kv GRADIENT_MODEL "${GRADIENT_MODEL#digitalocean/}"
         write_env_file_kv DO_INFERENCE_ROUTER "$ROUTER_NAME"
-        set_router_model "$ROUTER_NAME"
+        sync_digitalocean_models "digitalocean/router:${ROUTER_NAME}" "router:${ROUTER_NAME}"
         touch "$SETUP_MARKER"
         remove_setup_bashrc_hook
         echo "Gradient configured from droplet environment: router ${ROUTER_NAME} (digitalocean/router:${ROUTER_NAME})"
@@ -129,14 +145,18 @@ if env_value_usable "$DO_INFERENCE_ROUTER"; then
 fi
 
 if ! env_value_usable "$GRADIENT_MODEL"; then
-    GRADIENT_MODEL="$DEFAULT_MODEL"
+    if [ -n "$CHAT_IDS" ]; then
+        GRADIENT_MODEL="$(printf '%s\n' "$CHAT_IDS" | pick_default_inference_model)"
+    else
+        GRADIENT_MODEL="$DEFAULT_MODEL"
+    fi
 fi
 
 PRIMARY_MODEL=$(normalize_opencode_model "$GRADIENT_MODEL")
 write_env_file_kv GRADIENT_MODEL "${PRIMARY_MODEL#digitalocean/}"
 write_env_file_kv DO_INFERENCE_ROUTER ""
 
-set_default_model "$PRIMARY_MODEL"
+sync_digitalocean_models "$PRIMARY_MODEL"
 
 touch "$SETUP_MARKER"
 remove_setup_bashrc_hook

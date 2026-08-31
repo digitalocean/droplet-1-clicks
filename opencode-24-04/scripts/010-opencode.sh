@@ -42,6 +42,7 @@ chmod +x /opt/update-opencode.sh
 chmod +x /opt/opencode-version.sh
 chmod +x /opt/setup-opencode.sh
 chmod +x /opt/apply-gradient-from-env.sh
+chmod +x /var/lib/digitalocean/inference-models.sh
 chmod 600 /opt/opencode.env
 chmod +x /etc/update-motd.d/99-one-click
 chmod +x /var/lib/cloud/scripts/per-instance/001_onboot
