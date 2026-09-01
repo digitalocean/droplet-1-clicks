@@ -3,7 +3,7 @@
   "provider": {
     "digitalocean": {
       "npm": "@ai-sdk/openai-compatible",
-      "name": "DigitalOcean Gradient",
+      "name": "DigitalOcean Serverless Inference",
       "options": {
         "baseURL": "https://inference.do-ai.run/v1"
       },

@@ -4,7 +4,7 @@ This directory contains the Packer builder configuration for creating an OpenCod
 
 ## Overview
 
-OpenCode is an open-source AI coding agent that runs in the terminal. Users SSH into the droplet and run `opencode` to get AI-assisted coding directly in their shell. This builder creates a fully configured Ubuntu 24.04 LTS Droplet with OpenCode pre-installed and DigitalOcean Gradient AI pre-configured as the inference provider. The first-login wizard lists models live from `GET https://inference.do-ai.run/v1/models` (same helper as Hermes and OpenClaw).
+OpenCode is an open-source AI coding agent that runs in the terminal. Users SSH into the droplet and run `opencode` to get AI-assisted coding directly in their shell. This builder creates a fully configured Ubuntu 24.04 LTS Droplet with OpenCode pre-installed and DigitalOcean Serverless Inference pre-configured as the inference provider. The first-login wizard lists models live from `GET https://inference.do-ai.run/v1/models` (same helper as Hermes and OpenClaw).
 
 ## Directory Structure
 
@@ -20,15 +20,15 @@ opencode-24-04/
     │   └── update-motd.d/
     │       └── 99-one-click         # Message of the Day
     ├── opt/
-    │   ├── apply-gradient-from-env.sh # Auto-config from GRADIENT_KEY / GRADIENT_MODEL / DO_INFERENCE_ROUTER
-    │   ├── opencode.env              # Optional Gradient env vars (see 001_onboot)
-    │   ├── setup-opencode.sh       # First-login setup wizard (Gradient key)
+    │   ├── apply-inference-from-env.sh # Auto-config from MODEL_ACCESS_KEY / INFERENCE_MODEL / DO_INFERENCE_ROUTER
+    │   ├── opencode.env              # Optional Inference env vars (see 001_onboot)
+    │   ├── setup-opencode.sh       # First-login setup wizard (model access key)
     │   ├── update-opencode.sh      # Update to latest version
     │   └── opencode-version.sh     # Display installed version
     ├── root/
     │   └── .config/
     │       └── opencode/
-    │           └── opencode.json   # Pre-configured Gradient AI provider
+    │           └── opencode.json   # Pre-configured Serverless Inference provider
     └── var/
         └── lib/
             └── cloud/
@@ -67,27 +67,27 @@ make build-opencode-24-04
 ## What Gets Installed
 
 - **OpenCode** (version from `application_version` in template.json; see `template.json` for the current pin)
-- **DigitalOcean Gradient AI config** – Pre-configured provider in `files/root/.config/opencode/opencode.json` (`baseURL` only; no extra client options that imply prompt caching on Gradient)
+- **DigitalOcean Serverless Inference config** – Pre-configured provider in `files/root/.config/opencode/opencode.json` (`baseURL` only; no extra client options that imply prompt caching on Serverless Inference)
 - **Git**, **curl**, **jq**, **unzip** – utilities
 - **UFW** – Firewall (SSH only, rate-limited)
 
-OpenCode is installed to `/root/.opencode/bin/` and PATH is set in `/etc/profile.d/opencode.sh`. Claude and other Gradient models are exposed through the same OpenAI-compatible `digitalocean` provider; authentication uses your Gradient model access key in `auth.json`.
+OpenCode is installed to `/root/.opencode/bin/` and PATH is set in `/etc/profile.d/opencode.sh`. Claude and other Serverless Inference models are exposed through the same OpenAI-compatible `digitalocean` provider; authentication uses your DigitalOcean model access key in `auth.json`.
 
-## Inference usage on Gradient
+## Inference usage on Serverless Inference
 
-Field testing shows **cache-related usage fields are often zero** on `https://inference.do-ai.run/v1` across models, so this image **does not** set OpenCode’s `setCacheKey` (or similar) for Gradient. Billing and semantics should be taken from **DigitalOcean Gen AI / Gradient documentation**, not from those API numbers alone. A short note is in **`001_onboot`** (`opencode_info.txt`) and **`listing.md`**.
+Field testing shows **cache-related usage fields are often zero** on `https://inference.do-ai.run/v1` across models, so this image **does not** set OpenCode’s `setCacheKey` (or similar) for Serverless Inference. Billing and semantics should be taken from **DigitalOcean Inference documentation**, not from those API numbers alone. A short note is in **`001_onboot`** (`opencode_info.txt`) and **`listing.md`**.
 
 ## First Boot Behavior
 
 1. Removes SSH force-logout (allows normal login)
 2. Creates `/root/opencode_info.txt` with getting-started instructions
-3. If `GRADIENT_KEY` is set in droplet environment (`/etc/environment`) or `/opt/opencode.env`, applies Gradient config automatically (honoring `GRADIENT_MODEL` or `DO_INFERENCE_ROUTER`) and skips the setup wizard
-4. Otherwise hooks the Gradient setup wizard (`/opt/setup-opencode.sh`) into `.bashrc` for first login
+3. If `MODEL_ACCESS_KEY` is set in droplet environment (`/etc/environment`) or `/opt/opencode.env`, applies Serverless Inference config automatically (honoring `INFERENCE_MODEL` or `DO_INFERENCE_ROUTER`) and skips the setup wizard
+4. Otherwise hooks the Serverless Inference setup wizard (`/opt/setup-opencode.sh`) into `.bashrc` for first login
 
 ## First Login Experience
 
-If `GRADIENT_KEY` was not passed at droplet creation, on first SSH login the setup wizard runs and:
-1. Prompts the user for their DigitalOcean Gradient model access key
+If `MODEL_ACCESS_KEY` was not passed at droplet creation, on first SSH login the setup wizard runs and:
+1. Prompts the user for their DigitalOcean Serverless Inference model access key
 2. Fetches the current chat-capable catalog from `https://inference.do-ai.run/v1/models` and presents it as a numbered list — or `R` to use an Intelligent Inference Router
 3. Writes the key to `/root/.local/share/opencode/auth.json` under **`digitalocean`**, replaces `provider.digitalocean.models` with that live list, and sets the default model (or `digitalocean/router:<name>`)
 4. Self-removes from `.bashrc` (one-time only)
@@ -98,15 +98,15 @@ Pass these environment variables when creating the droplet (or set them in `/opt
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `GRADIENT_KEY` | Yes | Gradient model access key from the control panel |
-| `GRADIENT_MODEL` | No | Model id from `GET /v1/models`. If unset, the first chat-capable model from that list is used. |
+| `MODEL_ACCESS_KEY` | Yes | DigitalOcean model access key from the control panel |
+| `INFERENCE_MODEL` | No | Model id from `GET /v1/models`. If unset, the first chat-capable model from that list is used. |
 | `DO_INFERENCE_ROUTER` | No | Optional Intelligent Inference Router name (`router:<name>`). If set, becomes the default. |
 
-On first boot, `/opt/apply-gradient-from-env.sh` writes `/root/.local/share/opencode/auth.json`, replaces the DigitalOcean model list in `opencode.json` from the live catalog, and skips the interactive wizard.
+On first boot, `/opt/apply-inference-from-env.sh` writes `/root/.local/share/opencode/auth.json`, replaces the DigitalOcean model list in `opencode.json` from the live catalog, and skips the interactive wizard.
 
 Models are not pinned in the image. The live chat-capable list comes from [Retrieve available models](https://docs.digitalocean.com/products/inference/how-to/retrieve-available-models/). The Intelligent Inference Router remains available as `digitalocean/router:<name>`.
 
-If the user chooses option 2 in the setup wizard, the custom Gradient config is removed and OpenCode falls back to its standard built-in providers (75+ options via `/connect`).
+If the user chooses option 2 in the setup wizard, the custom Serverless Inference config is removed and OpenCode falls back to its standard built-in providers (75+ options via `/connect`).
 
 ## Version Pinning
 

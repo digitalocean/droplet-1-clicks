@@ -65,13 +65,9 @@ write_env_file_kv() {
     chmod 600 "$file"
 }
 
-# Canonical env vars:
-#   MODEL_ACCESS_KEY  official model access key
-#   INFERENCE_MODEL   default model id from GET /v1/models
-# Aliases still accepted from droplet environment:
-#   GRADIENT_KEY, MODEL_ACCESS_MODEL, DO_INFERENCE_MODEL, GRADIENT_MODEL
-MODEL_ACCESS_KEY=$(read_first_usable MODEL_ACCESS_KEY GRADIENT_KEY || true)
-INFERENCE_MODEL=$(read_first_usable INFERENCE_MODEL MODEL_ACCESS_MODEL DO_INFERENCE_MODEL GRADIENT_MODEL || true)
+# Canonical env vars: MODEL_ACCESS_KEY, INFERENCE_MODEL
+MODEL_ACCESS_KEY=$(read_config_value MODEL_ACCESS_KEY || true)
+INFERENCE_MODEL=$(read_config_value INFERENCE_MODEL || true)
 
 if ! env_value_usable "$MODEL_ACCESS_KEY"; then
     exit 1
@@ -108,12 +104,6 @@ chmod 700 "$HERMES_HOME"
 write_env_file_kv "$ENV_FILE" MODEL_ACCESS_KEY "$MODEL_ACCESS_KEY"
 write_env_file_kv "$ENV_FILE" INFERENCE_MODEL "$INFERENCE_MODEL"
 write_env_file_kv "$HERMES_ENV" MODEL_ACCESS_KEY "$MODEL_ACCESS_KEY"
-
-# Keep /opt/hermes/hermes.env on the canonical names.
-tmp="${ENV_FILE}.tmp"
-grep -v -E '^(MODEL_ACCESS_MODEL|GRADIENT_KEY|GRADIENT_MODEL|DO_INFERENCE_MODEL)=' "$ENV_FILE" >"$tmp" 2>/dev/null || : >"$tmp"
-mv "$tmp" "$ENV_FILE"
-chmod 600 "$ENV_FILE"
 
 HERMES_MODELS_JSON="$MODELS_JSON" python3 - "$HERMES_CONFIG" "$INFERENCE_MODEL" <<'PY'
 import json

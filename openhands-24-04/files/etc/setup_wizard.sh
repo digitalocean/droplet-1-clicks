@@ -1,5 +1,5 @@
 #!/bin/bash
-# OpenHands first-login setup wizard — API key reminder + optional Gradient config
+# OpenHands first-login setup wizard — API key reminder + optional Serverless Inference config
 
 set -euo pipefail
 
@@ -51,15 +51,15 @@ EOF
 
 if [ -f "$SETUP_DONE_MARKER" ] && [ "${1:-}" != "--force" ]; then
   echo ""
-  echo "LLM provider already configured. Skipping Gradient wizard."
+  echo "LLM provider already configured. Skipping Serverless Inference wizard."
   echo "Re-run with --force to configure again: /etc/setup_wizard.sh --force"
   remove_first_login_hook
   exit 0
 fi
 
-if [ "${1:-}" != "--force" ] && [ -x /opt/apply-gradient-from-env.sh ] && /opt/apply-gradient-from-env.sh; then
+if [ "${1:-}" != "--force" ] && [ -x /opt/apply-inference-from-env.sh ] && /opt/apply-inference-from-env.sh; then
   echo ""
-  echo "DigitalOcean Gradient configured from droplet environment."
+  echo "DigitalOcean Serverless Inference configured from droplet environment."
   remove_first_login_hook
   exit 0
 fi
@@ -67,10 +67,10 @@ fi
 cat <<'EOF'
 
 ------------------------------------------------------------------------
-  Optional: DigitalOcean Gradient AI
+  Optional: DigitalOcean Serverless Inference
 ------------------------------------------------------------------------
 
-Configure Gradient so OpenHands can call models via a single model access key.
+Configure Serverless Inference so OpenHands can call models via a single model access key.
 Create a key at: https://cloud.digitalocean.com/gen-ai
   (API Keys > Model Access Keys)
 
@@ -80,34 +80,34 @@ You can also skip and set any provider later in Settings > LLM.
 
 EOF
 
-read -r -p "Enter your Gradient model access key (or press Enter to skip): " MODEL_KEY
+read -r -p "Enter your DigitalOcean model access key (or press Enter to skip): " MODEL_KEY
 
 if [ -z "$MODEL_KEY" ]; then
   echo ""
-  echo "Skipped Gradient setup. Configure LLM in the web UI (Settings > LLM),"
+  echo "Skipped Serverless Inference setup. Configure LLM in the web UI (Settings > LLM),"
   echo "or re-run: /etc/setup_wizard.sh"
   echo ""
   remove_first_login_hook
   exit 0
 fi
 
-read -r -p "Gradient model id [minimax-m2.5]: " MODEL_ID
+read -r -p "Inference model id [minimax-m2.5]: " MODEL_ID
 MODEL_ID="${MODEL_ID:-minimax-m2.5}"
 
 # Persist into env file, then apply (plain KEY=value for systemd EnvironmentFile)
 tmp="${ENV_FILE}.tmp"
 touch "$ENV_FILE"
-grep -v -E '^(GRADIENT_KEY|GRADIENT_MODEL)=' "$ENV_FILE" >"$tmp" 2>/dev/null || : >"$tmp"
-printf 'GRADIENT_KEY=%s\n' "$MODEL_KEY" >>"$tmp"
-printf 'GRADIENT_MODEL=%s\n' "$MODEL_ID" >>"$tmp"
+grep -v -E '^(MODEL_ACCESS_KEY|INFERENCE_MODEL)=' "$ENV_FILE" >"$tmp" 2>/dev/null || : >"$tmp"
+printf 'MODEL_ACCESS_KEY=%s\n' "$MODEL_KEY" >>"$tmp"
+printf 'INFERENCE_MODEL=%s\n' "$MODEL_ID" >>"$tmp"
 mv "$tmp" "$ENV_FILE"
 chmod 600 "$ENV_FILE"
 
-export GRADIENT_KEY="$MODEL_KEY"
-export GRADIENT_MODEL="$MODEL_ID"
+export MODEL_ACCESS_KEY="$MODEL_KEY"
+export INFERENCE_MODEL="$MODEL_ID"
 
 echo ""
-echo "Testing connection to DigitalOcean Gradient..."
+echo "Testing connection to DigitalOcean Serverless Inference..."
 HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
   -H "Authorization: Bearer ${MODEL_KEY}" \
   -H "Content-Type: application/json" \
@@ -116,11 +116,11 @@ HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
 if [ "$HTTP_STATUS" = "200" ]; then
   echo "Connection successful! Your key is valid."
 else
-  echo "Warning: Received HTTP ${HTTP_STATUS} from the Gradient API."
+  echo "Warning: Received HTTP ${HTTP_STATUS} from the Serverless Inference API."
   echo "Saving anyway — re-run /etc/setup_wizard.sh --force if needed."
 fi
 
-/opt/apply-gradient-from-env.sh
+/opt/apply-inference-from-env.sh
 
 remove_first_login_hook
 
@@ -131,7 +131,7 @@ cat <<EOF
 
   Open:     https://${myip}
   API Key:  ${API_KEY}
-  Model:    openai/${MODEL_ID} via DigitalOcean Gradient
+  Model:    openai/${MODEL_ID} via DigitalOcean Serverless Inference
 
   Projects workspace: /home/openhands/projects
 ========================================================================

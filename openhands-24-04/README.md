@@ -4,7 +4,7 @@ This directory contains the Packer builder configuration for creating an OpenHan
 
 ## Overview
 
-[OpenHands](https://www.openhands.dev/) Agent Canvas is an open-source, self-hosted control center for AI coding agents and automations. This builder creates an Ubuntu 24.04 LTS Droplet with Agent Canvas pre-installed, running in public mode behind Caddy, with optional DigitalOcean Gradient AI configuration.
+[OpenHands](https://www.openhands.dev/) Agent Canvas is an open-source, self-hosted control center for AI coding agents and automations. This builder creates an Ubuntu 24.04 LTS Droplet with Agent Canvas pre-installed, running in public mode behind Caddy, with optional DigitalOcean Serverless Inference configuration.
 
 ## Directory Structure
 
@@ -18,14 +18,14 @@ openhands-24-04/
 └── files/
     ├── etc/
     │   ├── caddy/Caddyfile.tmp      # Shortlived TLS reverse proxy to :8000
-    │   ├── setup_wizard.sh          # First-login wizard (API key + Gradient)
+    │   ├── setup_wizard.sh          # First-login wizard (API key + Serverless Inference)
     │   ├── systemd/system/openhands.service
-    │   ├── systemd/system/openhands-apply-gradient.service
+    │   ├── systemd/system/openhands-apply-inference.service
     │   └── update-motd.d/99-one-click
     ├── opt/
-    │   ├── openhands.env            # Secrets + optional GRADIENT_* vars
-    │   ├── apply-gradient-from-env.sh
-    │   ├── retry-apply-gradient-after-cloud-init.sh
+    │   ├── openhands.env            # Secrets + optional inference env vars
+    │   ├── apply-inference-from-env.sh
+    │   ├── retry-apply-inference-after-cloud-init.sh
     │   ├── start-openhands.sh
     │   ├── stop-openhands.sh
     │   ├── restart-openhands.sh
@@ -66,22 +66,22 @@ make build-openhands-24-04
 1. Removes SSH force-logout
 2. Generates unique `LOCAL_BACKEND_API_KEY` and `OH_SECRET_KEY`
 3. Installs Caddyfile (shortlived TLS for droplet IP) and starts `openhands` + `caddy`
-4. If `GRADIENT_KEY` is set (droplet env or `/opt/openhands.env`), configures Gradient and skips the provider wizard
+4. If `MODEL_ACCESS_KEY` is set (droplet env or `/opt/openhands.env`), configures Serverless Inference and skips the provider wizard
 5. Otherwise hooks `/etc/setup_wizard.sh` into root `.bashrc` for first login
 6. Writes `/root/openhands_info.txt`
 
 ## First Login / Access
 
 1. Open `https://<droplet-ip>` and paste `LOCAL_BACKEND_API_KEY` from the MOTD or `/opt/openhands.env`
-2. If Gradient was not auto-configured, the SSH wizard can set a Gradient model access key
+2. If Serverless Inference was not auto-configured, the SSH wizard can set a DigitalOcean model access key
 3. Or configure any LLM under **Settings > LLM** in the UI (Advanced: custom model + base URL)
 
 ### Auto-configuration from droplet environment
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `GRADIENT_KEY` | Yes (for auto) | Gradient model access key |
-| `GRADIENT_MODEL` | No | Model id (default: `minimax-m2.5`) |
+| `MODEL_ACCESS_KEY` | Yes (for auto) | DigitalOcean model access key |
+| `INFERENCE_MODEL` | No | Model id (default: `minimax-m2.5`) |
 
 ## Version Pinning
 

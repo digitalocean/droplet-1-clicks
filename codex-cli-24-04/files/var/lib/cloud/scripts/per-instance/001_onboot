@@ -16,12 +16,12 @@ systemctl restart ssh
 # Ensure Codex config directory exists
 mkdir -p /root/.codex
 
-chmod +x /opt/apply-gradient-from-env.sh
+chmod +x /opt/apply-inference-from-env.sh
 
-GRADIENT_APPLIED=0
-if /opt/apply-gradient-from-env.sh; then
-    GRADIENT_APPLIED=1
-    echo "Gradient pre-configured from droplet environment."
+INFERENCE_APPLIED=0
+if /opt/apply-inference-from-env.sh; then
+    INFERENCE_APPLIED=1
+    echo "Serverless Inference pre-configured from droplet environment."
 else
     # Hook setup wizard to run on first SSH login
     if ! grep -q '/opt/setup-codex-cli.sh' /root/.bashrc 2>/dev/null; then
@@ -32,19 +32,19 @@ EOM
 fi
 
 # Create a getting started file for first-time users
-if [ "$GRADIENT_APPLIED" -eq 1 ]; then
+if [ "$INFERENCE_APPLIED" -eq 1 ]; then
     cat > /root/codex_cli_info.txt << 'EOF'
 ================================================================================
 Codex CLI 1-Click Droplet - Getting Started
 ================================================================================
 
 Codex CLI is OpenAI's terminal-based coding agent, pre-configured to use
-DigitalOcean Gradient AI for inference.
+DigitalOcean Serverless Inference.
 
-Gradient was configured automatically from droplet environment variables
-(GRADIENT_KEY / GRADIENT_MODEL) or /opt/codex-cli.env.
+Serverless Inference was configured automatically from droplet environment variables
+(MODEL_ACCESS_KEY / INFERENCE_MODEL) or /opt/codex-cli.env.
 
-PRE-CONFIGURED MODELS (via DigitalOcean Gradient):
+PRE-CONFIGURED MODELS (via DigitalOcean Serverless Inference):
 
   Default: openai-gpt-5.5 (GPT-5.5)
   Also available: GPT-5.2, GPT-5, GPT-4.1, o3, DeepSeek R1 70B, Qwen3 32B,
@@ -66,7 +66,7 @@ Switch models:  codex -m "openai-gpt-5.2"  or use /model inside Codex
 Configuration:  /root/.codex/config.toml
 API key:        /root/.codex/env (MODEL_ACCESS_KEY)
 
-ChatGPT subscription: run 'codex login' for OAuth instead of Gradient.
+ChatGPT subscription: run 'codex login' for OAuth instead of Serverless Inference.
 
 For documentation: https://developers.openai.com/codex/cli
 
@@ -79,9 +79,9 @@ Codex CLI 1-Click Droplet - Getting Started
 ================================================================================
 
 Codex CLI is OpenAI's terminal-based coding agent, pre-configured to use
-DigitalOcean Gradient AI for inference.
+DigitalOcean Serverless Inference.
 
-PRE-CONFIGURED MODELS (via DigitalOcean Gradient):
+PRE-CONFIGURED MODELS (via DigitalOcean Serverless Inference):
 
   Default: openai-gpt-5.5 (GPT-5.5)
   Also available: GPT-5.2, GPT-5, GPT-4.1, o3, DeepSeek R1 70B, Qwen3 32B,
@@ -89,8 +89,8 @@ PRE-CONFIGURED MODELS (via DigitalOcean Gradient):
 
 NEXT STEPS:
 
-1. Configure your Gradient model access key using one of:
-   - Set GRADIENT_KEY (and optional GRADIENT_MODEL) as droplet environment
+1. Configure your DigitalOcean model access key using one of:
+   - Set MODEL_ACCESS_KEY (and optional INFERENCE_MODEL) as droplet environment
      variables at create time, or edit /opt/codex-cli.env and reboot
    - Run the setup wizard on first login (prompts for your key)
 
@@ -112,7 +112,7 @@ Switch models:  codex -m "openai-gpt-5.2"  or use /model inside Codex
 Configuration:  /root/.codex/config.toml
 API key:        /root/.codex/env (MODEL_ACCESS_KEY)
 
-ChatGPT subscription: run 'codex login' for OAuth instead of Gradient.
+ChatGPT subscription: run 'codex login' for OAuth instead of Serverless Inference.
 
 For documentation: https://developers.openai.com/codex/cli
 

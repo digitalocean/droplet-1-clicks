@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # OpenCode First-Login Setup Wizard
-# Prompts for a DigitalOcean Gradient model access key, lists live models, and
+# Prompts for a DigitalOcean model access key, lists live models, and
 # configures OpenCode.
 
 SETUP_MARKER="/root/.opencode_setup_complete"
@@ -23,14 +23,14 @@ save_env_kv() {
   chmod 600 "$ENV_FILE"
 }
 
-try_apply_gradient_from_env() {
+try_apply_inference_from_env() {
   set -a
   # shellcheck source=/dev/null
   source /etc/environment 2>/dev/null || true
   set +a
 
-  if [ -x /opt/apply-gradient-from-env.sh ] && /opt/apply-gradient-from-env.sh; then
-    echo "Gradient configured from droplet environment."
+  if [ -x /opt/apply-inference-from-env.sh ] && /opt/apply-inference-from-env.sh; then
+    echo "DigitalOcean Serverless Inference configured from droplet environment."
     remove_first_login_hook
     return 0
   fi
@@ -39,11 +39,11 @@ try_apply_gradient_from_env() {
 }
 
 # Startup scripts may land in /etc/environment after 001_onboot; retry before prompting.
-if [ "$1" != "--force" ] && try_apply_gradient_from_env; then
+if [ "$1" != "--force" ] && try_apply_inference_from_env; then
   exit 0
 fi
 
-gradient_already_configured() {
+inference_already_configured() {
   local configured_key
 
   if [ -f "$SETUP_MARKER" ]; then
@@ -54,7 +54,7 @@ gradient_already_configured() {
   if [ -f "$AUTH_FILE" ]; then
     configured_key=$(jq -r '.digitalocean.key // empty' "$AUTH_FILE" 2>/dev/null || true)
     if [ -n "$configured_key" ] && [ "$configured_key" != "null" ]; then
-      echo "DigitalOcean Gradient is already configured"
+      echo "DigitalOcean Serverless Inference is already configured"
       return 0
     fi
   fi
@@ -62,7 +62,7 @@ gradient_already_configured() {
   return 1
 }
 
-configured_reason=$(gradient_already_configured || true)
+configured_reason=$(inference_already_configured || true)
 if [ -n "$configured_reason" ] && [ "$1" != "--force" ]; then
   echo "${configured_reason}. Skipping setup wizard."
   remove_first_login_hook
@@ -78,14 +78,14 @@ fi
 
 echo ""
 echo "========================================================================"
-echo "  OpenCode Setup - DigitalOcean Gradient AI"
+echo "  OpenCode Setup - DigitalOcean Serverless Inference"
 echo "========================================================================"
 echo ""
-echo "This droplet is pre-configured with DigitalOcean Gradient AI. A single"
-echo "Gradient model access key unlocks the current chat model catalog"
+echo "This droplet is pre-configured with DigitalOcean Serverless Inference. A single"
+echo "model access key unlocks the current chat model catalog"
 echo "(fetched live from the inference API) plus the Intelligent Inference Router."
 echo ""
-echo "To create a Gradient model access key:"
+echo "To create a DigitalOcean model access key:"
 echo "  1. Go to https://cloud.digitalocean.com/gen-ai"
 echo "  2. Navigate to API Keys > Model Access Keys"
 echo "  3. Click 'Create Model Access Key'"
@@ -93,7 +93,7 @@ echo ""
 
 old_histfile="${HISTFILE-}"
 unset HISTFILE
-read -rsp "Enter your Gradient model access key (or press Enter to skip): " MODEL_KEY
+read -rsp "Enter your DigitalOcean model access key (or press Enter to skip): " MODEL_KEY
 echo ""
 [ -n "${old_histfile:-}" ] && export HISTFILE="$old_histfile"
 
@@ -106,11 +106,11 @@ if [ -z "$MODEL_KEY" ]; then
 fi
 
 echo ""
-echo "Fetching available models from DigitalOcean Gradient..."
+echo "Fetching available models from DigitalOcean Serverless Inference..."
 
 json=""
 chat_ids=""
-GRADIENT_MODEL=""
+INFERENCE_MODEL=""
 DO_INFERENCE_ROUTER=""
 while true; do
   if json="$(fetch_inference_models_json "$MODEL_KEY")"; then
@@ -121,7 +121,7 @@ while true; do
     if [ -n "$chat_ids" ]; then
       break
     fi
-    echo "The Gradient API returned no models for this key."
+    echo "The Serverless Inference API returned no models for this key."
   else
     status="${INFERENCE_MODELS_HTTP_STATUS:-000}"
     if [ "$status" = "401" ] || [ "$status" = "403" ]; then
@@ -135,7 +135,7 @@ while true; do
   echo "You can re-enter the key, type a model id to use this key anyway, or skip."
   old_histfile="${HISTFILE-}"
   unset HISTFILE
-  read -rsp "Re-enter your Gradient model access key (or press Enter to keep the current key): " NEW_KEY
+  read -rsp "Re-enter your DigitalOcean model access key (or press Enter to keep the current key): " NEW_KEY
   echo ""
   [ -n "${old_histfile:-}" ] && export HISTFILE="$old_histfile"
   if [ -n "${NEW_KEY}" ]; then
@@ -143,8 +143,8 @@ while true; do
     continue
   fi
 
-  read -rp "Enter a Gradient model id (or press Enter to skip setup): " GRADIENT_MODEL
-  if [ -n "${GRADIENT_MODEL}" ]; then
+  read -rp "Enter an inference model id (or press Enter to skip setup): " INFERENCE_MODEL
+  if [ -n "${INFERENCE_MODEL}" ]; then
     chat_ids=""
     break
   fi
@@ -183,38 +183,32 @@ if [ -n "$chat_ids" ]; then
       CHOSEN_LABEL="Intelligent Inference Router (digitalocean/router:${ROUTER_NAME})"
     else
       echo "No router name entered; keeping ${default_model}."
-      GRADIENT_MODEL="$default_model"
+      INFERENCE_MODEL="$default_model"
     fi
-  elif ! GRADIENT_MODEL="$(printf '%s\n' "$chat_ids" | resolve_inference_model_choice "$SEL")"; then
+  elif ! INFERENCE_MODEL="$(printf '%s\n' "$chat_ids" | resolve_inference_model_choice "$SEL")"; then
     echo "Invalid selection; using ${default_model}."
-    GRADIENT_MODEL="$default_model"
+    INFERENCE_MODEL="$default_model"
   fi
 fi
 
-save_env_kv GRADIENT_KEY "$MODEL_KEY"
-export GRADIENT_KEY="$MODEL_KEY"
+save_env_kv MODEL_ACCESS_KEY "$MODEL_KEY"
+export MODEL_ACCESS_KEY="$MODEL_KEY"
 if [ -n "$DO_INFERENCE_ROUTER" ]; then
   save_env_kv DO_INFERENCE_ROUTER "$DO_INFERENCE_ROUTER"
   export DO_INFERENCE_ROUTER
-  save_env_kv GRADIENT_MODEL ""
-  export GRADIENT_MODEL=""
+  save_env_kv INFERENCE_MODEL ""
+  export INFERENCE_MODEL=""
 else
-  save_env_kv GRADIENT_MODEL "$GRADIENT_MODEL"
+  save_env_kv INFERENCE_MODEL "$INFERENCE_MODEL"
   save_env_kv DO_INFERENCE_ROUTER ""
-  export GRADIENT_MODEL
+  export INFERENCE_MODEL
   export DO_INFERENCE_ROUTER=""
 fi
 
-/opt/apply-gradient-from-env.sh
-
-# Substitute Gradient key into opencode.json (do-anthropic authToken placeholder).
-if [ -f "$CONFIG_FILE" ] && grep -q '%API_TOKEN%' "$CONFIG_FILE" 2>/dev/null; then
-  ESC_KEY=$(printf '%s\n' "$MODEL_KEY" | sed 's/\\/\\\\/g; s/&/\\&/g; s/|/\\|/g')
-  sed -i "s|%API_TOKEN%|${ESC_KEY}|g" "$CONFIG_FILE"
-fi
+/opt/apply-inference-from-env.sh
 
 if [ -z "$CHOSEN_LABEL" ]; then
-  CHOSEN_LABEL="digitalocean/${GRADIENT_MODEL}"
+  CHOSEN_LABEL="digitalocean/${INFERENCE_MODEL}"
 fi
 
 touch "$SETUP_MARKER"

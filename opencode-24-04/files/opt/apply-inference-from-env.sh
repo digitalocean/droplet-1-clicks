@@ -1,6 +1,6 @@
 #!/bin/bash
-# Apply DigitalOcean Gradient from droplet env or /opt/opencode.env
-# (GRADIENT_KEY, GRADIENT_MODEL, DO_INFERENCE_ROUTER).
+# Apply DigitalOcean Serverless Inference from droplet env or /opt/opencode.env
+# (MODEL_ACCESS_KEY, INFERENCE_MODEL, DO_INFERENCE_ROUTER).
 # Returns 0 when a key was applied; 1 when skipped (empty or unset placeholder).
 set -euo pipefail
 
@@ -27,21 +27,28 @@ env_value_usable() {
 }
 
 read_file_kv() {
-    local key="$1"
-    local line val
-    line=$(grep -E "^${key}=" "$ENV_FILE" 2>/dev/null | tail -n 1) || return 1
+    local file="$1" key="$2" line val
+    [ -f "$file" ] || return 1
+    line=$(grep -E "^${key}=" "$file" 2>/dev/null | tail -n 1) || return 1
     val="${line#${key}=}"
+    val="${val#\"}"; val="${val%\"}"
+    val="${val#\'}"; val="${val%\'}"
     printf '%s' "$val"
 }
 
 read_config_value() {
-    local key="$1"
-    local env_val="${!key-}"
-    if env_value_usable "$env_val"; then
-        printf '%s' "$env_val"
+    local key="$1" val
+    val="${!key-}"
+    if env_value_usable "$val"; then
+        printf '%s' "$val"
         return 0
     fi
-    read_file_kv "$key"
+    val=$(read_file_kv /etc/environment "$key" || true)
+    if env_value_usable "$val"; then
+        printf '%s' "$val"
+        return 0
+    fi
+    read_file_kv "$ENV_FILE" "$key"
 }
 
 write_env_file_kv() {
@@ -71,9 +78,17 @@ normalize_router_name() {
     printf '%s' "$n"
 }
 
+redact_inference_secrets_from_system_environment() {
+    local env_file=/etc/environment
+    [ -f "$env_file" ] || return 0
+    grep -Ev '^MODEL_ACCESS_KEY=' "$env_file" >"${env_file}.tmp" 2>/dev/null || : >"${env_file}.tmp"
+    mv "${env_file}.tmp" "$env_file"
+    chmod 644 "$env_file"
+}
+
 write_auth_file() {
     mkdir -p /root/.config/opencode /root/.local/share/opencode
-    jq -n --arg key "$GRADIENT_KEY" \
+    jq -n --arg key "$MODEL_ACCESS_KEY" \
         '{
           "digitalocean": {"type": "api", "key": $key},
           "do-anthropic": {"type": "api", "key": $key}
@@ -106,11 +121,20 @@ sync_digitalocean_models() {
     mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
 }
 
-GRADIENT_KEY=$(read_config_value GRADIENT_KEY || true)
-GRADIENT_MODEL=$(read_config_value GRADIENT_MODEL || true)
+finish_apply() {
+    local message="$1"
+    redact_inference_secrets_from_system_environment
+    touch "$SETUP_MARKER"
+    remove_setup_bashrc_hook
+    echo "$message"
+    exit 0
+}
+
+MODEL_ACCESS_KEY=$(read_config_value MODEL_ACCESS_KEY || true)
+INFERENCE_MODEL=$(read_config_value INFERENCE_MODEL || true)
 DO_INFERENCE_ROUTER=$(read_config_value DO_INFERENCE_ROUTER || true)
 
-if ! env_value_usable "$GRADIENT_KEY"; then
+if ! env_value_usable "$MODEL_ACCESS_KEY"; then
     exit 1
 fi
 
@@ -118,48 +142,41 @@ CHAT_IDS=""
 if [ -f "$INFERENCE_MODELS_LIB" ]; then
     # shellcheck source=/var/lib/digitalocean/inference-models.sh
     . "$INFERENCE_MODELS_LIB"
-    CHAT_IDS="$(list_chat_inference_models "$GRADIENT_KEY" || true)"
+    CHAT_IDS="$(list_chat_inference_models "$MODEL_ACCESS_KEY" || true)"
 fi
 
-write_env_file_kv GRADIENT_KEY "$GRADIENT_KEY"
+write_env_file_kv MODEL_ACCESS_KEY "$MODEL_ACCESS_KEY"
 write_auth_file
 
 if env_value_usable "$DO_INFERENCE_ROUTER"; then
     ROUTER_NAME=$(normalize_router_name "$DO_INFERENCE_ROUTER")
     if [ -n "$ROUTER_NAME" ]; then
-        if ! env_value_usable "$GRADIENT_MODEL"; then
+        if ! env_value_usable "$INFERENCE_MODEL"; then
             if [ -n "$CHAT_IDS" ]; then
-                GRADIENT_MODEL="$(printf '%s\n' "$CHAT_IDS" | pick_default_inference_model)"
+                INFERENCE_MODEL="$(printf '%s\n' "$CHAT_IDS" | pick_default_inference_model)"
             else
-                GRADIENT_MODEL="$DEFAULT_MODEL"
+                INFERENCE_MODEL="$DEFAULT_MODEL"
             fi
         fi
-        write_env_file_kv GRADIENT_MODEL "${GRADIENT_MODEL#digitalocean/}"
+        write_env_file_kv INFERENCE_MODEL "${INFERENCE_MODEL#digitalocean/}"
         write_env_file_kv DO_INFERENCE_ROUTER "$ROUTER_NAME"
         sync_digitalocean_models "digitalocean/router:${ROUTER_NAME}" "router:${ROUTER_NAME}"
-        touch "$SETUP_MARKER"
-        remove_setup_bashrc_hook
-        echo "Gradient configured from droplet environment: router ${ROUTER_NAME} (digitalocean/router:${ROUTER_NAME})"
-        exit 0
+        finish_apply "DigitalOcean Serverless Inference configured from droplet environment: router ${ROUTER_NAME} (digitalocean/router:${ROUTER_NAME})"
     fi
 fi
 
-if ! env_value_usable "$GRADIENT_MODEL"; then
+if ! env_value_usable "$INFERENCE_MODEL"; then
     if [ -n "$CHAT_IDS" ]; then
-        GRADIENT_MODEL="$(printf '%s\n' "$CHAT_IDS" | pick_default_inference_model)"
+        INFERENCE_MODEL="$(printf '%s\n' "$CHAT_IDS" | pick_default_inference_model)"
     else
-        GRADIENT_MODEL="$DEFAULT_MODEL"
+        INFERENCE_MODEL="$DEFAULT_MODEL"
     fi
 fi
 
-PRIMARY_MODEL=$(normalize_opencode_model "$GRADIENT_MODEL")
-write_env_file_kv GRADIENT_MODEL "${PRIMARY_MODEL#digitalocean/}"
+PRIMARY_MODEL=$(normalize_opencode_model "$INFERENCE_MODEL")
+write_env_file_kv INFERENCE_MODEL "${PRIMARY_MODEL#digitalocean/}"
 write_env_file_kv DO_INFERENCE_ROUTER ""
 
 sync_digitalocean_models "$PRIMARY_MODEL"
 
-touch "$SETUP_MARKER"
-remove_setup_bashrc_hook
-
-echo "Gradient configured from droplet environment: model ${PRIMARY_MODEL}"
-exit 0
+finish_apply "DigitalOcean Serverless Inference configured from droplet environment: model ${PRIMARY_MODEL}"
