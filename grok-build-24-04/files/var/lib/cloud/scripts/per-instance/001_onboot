@@ -17,6 +17,7 @@ systemctl restart ssh
 mkdir -p /root/.grok
 
 chmod +x /opt/apply-inference-from-env.sh
+chmod +x /var/lib/digitalocean/inference-models.sh
 
 CONFIGURED=0
 if /opt/apply-inference-from-env.sh; then
@@ -52,17 +53,12 @@ DigitalOcean Serverless Inference (https://inference.do-ai.run/v1).
 Authentication was configured automatically from the droplet environment
 (MODEL_ACCESS_KEY / XAI_API_KEY) or /opt/grok-build.env.
 
-PRE-CONFIGURED MODELS (DigitalOcean Serverless Inference, default GPT-5.5):
+MODELS (DigitalOcean Serverless Inference):
 
-  gpt-5-5 (default), gpt-5-4, gpt-5-3-codex, gpt-5-2, gpt-5,
-  gpt-4-1, claude-opus-4-8, claude-opus-4-6, claude-sonnet-4-6,
-  claude-haiku-4-5, deepseek-v4-pro, deepseek-4-flash, kimi-k2-6,
-  minimax-m2-5, glm-5, qwen3-coder-flash, qwen3-5, llama-4-maverick,
-  nemotron-3-super-120b, router
-
-  List the live catalog:
-    curl -s -H "Authorization: Bearer $MODEL_ACCESS_KEY" \
-      https://inference.do-ai.run/v1/models | jq -r '.data[].id'
+  The current chat-model catalog is loaded from
+  https://inference.do-ai.run/v1/models when a model access key is applied.
+  Default is openai-gpt-5.5 (alias gpt-5-5) when that id is still listed.
+  Switch with /model or: grok -p "..." -m <alias>
 
 NEXT STEPS:
 
@@ -102,19 +98,16 @@ Grok Build 1-Click Droplet - Getting Started
 Grok Build is xAI's terminal-based coding agent, pre-configured to run on
 DigitalOcean Serverless Inference (https://inference.do-ai.run/v1).
 
-PRE-CONFIGURED MODELS (DigitalOcean Serverless Inference, default GPT-5.5):
+MODELS (DigitalOcean Serverless Inference):
 
-  gpt-5-5 (default), gpt-5-4, gpt-5-3-codex, gpt-5-2, gpt-5,
-  gpt-4-1, claude-opus-4-8, claude-opus-4-6, claude-sonnet-4-6,
-  claude-haiku-4-5, deepseek-v4-pro, deepseek-4-flash, kimi-k2-6,
-  minimax-m2-5, glm-5, qwen3-coder-flash, qwen3-5, llama-4-maverick,
-  nemotron-3-super-120b, router
+  The setup wizard loads the current chat-model catalog after you enter
+  a model access key (or pick R for the Intelligent Inference Router).
 
 NEXT STEPS:
 
 1. Authenticate. The setup wizard runs automatically on first login,
-   prompts for a DigitalOcean model access key, and lets you pick
-   a default model from a list (or a router). Create a key at:
+   prompts for a DigitalOcean model access key, and loads the current
+   model list (or a router). Create a key at:
      https://cloud.digitalocean.com/model-studio/manage-keys
      (Inference > Manage)
 

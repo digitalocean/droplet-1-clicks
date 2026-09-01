@@ -7,7 +7,7 @@
 #
 # Provide the key via the droplet environment (MODEL_ACCESS_KEY), /opt/grok-build.env,
 # or the first-login setup wizard (/opt/setup-grok-build.sh). The wizard also
-# lets you pick the default model from a list. Switch any time in the TUI with
+# loads the live catalog after you enter a key. Switch any time in the TUI with
 # /model, or headlessly with: grok -p "..." -m <alias>
 #
 # The default model is set by /opt/apply-inference-from-env.sh from
@@ -29,7 +29,12 @@ base_url = "https://api.x.ai/v1"
 name = "Grok Build 0.1 (xAI)"
 env_key = "XAI_API_KEY"
 
-# === DigitalOcean Serverless Inference: OpenAI models ===
+# BEGIN digitalocean-inference-models
+# === DigitalOcean Serverless Inference models ===
+# Seeded catalog; refreshed from GET https://inference.do-ai.run/v1/models
+# when a model access key is applied.
+
+# --- OpenAI models ---
 
 [model.gpt-5-5]
 model = "openai-gpt-5.5"
@@ -67,7 +72,7 @@ base_url = "https://inference.do-ai.run/v1"
 name = "GPT-4.1 (DigitalOcean Inference)"
 env_key = "MODEL_ACCESS_KEY"
 
-# === DigitalOcean Serverless Inference: Anthropic models ===
+# --- Anthropic models ---
 
 [model.claude-opus-4-8]
 model = "anthropic-claude-opus-4.8"
@@ -99,7 +104,7 @@ base_url = "https://inference.do-ai.run/v1"
 name = "Claude Haiku 4.5 (DigitalOcean Inference)"
 env_key = "MODEL_ACCESS_KEY"
 
-# === DigitalOcean Serverless Inference: open / DO-hosted models ===
+# --- Open / DO-hosted models ---
 
 [model.deepseek-v4-pro]
 model = "deepseek-v4-pro"
@@ -154,6 +159,8 @@ model = "nvidia-nemotron-3-super-120b"
 base_url = "https://inference.do-ai.run/v1"
 name = "NVIDIA Nemotron 3 Super 120B (DigitalOcean Inference)"
 env_key = "MODEL_ACCESS_KEY"
+
+# END digitalocean-inference-models
 
 # === DigitalOcean Intelligent Inference Router ===
 # Create a router in the DigitalOcean control panel (Inference > Routers) and

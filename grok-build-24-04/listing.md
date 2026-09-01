@@ -38,7 +38,7 @@ Grok Build is lightweight; most compute happens at the inference service.
 - **Grok Build** – xAI terminal coding agent (version 0.2.51)
 - **DigitalOcean Serverless Inference** – Pre-configured inference provider
 - **Git** – Version control
-- **curl**, **jq**, **unzip** – Utilities
+- **curl**, **jq**, **python3**, **unzip** – Utilities
 - **UFW Firewall** – SSH only (rate-limited)
 
 ## Getting Started
@@ -85,11 +85,13 @@ grok -p "Explain this codebase"
 grok -p "Review this diff" --output-format json --always-approve
 ```
 
-The default model is **GPT-5.5** (`gpt-5-5` via DigitalOcean Serverless Inference). Switch with `/model` in the TUI or `-m <alias>` headlessly.
+The default model is **GPT-5.5** (`openai-gpt-5.5` / alias `gpt-5-5`) when that id is still in the live DigitalOcean catalog. Switch with `/model` in the TUI or `-m <alias>` headlessly.
 
-## Pre-Configured Models
+## Models
 
-All models below are available via DigitalOcean Serverless Inference with just a model access key. The setup wizard lets you pick the default from this list (or a router). Switch any time with the alias via `-m` or `/model`; configuration lives in `/root/.grok/config.toml`.
+The setup wizard loads the current chat-model list at runtime from `GET https://inference.do-ai.run/v1/models` after you enter a model access key (same helper as Hermes/OpenClaw). New models appear and deprecated ones drop off. Pick `R` for the Intelligent Inference Router.
+
+The table below is the **seeded** catalog in `/root/.grok/config.toml`. Applying a key refreshes those DigitalOcean entries from the live list and keeps existing aliases when the model id is still available. Switch any time with `-m` or `/model`.
 
 | Alias | Model | ID |
 |-------|-------|----|
@@ -122,7 +124,7 @@ curl -s -H "Authorization: Bearer $MODEL_ACCESS_KEY" \
   https://inference.do-ai.run/v1/models | jq -r '.data[].id'
 ```
 
-To use a model that isn't pre-configured, add a `[model.<alias>]` block to `/root/.grok/config.toml` (copy an existing DigitalOcean entry and change `model` to the catalog ID).
+Re-run `/opt/apply-inference-from-env.sh` (or the setup wizard) after new models ship — the DigitalOcean catalog in `config.toml` is rebuilt from the live list. To add a provider that is not on Serverless Inference, add a `[model.<alias>]` block (see the commented examples at the bottom of that file).
 
 ## Intelligent Inference Router
 
