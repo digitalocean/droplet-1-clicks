@@ -25,7 +25,7 @@ and automations. Run agents on this droplet and connect from your browser.
 📝 First steps:
   1. Open the Web UI and enter the API key
   2. Configure an LLM (Settings > LLM), or complete the SSH setup wizard
-     for DigitalOcean Gradient (optional: Intelligent Inference Router)
+     for DigitalOcean Serverless Inference (optional: Intelligent Inference Router)
   3. Put projects in /home/openhands/projects and start a conversation
 
 🔧 Management:

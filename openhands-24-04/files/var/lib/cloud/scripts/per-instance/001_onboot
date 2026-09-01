@@ -46,13 +46,13 @@ sed -e '/Match User root/d' \
     -e '/.*ForceCommand.*droplet.*/d' \
     -i /etc/ssh/sshd_config
 
-chmod +x /opt/apply-gradient-from-env.sh
-chmod +x /opt/retry-apply-gradient-after-cloud-init.sh
+chmod +x /opt/apply-inference-from-env.sh
+chmod +x /opt/retry-apply-inference-after-cloud-init.sh
 
-GRADIENT_APPLIED=0
-if /opt/apply-gradient-from-env.sh; then
-  GRADIENT_APPLIED=1
-  echo "Gradient pre-configured from droplet environment."
+INFERENCE_APPLIED=0
+if /opt/apply-inference-from-env.sh; then
+  INFERENCE_APPLIED=1
+  echo "Serverless Inference pre-configured from droplet environment."
 elif ! grep -q 'setup_wizard.sh' /root/.bashrc 2>/dev/null; then
   cat >> /root/.bashrc <<'EOM'
 
@@ -60,10 +60,10 @@ chmod +x /etc/setup_wizard.sh
 /etc/setup_wizard.sh
 EOM
 
-  # Startup scripts may write GRADIENT_KEY after this script; retry after cloud-init.
+  # Startup scripts may write MODEL_ACCESS_KEY after this script; retry after cloud-init.
   systemctl daemon-reload
-  systemctl enable openhands-apply-gradient.service
-  systemctl start openhands-apply-gradient.service || true
+  systemctl enable openhands-apply-inference.service
+  systemctl start openhands-apply-inference.service || true
 fi
 
 # Ensure persistence dirs exist with correct ownership
@@ -89,18 +89,18 @@ ACCESS:
   The key is also saved at: /home/openhands/.openhands/api-key.txt
   And in: /opt/openhands.env (LOCAL_BACKEND_API_KEY)
 
-LLM / GRADIENT:
+LLM / SERVERLESS INFERENCE:
 EOF
 
-if [ "$GRADIENT_APPLIED" = "1" ]; then
+if [ "$INFERENCE_APPLIED" = "1" ]; then
   cat >> "$INFO_FILE" << 'EOF'
-  DigitalOcean Gradient was auto-configured from GRADIENT_KEY.
+  DigitalOcean Serverless Inference was auto-configured from MODEL_ACCESS_KEY.
   Confirm or change models under Settings > LLM in the web UI.
 EOF
 else
   cat >> "$INFO_FILE" << 'EOF'
-  On first SSH login, the setup wizard can configure DigitalOcean Gradient.
-  Or set GRADIENT_KEY / GRADIENT_MODEL / DO_INFERENCE_ROUTER as droplet env vars and recreate,
+  On first SSH login, the setup wizard can configure DigitalOcean Serverless Inference.
+  Or set MODEL_ACCESS_KEY / INFERENCE_MODEL / DO_INFERENCE_ROUTER as droplet env vars and recreate,
   or run: sudo /etc/setup_wizard.sh
   Or configure any provider in Settings > LLM (Advanced: Base URL).
 EOF

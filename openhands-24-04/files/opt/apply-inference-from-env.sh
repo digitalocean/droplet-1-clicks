@@ -1,6 +1,6 @@
 #!/bin/bash
-# Apply DigitalOcean Gradient from droplet env or /opt/openhands.env
-# (GRADIENT_KEY, GRADIENT_MODEL, DO_INFERENCE_ROUTER).
+# Apply DigitalOcean Serverless Inference from droplet env or /opt/openhands.env
+# (MODEL_ACCESS_KEY, INFERENCE_MODEL, DO_INFERENCE_ROUTER).
 # Returns 0 when a key was applied; 1 when skipped (empty or unset placeholder).
 set -euo pipefail
 
@@ -8,7 +8,7 @@ ENV_FILE=/opt/openhands.env
 OPENHANDS_HOME=/home/openhands
 SETTINGS_FILE="${OPENHANDS_HOME}/.openhands/agent_settings.json"
 SETUP_DONE_MARKER="${OPENHANDS_HOME}/.openhands/provider-configured"
-GRADIENT_BASE_URL="https://inference.do-ai.run/v1"
+INFERENCE_BASE_URL="https://inference.do-ai.run/v1"
 
 remove_setup_wizard_bashrc_hook() {
   [ -f /root/.bashrc ] || return 0
@@ -32,7 +32,8 @@ read_file_kv() {
   [ -f "$file" ] || return 1
   line=$(grep -E "^${key}=" "$file" 2>/dev/null | tail -n 1) || return 1
   val="${line#${key}=}"
-  val="${val#\"}"; val="${val%\"}"; val="${val#\'}"; val="${val%\'}"
+  val="${val#\"}"; val="${val%\"}"
+  val="${val#\'}"; val="${val%\'}"
   printf '%s' "$val"
 }
 
@@ -49,6 +50,18 @@ read_config_value() {
     return 0
   fi
   read_file_kv "$ENV_FILE" "$key"
+}
+
+read_first_usable() {
+  local key val
+  for key in "$@"; do
+    val=$(read_config_value "$key" || true)
+    if env_value_usable "$val"; then
+      printf '%s' "$val"
+      return 0
+    fi
+  done
+  return 1
 }
 
 write_env_file_kv() {
@@ -79,34 +92,36 @@ normalize_router_name() {
   printf '%s' "$n"
 }
 
-GRADIENT_KEY=$(read_config_value GRADIENT_KEY || true)
-GRADIENT_MODEL=$(read_config_value GRADIENT_MODEL || true)
+# Canonical env vars: MODEL_ACCESS_KEY, INFERENCE_MODEL, DO_INFERENCE_ROUTER
+MODEL_ACCESS_KEY=$(read_config_value MODEL_ACCESS_KEY || true)
+INFERENCE_MODEL=$(read_config_value INFERENCE_MODEL || true)
 DO_INFERENCE_ROUTER=$(read_config_value DO_INFERENCE_ROUTER || true)
 
-if ! env_value_usable "$GRADIENT_KEY"; then
+if ! env_value_usable "$MODEL_ACCESS_KEY"; then
   exit 1
 fi
 
-write_env_file_kv GRADIENT_KEY "$GRADIENT_KEY"
+write_env_file_kv MODEL_ACCESS_KEY "$MODEL_ACCESS_KEY"
 
 if env_value_usable "$DO_INFERENCE_ROUTER"; then
   ROUTER_NAME=$(normalize_router_name "$DO_INFERENCE_ROUTER")
   if [ -n "$ROUTER_NAME" ]; then
-    if ! env_value_usable "$GRADIENT_MODEL"; then
-      GRADIENT_MODEL="minimax-m2.5"
+    if ! env_value_usable "$INFERENCE_MODEL"; then
+      INFERENCE_MODEL="minimax-m2.5"
     fi
     PRIMARY_MODEL="openai/router:${ROUTER_NAME}"
-    write_env_file_kv GRADIENT_MODEL "${GRADIENT_MODEL#openai/}"
+    write_env_file_kv INFERENCE_MODEL "${INFERENCE_MODEL#openai/}"
     write_env_file_kv DO_INFERENCE_ROUTER "$ROUTER_NAME"
   fi
 fi
 
 if [ -z "${PRIMARY_MODEL:-}" ]; then
-  if ! env_value_usable "$GRADIENT_MODEL"; then
-    GRADIENT_MODEL="minimax-m2.5"
+  if ! env_value_usable "$INFERENCE_MODEL"; then
+    INFERENCE_MODEL="minimax-m2.5"
   fi
-  PRIMARY_MODEL=$(normalize_model "$GRADIENT_MODEL")
-  write_env_file_kv GRADIENT_MODEL "${PRIMARY_MODEL#openai/}"
+  INFERENCE_MODEL="${INFERENCE_MODEL#openai/}"
+  PRIMARY_MODEL=$(normalize_model "$INFERENCE_MODEL")
+  write_env_file_kv INFERENCE_MODEL "$INFERENCE_MODEL"
   write_env_file_kv DO_INFERENCE_ROUTER ""
 fi
 
@@ -115,8 +130,8 @@ mkdir -p "${OPENHANDS_HOME}/.openhands"
 # Seed agent settings for OpenHands / Agent Canvas (LiteLLM OpenAI-compatible)
 jq -n \
   --arg model "$PRIMARY_MODEL" \
-  --arg key "$GRADIENT_KEY" \
-  --arg base "$GRADIENT_BASE_URL" \
+  --arg key "$MODEL_ACCESS_KEY" \
+  --arg base "$INFERENCE_BASE_URL" \
   '{
     llm: {
       model: $model,
@@ -125,7 +140,7 @@ jq -n \
     }
   }' > "$SETTINGS_FILE"
 
-printf '%s\n' "DigitalOcean Gradient" > "$SETUP_DONE_MARKER"
+printf '%s\n' "DigitalOcean Serverless Inference" > "$SETUP_DONE_MARKER"
 chown -R openhands:openhands "${OPENHANDS_HOME}/.openhands"
 chmod 700 "${OPENHANDS_HOME}/.openhands"
 chmod 600 "$SETTINGS_FILE" "$SETUP_DONE_MARKER"
@@ -137,5 +152,5 @@ if systemctl is-active --quiet openhands 2>/dev/null; then
   systemctl restart openhands || true
 fi
 
-echo "OpenHands configured for DigitalOcean Gradient: ${PRIMARY_MODEL}"
+echo "OpenHands configured for DigitalOcean Serverless Inference: ${PRIMARY_MODEL}"
 exit 0

@@ -22,10 +22,10 @@ install_codex_binaries "$CODEX_RELEASE" "$tmpdir" \
 
 cat > /usr/local/bin/codex << 'EOF'
 #!/bin/bash
-# Load Gradient model access key when the shell profile has not been sourced yet.
-if [ -f /etc/profile.d/codex-gradient.sh ]; then
+# Load model access key when the shell profile has not been sourced yet.
+if [ -f /etc/profile.d/codex-inference.sh ]; then
   # shellcheck source=/dev/null
-  . /etc/profile.d/codex-gradient.sh
+  . /etc/profile.d/codex-inference.sh
 elif [ -f /root/.codex/env ]; then
   # shellcheck source=/dev/null
   . /root/.codex/env
@@ -45,14 +45,14 @@ fi
 # Ensure Codex config directory exists
 mkdir -p /root/.codex
 chmod 600 /root/.codex/config.toml
-chmod 600 /root/.codex/gradient-models.json
+chmod 600 /root/.codex/inference-models.json
 
 # Make helper scripts, MOTD, and onboot script executable (copied by Packer)
 chmod +x /opt/codex-cli-download.sh
 chmod +x /opt/update-codex-cli.sh
 chmod +x /opt/codex-cli-version.sh
 chmod +x /opt/setup-codex-cli.sh
-chmod +x /opt/apply-gradient-from-env.sh
+chmod +x /opt/apply-inference-from-env.sh
 chmod 600 /opt/codex-cli.env
 chmod +x /etc/update-motd.d/99-one-click
 chmod +x /var/lib/cloud/scripts/per-instance/001_onboot

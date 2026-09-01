@@ -174,10 +174,6 @@ elif [ -f /etc/config/digitalocean-inference.json ]; then
     mkdir -p /home/openclaw/.openclaw
     cp /etc/config/digitalocean-inference.json /home/openclaw/.openclaw/openclaw.json
     echo "Using digitalocean-inference.json from image config"
-elif [ -f /etc/config/gradientai.json ]; then
-    mkdir -p /home/openclaw/.openclaw
-    cp /etc/config/gradientai.json /home/openclaw/.openclaw/openclaw.json
-    echo "Using gradientai.json from image config"
 else
     mkdir -p /home/openclaw/.openclaw
     echo "Warning: No config found. Creating default config."

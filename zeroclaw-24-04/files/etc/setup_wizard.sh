@@ -15,7 +15,7 @@ remove_first_login_hook() {
   fi
 }
 
-gradient_already_configured() {
+inference_already_configured() {
   local api_key
   [ -f "$CONFIG_FILE" ] || return 1
   api_key=$(grep -E '^api_key\s*=' "$CONFIG_FILE" 2>/dev/null | tail -n 1 | sed 's/^api_key\s*=\s*"\?\([^"]*\)"\?.*/\1/') || return 1
@@ -25,13 +25,13 @@ gradient_already_configured() {
   return 0
 }
 
-write_gradient_env_key() {
+write_inference_env_key() {
   local key="$1" model="$2" router="${3-}"
   umask 077
   touch "$ENV_FILE"
-  grep -Ev '^(GRADIENT_KEY|GRADIENT_MODEL|DO_INFERENCE_ROUTER)=' "$ENV_FILE" >"${ENV_FILE}.tmp" 2>/dev/null || : >"${ENV_FILE}.tmp"
-  printf 'GRADIENT_KEY=%q\n' "$key" >>"${ENV_FILE}.tmp"
-  printf 'GRADIENT_MODEL=%q\n' "$model" >>"${ENV_FILE}.tmp"
+  grep -Ev '^(MODEL_ACCESS_KEY|INFERENCE_MODEL|DO_INFERENCE_ROUTER)=' "$ENV_FILE" >"${ENV_FILE}.tmp" 2>/dev/null || : >"${ENV_FILE}.tmp"
+  printf 'MODEL_ACCESS_KEY=%q\n' "$key" >>"${ENV_FILE}.tmp"
+  printf 'INFERENCE_MODEL=%q\n' "$model" >>"${ENV_FILE}.tmp"
   printf 'DO_INFERENCE_ROUTER=%q\n' "$router" >>"${ENV_FILE}.tmp"
   mv "${ENV_FILE}.tmp" "$ENV_FILE"
   chmod 600 "$ENV_FILE"
@@ -40,19 +40,19 @@ write_gradient_env_key() {
 DROPL_IP=$(hostname -I | awk '{print$1}')
 
 if [ "$1" != "--force" ]; then
-  if [ -f "$SETUP_MARKER" ] || gradient_already_configured; then
+  if [ -f "$SETUP_MARKER" ] || inference_already_configured; then
     echo "ZeroClaw provider is already configured. Skipping setup."
     remove_first_login_hook
     exit 0
   fi
-  if [ -x /opt/apply-gradient-from-env.sh ] && /opt/apply-gradient-from-env.sh; then
+  if [ -x /opt/apply-inference-from-env.sh ] && /opt/apply-inference-from-env.sh; then
     remove_first_login_hook
     exit 0
   fi
 fi
 
 PS3="Select a provider (1-4): "
-options=("DigitalOcean Gradient" "OpenAI" "Anthropic" "OpenRouter")
+options=("DigitalOcean Serverless Inference" "OpenAI" "Anthropic" "OpenRouter")
 
 echo "--- ZeroClaw AI Provider Setup ---"
 
@@ -64,15 +64,15 @@ onboard_router=""
 select opt in "${options[@]}"
 do
   case $opt in
-    "DigitalOcean Gradient")
-        selected_provider="DigitalOcean Gradient"
+    "DigitalOcean Serverless Inference")
+        selected_provider="DigitalOcean Serverless Inference"
         onboard_provider="custom:https://inference.do-ai.run/v1"
-        echo "You selected DigitalOcean Gradient."
+        echo "You selected DigitalOcean Serverless Inference."
         echo ""
-        echo "Choose a Gradient inference model (default: Kimi K2.5):"
+        echo "Choose a serverless inference model (default: Kimi K2.5):"
         PS3="Select model (1-5): "
-        gradient_options=("Kimi K2.5" "MiniMax M2.5" "GLM 5" "Claude Sonnet 4.5" "Intelligent Inference Router")
-        select gopt in "${gradient_options[@]}"
+        inference_options=("Kimi K2.5" "MiniMax M2.5" "GLM 5" "Claude Sonnet 4.5" "Intelligent Inference Router")
+        select gopt in "${inference_options[@]}"
         do
           case $gopt in
             "Kimi K2.5")
@@ -163,8 +163,8 @@ done
 [ -n "${old_histfile:-}" ] && export HISTFILE="$old_histfile"
 
 if [[ "$onboard_provider" == "custom:https://inference.do-ai.run/v1" ]]; then
-  write_gradient_env_key "$model_access_key" "$onboard_model" "$onboard_router"
-  /opt/apply-gradient-from-env.sh
+  write_inference_env_key "$model_access_key" "$onboard_model" "$onboard_router"
+  /opt/apply-inference-from-env.sh
 else
   /opt/zeroclaw-run-onboard.sh "$model_access_key" "$onboard_provider" "$onboard_model"
   umask 077

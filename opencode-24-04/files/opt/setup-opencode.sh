@@ -1,24 +1,25 @@
 #!/bin/bash
 
 # OpenCode First-Login Setup Wizard
-# Prompts for a DigitalOcean Gradient model access key and configures OpenCode.
+# Prompts for a DigitalOcean model access key and configures OpenCode.
 
 SETUP_MARKER="/root/.opencode_setup_complete"
 CONFIG_FILE="/root/.config/opencode/opencode.json"
 AUTH_FILE="/root/.local/share/opencode/auth.json"
+ENV_FILE="/opt/opencode.env"
 
 remove_first_login_hook() {
   sed -i '/\/opt\/setup-opencode\.sh/d' /root/.bashrc 2>/dev/null || true
 }
 
-try_apply_gradient_from_env() {
+try_apply_inference_from_env() {
   set -a
   # shellcheck source=/dev/null
   source /etc/environment 2>/dev/null || true
   set +a
 
-  if [ -x /opt/apply-gradient-from-env.sh ] && /opt/apply-gradient-from-env.sh; then
-    echo "Gradient configured from droplet environment."
+  if [ -x /opt/apply-inference-from-env.sh ] && /opt/apply-inference-from-env.sh; then
+    echo "DigitalOcean Serverless Inference configured from droplet environment."
     remove_first_login_hook
     return 0
   fi
@@ -27,11 +28,11 @@ try_apply_gradient_from_env() {
 }
 
 # Startup scripts may land in /etc/environment after 001_onboot; retry before prompting.
-if [ "$1" != "--force" ] && try_apply_gradient_from_env; then
+if [ "$1" != "--force" ] && try_apply_inference_from_env; then
   exit 0
 fi
 
-gradient_already_configured() {
+inference_already_configured() {
   local configured_key
 
   if [ -f "$SETUP_MARKER" ]; then
@@ -42,7 +43,7 @@ gradient_already_configured() {
   if [ -f "$AUTH_FILE" ]; then
     configured_key=$(jq -r '.digitalocean.key // empty' "$AUTH_FILE" 2>/dev/null || true)
     if [ -n "$configured_key" ] && [ "$configured_key" != "null" ]; then
-      echo "DigitalOcean Gradient is already configured"
+      echo "DigitalOcean Serverless Inference is already configured"
       return 0
     fi
   fi
@@ -50,7 +51,7 @@ gradient_already_configured() {
   return 1
 }
 
-configured_reason=$(gradient_already_configured || true)
+configured_reason=$(inference_already_configured || true)
 if [ -n "$configured_reason" ] && [ "$1" != "--force" ]; then
   echo "${configured_reason}. Skipping setup wizard."
   remove_first_login_hook
@@ -59,23 +60,23 @@ fi
 
 echo ""
 echo "========================================================================"
-echo "  OpenCode Setup - DigitalOcean Gradient AI"
+echo "  OpenCode Setup - DigitalOcean Serverless Inference"
 echo "========================================================================"
 echo ""
-echo "This droplet is pre-configured with DigitalOcean Gradient AI, which gives"
-echo "you access to top coding models through a single Gradient model access key:"
+echo "This droplet is pre-configured with DigitalOcean Serverless Inference, which gives"
+echo "you access to top coding models through a single DigitalOcean model access key:"
 echo ""
 echo "  digitalocean/ (OpenAI-compatible):  GPT-5.2, GPT-5, GPT-4.1, o3,"
 echo "    DeepSeek R1 70B, Qwen3 32B, Llama 3.3 70B, Kimi K2.5 (default),"
 echo "    glm-5, MiniMax M2.5, Claude Opus 4.6, Opus 4.5, Sonnet 4.5, Sonnet 4"
 echo ""
-echo "To create a Gradient model access key:"
+echo "To create a DigitalOcean model access key:"
 echo "  1. Go to https://cloud.digitalocean.com/gen-ai"
 echo "  2. Navigate to API Keys > Model Access Keys"
 echo "  3. Click 'Create Model Access Key'"
 echo ""
 
-read -p "Enter your Gradient model access key (or press Enter to skip): " MODEL_KEY
+read -p "Enter your DigitalOcean model access key (or press Enter to skip): " MODEL_KEY
 
 if [ -z "$MODEL_KEY" ]; then
   echo ""
@@ -86,30 +87,16 @@ if [ -z "$MODEL_KEY" ]; then
   exit 0
 fi
 
-# Write the auth.json file for the Gradient OpenAI-compatible provider.
-mkdir -p /root/.local/share/opencode
-cat > /root/.local/share/opencode/auth.json << EOF
-{
-  "digitalocean": {
-    "type": "api",
-    "key": "${MODEL_KEY}"
-  },
-  "do-anthropic": {
-    "type": "api",
-    "key": "${MODEL_KEY}"
-  }
-}
-EOF
-chmod 600 /root/.local/share/opencode/auth.json
+touch "$ENV_FILE"
+grep -v '^MODEL_ACCESS_KEY=' "$ENV_FILE" > "${ENV_FILE}.tmp" 2>/dev/null || : > "${ENV_FILE}.tmp"
+printf 'MODEL_ACCESS_KEY=%q\n' "$MODEL_KEY" >> "${ENV_FILE}.tmp"
+mv "${ENV_FILE}.tmp" "$ENV_FILE"
+chmod 600 "$ENV_FILE"
 
-# Substitute Gradient key into opencode.json (do-anthropic authToken placeholder).
-if [ -f "$CONFIG_FILE" ] && grep -q '%API_TOKEN%' "$CONFIG_FILE" 2>/dev/null; then
-  ESC_KEY=$(printf '%s\n' "$MODEL_KEY" | sed 's/\\/\\\\/g; s/&/\\&/g; s/|/\\|/g')
-  sed -i "s|%API_TOKEN%|${ESC_KEY}|g" "$CONFIG_FILE"
-fi
+/opt/apply-inference-from-env.sh
 
 echo ""
-echo "Testing connection to DigitalOcean Gradient..."
+echo "Testing connection to DigitalOcean Serverless Inference..."
 
 HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
   -H "Authorization: Bearer ${MODEL_KEY}" \
@@ -119,14 +106,9 @@ HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
 if [ "$HTTP_STATUS" = "200" ]; then
   echo "Connection successful! Your key is valid."
 else
-  echo "Warning: Received HTTP $HTTP_STATUS from the Gradient API."
+  echo "Warning: Received HTTP $HTTP_STATUS from the Serverless Inference API."
   echo "Your key has been saved. If it's incorrect, re-run: /opt/setup-opencode.sh"
 fi
-
-# Mark setup as complete
-touch "$SETUP_MARKER"
-
-remove_first_login_hook
 
 echo ""
 echo "========================================================================"

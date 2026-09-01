@@ -1,6 +1,6 @@
 # OpenHands 1-Click Application
 
-Deploy OpenHands Agent Canvas, an open-source self-hosted control center for AI coding agents and automations. Run agents on your Droplet, connect from the browser, and optionally use DigitalOcean Gradient AI for inference.
+Deploy OpenHands Agent Canvas, an open-source self-hosted control center for AI coding agents and automations. Run agents on your Droplet, connect from the browser, and optionally use DigitalOcean Serverless Inference for inference.
 
 ## What is OpenHands?
 
@@ -9,14 +9,14 @@ OpenHands is the open platform for cloud coding agents. Agent Canvas is the self
 - **Self-hosted** – Agents and settings stay on your Droplet
 - **Browser UI** – Agent Canvas on your droplet IP (Caddy reverse proxy)
 - **Public mode** – Protected by a generated API key (`LOCAL_BACKEND_API_KEY`)
-- **DigitalOcean Gradient AI** – Optional one-key setup for OpenAI-compatible models
+- **DigitalOcean Serverless Inference** – Optional one-key setup for OpenAI-compatible models
 - **Workspace** – Projects under `/home/openhands/projects`
 
 ## Key Features
 
 - Always-on agent backend for coding tasks and automations
 - Web UI with API-key gate for internet-facing deployments
-- Optional Gradient model access key configuration at first login
+- Optional DigitalOcean model access key configuration at first login
 - Helper scripts for start/stop/restart/status/update and custom domain TLS
 - Ubuntu 24.04 LTS with UFW and fail2ban
 
@@ -45,7 +45,7 @@ OpenHands Agent Canvas runs the agent server on the host. Prefer at least 4 GB R
 1. Select this 1-Click App from the DigitalOcean Marketplace
 2. Choose a Droplet size (4 GB RAM minimum recommended)
 3. Add your SSH key
-4. Optionally set droplet environment variables `GRADIENT_KEY`, `GRADIENT_MODEL`, and `DO_INFERENCE_ROUTER`
+4. Optionally set droplet environment variables `MODEL_ACCESS_KEY`, `INFERENCE_MODEL`, and `DO_INFERENCE_ROUTER`
 5. Create the Droplet
 
 ### 2. Open the Web UI
@@ -59,11 +59,11 @@ OpenHands Agent Canvas runs the agent server on the host. Prefer at least 4 GB R
 ssh root@your-droplet-ip
 ```
 
-If Gradient was not passed at create time, the first-login wizard can configure a DigitalOcean Gradient model access key. After the key, press Enter for MiniMax M2.5, enter a model id, or `R` for the Intelligent Inference Router. Create keys at https://cloud.digitalocean.com/gen-ai/model-access-keys.
+If Serverless Inference was not passed at create time, the first-login wizard can configure a DigitalOcean Serverless Inference model access key. After the key, press Enter for MiniMax M2.5, enter a model id, or `R` for the Intelligent Inference Router. Create keys at https://cloud.digitalocean.com/gen-ai/model-access-keys.
 
 ### 4. Configure LLM and start working
 
-1. In the UI, open **Settings > LLM** (confirm Gradient settings or add another provider)
+1. In the UI, open **Settings > LLM** (confirm Serverless Inference settings or add another provider)
 2. Place code under `/home/openhands/projects`
 3. Start a conversation from the home screen
 
@@ -89,9 +89,9 @@ Logs: `journalctl -u openhands -f`
 - Settings: `/home/openhands/.openhands/`
 - Getting started: `/root/openhands_info.txt`
 
-### DigitalOcean Gradient
+### DigitalOcean Serverless Inference
 
-When configured, OpenHands uses the OpenAI-compatible Gradient endpoint:
+When configured, OpenHands uses the OpenAI-compatible Serverless Inference endpoint:
 
 - Base URL: `https://inference.do-ai.run/v1`
 - Model form: `openai/<model-id>` (default `openai/minimax-m2.5`)

@@ -1,19 +1,19 @@
 #!/bin/bash
-# Apply DigitalOcean Gradient from droplet env or /opt/codex-cli.env
-# (GRADIENT_KEY, GRADIENT_MODEL, DO_INFERENCE_ROUTER).
+# Apply DigitalOcean Serverless Inference from droplet env or /opt/codex-cli.env
+# (MODEL_ACCESS_KEY, INFERENCE_MODEL, DO_INFERENCE_ROUTER).
 # Returns 0 when a key was applied; 1 when skipped (empty or unset placeholder).
 set -euo pipefail
 
 ENV_FILE=/opt/codex-cli.env
 CODEX_ENV=/root/.codex/env
-CODEX_PROFILED=/etc/profile.d/codex-gradient.sh
+CODEX_PROFILED=/etc/profile.d/codex-inference.sh
 CODEX_CONFIG=/root/.codex/config.toml
 SETUP_MARKER=/root/.codex_setup_complete
 DEFAULT_MODEL=openai-gpt-5.5
-BASHRC_BEGIN='# codex-cli-24-04-gradient-env BEGIN'
-BASHRC_END='# codex-cli-24-04-gradient-env END'
-BASHRC_RANGE_BEGIN='codex-cli-24-04-gradient-env BEGIN'
-BASHRC_RANGE_END='codex-cli-24-04-gradient-env END'
+BASHRC_BEGIN='# codex-cli-24-04-inference-env BEGIN'
+BASHRC_END='# codex-cli-24-04-inference-env END'
+BASHRC_RANGE_BEGIN='codex-cli-24-04-inference-env BEGIN'
+BASHRC_RANGE_END='codex-cli-24-04-inference-env END'
 
 remove_setup_wizard_bashrc_hook() {
     [ -f /root/.bashrc ] || return 0
@@ -41,9 +41,9 @@ write_codex_profiled() {
 }
 
 read_file_kv() {
-    local key="$1"
-    local line val
-    line=$(grep -E "^${key}=" "$ENV_FILE" 2>/dev/null | tail -n 1) || return 1
+    local file="$1" key="$2" line val
+    [ -f "$file" ] || return 1
+    line=$(grep -E "^${key}=" "$file" 2>/dev/null | tail -n 1) || return 1
     val="${line#${key}=}"
     val="${val#\"}"; val="${val%\"}"
     val="${val#\'}"; val="${val%\'}"
@@ -51,13 +51,30 @@ read_file_kv() {
 }
 
 read_config_value() {
-    local key="$1"
-    local env_val="${!key-}"
-    if env_value_usable "$env_val"; then
-        printf '%s' "$env_val"
+    local key="$1" val
+    val="${!key-}"
+    if env_value_usable "$val"; then
+        printf '%s' "$val"
         return 0
     fi
-    read_file_kv "$key"
+    val=$(read_file_kv /etc/environment "$key" || true)
+    if env_value_usable "$val"; then
+        printf '%s' "$val"
+        return 0
+    fi
+    read_file_kv "$ENV_FILE" "$key"
+}
+
+read_first_usable() {
+    local key val
+    for key in "$@"; do
+        val=$(read_config_value "$key" || true)
+        if env_value_usable "$val"; then
+            printf '%s' "$val"
+            return 0
+        fi
+    done
+    return 1
 }
 
 write_env_file_kv() {
@@ -78,7 +95,7 @@ env_value_usable() {
     return 0
 }
 
-normalize_gradient_model() {
+normalize_inference_model() {
     local m="$1"
     case "$m" in
         '') printf '%s' "$DEFAULT_MODEL" ;;
@@ -102,48 +119,48 @@ write_codex_env() {
     chmod 600 "$CODEX_ENV"
 }
 
-redact_gradient_secrets_from_system_environment() {
+redact_inference_secrets_from_system_environment() {
     local env_file=/etc/environment
     [ -f "$env_file" ] || return 0
-    grep -Ev '^(GRADIENT_KEY|GRADIENT_MODEL)=' "$env_file" >"${env_file}.tmp" 2>/dev/null || : >"${env_file}.tmp"
+    grep -Ev '^MODEL_ACCESS_KEY=' "$env_file" >"${env_file}.tmp" 2>/dev/null || : >"${env_file}.tmp"
     mv "${env_file}.tmp" "$env_file"
     chmod 644 "$env_file"
 }
 
-GRADIENT_KEY=$(read_config_value GRADIENT_KEY || true)
-GRADIENT_MODEL=$(read_config_value GRADIENT_MODEL || true)
+MODEL_ACCESS_KEY=$(read_config_value MODEL_ACCESS_KEY || true)
+INFERENCE_MODEL=$(read_config_value INFERENCE_MODEL || true)
 DO_INFERENCE_ROUTER=$(read_config_value DO_INFERENCE_ROUTER || true)
 
-if ! env_value_usable "$GRADIENT_KEY"; then
+if ! env_value_usable "$MODEL_ACCESS_KEY"; then
     exit 1
 fi
 
-write_env_file_kv GRADIENT_KEY "$GRADIENT_KEY"
+write_env_file_kv MODEL_ACCESS_KEY "$MODEL_ACCESS_KEY"
 
 if env_value_usable "$DO_INFERENCE_ROUTER"; then
     ROUTER_NAME=$(normalize_router_name "$DO_INFERENCE_ROUTER")
     if [ -n "$ROUTER_NAME" ]; then
         PRIMARY_MODEL="router:${ROUTER_NAME}"
-        if ! env_value_usable "$GRADIENT_MODEL"; then
-            GRADIENT_MODEL="$DEFAULT_MODEL"
+        if ! env_value_usable "$INFERENCE_MODEL"; then
+            INFERENCE_MODEL="$DEFAULT_MODEL"
         fi
-        write_env_file_kv GRADIENT_MODEL "$(normalize_gradient_model "$GRADIENT_MODEL")"
+        write_env_file_kv INFERENCE_MODEL "$(normalize_inference_model "$INFERENCE_MODEL")"
         write_env_file_kv DO_INFERENCE_ROUTER "$ROUTER_NAME"
     fi
 fi
 
 if [ -z "${PRIMARY_MODEL:-}" ]; then
-    if ! env_value_usable "$GRADIENT_MODEL"; then
-        GRADIENT_MODEL="$DEFAULT_MODEL"
+    if ! env_value_usable "$INFERENCE_MODEL"; then
+        INFERENCE_MODEL="$DEFAULT_MODEL"
     fi
-    PRIMARY_MODEL=$(normalize_gradient_model "$GRADIENT_MODEL")
-    write_env_file_kv GRADIENT_MODEL "$PRIMARY_MODEL"
+    PRIMARY_MODEL=$(normalize_inference_model "$INFERENCE_MODEL")
+    write_env_file_kv INFERENCE_MODEL "$PRIMARY_MODEL"
     write_env_file_kv DO_INFERENCE_ROUTER ""
 fi
 
 mkdir -p /root/.codex
-write_codex_profiled "$GRADIENT_KEY"
-write_codex_env "$GRADIENT_KEY"
+write_codex_profiled "$MODEL_ACCESS_KEY"
+write_codex_env "$MODEL_ACCESS_KEY"
 # shellcheck source=/dev/null
 . "$CODEX_PROFILED"
 
@@ -158,20 +175,20 @@ fi
 
 ensure_codex_env_sourced
 remove_setup_wizard_bashrc_hook
-redact_gradient_secrets_from_system_environment
+redact_inference_secrets_from_system_environment
 touch "$SETUP_MARKER"
 
-echo "Testing connection to DigitalOcean Gradient..."
+echo "Testing connection to DigitalOcean Serverless Inference..."
 HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-    -H "Authorization: Bearer ${GRADIENT_KEY}" \
+    -H "Authorization: Bearer ${MODEL_ACCESS_KEY}" \
     -H "Content-Type: application/json" \
     https://inference.do-ai.run/v1/models 2>/dev/null || true)
 
 if [ "$HTTP_STATUS" = "200" ]; then
-    echo "Gradient configured from ${ENV_FILE}: model ${PRIMARY_MODEL}"
+    echo "Serverless Inference configured from ${ENV_FILE}: model ${PRIMARY_MODEL}"
 else
-    echo "Gradient configured from ${ENV_FILE}: model ${PRIMARY_MODEL}"
-    echo "Warning: Received HTTP ${HTTP_STATUS:-000} from the Gradient API." >&2
+    echo "Serverless Inference configured from ${ENV_FILE}: model ${PRIMARY_MODEL}"
+    echo "Warning: Received HTTP ${HTTP_STATUS:-000} from the Serverless Inference API." >&2
 fi
 
 exit 0
