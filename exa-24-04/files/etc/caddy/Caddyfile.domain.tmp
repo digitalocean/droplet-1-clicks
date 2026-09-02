@@ -1,0 +1,16 @@
+PLACEHOLDER_DOMAIN {
+    tls {
+        issuer acme {
+            dir https://acme-v02.api.letsencrypt.org/directory
+            profile shortlived
+        }
+    }
+    @unauthorized not header Authorization "Bearer PLACEHOLDER_ACCESS_TOKEN"
+    handle @unauthorized {
+        respond "Unauthorized" 401
+    }
+    handle {
+        reverse_proxy 127.0.0.1:8081
+    }
+    header X-DO-MARKETPLACE "exa"
+}

@@ -18,9 +18,24 @@ fi
 
 echo "==> Installing exa-mcp-server@${TARGET_VERSION}..."
 npm install -g "exa-mcp-server@${TARGET_VERSION}"
+
+PKG_ROOT="$(npm root -g)/exa-mcp-server"
+if [ ! -f "${PKG_ROOT}/smithery/shttp/index.cjs" ] \
+  && [ ! -f "${PKG_ROOT}/.smithery/shttp/index.cjs" ] \
+  && [ ! -f "${PKG_ROOT}/shttp/.smithery/index.cjs" ]; then
+  echo "Error: streamable HTTP bundle (smithery/shttp) not found for exa-mcp-server@${TARGET_VERSION}" >&2
+  echo "This 1-Click needs a release that ships smithery/shttp (e.g. 3.2.x)." >&2
+  exit 1
+fi
+
 mkdir -p /etc/exa
 echo "${TARGET_VERSION}" > "$VERSION_FILE"
 chmod 644 "$VERSION_FILE"
 
+if [ -f /etc/exa/.configured ]; then
+  systemctl restart exa-mcp || true
+fi
+
 echo "Updated to $(npm list -g exa-mcp-server --depth=0 2>/dev/null | tail -n 1 || echo "$TARGET_VERSION")"
-echo "MCP clients should keep using: /opt/run-exa-mcp.sh"
+echo "Remote MCP URL remains: https://<droplet-ip>/mcp"
+echo "Optional stdio entrypoint: /opt/run-exa-mcp.sh"

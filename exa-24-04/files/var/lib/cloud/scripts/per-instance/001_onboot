@@ -1,21 +1,47 @@
 #!/bin/bash
 set -euo pipefail
 
-# Remove the ssh force logout command
-sed -e '/Match User root/d' \
-    -e '/.*ForceCommand.*droplet.*/d' \
-    -i /etc/ssh/sshd_config
-
-systemctl restart ssh
+# Always unlock SSH, even if Caddy/ACME or later steps fail.
+unlock_ssh() {
+  sed -e '/Match User root/d' \
+      -e '/.*ForceCommand.*droplet.*/d' \
+      -i /etc/ssh/sshd_config
+  systemctl restart ssh 2>/dev/null || true
+}
+trap unlock_ssh EXIT
 
 mkdir -p /etc/exa
 chmod 700 /etc/exa
+
+meta() { curl -fsS --retry 10 --retry-connrefused --max-time 2 "$1"; }
+DROPLET_PUBLIC_IP="$(meta http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)"
+DROPLET_PRIVATE_IP="$(hostname -I | awk '{print $1}')"
+DROPLET_IP="${DROPLET_PUBLIC_IP:-$DROPLET_PRIVATE_IP}"
+
+printf '%s\n' "$DROPLET_IP" > /etc/exa/public_host
+chmod 644 /etc/exa/public_host
+
+# Per-droplet Bearer token for MCP access (not the Exa API key).
+if [ ! -f /etc/exa/access.token ]; then
+  /opt/rotate-exa-access-token.sh >/dev/null
+else
+  /opt/write-exa-access-creds.sh
+fi
+
+/opt/render-exa-caddy.sh ip
+systemctl enable caddy
+systemctl restart caddy
 
 # Hook first-login API key setup when not yet configured
 if [ ! -f /etc/exa/.configured ]; then
   if ! grep -q '/opt/setup-exa.sh' /root/.bashrc 2>/dev/null; then
     echo '/opt/setup-exa.sh' >> /root/.bashrc
   fi
+else
+  systemctl enable exa-mcp
+  systemctl restart exa-mcp || true
 fi
 
 echo "Exa MCP first-boot initialization complete."
+echo "MCP endpoint (after API key setup): https://${DROPLET_IP}/mcp"
+echo "Access token: /root/exa_access_token.txt"
