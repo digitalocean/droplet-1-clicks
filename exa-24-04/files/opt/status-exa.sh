@@ -4,6 +4,8 @@ set -euo pipefail
 VERSION_FILE="/etc/exa/version"
 ENV_FILE="/etc/exa/mcp.env"
 CONFIGURED_MARKER="/etc/exa/.configured"
+TOKEN_FILE="/etc/exa/access.token"
+HOST_FILE="/etc/exa/public_host"
 
 echo "Exa MCP Server status"
 echo "---------------------"
@@ -27,15 +29,27 @@ systemctl is-active exa-mcp >/dev/null 2>&1 && echo "exa-mcp: active" || echo "e
 systemctl is-active caddy >/dev/null 2>&1 && echo "caddy: active" || echo "caddy: inactive"
 
 if [ -f "$CONFIGURED_MARKER" ] && [ -f "$ENV_FILE" ]; then
-  echo "API key: configured (${ENV_FILE})"
+  echo "Exa API key: configured (${ENV_FILE})"
 else
-  echo "API key: not configured (run /opt/setup-exa.sh)"
+  echo "Exa API key: not configured (run /opt/setup-exa.sh)"
 fi
 
-pub=$(curl -fsS --retry 3 --retry-connrefused --max-time 3 \
-  http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)
-host="${pub:-$(hostname -I | awk '{print $1}')}"
+if [ -f "$TOKEN_FILE" ]; then
+  echo "Access token: configured (${TOKEN_FILE})"
+else
+  echo "Access token: missing (run /opt/rotate-exa-access-token.sh)"
+fi
+
+if [ -f "$HOST_FILE" ]; then
+  host="$(tr -d '[:space:]' < "$HOST_FILE")"
+else
+  pub=$(curl -fsS --retry 3 --retry-connrefused --max-time 3 \
+    http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)
+  host="${pub:-$(hostname -I | awk '{print $1}')}"
+fi
+
 echo ""
-echo "MCP endpoint: https://${host}/mcp  (Caddy -> 127.0.0.1:8081)"
+echo "MCP endpoint: https://${host}/mcp"
+echo "Auth: Authorization: Bearer <token from /root/exa_access_token.txt>"
 echo "Stdio entrypoint (optional): /opt/run-exa-mcp.sh"
-echo "UFW: SSH + HTTP/HTTPS (app port 8081 not public)"
+echo "UFW: SSH + HTTP/HTTPS only"

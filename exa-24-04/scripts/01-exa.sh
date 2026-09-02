@@ -18,7 +18,8 @@ apt-get update -y
 apt-get install -y caddy
 mkdir -p /var/log/caddy
 chown -R caddy:caddy /var/log/caddy
-# Do not enable/start Caddy here — 001_onboot installs the shortlived Caddyfile first.
+# Keep Caddy off until 001_onboot installs the shortlived Caddyfile (avoids stock :80 page).
+systemctl disable --now caddy || true
 
 echo "==> Installing Exa MCP Server ${EXA_VERSION}..."
 npm install -g "exa-mcp-server@${EXA_VERSION}"
@@ -47,6 +48,9 @@ chmod +x /opt/stop-exa.sh
 chmod +x /opt/restart-exa.sh
 chmod +x /opt/run-exa-mcp.sh
 chmod +x /opt/run-exa-mcp-http.sh
+chmod +x /opt/render-exa-caddy.sh
+chmod +x /opt/rotate-exa-access-token.sh
+chmod +x /opt/write-exa-access-creds.sh
 chmod +x /etc/update-motd.d/99-one-click
 chmod +x /var/lib/cloud/scripts/per-instance/001_onboot
 

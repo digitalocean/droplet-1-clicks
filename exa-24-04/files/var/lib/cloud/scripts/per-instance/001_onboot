@@ -1,10 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 
-# Remove the ssh force logout command
-sed -e '/Match User root/d' \
-    -e '/.*ForceCommand.*droplet.*/d' \
-    -i /etc/ssh/sshd_config
+# Always unlock SSH, even if Caddy/ACME or later steps fail.
+unlock_ssh() {
+  sed -e '/Match User root/d' \
+      -e '/.*ForceCommand.*droplet.*/d' \
+      -i /etc/ssh/sshd_config
+  systemctl restart ssh 2>/dev/null || true
+}
+trap unlock_ssh EXIT
 
 mkdir -p /etc/exa
 chmod 700 /etc/exa
@@ -14,14 +18,17 @@ DROPLET_PUBLIC_IP="$(meta http://169.254.169.254/metadata/v1/interfaces/public/0
 DROPLET_PRIVATE_IP="$(hostname -I | awk '{print $1}')"
 DROPLET_IP="${DROPLET_PUBLIC_IP:-$DROPLET_PRIVATE_IP}"
 
-# Install Caddyfile and substitute droplet IP for shortlived TLS.
-if [ -f /etc/caddy/Caddyfile.tmp ]; then
-  mv /etc/caddy/Caddyfile.tmp /etc/caddy/Caddyfile
+printf '%s\n' "$DROPLET_IP" > /etc/exa/public_host
+chmod 644 /etc/exa/public_host
+
+# Per-droplet Bearer token for MCP access (not the Exa API key).
+if [ ! -f /etc/exa/access.token ]; then
+  /opt/rotate-exa-access-token.sh >/dev/null
+else
+  /opt/write-exa-access-creds.sh
 fi
-if grep -q "PLACEHOLDER_DOMAIN" /etc/caddy/Caddyfile 2>/dev/null; then
-  echo "Configuring Caddy with droplet IP address..."
-  sed -i "s/PLACEHOLDER_DOMAIN/${DROPLET_IP}/" /etc/caddy/Caddyfile
-fi
+
+/opt/render-exa-caddy.sh ip
 systemctl enable caddy
 systemctl restart caddy
 
@@ -35,7 +42,6 @@ else
   systemctl restart exa-mcp || true
 fi
 
-systemctl restart ssh
-
 echo "Exa MCP first-boot initialization complete."
 echo "MCP endpoint (after API key setup): https://${DROPLET_IP}/mcp"
+echo "Access token: /root/exa_access_token.txt"
