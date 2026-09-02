@@ -26,7 +26,7 @@
   "gateway": {
     "mode": "local",
     "bind": "loopback",
-    "trustedProxies": ["127.0.0.1"],
+    "trustedProxies": ["127.0.0.1", "::1"],
     "controlUi": {
       "enabled": true
     }

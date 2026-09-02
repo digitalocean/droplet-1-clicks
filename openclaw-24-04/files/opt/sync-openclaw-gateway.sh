@@ -39,6 +39,14 @@ jq --arg token "$GATEWAY_TOKEN" \
      | .gateway.remote = (if (.gateway.remote | type) == "object" then .gateway.remote else {} end)
      | .gateway.auth.token = $token
      | .gateway.remote.token = $token
+     # Caddy terminates TLS and proxies to the gateway on loopback with
+     # X-Forwarded-*. OpenClaw 2.0 needs those proxy IPs in trustedProxies or it
+     # returns proxy_attribution_required. Keep both IPv4 and IPv6 loopback.
+     # Do not strip X-Forwarded-* in Caddy: that would look like direct-local and
+     # auto-approve Control UI device pairing.
+     | .gateway.trustedProxies = (
+         ((.gateway.trustedProxies // []) + ["127.0.0.1", "::1"]) | unique
+       )
      | .tools = (if (.tools | type) == "object" then .tools else {} end)
      | .tools.deny = (((.tools.deny // []) + ["sessions_send"]) | unique)
      | .session = (if (.session | type) == "object" then .session else {} end)

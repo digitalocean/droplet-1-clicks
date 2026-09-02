@@ -36,10 +36,7 @@ fi
 
 # Put the 1-Click wrapper ahead of the npm binary for interactive SSH users.
 # systemd still uses /usr/bin/openclaw directly for the gateway service.
-cat > /usr/local/bin/openclaw <<'EOF'
-#!/bin/sh
-exec /opt/openclaw-cli.sh "$@"
-EOF
+# Wrapper is shipped under files/usr/local/bin/openclaw via Packer.
 chmod 0755 /usr/local/bin/openclaw
 
 # Create openclaw home directory and config directory
@@ -55,6 +52,8 @@ systemctl enable fail2ban
 systemctl restart fail2ban
 
 # Make all scripts executable
+chmod +x /opt/start-openclaw.sh
+chmod +x /opt/stop-openclaw.sh
 chmod +x /opt/restart-openclaw.sh
 chmod +x /opt/status-openclaw.sh
 chmod +x /opt/update-openclaw.sh
@@ -70,6 +69,8 @@ chmod +x /opt/openclaw-control-ui-pairing.sh
 chmod +x /opt/install-openclaw-pairing-hook.sh
 chmod +x /opt/build-openclaw-sandbox.sh
 chmod +x /opt/ensure-openclaw-ready.sh
+chmod +x /etc/update-motd.d/99-one-click
+chmod +x /var/lib/cloud/scripts/per-instance/001_onboot
 
 systemctl enable docker
 systemctl start docker
