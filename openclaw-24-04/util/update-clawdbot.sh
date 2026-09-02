@@ -177,7 +177,7 @@ elif [ -f /etc/config/digitalocean-inference.json ]; then
 else
     mkdir -p /home/openclaw/.openclaw
     echo "Warning: No config found. Creating default config."
-    printf '%s\n' '{"gateway":{"mode":"local","bind":"loopback","auth":{"token":"${OPENCLAW_GATEWAY_TOKEN}"},"trustedProxies":["127.0.0.1"]}}' > /home/openclaw/.openclaw/openclaw.json
+    printf '%s\n' '{"gateway":{"mode":"local","bind":"loopback","auth":{"token":"${OPENCLAW_GATEWAY_TOKEN}"},"trustedProxies":["127.0.0.1","::1"]}}' > /home/openclaw/.openclaw/openclaw.json
 fi
 
 # Step 2b: Update any clawdbot paths in ALL config files to openclaw paths

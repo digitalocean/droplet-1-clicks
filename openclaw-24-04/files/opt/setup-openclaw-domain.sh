@@ -27,6 +27,8 @@ ${DOMAIN} {
             profile shortlived
         }
     }
+    # Keep Caddy's X-Forwarded-* (do not strip) so pairing stays remote-required.
+    # gateway.trustedProxies must include this proxy address (see sync-openclaw-gateway.sh).
     reverse_proxy ${BIND_IP}:${PORT}
 }
 CADDYEOC

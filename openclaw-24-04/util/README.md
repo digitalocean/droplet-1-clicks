@@ -137,6 +137,8 @@ Common issues:
 - **Docker not running:** `systemctl start docker` (required for sandbox)
 - **Sandbox image missing** (`openclaw-sandbox:bookworm-slim`): image is built at snapshot time and on first boot. On a live droplet: `sudo /opt/build-openclaw-sandbox.sh`
 - **Gateway token missing** in logs: tokens live in `openclaw.json` (`gateway.auth.token` and `gateway.remote.token`), not only `/opt/openclaw.env`. Fix: `sudo /opt/ensure-openclaw-ready.sh`
+- **`proxy_attribution_required` in the browser:** OpenClaw 2.0 rejects Caddy→loopback traffic unless `gateway.trustedProxies` includes `127.0.0.1` and `::1`. Caddy must keep `X-Forwarded-*` (do not strip them) so the gateway attributes the real client and Control UI pairing stays required. On a live droplet: `sudo /opt/ensure-openclaw-ready.sh`, then reload.
+- **Control UI logs in with only the gateway token (no CLI pairing):** Usually caused by stripping `X-Forwarded-*` in Caddy, which makes OpenClaw treat the browser as local and auto-approve pairing. Restore a plain `reverse_proxy 127.0.0.1:18789` (no `header_up -X-Forwarded-*`) and keep `trustedProxies`.
 
 ### One-shot repair on a live droplet
 
