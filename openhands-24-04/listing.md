@@ -45,7 +45,7 @@ OpenHands Agent Canvas runs the agent server on the host. Prefer at least 4 GB R
 1. Select this 1-Click App from the DigitalOcean Marketplace
 2. Choose a Droplet size (4 GB RAM minimum recommended)
 3. Add your SSH key
-4. Optionally set droplet environment variables `MODEL_ACCESS_KEY` and `INFERENCE_MODEL`
+4. Optionally set droplet environment variables `MODEL_ACCESS_KEY`, `INFERENCE_MODEL`, and `DO_INFERENCE_ROUTER`
 5. Create the Droplet
 
 ### 2. Open the Web UI
@@ -59,7 +59,7 @@ OpenHands Agent Canvas runs the agent server on the host. Prefer at least 4 GB R
 ssh root@your-droplet-ip
 ```
 
-If Serverless Inference was not passed at create time, the first-login wizard can configure a DigitalOcean Serverless Inference model access key. Create keys at https://cloud.digitalocean.com/gen-ai/model-access-keys.
+If Serverless Inference was not passed at create time, the first-login wizard can configure a DigitalOcean Serverless Inference model access key. After the key, press Enter for MiniMax M2.5, enter a model id, or `R` for the Intelligent Inference Router. Create keys at https://cloud.digitalocean.com/gen-ai/model-access-keys.
 
 ### 4. Configure LLM and start working
 
@@ -95,6 +95,7 @@ When configured, OpenHands uses the OpenAI-compatible Serverless Inference endpo
 
 - Base URL: `https://inference.do-ai.run/v1`
 - Model form: `openai/<model-id>` (default `openai/minimax-m2.5`)
+- Intelligent Inference Router: set `DO_INFERENCE_ROUTER=<name>` (or pick `R` in the setup wizard) to use `openai/router:<name>` with the same key
 
 You can change the model in Settings > LLM or by re-running the setup wizard.
 

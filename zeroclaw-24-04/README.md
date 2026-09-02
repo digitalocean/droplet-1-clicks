@@ -26,6 +26,7 @@ When you choose **DigitalOcean Serverless Inference** in the setup wizard (or pr
 |----------|---------|
 | `MODEL_ACCESS_KEY` | DigitalOcean Serverless Inference model access key |
 | `INFERENCE_MODEL` | Optional model id (default: `kimi-k2.5`) |
+| `DO_INFERENCE_ROUTER` | Optional Intelligent Inference Router name (`router:<name>`) |
 
 Set these as droplet environment variables at create time, or edit `/opt/zeroclaw.env`, then reboot or run:
 
@@ -39,6 +40,7 @@ sudo /opt/apply-inference-from-env.sh
 | MiniMax M2.5 | `minimax-m2.5` |
 | GLM 5 | `glm-5` |
 | Claude Sonnet 4.5 | `anthropic-claude-4.5-sonnet` |
+| Intelligent Inference Router | `router:<name>` |
 
 ## Building
 
@@ -63,7 +65,7 @@ ZeroClaw is extremely lightweight (<5MB RAM, ~8.8MB binary). The minimum `s-1vcp
 | `files/etc/systemd/system/zeroclaw.service` | Systemd unit file |
 | `files/etc/caddy/Caddyfile.tmp` | Caddy config template |
 | `files/etc/update-motd.d/99-one-click` | MOTD with usage instructions |
-| `files/opt/zeroclaw.env` | Environment configuration (`MODEL_ACCESS_KEY`, `INFERENCE_MODEL`) |
+| `files/opt/zeroclaw.env` | Environment configuration (`MODEL_ACCESS_KEY`, `INFERENCE_MODEL`, `DO_INFERENCE_ROUTER`) |
 | `files/opt/apply-inference-from-env.sh` | Apply Serverless Inference key from env on boot |
 | `files/opt/*.sh` | Helper scripts (restart, status, update, domain, cli) |
 | `files/var/lib/cloud/scripts/per-instance/001_onboot` | First-boot initialization |

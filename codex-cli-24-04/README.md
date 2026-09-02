@@ -87,6 +87,7 @@ Codex CLI is installed to `/usr/local/bin/codex`. Authentication uses your Digit
 |----------|-------------|
 | `MODEL_ACCESS_KEY` | DigitalOcean Serverless Inference model access key |
 | `INFERENCE_MODEL` | Optional model id (default: `openai-gpt-5.5`) |
+| `DO_INFERENCE_ROUTER` | Optional Intelligent Inference Router name (`router:<name>`) |
 
 These can be set as droplet environment variables at create time (written to `/etc/environment`) or in `/opt/codex-cli.env`.
 
@@ -95,9 +96,10 @@ These can be set as droplet environment variables at create time (written to `/e
 On first SSH login, the setup wizard runs and:
 
 1. Prompts the user for their DigitalOcean Serverless Inference model access key
-2. Writes the key to `/root/.codex/env` as `MODEL_ACCESS_KEY`
-3. Tests the connection to `https://inference.do-ai.run/v1/models`
-4. Self-removes from `.bashrc` (one-time only)
+2. Optionally pick `R` to use an Intelligent Inference Router (prompts for its name)
+3. Writes the key to `/root/.codex/env` as `MODEL_ACCESS_KEY`
+4. Tests the connection to `https://inference.do-ai.run/v1/models`
+5. Self-removes from `.bashrc` (one-time only)
 
 Default model: **GPT-5.5** (`openai-gpt-5.5` via DigitalOcean Serverless Inference).
 

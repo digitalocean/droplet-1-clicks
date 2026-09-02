@@ -100,7 +100,7 @@ EOF
 else
   cat >> "$INFO_FILE" << 'EOF'
   On first SSH login, the setup wizard can configure DigitalOcean Serverless Inference.
-  Or set MODEL_ACCESS_KEY / INFERENCE_MODEL as droplet env vars and recreate,
+  Or set MODEL_ACCESS_KEY / INFERENCE_MODEL / DO_INFERENCE_ROUTER as droplet env vars and recreate,
   or run: sudo /etc/setup_wizard.sh
   Or configure any provider in Settings > LLM (Advanced: Base URL).
 EOF

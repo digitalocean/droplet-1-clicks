@@ -82,6 +82,7 @@ make build-openhands-24-04
 |----------|----------|-------------|
 | `MODEL_ACCESS_KEY` | Yes (for auto) | DigitalOcean model access key |
 | `INFERENCE_MODEL` | No | Model id (default: `minimax-m2.5`) |
+| `DO_INFERENCE_ROUTER` | No | Optional Intelligent Inference Router name (`openai/router:<name>`) |
 
 ## Version Pinning
 

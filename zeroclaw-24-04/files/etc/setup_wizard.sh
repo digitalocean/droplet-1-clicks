@@ -26,12 +26,13 @@ inference_already_configured() {
 }
 
 write_inference_env_key() {
-  local key="$1" model="$2"
+  local key="$1" model="$2" router="${3-}"
   umask 077
   touch "$ENV_FILE"
-  grep -Ev '^(MODEL_ACCESS_KEY|INFERENCE_MODEL)=' "$ENV_FILE" >"${ENV_FILE}.tmp" 2>/dev/null || : >"${ENV_FILE}.tmp"
+  grep -Ev '^(MODEL_ACCESS_KEY|INFERENCE_MODEL|DO_INFERENCE_ROUTER)=' "$ENV_FILE" >"${ENV_FILE}.tmp" 2>/dev/null || : >"${ENV_FILE}.tmp"
   printf 'MODEL_ACCESS_KEY=%q\n' "$key" >>"${ENV_FILE}.tmp"
   printf 'INFERENCE_MODEL=%q\n' "$model" >>"${ENV_FILE}.tmp"
+  printf 'DO_INFERENCE_ROUTER=%q\n' "$router" >>"${ENV_FILE}.tmp"
   mv "${ENV_FILE}.tmp" "$ENV_FILE"
   chmod 600 "$ENV_FILE"
 }
@@ -58,6 +59,7 @@ echo "--- ZeroClaw AI Provider Setup ---"
 selected_provider="n/a"
 onboard_provider=""
 onboard_model=""
+onboard_router=""
 
 select opt in "${options[@]}"
 do
@@ -68,8 +70,8 @@ do
         echo "You selected DigitalOcean Serverless Inference."
         echo ""
         echo "Choose a serverless inference model (default: Kimi K2.5):"
-        PS3="Select model (1-4): "
-        inference_options=("Kimi K2.5" "MiniMax M2.5" "GLM 5" "Claude Sonnet 4.5")
+        PS3="Select model (1-5): "
+        inference_options=("Kimi K2.5" "MiniMax M2.5" "GLM 5" "Claude Sonnet 4.5" "Intelligent Inference Router")
         select gopt in "${inference_options[@]}"
         do
           case $gopt in
@@ -91,6 +93,23 @@ do
             "Claude Sonnet 4.5")
               onboard_model="anthropic-claude-4.5-sonnet"
               echo "Using Claude Sonnet 4.5 (anthropic-claude-4.5-sonnet)."
+              break 2
+              ;;
+            "Intelligent Inference Router")
+              echo ""
+              echo "Create a router under Inference > Routers, then enter its name."
+              read -rp "Router name: " ROUTER_NAME
+              ROUTER_NAME="${ROUTER_NAME#digitalocean/}"
+              ROUTER_NAME="${ROUTER_NAME#openai/}"
+              ROUTER_NAME="${ROUTER_NAME#router:}"
+              if [ -n "$ROUTER_NAME" ]; then
+                onboard_model="router:${ROUTER_NAME}"
+                onboard_router="$ROUTER_NAME"
+                echo "Using Intelligent Inference Router (router:${ROUTER_NAME})."
+              else
+                onboard_model="kimi-k2.5"
+                echo "No router name entered; keeping Kimi K2.5."
+              fi
               break 2
               ;;
             *)
@@ -144,7 +163,7 @@ done
 [ -n "${old_histfile:-}" ] && export HISTFILE="$old_histfile"
 
 if [[ "$onboard_provider" == "custom:https://inference.do-ai.run/v1" ]]; then
-  write_inference_env_key "$model_access_key" "$onboard_model"
+  write_inference_env_key "$model_access_key" "$onboard_model" "$onboard_router"
   /opt/apply-inference-from-env.sh
 else
   /opt/zeroclaw-run-onboard.sh "$model_access_key" "$onboard_provider" "$onboard_model"
