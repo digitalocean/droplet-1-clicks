@@ -1,0 +1,4 @@
+#!/bin/sh
+# 1-Click wrapper ahead of the npm binary for interactive SSH users.
+# systemd still uses /usr/bin/openclaw directly for the gateway service.
+exec /opt/openclaw-cli.sh "$@"

@@ -39,6 +39,7 @@ CADDYEOC
 }
 
 systemctl enable caddy
+systemctl restart caddy
 systemctl restart openclaw
 
 echo "Caddy is now proxying https://${DOMAIN} to ${BIND_IP}:${PORT}."

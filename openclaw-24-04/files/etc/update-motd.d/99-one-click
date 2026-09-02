@@ -36,6 +36,8 @@ on the channels you already use (WhatsApp, Telegram, Slack, Discord, and more).
   View logs: journalctl -u openclaw -f
   
   Or use helper scripts:
+  - /opt/start-openclaw.sh     (start gateway + caddy)
+  - /opt/stop-openclaw.sh      (stop gateway)
   - /opt/restart-openclaw.sh   (restart with status check)
   - /opt/status-openclaw.sh    (show status and token)
   - /opt/update-openclaw.sh    (update to latest version)
@@ -43,11 +45,10 @@ on the channels you already use (WhatsApp, Telegram, Slack, Discord, and more).
   - /opt/openclaw-control-ui-pairing.sh    (full Control UI pairing walkthrough)
   - /opt/openclaw-approve-ui-pairing.sh    (approve pending pairing only)
 
-🔒 Enable HTTPS (TLS):
-  Point your domain to this droplet, then run:
+🔒 Custom domain (HTTPS):
+  HTTPS is already enabled on this droplet IP (shortlived TLS via Caddy).
+  For a custom domain, point DNS at this droplet, then run:
   sudo /opt/setup-openclaw-domain.sh
-  
-  This configures Caddy with Let's Encrypt SSL certificates.
 
 📱 Configure Messaging Channels:
   1. Edit /opt/openclaw.env with your channel tokens

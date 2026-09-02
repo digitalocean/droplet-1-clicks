@@ -10,7 +10,7 @@ REPO_DIR="/opt/openclaw"
 
 # Gateway Configuration
 OPENCLAW_GATEWAY_PORT=18789
-OPENCLAW_GATEWAY_BIND=lan
+OPENCLAW_GATEWAY_BIND=loopback
 
 # Shutdown clawdbot
 systemctl stop clawdbot 2>/dev/null || true
@@ -92,14 +92,16 @@ else
 # Openclaw Environment Configuration
 OPENCLAW_VERSION=${APP_VERSION}
 OPENCLAW_GATEWAY_PORT=18789
-OPENCLAW_GATEWAY_BIND=lan
+OPENCLAW_GATEWAY_BIND=loopback
 OPENCLAW_GATEWAY_TOKEN=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT
 ENVEOF
 fi
 # Ensure openclaw-specific vars exist for systemd (may be missing if copied from clawdbot.env)
 grep -q '^OPENCLAW_GATEWAY_PORT=' /opt/openclaw.env 2>/dev/null || echo "OPENCLAW_GATEWAY_PORT=18789" >> /opt/openclaw.env
 grep -q '^OPENCLAW_VERSION=' /opt/openclaw.env 2>/dev/null || echo "OPENCLAW_VERSION=${APP_VERSION}" >> /opt/openclaw.env
-grep -q '^OPENCLAW_GATEWAY_BIND=' /opt/openclaw.env 2>/dev/null || echo "OPENCLAW_GATEWAY_BIND=lan" >> /opt/openclaw.env
+grep -q '^OPENCLAW_GATEWAY_BIND=' /opt/openclaw.env 2>/dev/null || echo "OPENCLAW_GATEWAY_BIND=loopback" >> /opt/openclaw.env
+# Prefer loopback so Caddy is the only public surface (matches openclaw.json bind).
+sed -i 's/^OPENCLAW_GATEWAY_BIND=lan$/OPENCLAW_GATEWAY_BIND=loopback/' /opt/openclaw.env
 # Generate gateway token if missing or placeholder
 if ! grep -q '^OPENCLAW_GATEWAY_TOKEN=' /opt/openclaw.env 2>/dev/null || grep -q "PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT" /opt/openclaw.env 2>/dev/null; then
     NEW_GATEWAY_TOKEN=$(openssl rand -hex 32)
