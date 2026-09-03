@@ -8,16 +8,27 @@ if [[ ! -d /tmp ]]; then
 fi
 chmod 1777 /tmp
 
+export DEBIAN_FRONTEND="${DEBIAN_FRONTEND:-noninteractive}"
+export NEEDRESTART_SUSPEND=1
+
 apt-get -y update
-apt-get -y upgrade
+apt-get -y \
+  -o Dpkg::Options::='--force-confdef' \
+  -o Dpkg::Options::='--force-confold' \
+  -o APT::Get::Always-Include-Phased-Updates=true \
+  full-upgrade
+apt-get -y \
+  -o Dpkg::Options::='--force-confdef' \
+  -o Dpkg::Options::='--force-confold' \
+  -o APT::Get::Always-Include-Phased-Updates=true \
+  install --only-upgrade openssh-client openssh-server openssh-sftp-server
+
 rm -rf /tmp/* /var/tmp/*
 history -c
 cat /dev/null > /root/.bash_history
 unset HISTFILE
 apt-get -y autoremove
 apt-get -y autoclean
-find /var/log -mtime -1 -type f -exec truncate -s 0 {} \;
-rm -rf /var/log/*.gz /var/log/*.[0-9] /var/log/*-????????
 rm -rf /var/lib/cloud/instances/*
 rm -f /root/.ssh/authorized_keys /etc/ssh/*key*
 touch /etc/ssh/revoked_keys
@@ -41,5 +52,11 @@ dd if=/dev/zero of=/zerofile &
       sleep 5
     done
 sync; rm /zerofile; sync
-cat /dev/null > /var/log/lastlog; cat /dev/null > /var/log/wtmp
+
+# Purge then wipe logs so img_check does not see leftover packer/dpkg entries.
 sudo apt-get --yes purge droplet-agent*
+find /var/log -type f -exec truncate -s 0 {} \;
+rm -rf /var/log/*.gz /var/log/*.[0-9] /var/log/*-????????
+rm -rf /var/log/unattended-upgrades
+cat /dev/null > /var/log/lastlog
+cat /dev/null > /var/log/wtmp

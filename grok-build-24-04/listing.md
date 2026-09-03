@@ -50,6 +50,8 @@ Grok Build is lightweight; most compute happens at the inference service.
 3. Add your SSH key for secure access
 4. Create the Droplet
 
+Optional: pass `MODEL_ACCESS_KEY` (and optionally `DO_INFERENCE_MODEL` or `DO_INFERENCE_ROUTER`) as droplet environment variables to skip the wizard.
+
 ### 2. SSH In
 
 ```bash
@@ -58,18 +60,23 @@ ssh root@your-droplet-ip
 
 ### 3. Complete the Setup Wizard
 
-On first login, the setup wizard prompts for your **DigitalOcean model access key**. To create one:
+If you passed `MODEL_ACCESS_KEY` at create time, Grok Build is already configured — skip to step 4.
+
+Otherwise, on first login the setup wizard prompts for your **DigitalOcean model access key**. To create one:
 
 1. Go to <https://cloud.digitalocean.com/model-studio/manage-keys>
 2. Or from the cloud console, navigate to **Inference > Manage**
 3. Click **Create Model Access Key** and copy it
-4. Paste it when prompted, then **pick your default model from the list** (or choose the Intelligent Inference Router)
+4. Paste it when prompted — the wizard then lists **current** chat models from `GET https://inference.do-ai.run/v1/models`
+5. Pick a default from that live list, or `R` for the Intelligent Inference Router
 
-The wizard verifies the key against `https://inference.do-ai.run/v1` and configures Grok Build automatically. You can change the model later with `/model` in the TUI or `-m <alias>`.
+The wizard verifies the key against the inference API, rebuilds the DigitalOcean entries in `/root/.grok/config.toml` from that live list, and sets the default. If the key is rejected you can re-enter it, or type a model id to continue without a live list. Change the model later with `/model` in the TUI or `-m <alias>`.
 
 Prefer to use xAI directly? Press Enter at the model-access-key prompt to choose **xAI account sign-in** or to enter an **xAI API key**.
 
-> **No browser needed.** With a model access key (or any API key), Grok authenticates with the API directly — there is no OAuth browser step. Because the droplet has no desktop browser, the xAI account path uses **device-code sign-in** (`/opt/grok-login.sh`), which shows a short URL and code to open on your laptop or phone. Avoid running a bare `grok login`, which would try to launch a local browser.
+> **No browser needed.** With a model access key (or any API key), Grok authenticates with the API directly — there is no OAuth browser step. Because the droplet has no desktop browser, the xAI account path uses **device-code sign-in** (`/opt/grok-login.sh` or `grok login --device-auth`), which shows a short URL and code to open on your laptop or phone. Avoid running a bare `grok login`, which would try to launch a local browser.
+
+If `grok` reports no API key in the same session right after setup (or in a non-login shell), load it with `source /etc/profile.d/grok-build-key.sh`.
 
 ### 4. Run Grok Build
 
@@ -85,46 +92,20 @@ grok -p "Explain this codebase"
 grok -p "Review this diff" --output-format json --always-approve
 ```
 
-The default model is **GPT-5.5** (`openai-gpt-5.5` / alias `gpt-5-5`) when that id is still in the live DigitalOcean catalog. Switch with `/model` in the TUI or `-m <alias>` headlessly.
+The default model is the one you picked in the wizard. If you auto-configured without `DO_INFERENCE_MODEL`, apply prefers **GPT-5.5** (`openai-gpt-5.5` / alias `gpt-5-5`) when that id is still in the live catalog; otherwise it uses the first chat-capable model returned by the API. Switch with `/model` in the TUI or `-m <alias>` headlessly.
 
 ## Models
 
-The setup wizard loads the current chat-model list at runtime from `GET https://inference.do-ai.run/v1/models` after you enter a model access key (same helper as Hermes/OpenClaw). New models appear and deprecated ones drop off. Pick `R` for the Intelligent Inference Router.
+The image does **not** pin a marketplace catalog. After you enter a model access key, the setup wizard (and `/opt/apply-inference-from-env.sh`) load chat-capable models from [Retrieve available models](https://docs.digitalocean.com/products/inference/how-to/retrieve-available-models/) and rewrite the DigitalOcean `[model.*]` block in `/root/.grok/config.toml`. New models appear and deprecated ones drop off. Existing aliases (for example `gpt-5-5`) are kept when that id is still available. Pick `R` for the Intelligent Inference Router.
 
-The table below is the **seeded** catalog in `/root/.grok/config.toml`. Applying a key refreshes those DigitalOcean entries from the live list and keeps existing aliases when the model id is still available. Switch any time with `-m` or `/model`.
-
-| Alias | Model | ID |
-|-------|-------|----|
-| `gpt-5-5` (default) | GPT-5.5 | `openai-gpt-5.5` |
-| `gpt-5-4` | GPT-5.4 | `openai-gpt-5.4` |
-| `gpt-5-3-codex` | GPT-5.3 Codex | `openai-gpt-5.3-codex` |
-| `gpt-5-2` | GPT-5.2 | `openai-gpt-5.2` |
-| `gpt-5` | GPT-5 | `openai-gpt-5` |
-| `gpt-4-1` | GPT-4.1 | `openai-gpt-4.1` |
-| `claude-opus-4-8` | Claude Opus 4.8 | `anthropic-claude-opus-4.8` |
-| `claude-opus-4-6` | Claude Opus 4.6 | `anthropic-claude-opus-4.6` |
-| `claude-sonnet-4-6` | Claude Sonnet 4.6 | `anthropic-claude-4.6-sonnet` |
-| `claude-sonnet-4-5` | Claude Sonnet 4.5 | `anthropic-claude-4.5-sonnet` |
-| `claude-haiku-4-5` | Claude Haiku 4.5 | `anthropic-claude-haiku-4.5` |
-| `deepseek-v4-pro` | DeepSeek V4 Pro | `deepseek-v4-pro` |
-| `deepseek-4-flash` | DeepSeek 4 Flash | `deepseek-4-flash` |
-| `kimi-k2-6` | Kimi K2.6 | `kimi-k2.6` |
-| `minimax-m2-5` | MiniMax M2.5 | `minimax-m2.5` |
-| `glm-5` | GLM-5 | `glm-5` |
-| `qwen3-coder-flash` | Qwen3 Coder Flash | `qwen3-coder-flash` |
-| `qwen3-5` | Qwen3.5 397B | `qwen3.5-397b-a17b` |
-| `llama-4-maverick` | Llama 4 Maverick | `llama-4-maverick` |
-| `nemotron-3-super-120b` | NVIDIA Nemotron 3 Super 120B | `nvidia-nemotron-3-super-120b` |
-| `router` | DigitalOcean Intelligent Inference Router | `router:<name>` |
-
-DigitalOcean's serverless catalog grows over time. List the live set on the droplet with:
+List the live set on the droplet with:
 
 ```bash
 curl -s -H "Authorization: Bearer $MODEL_ACCESS_KEY" \
   https://inference.do-ai.run/v1/models | jq -r '.data[].id'
 ```
 
-Re-run `/opt/apply-inference-from-env.sh` (or the setup wizard) after new models ship — the DigitalOcean catalog in `config.toml` is rebuilt from the live list. To add a provider that is not on Serverless Inference, add a `[model.<alias>]` block (see the commented examples at the bottom of that file).
+Use the alias from `config.toml` with `-m` or `/model`. The router alias is `router` (`router:<name>`). Re-run `/opt/apply-inference-from-env.sh` or the setup wizard after new models ship. To add a provider that is not on Serverless Inference, uncomment a `[model.<alias>]` example at the bottom of `/root/.grok/config.toml`.
 
 ## Intelligent Inference Router
 
@@ -144,12 +125,13 @@ This points the `router` alias at `router:<router-name>` on `https://inference.d
 | Check version | `grok --version` |
 | Update to latest | `/opt/update-grok-build.sh` |
 | Re-run setup wizard | `/opt/setup-grok-build.sh` |
+| Apply inference from env | `/opt/apply-inference-from-env.sh` |
 | Sign in with xAI account (no browser) | `/opt/grok-login.sh` |
 
 ### Configuration
 
 - **Grok config**: `/root/.grok/config.toml`
-- **API key env template**: `/opt/grok-build.env`
+- **API key env template**: `/opt/grok-build.env` (`MODEL_ACCESS_KEY`, `DO_INFERENCE_MODEL`, `DO_INFERENCE_ROUTER`, `XAI_API_KEY`)
 - **Active key**: `/etc/profile.d/grok-build-key.sh` (`MODEL_ACCESS_KEY` or `XAI_API_KEY`)
 - **Getting started guide**: `cat /root/grok_build_info.txt`
 
@@ -187,12 +169,13 @@ echo 'export MODEL_ACCESS_KEY="<your key>"' > /etc/profile.d/grok-build-key.sh
 chmod 600 /etc/profile.d/grok-build-key.sh
 ```
 
-Create keys at <https://cloud.digitalocean.com/model-studio/manage-keys> (Inference > Manage).
+Then `source /etc/profile.d/grok-build-key.sh` (or start a new SSH session). Create keys at <https://cloud.digitalocean.com/model-studio/manage-keys> (Inference > Manage).
 
 ## Additional Resources
 
 - **Grok Build docs**: <https://docs.x.ai/build/overview>
 - **Custom models reference**: <https://docs.x.ai/build/overview#custom-models>
+- **Retrieve available models**: <https://docs.digitalocean.com/products/inference/how-to/retrieve-available-models/>
 - **DigitalOcean Inference Router**: <https://docs.digitalocean.com/products/inference/how-to/use-inference-router/>
 - **Announcement**: <https://x.ai/news/grok-build-cli>
 
