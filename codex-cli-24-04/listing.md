@@ -124,8 +124,8 @@ Use model IDs from the Inference model catalog with `codex -m "<model-id>"` or e
 | DeepSeek R1 Distill Llama 70B | `deepseek-r1-distill-llama-70b` |
 | Qwen3 32B | `alibaba-qwen3-32b` |
 | Llama 3.3 70B Instruct | `llama3.3-70b-instruct` |
-| Kimi K2.5 | `kimi-k2.5` |
-| glm-5 | `glm-5` |
+| Kimi K3 | `kimi-k3` |
+| GLM-5.3 | `glm-5.3` |
 | MiniMax M2.5 | `minimax-m2.5` |
 | Claude Opus 4.6 | `anthropic-claude-opus-4-6` |
 | Claude Sonnet 4.5 | `anthropic-claude-4.5-sonnet` |

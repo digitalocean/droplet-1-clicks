@@ -346,8 +346,8 @@
       "supports_search_tool": false
     },
     {
-      "slug": "kimi-k2.5",
-      "display_name": "Kimi K2.5",
+      "slug": "kimi-k3",
+      "display_name": "Kimi K3",
       "description": null,
       "supported_reasoning_levels": [],
       "shell_type": "shell_command",
@@ -381,8 +381,8 @@
       "supports_search_tool": false
     },
     {
-      "slug": "glm-5",
-      "display_name": "glm-5",
+      "slug": "glm-5.3",
+      "display_name": "GLM-5.3",
       "description": null,
       "supported_reasoning_levels": [],
       "shell_type": "shell_command",
