@@ -8,6 +8,7 @@ OpenCode brings AI assistance into the command line. It's a terminal-based codin
 
 - **Terminal-first** – Works natively in your shell, no web interface required
 - **DigitalOcean Serverless Inference** – Pre-configured with open-source models via serverless inference
+- **Intelligent Inference Router** – Optionally route each prompt to the best-fit model
 - **Multiple sessions** – Run multiple agents for different tasks
 - **File references** – Use `@filename` to include files in context
 - **Shell commands** – Execute commands with `!` prefix
@@ -18,6 +19,8 @@ OpenCode brings AI assistance into the command line. It's a terminal-based codin
 
 - Natural language coding assistance in the terminal
 - Pre-configured with DigitalOcean Serverless Inference (Claude, GPT, DeepSeek, Llama, and more)
+- Optional DigitalOcean Intelligent Inference Router (`router:<name>`)
+- Live model list at first login from `GET https://inference.do-ai.run/v1/models`
 - Works with existing projects—navigate, edit, and run code
 - No IDE required—pure terminal workflow
 
@@ -62,9 +65,9 @@ Otherwise, on first login the setup wizard will prompt for your DigitalOcean Ser
 1. Go to https://cloud.digitalocean.com/gen-ai/model-access-keys
 2. Click **Create Model Access Key**
 3. Copy the new key
-4. Paste the key when prompted by the setup wizard
+4. Paste the key when prompted — the wizard then lists **current** chat models from the Serverless Inference API (or `R` for the Intelligent Inference Router)
 
-The wizard verifies your key and configures OpenCode automatically.
+The wizard verifies your key, lets you pick a default model from that live list, and configures OpenCode automatically.
 
 ### 4. Run OpenCode
 
@@ -73,7 +76,7 @@ cd /path/to/your/project
 opencode
 ```
 
-The default model is **Kimi K2.5** (`digitalocean/kimi-k2.5` via DigitalOcean Serverless Inference). You can change it in `/root/.config/opencode/opencode.json` or use the `/models` command inside OpenCode.
+The default model is the one you picked in the wizard (or the first chat-capable model from the live catalog if you auto-configured without `INFERENCE_MODEL`). Change it in `/root/.config/opencode/opencode.json` or use `/models` inside OpenCode. To use an Intelligent Inference Router, pick `R` in the setup wizard or set `DO_INFERENCE_ROUTER`.
 
 ## Managing OpenCode
 
@@ -90,37 +93,34 @@ The default model is **Kimi K2.5** (`digitalocean/kimi-k2.5` via DigitalOcean Se
 
 - **OpenCode config**: `/root/.config/opencode/opencode.json`
 - **Auth / API key**: `/root/.local/share/opencode/auth.json`
-- **Inference env vars**: `/opt/opencode.env` (`MODEL_ACCESS_KEY`, `INFERENCE_MODEL`)
+- **Inference env vars**: `/opt/opencode.env` (`MODEL_ACCESS_KEY`, `INFERENCE_MODEL`, `DO_INFERENCE_ROUTER`)
 - **Getting started guide**: `cat /root/opencode_info.txt`
 
 ### Inference usage (Serverless Inference)
 
 API `usage` may list cache-related fields, but on DigitalOcean Serverless Inference’s OpenAI-compatible inference they are **often zero** regardless of model. Treat **DigitalOcean billing and documentation** as the source of truth for charges. The same note is in `/root/opencode_info.txt`. If you add providers with `/connect`, their APIs define usage and any prompt-cache behavior.
 
-### Pre-Configured Models
+### Available models
 
-The following models are available via DigitalOcean Serverless Inference (only a DigitalOcean model access key is required). Use the full `provider/model-id` value in OpenCode or in `"model"` in `opencode.json`.
+The image does **not** hardcode a model catalog. After you enter a DigitalOcean model access key, the setup wizard (and `/opt/apply-inference-from-env.sh`) load chat-capable models from:
 
-**`digitalocean`** (OpenAI-compatible; default **Kimi K2.5**)
+```bash
+curl -s -H "Authorization: Bearer $MODEL_ACCESS_KEY" \
+  https://inference.do-ai.run/v1/models | jq -r '.data[].id'
+```
 
-| Model | Full model id |
-|-------|---------------|
-| Kimi K2.5 (default) | `digitalocean/kimi-k2.5` |
-| GPT-5.2 | `digitalocean/openai-gpt-5.2` |
-| GPT-5 | `digitalocean/openai-gpt-5` |
-| GPT-4.1 | `digitalocean/openai-gpt-4.1` |
-| OpenAI o3 | `digitalocean/openai-o3` |
-| DeepSeek R1 Distill Llama 70B | `digitalocean/deepseek-r1-distill-llama-70b` |
-| Qwen3 32B | `digitalocean/alibaba-qwen3-32b` |
-| Llama 3.3 70B Instruct | `digitalocean/llama3.3-70b-instruct` |
-| glm-5 | `digitalocean/glm-5` |
-| MiniMax M2.5 | `digitalocean/minimax-m2.5` |
-| Claude Opus 4.6 | `digitalocean/claude-opus-4-6` |
-| Claude Opus 4.5 | `digitalocean/claude-opus-4-5` |
-| Claude Sonnet 4.5 | `digitalocean/claude-sonnet-4-5` |
-| Claude Sonnet 4 | `digitalocean/claude-sonnet-4-6` |
+See [Retrieve available models](https://docs.digitalocean.com/products/inference/how-to/retrieve-available-models/). Use `digitalocean/<id>` in OpenCode or in `"model"` in `opencode.json`. The Intelligent Inference Router is `digitalocean/router:<name>`.
 
-To change the default model, edit `"model"` in `/root/.config/opencode/opencode.json`.
+To change the default model, edit `"model"` in `/root/.config/opencode/opencode.json` or re-run `/opt/setup-opencode.sh`.
+
+### Intelligent Inference Router
+
+DigitalOcean's Inference Router classifies each prompt and sends it to the best-fit model based on rules you define (optimizing for cost or latency).
+
+1. Create a router under **Inference > Routers** in the control panel (or via the API) and attach it to the same model access key you use for the droplet.
+2. Set `DO_INFERENCE_ROUTER=<router-name>` in `/opt/opencode.env` (or as a droplet env var) and run `/opt/apply-inference-from-env.sh`, **or** enter the router name in the setup wizard (`R`).
+
+This points OpenCode at `digitalocean/router:<router-name>` on `https://inference.do-ai.run/v1` and makes it the default. The router authenticates with the same `MODEL_ACCESS_KEY` as the direct models — no extra key needed.
 
 ### Using OpenCode's Built-in Providers
 
@@ -159,6 +159,8 @@ Or manually edit `/root/.local/share/opencode/auth.json` — set `digitalocean` 
 - **Documentation**: https://opencode.ai/docs
 - **CLI Reference**: https://opencode.ai/docs/cli/
 - **GitHub**: https://github.com/anomalyco/opencode
+- **Retrieve available models**: https://docs.digitalocean.com/products/inference/how-to/retrieve-available-models/
+- **DigitalOcean Inference Router**: https://docs.digitalocean.com/products/inference/how-to/use-inference-router/
 
 ## Support
 

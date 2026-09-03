@@ -18,6 +18,7 @@ mkdir -p /root/.config/opencode
 mkdir -p /root/.local/share/opencode
 
 chmod +x /opt/apply-inference-from-env.sh
+chmod +x /var/lib/digitalocean/inference-models.sh
 
 if /opt/apply-inference-from-env.sh; then
     echo "Serverless Inference pre-configured from droplet environment."
@@ -66,23 +67,23 @@ OpenCode 1-Click Droplet - Getting Started
 OpenCode is an AI coding agent that runs in your terminal, pre-configured to
 use DigitalOcean Serverless Inference.
 
-PRE-CONFIGURED MODELS (via DigitalOcean Serverless Inference):
+MODELS (via DigitalOcean Serverless Inference):
 
-  digitalocean/ (default: MiniMax M2.5):
-    GPT-5.2, GPT-5, GPT-4.1, o3, DeepSeek R1 70B, Qwen3 32B,
-    Llama 3.3 70B, Kimi K2.5, glm-5, MiniMax M2.5,
-    Claude Opus 4.6, Opus 4.5, Sonnet 4.5, Sonnet 4
+  The setup wizard lists chat-capable models live from
+    GET https://inference.do-ai.run/v1/models
+  after you enter a DigitalOcean model access key. Switch later with /models.
 
 AUTO-CONFIGURATION (optional):
 
-  If MODEL_ACCESS_KEY (and optionally INFERENCE_MODEL) are passed as droplet
-  environment variables, OpenCode configures Serverless Inference automatically on first
-  boot and skips the interactive setup wizard.
+  If MODEL_ACCESS_KEY (and optionally INFERENCE_MODEL / DO_INFERENCE_ROUTER) are
+  passed as droplet environment variables, OpenCode configures Serverless
+  Inference automatically on first boot and skips the interactive setup wizard.
 
 NEXT STEPS:
 
 1. If Serverless Inference was not auto-configured, the setup wizard runs on first login
-   to configure your DigitalOcean model access key. To create one:
+   to configure your DigitalOcean model access key and pick a default model
+   (or the Intelligent Inference Router). To create a key:
      https://cloud.digitalocean.com/gen-ai
      Navigate to API Keys > Model Access Keys
 
@@ -90,7 +91,12 @@ NEXT STEPS:
    cd /path/to/your/project
    opencode
 
-3. Helper commands:
+3. Intelligent Inference Router:
+   Create a router under Inference > Routers attached to your model access
+   key, set DO_INFERENCE_ROUTER=<name> in /opt/opencode.env, then run
+   /opt/apply-inference-from-env.sh (routes via model "router:<name>", same key).
+
+4. Helper commands:
    Check version:    /opt/opencode-version.sh
    Update OpenCode:  /opt/update-opencode.sh
    Re-run setup:     /opt/setup-opencode.sh
@@ -100,7 +106,7 @@ Other providers: use /connect inside OpenCode to add your own API keys
 
 Configuration:  /root/.config/opencode/opencode.json
 Auth:           /root/.local/share/opencode/auth.json
-Inference env:  /opt/opencode.env
+Inference env:  /opt/opencode.env (MODEL_ACCESS_KEY, INFERENCE_MODEL, DO_INFERENCE_ROUTER)
 
 For documentation: https://opencode.ai/docs
 

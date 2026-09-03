@@ -4,7 +4,7 @@ This directory contains the Packer builder configuration for creating an OpenCod
 
 ## Overview
 
-OpenCode is an open-source AI coding agent that runs in the terminal. Users SSH into the droplet and run `opencode` to get AI-assisted coding directly in their shell. This builder creates a fully configured Ubuntu 24.04 LTS Droplet with OpenCode pre-installed and DigitalOcean Serverless Inference pre-configured as the inference provider.
+OpenCode is an open-source AI coding agent that runs in the terminal. Users SSH into the droplet and run `opencode` to get AI-assisted coding directly in their shell. This builder creates a fully configured Ubuntu 24.04 LTS Droplet with OpenCode pre-installed and DigitalOcean Serverless Inference pre-configured as the inference provider. The first-login wizard lists models live from `GET https://inference.do-ai.run/v1/models` (same helper as Hermes and OpenClaw).
 
 ## Directory Structure
 
@@ -20,7 +20,7 @@ opencode-24-04/
     │   └── update-motd.d/
     │       └── 99-one-click         # Message of the Day
     ├── opt/
-    │   ├── apply-inference-from-env.sh # Auto-config from MODEL_ACCESS_KEY / INFERENCE_MODEL
+    │   ├── apply-inference-from-env.sh # Auto-config from MODEL_ACCESS_KEY / INFERENCE_MODEL / DO_INFERENCE_ROUTER
     │   ├── opencode.env              # Optional Inference env vars (see 001_onboot)
     │   ├── setup-opencode.sh       # First-login setup wizard (model access key)
     │   ├── update-opencode.sh      # Update to latest version
@@ -81,15 +81,15 @@ Field testing shows **cache-related usage fields are often zero** on `https://in
 
 1. Removes SSH force-logout (allows normal login)
 2. Creates `/root/opencode_info.txt` with getting-started instructions
-3. If `MODEL_ACCESS_KEY` is set in droplet environment (`/etc/environment`) or `/opt/opencode.env`, applies Serverless Inference config automatically and skips the setup wizard
+3. If `MODEL_ACCESS_KEY` is set in droplet environment (`/etc/environment`) or `/opt/opencode.env`, applies Serverless Inference config automatically (honoring `INFERENCE_MODEL` or `DO_INFERENCE_ROUTER`) and skips the setup wizard
 4. Otherwise hooks the Serverless Inference setup wizard (`/opt/setup-opencode.sh`) into `.bashrc` for first login
 
 ## First Login Experience
 
 If `MODEL_ACCESS_KEY` was not passed at droplet creation, on first SSH login the setup wizard runs and:
 1. Prompts the user for their DigitalOcean Serverless Inference model access key
-2. Writes the key to `/root/.local/share/opencode/auth.json` under **`digitalocean`**
-3. Tests the connection to `https://inference.do-ai.run/v1/models`
+2. Fetches the current chat-capable catalog from `https://inference.do-ai.run/v1/models` and presents it as a numbered list — or `R` to use an Intelligent Inference Router
+3. Writes the key to `/root/.local/share/opencode/auth.json` under **`digitalocean`**, replaces `provider.digitalocean.models` with that live list, and sets the default model (or `digitalocean/router:<name>`)
 4. Self-removes from `.bashrc` (one-time only)
 
 ### Auto-configuration from droplet environment
@@ -99,12 +99,12 @@ Pass these environment variables when creating the droplet (or set them in `/opt
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `MODEL_ACCESS_KEY` | Yes | DigitalOcean model access key from the control panel |
-| `INFERENCE_MODEL` | No | Model id, e.g. `minimax-m2.5`, `kimi-k2.5` (default: `minimax-m2.5`) |
+| `INFERENCE_MODEL` | No | Model id from `GET /v1/models`. If unset, the first chat-capable model from that list is used. |
+| `DO_INFERENCE_ROUTER` | No | Optional Intelligent Inference Router name (`router:<name>`). If set, becomes the default. |
 
-On first boot, `/opt/apply-inference-from-env.sh` writes `/root/.local/share/opencode/auth.json`, sets the default model in `opencode.json`, and skips the interactive wizard.
+On first boot, `/opt/apply-inference-from-env.sh` writes `/root/.local/share/opencode/auth.json`, replaces the DigitalOcean model list in `opencode.json` from the live catalog, and skips the interactive wizard.
 
-Pre-configured models (no separate provider key needed, all via Serverless Inference):
-- **`digitalocean/`** (OpenAI-compatible): GPT-5.2, GPT-5, GPT-4.1, o3, DeepSeek R1 70B, Qwen3 32B, Llama 3.3 70B, **Kimi K2.5 (default)**, glm-5, MiniMax M2.5, Claude Opus 4.6, Opus 4.5, Sonnet 4.5, Sonnet 4
+Models are not pinned in the image. The live chat-capable list comes from [Retrieve available models](https://docs.digitalocean.com/products/inference/how-to/retrieve-available-models/). The Intelligent Inference Router remains available as `digitalocean/router:<name>`.
 
 If the user chooses option 2 in the setup wizard, the custom Serverless Inference config is removed and OpenCode falls back to its standard built-in providers (75+ options via `/connect`).
 
