@@ -2,7 +2,7 @@
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "grok-build-24-04-snapshot-{{timestamp}}",
-    "apt_packages": "apt-transport-https ca-certificates curl software-properties-common git jq unzip ufw",
+    "apt_packages": "apt-transport-https ca-certificates curl software-properties-common git jq python3 unzip ufw",
     "application_name": "Grok Build",
     "application_version": "0.2.51"
   },

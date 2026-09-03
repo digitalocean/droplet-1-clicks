@@ -74,8 +74,8 @@ Grok Build supports any OpenAI-compatible provider through per-model entries in 
 
 - **Endpoint**: `https://inference.do-ai.run/v1`
 - **Auth**: Bearer token (model access key) read from the `MODEL_ACCESS_KEY` env var
-- **Default model**: `gpt-5-5` (GPT-5.5)
-- **Catalog**: GPT-5.x, Claude Opus/Sonnet, Kimi, MiniMax, GLM, Llama, Qwen, DeepSeek (see `config.toml`)
+- **Default model**: `openai-gpt-5.5` / alias `gpt-5-5` when that id is still in the live catalog
+- **Catalog**: loaded at runtime from `GET https://inference.do-ai.run/v1/models` (same helper as Hermes/OpenClaw)
 - **Intelligent Inference Router**: the `router` alias uses `model = "router:<name>"`
 
 ### Authentication priority
@@ -109,7 +109,7 @@ Grok resolves credentials per model as `model.api_key` > `model.env_key` > activ
 | Variable | Description |
 |----------|-------------|
 | `MODEL_ACCESS_KEY` | DigitalOcean model access key (default provider) |
-| `DO_INFERENCE_MODEL` | Optional default model alias (default `gpt-5-5`) |
+| `DO_INFERENCE_MODEL` | Optional default model id or alias (live catalog; prefers `openai-gpt-5.5`) |
 | `DO_INFERENCE_ROUTER` | Optional Intelligent Inference Router name (`router:<name>`) |
 | `XAI_API_KEY` | xAI API key (`xai-...`) for the xAI native provider |
 
@@ -120,13 +120,12 @@ Set these as droplet environment variables at create time (written to `/etc/envi
 On first SSH login (when nothing was pre-applied), the wizard:
 
 1. Prompts for a DigitalOcean model access key
-2. Presents a numbered list of DigitalOcean models to pick the default from — or `R` to use an Intelligent Inference Router (and prompts for its name)
-3. Saves the selection to `/opt/grok-build.env`, applies `MODEL_ACCESS_KEY`, and sets the default model/router in `config.toml`
-4. Tests the connection to `https://inference.do-ai.run/v1/models`
-5. If the model access key is skipped, offers xAI device-code sign-in or an xAI API key
-6. Self-removes from `.bashrc` after a successful setup
+2. Fetches the current chat-model list from `GET https://inference.do-ai.run/v1/models` and presents it (or `R` for the Intelligent Inference Router)
+3. Saves the selection to `/opt/grok-build.env`, applies `MODEL_ACCESS_KEY`, refreshes the DigitalOcean catalog in `config.toml`, and sets the default model/router
+4. If the model access key is skipped, offers xAI device-code sign-in or an xAI API key
+5. Self-removes from `.bashrc` after a successful setup
 
-The model menu aliases are kept in sync with `/root/.grok/config.toml`. The DigitalOcean catalog evolves; list the live set with `curl -s -H "Authorization: Bearer $MODEL_ACCESS_KEY" https://inference.do-ai.run/v1/models | jq -r '.data[].id'`.
+Invalid keys can be re-entered, or you can type a model id to continue without a live list. The DigitalOcean `[model.*]` entries in `config.toml` are replaced with the live set (existing aliases such as `gpt-5-5` are kept when that id is still available).
 
 ## Version Pinning
 

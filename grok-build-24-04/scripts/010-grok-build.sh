@@ -54,6 +54,7 @@ chmod +x /opt/setup-grok-build.sh
 chmod +x /opt/update-grok-build.sh
 chmod +x /opt/grok-login.sh
 chmod +x /opt/apply-inference-from-env.sh
+chmod +x /var/lib/digitalocean/inference-models.sh
 chmod 600 /opt/grok-build.env
 chmod +x /etc/update-motd.d/99-one-click
 chmod +x /var/lib/cloud/scripts/per-instance/001_onboot
