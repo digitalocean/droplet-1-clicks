@@ -1,196 +1,191 @@
 #!/bin/bash
-
-
-set -e
+set -euo pipefail
 
 INSTALL_DIR="/docker/plausible"
-mkdir -p "$INSTALL_DIR"
-cd "$INSTALL_DIR" || exit 1
-
-# Function to clean up existing containers and images
-cleanup_docker() {
-    echo "🧹 Cleaning up existing Docker containers and images..."
-    
-    # Stop and remove containers
-    if docker-compose ps 2>/dev/null | grep -q "plausible"; then
-        docker-compose down -v --remove-orphans 2>/dev/null || true
-    fi
-    
-    # Remove dangling images and containers
-    docker container prune -f --filter "until=0h" 2>/dev/null || true
-    docker image prune -af --filter "until=0h" 2>/dev/null || true
-    
-    # Specifically remove plausible-related containers if they exist
-    docker ps -a --filter "name=plausible" --format '{{.ID}}' | xargs -r docker rm -f 2>/dev/null || true
-    
-    echo "✅ Docker cleanup completed."
-}
-
-if [ -d ".git" ]; then
-    echo "Repository already exists. Cleaning up and pulling latest changes..."
-    cleanup_docker
-    git pull --rebase --autostash
-else
-    echo "Cloning Plausible hosting repo..."
-    git clone https://github.com/plausible/hosting .
+CE_REPO="https://github.com/plausible/community-edition.git"
+APP_VERSION="v3.2.1"
+if [ -f /var/lib/digitalocean/application.info ]; then
+	# shellcheck disable=SC1091
+	. /var/lib/digitalocean/application.info
+	APP_VERSION="${application_version:-$APP_VERSION}"
 fi
 
-droplet_ip=$(hostname -I | awk '{print$1}')
+mkdir -p "$INSTALL_DIR"
+cd "$INSTALL_DIR"
+
+meta() { curl -fsS --retry 5 --retry-connrefused --max-time 2 "$1"; }
+DROPLET_PUBLIC_IP="$(meta http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)"
+DROPLET_PRIVATE_IP="$(hostname -I | awk '{print $1}')"
+DROPLET_IP="${DROPLET_PUBLIC_IP:-$DROPLET_PRIVATE_IP}"
+
+cleanup_docker() {
+	echo "Cleaning up existing Plausible containers..."
+	if [ -f compose.yml ] || [ -f docker-compose.yml ]; then
+		docker compose down -v --remove-orphans 2>/dev/null || true
+	fi
+	docker ps -a --filter "name=plausible" --format '{{.ID}}' | xargs -r docker rm -f 2>/dev/null || true
+}
+
+if [ -d .git ]; then
+	remote_url="$(git remote get-url origin 2>/dev/null || true)"
+	if [[ "$remote_url" != *community-edition* ]]; then
+		echo "Replacing outdated hosting checkout with community-edition..."
+		cleanup_docker
+		cd /
+		rm -rf "$INSTALL_DIR"
+		mkdir -p "$INSTALL_DIR"
+		cd "$INSTALL_DIR"
+		git clone --depth 1 "$CE_REPO" .
+	else
+		echo "Repository already exists. Updating..."
+		cleanup_docker
+		git pull --rebase --autostash || true
+	fi
+else
+	echo "Cloning Plausible Community Edition (image pin ${APP_VERSION})..."
+	git clone --depth 1 "$CE_REPO" .
+fi
+
+# Keep application_version aligned with the compose image tag when present
+if grep -q "ghcr.io/plausible/community-edition:" compose.yml 2>/dev/null; then
+	image_pin="$(sed -n 's/.*ghcr.io\/plausible\/community-edition:\([^[:space:]]*\).*/\1/p' compose.yml | head -1)"
+	if [ -n "$image_pin" ]; then
+		APP_VERSION="$image_pin"
+	fi
+fi
 
 echo "=== Plausible Analytics Setup ==="
 echo ""
 echo "Choose your setup method:"
-echo "1. Use server IP address (quick setup) - http://$droplet_ip"
+echo "1. Use server IP with HTTPS (shortlived TLS) - https://${DROPLET_IP}"
 echo "2. Use your own domain (recommended for production) - https://yourdomain.com"
 echo ""
-read -p "Enter your choice (1 or 2): " setup_choice
+read -r -p "Enter your choice (1 or 2): " setup_choice
 
-if [ "$setup_choice" = "2" ]; then
-    echo ""
-    echo "📋 DNS Configuration Required:"
-    echo "   Create an A record pointing your domain to: $droplet_ip"
-    echo ""
-    
-    read -p "Enter your domain name: " user_domain
-    
-    if [[ ! "$user_domain" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]+[a-zA-Z0-9]$ ]]; then
-        echo "❌ Invalid domain format."
-        exit 1
-    fi
-    
-    read -p "Have you configured the DNS A record? (y/n): " dns_ready
-    
-    if [ "$dns_ready" != "y" ]; then
-        echo "⚠️  Please configure DNS first, then run this script again."
-        exit 1
-    fi
-    
-    base_url="https://$user_domain"
-    use_domain=true
+use_domain=false
+if [ "${setup_choice}" = "2" ]; then
+	use_domain=true
+	echo ""
+	echo "DNS Configuration Required:"
+	echo "  Create an A record pointing your domain to: ${DROPLET_IP}"
+	echo ""
+	read -r -p "Enter your domain name: " user_domain
+	if [[ ! "$user_domain" =~ ^[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?$ ]]; then
+		echo "Invalid domain format."
+		exit 1
+	fi
+	read -r -p "Have you configured the DNS A record? (y/n): " dns_ready
+	if [ "$dns_ready" != "y" ]; then
+		echo "Configure DNS first, then run this script again."
+		exit 1
+	fi
+	base_url="https://${user_domain}"
 else
-    base_url="http://$droplet_ip"
-    use_domain=false
+	base_url="https://${DROPLET_IP}"
 fi
 
-echo ""
-read -p "Enter your admin email: " admin_email
-read -p "Enter your desired admin name: " admin_name
-read -s -p "Enter your desired admin password: " admin_pwd
-echo
+secret_key_base="$(openssl rand -base64 48)"
 
-secret_key_base=$(openssl rand -base64 64)
-
-# Remove old .env file to clear previous values
 rm -f .env
-
-cat > .env <<EOF
-BASE_URL=$base_url
-SECRET_KEY_BASE=$secret_key_base
-ADMIN_USER_EMAIL=$admin_email
-ADMIN_USER_NAME=$admin_name
-ADMIN_USER_PWD=$admin_pwd
-DATABASE_URL=postgresql://postgres:postgres@plausible_db:5432/plausible
-CLICKHOUSE_DATABASE_URL=http://plausible_events_db:8123/plausible
+cat >.env <<EOF
+BASE_URL=${base_url}
+SECRET_KEY_BASE=${secret_key_base}
+DISABLE_REGISTRATION=invite_only
+HTTP_PORT=8000
 EOF
+chmod 600 .env
 
-# Reset compose.yml to clean state by checking it out from git
-git checkout compose.yml 2>/dev/null || true
+cp -f /opt/plausible/compose.override.yml "${INSTALL_DIR}/compose.override.yml"
 
-# Configure Docker Compose - add ports if not already present
-if ! grep -q "127.0.0.1:8000:8000" compose.yml; then
-    sed -i '/plausible:/a \ \ \ \ ports:\n\ \ \ \ \ \ - 127.0.0.1:8000:8000' compose.yml
-fi
-
-# Update environment variables (these patterns will match and replace existing ones)
-sed -i "s|- BASE_URL.*|- BASE_URL=\${BASE_URL}|" compose.yml
-sed -i "s|- SECRET_KEY_BASE.*|- SECRET_KEY_BASE=\${SECRET_KEY_BASE}|" compose.yml
-sed -i "s|- DATABASE_URL.*|- DATABASE_URL=\${DATABASE_URL}|" compose.yml
-sed -i "s|- CLICKHOUSE_DATABASE_URL.*|- CLICKHOUSE_DATABASE_URL=\${CLICKHOUSE_DATABASE_URL}|" compose.yml
-
-# Remove any existing duplicate admin user variables and add them once
-sed -i "/- ADMIN_USER_EMAIL=/d" compose.yml
-sed -i "/- ADMIN_USER_NAME=/d" compose.yml
-sed -i "/- ADMIN_USER_PWD=/d" compose.yml
-sed -i "/# required:.*$/a \ \ \ \ \ \ - ADMIN_USER_EMAIL=\${ADMIN_USER_EMAIL}\n\ \ \ \ \ \ - ADMIN_USER_NAME=\${ADMIN_USER_NAME}\n\ \ \ \ \ \ - ADMIN_USER_PWD=\${ADMIN_USER_PWD}" compose.yml
-
-# Configure Nginx based on user choice
 if [ "$use_domain" = true ]; then
-    echo "🔧 Configuring domain setup..."
-    
-    # Remove the default IP configuration
-    rm -f /etc/nginx/sites-enabled/plausible.conf
-    
-    # Create domain-specific configuration
-    cat > /etc/nginx/sites-available/plausible-domain <<EOF
-server {
-    listen 80;
-    server_name $user_domain;
-
-    location / {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_set_header X-Forwarded-Host \$host;
-        proxy_redirect off;
-        
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-    }
+	echo "Configuring Caddy for domain ${user_domain}..."
+	read -r -p "Enter an email for Let's Encrypt notifications (optional): " le_email
+	cat >/etc/caddy/Caddyfile <<CADDYEOC
+${user_domain} {
+	tls {
+		issuer acme {
+			dir https://acme-v02.api.letsencrypt.org/directory
+			profile shortlived
+		}
+	}
+	reverse_proxy 127.0.0.1:8000
+	header X-DO-MARKETPLACE "plausible"
 }
-EOF
-
-    ln -sf /etc/nginx/sites-available/plausible-domain /etc/nginx/sites-enabled/
-    nginx -t && systemctl reload nginx
-    
-    echo "🚀 Starting Plausible Analytics..."
-    # Clean up before starting
-    docker-compose down -v --remove-orphans 2>/dev/null || true
-    sleep 2
-    docker-compose up -d
-    
-    echo "⏳ Waiting for Plausible to start..."
-    sleep 30
-    
-    echo "🔒 Setting up SSL certificate..."
-    if certbot --nginx -d "$user_domain" --non-interactive --agree-tos --email "$admin_email" --redirect; then
-        sed -i "s|BASE_URL=.*|BASE_URL=https://$user_domain|" .env
-        docker-compose restart plausible
-        access_url="https://$user_domain"
-        echo "✅ SSL certificate installed!"
-    else
-        access_url="http://$user_domain"
-        echo "⚠️  SSL setup failed."
-    fi
-    
+CADDYEOC
+	if [ -n "${le_email}" ]; then
+		sed -i "1iemail ${le_email}" /etc/caddy/Caddyfile
+	fi
 else
-    echo "🔧 Using IP configuration..."
-    
-    echo "🚀 Starting Plausible Analytics..."
-    # Clean up before starting
-    docker-compose down -v --remove-orphans 2>/dev/null || true
-    sleep 2
-    docker-compose up -d
-    
-    access_url="http://$droplet_ip"
+	echo "Configuring Caddy for IP ${DROPLET_IP} with shortlived TLS..."
+	cat >/etc/caddy/Caddyfile <<CADDYEOC
+${DROPLET_IP} {
+	tls {
+		issuer acme {
+			dir https://acme-v02.api.letsencrypt.org/directory
+			profile shortlived
+		}
+	}
+	reverse_proxy 127.0.0.1:8000
+	header X-DO-MARKETPLACE "plausible"
+}
+CADDYEOC
 fi
 
-sleep 15
+systemctl enable caddy
+systemctl restart caddy
 
-echo ""
-echo "🎉 Plausible Analytics is ready!"
-echo "📍 Access URL: $access_url"
-echo "📧 Admin Email: $admin_email"
-echo ""
+echo "Starting Plausible..."
+docker compose down -v --remove-orphans 2>/dev/null || true
+docker compose up -d
 
-if [ "$use_domain" = true ]; then
-    echo "🔒 SSL: Enabled"
-    echo "✅ Production ready!"
-else
-    echo "📝 For production: re-run with option 2"
+echo "Waiting for Plausible to become ready..."
+app_ok=false
+for _ in $(seq 1 60); do
+	if curl -fsS --max-time 3 "http://127.0.0.1:8000/" >/dev/null 2>&1; then
+		app_ok=true
+		break
+	fi
+	sleep 2
+done
+
+if [ "$app_ok" != true ]; then
+	echo "ERROR: Plausible did not become ready on 127.0.0.1:8000."
+	echo "Check: cd /docker/plausible && docker compose logs"
+	exit 1
 fi
 
+echo "Waiting for HTTPS at ${base_url}..."
+tls_ok=false
+for _ in $(seq 1 45); do
+	if curl -fsSk --max-time 5 "${base_url}/" >/dev/null 2>&1; then
+		tls_ok=true
+		break
+	fi
+	sleep 2
+done
+
+if [ "$tls_ok" != true ]; then
+	echo "ERROR: HTTPS is not available at ${base_url}."
+	echo "Not falling back to HTTP. Check DNS (for domains) and:"
+	echo "  journalctl -u caddy -n 50 --no-pager"
+	echo "  /opt/status-plausible.sh"
+	exit 1
+fi
+
+# Restore default .bashrc so this first-login script doesn't run again
+cp -f /etc/skel/.bashrc /root/.bashrc
+
 echo ""
-echo "🚀 Visit $access_url to start using Plausible!"
+echo "Plausible Analytics is ready!"
+echo "Access URL: ${base_url}"
+echo ""
+echo "Create the first account at: ${base_url}/register"
+echo "The first registrant becomes admin."
+echo "Further signups are invite-only (DISABLE_REGISTRATION=invite_only)."
+echo ""
+echo "Helpers:"
+echo "  /opt/status-plausible.sh"
+echo "  /opt/setup-plausible-domain.sh   # switch later to a custom domain"
+echo "  /opt/start-plausible.sh | /opt/stop-plausible.sh | /opt/restart-plausible.sh"
+echo ""
+echo "Visit ${base_url}/register to finish setup."

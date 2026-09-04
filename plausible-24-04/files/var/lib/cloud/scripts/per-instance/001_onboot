@@ -1,13 +1,34 @@
 #!/bin/bash
+set -euo pipefail
 
-cat >> /root/.bashrc <<EOM
+meta() { curl -fsS --retry 10 --retry-connrefused --max-time 2 "$1"; }
+DROPLET_PUBLIC_IP="$(meta http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)"
+DROPLET_PRIVATE_IP="$(hostname -I | awk '{print $1}')"
+DROPLET_IP="${DROPLET_PUBLIC_IP:-$DROPLET_PRIVATE_IP}"
+
+if [ -f /etc/caddy/Caddyfile.tmp ]; then
+	cp /etc/caddy/Caddyfile.tmp /etc/caddy/Caddyfile
+fi
+
+if grep -q "PLACEHOLDER_DOMAIN" /etc/caddy/Caddyfile 2>/dev/null; then
+	echo "Configuring Caddy with droplet IP address..."
+	sed -i "s/PLACEHOLDER_DOMAIN/${DROPLET_IP}/" /etc/caddy/Caddyfile
+fi
+
+systemctl enable caddy
+systemctl restart caddy
+
+# Run interactive setup on first SSH login
+if ! grep -q 'plausible-setup.sh' /root/.bashrc 2>/dev/null; then
+	cat >>/root/.bashrc <<'EOM'
 chmod +x /root/plausible-setup.sh
 /root/plausible-setup.sh
 EOM
+fi
 
 # Remove the ssh force logout command
 sed -e '/Match User root/d' \
-    -e '/.*ForceCommand.*droplet.*/d' \
-    -i /etc/ssh/sshd_config
+	-e '/.*ForceCommand.*droplet.*/d' \
+	-i /etc/ssh/sshd_config
 
 systemctl restart ssh
