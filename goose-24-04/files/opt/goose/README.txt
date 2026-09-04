@@ -58,18 +58,18 @@ The first time you log in as root, /opt/goose/first-login-setup.sh runs automati
      version from this 1-Click (the "name" field inside the JSON must be
      digitalocean_gradient).
 
-CHANGE GRADIENT MODEL (e.g. minimax-m2.5 to kimi-k2.5)
+CHANGE GRADIENT MODEL (e.g. minimax-m2.5 to kimi-k3)
 ======================================================
 
   Edit /root/.config/goose/config.yaml and set GOOSE_MODEL to one of the "name"
   values in /root/.config/goose/custom_providers/digitalocean_gradient.json
-  (for example kimi-k2.5, glm-5, anthropic-claude-4.5-sonnet). Keep
+  (for example kimi-k3, glm-5.3, anthropic-claude-4.5-sonnet). Keep
   GOOSE_PROVIDER as digitalocean_gradient. Or run "goose configure" and choose
   another model when offered. Rotating the API key with
   /opt/goose/configure-gradient-key.sh does not overwrite GOOSE_MODEL if it is
   already set.
 
-  Note: kimi-k2.5 can be slow with some Goose builds on Gradient (max_tokens vs
+  Note: kimi-k3 can be slow with some Goose builds on Gradient (max_tokens vs
   max_completion_tokens). Prefer minimax-m2.5 as default; upstream Goose can add
   digitalocean_gradient to its OpenAI compat remap list for a full fix.
 
