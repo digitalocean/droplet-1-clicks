@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-APP_VERSION="${application_version:-1.4.0}"
+APP_VERSION="${application_version:-1.16.0}"
 OPENHANDS_USER=openhands
 OPENHANDS_HOME=/home/openhands
 
@@ -10,6 +10,9 @@ ufw allow 80/tcp comment 'HTTP'
 ufw allow 443/tcp comment 'HTTPS'
 ufw limit ssh/tcp
 ufw --force enable
+
+# Chromium (browser tooling for agents); also in template apt_packages
+apt-get install -y chromium-browser
 
 # Node.js 22 (required by Agent Canvas)
 curl -fsSL https://deb.nodesource.com/setup_22.x | bash -

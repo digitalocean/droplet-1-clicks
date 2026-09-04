@@ -2,9 +2,9 @@
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "openhands-24-04-snapshot-{{timestamp}}",
-    "apt_packages": "procps file apt-transport-https ca-certificates curl software-properties-common git build-essential jq unzip gnupg fail2ban ufw",
+    "apt_packages": "procps file apt-transport-https ca-certificates curl software-properties-common git build-essential jq unzip gnupg fail2ban ufw chromium-browser",
     "application_name": "OpenHands",
-    "application_version": "1.4.0"
+    "application_version": "1.16.0"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
