@@ -18,16 +18,16 @@ ONBOARD_LOG=/tmp/zeroclaw-onboard.log
 ensure_config_api_key() {
     local key="$1" conf="$CONFIG_FILE"
     [ -f "$conf" ] || return 1
-    if grep -qE '^api_key\s*=' "$conf"; then
-        sed -i "s|^api_key\s*=.*|api_key = \"${key}\"|" "$conf"
+    if grep -qE '^api_key[[:space:]]*=' "$conf"; then
+        sed -E -i "s|^api_key[[:space:]]*=.*|api_key = \"${key}\"|" "$conf"
     else
         sed -i "1i api_key = \"${key}\"" "$conf"
     fi
-    if grep -qE '^default_provider\s*=' "$conf"; then
-        sed -i "s|^default_provider\s*=.*|default_provider = \"${PROVIDER}\"|" "$conf"
+    if grep -qE '^default_provider[[:space:]]*=' "$conf"; then
+        sed -E -i "s|^default_provider[[:space:]]*=.*|default_provider = \"${PROVIDER}\"|" "$conf"
     fi
-    if grep -qE '^default_model\s*=' "$conf"; then
-        sed -i "s|^default_model\s*=.*|default_model = \"${MODEL}\"|" "$conf"
+    if grep -qE '^default_model[[:space:]]*=' "$conf"; then
+        sed -E -i "s|^default_model[[:space:]]*=.*|default_model = \"${MODEL}\"|" "$conf"
     fi
     chown zeroclaw:zeroclaw "$conf"
     chmod 600 "$conf"
@@ -65,7 +65,7 @@ sed -i 's/^port = .*/port = 42617/' "$CONFIG_FILE" || true
 ensure_config_api_key "$API_KEY"
 
 # Verify top-level api_key is non-empty (ignore reliability api_keys = []).
-configured_key=$(grep -E '^api_key\s*=' "$CONFIG_FILE" | head -n1 | sed 's/^api_key\s*=\s*"\?\([^"]*\)"\?.*/\1/')
+configured_key=$(grep -E '^api_key[[:space:]]*=' "$CONFIG_FILE" | head -n1 | sed -E 's/^api_key[[:space:]]*=[[:space:]]*"?([^"]*)"?.*/\1/')
 if [ -z "$configured_key" ] || [ "$configured_key" = "PLACEHOLDER" ]; then
     echo "Failed to write api_key into ${CONFIG_FILE}. Onboard log: ${ONBOARD_LOG}" >&2
     exit 1

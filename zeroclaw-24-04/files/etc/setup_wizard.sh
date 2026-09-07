@@ -18,7 +18,7 @@ remove_first_login_hook() {
 inference_already_configured() {
   local api_key
   [ -f "$CONFIG_FILE" ] || return 1
-  api_key=$(grep -E '^api_key\s*=' "$CONFIG_FILE" 2>/dev/null | tail -n 1 | sed 's/^api_key\s*=\s*"\?\([^"]*\)"\?.*/\1/') || return 1
+  api_key=$(grep -E '^api_key[[:space:]]*=' "$CONFIG_FILE" 2>/dev/null | tail -n 1 | sed -E 's/^api_key[[:space:]]*=[[:space:]]*"?([^"]*)"?.*/\1/') || return 1
   case "$api_key" in
     ''|PLACEHOLDER|*'${'*) return 1 ;;
   esac
