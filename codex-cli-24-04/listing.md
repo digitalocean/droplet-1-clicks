@@ -63,12 +63,13 @@ Set at droplet create time:
 
 - `MODEL_ACCESS_KEY` — your DigitalOcean model access key (required)
 - `INFERENCE_MODEL` — optional model id (default: `openai-gpt-5.5`)
+- `DO_INFERENCE_ROUTER` — optional Intelligent Inference Router name (`router:<name>`)
 
 Codex CLI is configured automatically on first boot; no wizard required.
 
 **Option B — Edit `/opt/codex-cli.env`**
 
-Set `MODEL_ACCESS_KEY` and optionally `INFERENCE_MODEL`, then reboot or run:
+Set `MODEL_ACCESS_KEY` and optionally `INFERENCE_MODEL` / `DO_INFERENCE_ROUTER`, then reboot or run:
 
 ```bash
 /opt/apply-inference-from-env.sh
@@ -76,7 +77,7 @@ Set `MODEL_ACCESS_KEY` and optionally `INFERENCE_MODEL`, then reboot or run:
 
 **Option C — First-login setup wizard**
 
-On first SSH login, the wizard prompts for your key if it was not pre-configured.
+On first SSH login, the wizard prompts for your key if it was not pre-configured. After the key, press Enter for GPT-5.5 or `R` for the Intelligent Inference Router.
 
 To create a key:
 
@@ -107,7 +108,7 @@ The default model is **GPT-5.5** (`openai-gpt-5.5`). Change it with `codex -m "o
 
 - **Codex config**: `/root/.codex/config.toml`
 - **API key**: `/root/.codex/env` (`MODEL_ACCESS_KEY`)
-- **Droplet env template**: `/opt/codex-cli.env` (`MODEL_ACCESS_KEY`, `INFERENCE_MODEL`)
+- **Droplet env template**: `/opt/codex-cli.env` (`MODEL_ACCESS_KEY`, `INFERENCE_MODEL`, `DO_INFERENCE_ROUTER`)
 - **Getting started guide**: `cat /root/codex_cli_info.txt`
 
 ### Available Models
@@ -129,6 +130,7 @@ Use model IDs from the Inference model catalog with `codex -m "<model-id>"` or e
 | MiniMax M2.5 | `minimax-m2.5` |
 | Claude Opus 4.6 | `anthropic-claude-opus-4-6` |
 | Claude Sonnet 4.5 | `anthropic-claude-4.5-sonnet` |
+| Intelligent Inference Router | `router:<name>` |
 
 List all available models:
 
