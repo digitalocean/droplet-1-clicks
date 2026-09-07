@@ -21,5 +21,10 @@ echo "=== Quick Status ==="
 su - zeroclaw -c "zeroclaw status" 2>/dev/null || echo "Run setup wizard first: sudo /etc/setup_wizard.sh"
 
 echo ""
+echo "=== Gateway Pairing Code ==="
+su - zeroclaw -c "zeroclaw gateway get-paircode --new" 2>/dev/null \
+  || echo "Run: /opt/zeroclaw-cli.sh gateway get-paircode --new"
+
+echo ""
 echo "=== CLI tip ==="
 echo "/opt/zeroclaw-cli.sh agent -a assistant -m \"Hello\""

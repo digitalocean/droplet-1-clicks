@@ -69,6 +69,9 @@ journalctl -u zeroclaw -f
 # Show status and version
 /opt/status-zeroclaw.sh
 
+# Gateway pairing code (UI login)
+/opt/zeroclaw-cli.sh gateway get-paircode --new
+
 # Update to latest version
 sudo /opt/update-zeroclaw.sh
 

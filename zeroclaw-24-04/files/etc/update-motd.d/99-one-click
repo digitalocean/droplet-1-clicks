@@ -30,6 +30,7 @@ anywhere. Uses <5MB RAM and starts in <10ms.
     View logs:        journalctl -u zeroclaw -f
     System status:    /opt/zeroclaw-cli.sh status
     System doctor:    /opt/zeroclaw-cli.sh doctor
+    Pairing code:     /opt/zeroclaw-cli.sh gateway get-paircode --new
     Chat once:        /opt/zeroclaw-cli.sh agent -a assistant -m "Hello"
 
   Helper Scripts:
