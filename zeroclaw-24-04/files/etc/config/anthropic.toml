@@ -1,7 +1,21 @@
+schema_version = 3
+
+[providers.models.anthropic.default]
 api_key = "PLACEHOLDER"
-default_provider = "anthropic"
-default_model = "claude-sonnet-4-6"
-default_temperature = 0.7
+model = "claude-sonnet-4-6"
+temperature = 0.7
+
+[agents.assistant]
+model_provider = "anthropic.default"
+risk_profile = "locked_down"
+
+[risk_profiles.locked_down]
+level = "supervised"
+workspace_only = true
+allowed_commands = ["git", "npm", "cargo", "ls", "cat", "grep"]
+require_approval_for_medium_risk = true
+block_high_risk_commands = true
+sandbox_enabled = true
 
 [memory]
 backend = "sqlite"
@@ -13,11 +27,10 @@ port = 42617
 host = "127.0.0.1"
 require_pairing = true
 allow_public_bind = false
-
-[autonomy]
-level = "supervised"
-workspace_only = true
-allowed_commands = ["git", "npm", "cargo", "ls", "cat", "grep"]
+web_dist_dir = "/usr/share/zeroclawlabs/web/dist"
 
 [secrets]
 encrypt = true
+
+[onboard_state]
+quickstart_completed = true

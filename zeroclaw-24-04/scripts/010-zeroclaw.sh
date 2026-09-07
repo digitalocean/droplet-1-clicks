@@ -1,6 +1,6 @@
 #!/bin/sh
 
-APP_VERSION="${application_version:-v0.1.7-beta.30}"
+APP_VERSION="${application_version:-v0.8.4}"
 
 # Open required ports
 ufw allow 80
@@ -36,7 +36,27 @@ echo "Downloading ZeroClaw ${APP_VERSION} for ${TARGET}..."
 curl -fsSLO "$DOWNLOAD_URL"
 tar xzf "zeroclaw-${TARGET}.tar.gz"
 install -m 0755 zeroclaw /usr/local/bin/zeroclaw
-rm -f "zeroclaw-${TARGET}.tar.gz" zeroclaw
+# Optional TUI companion binary when present in the release archive
+if [ -f zerocode ]; then
+    install -m 0755 zerocode /usr/local/bin/zerocode
+fi
+
+# Web dashboard assets (required for the gateway UI). Official installer places
+# these under the XDG data dir; also mirror the system package path the gateway
+# auto-detects so systemd (HOME=/home/zeroclaw) finds index.html.
+WEB_DIST_SYSTEM=/usr/share/zeroclawlabs/web/dist
+WEB_DIST_USER=/home/zeroclaw/.local/share/zeroclaw/web/dist
+if [ -f web/dist/index.html ]; then
+    mkdir -p "$WEB_DIST_SYSTEM" "$WEB_DIST_USER"
+    cp -a web/dist/. "$WEB_DIST_SYSTEM/"
+    cp -a web/dist/. "$WEB_DIST_USER/"
+    chown -R zeroclaw:zeroclaw /home/zeroclaw/.local
+    echo "Web dashboard installed to ${WEB_DIST_SYSTEM} and ${WEB_DIST_USER}"
+else
+    echo "WARNING: web/dist missing from release archive — dashboard UI will be unavailable." >&2
+fi
+
+rm -rf "zeroclaw-${TARGET}.tar.gz" zeroclaw zerocode web
 
 # Verify installation
 /usr/local/bin/zeroclaw --help > /dev/null 2>&1
