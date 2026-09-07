@@ -74,7 +74,7 @@ Configure Serverless Inference so OpenHands can call models via a single model a
 Create a key at: https://cloud.digitalocean.com/gen-ai
   (API Keys > Model Access Keys)
 
-Examples: minimax-m2.5 (default), kimi-k2.5, glm-5, llama3.3-70b-instruct
+Examples: minimax-m2.5 (default), kimi-k3, glm-5.3, llama3.3-70b-instruct
 
 You can also skip and set any provider later in Settings > LLM.
 

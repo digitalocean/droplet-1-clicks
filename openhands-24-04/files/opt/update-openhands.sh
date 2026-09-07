@@ -3,16 +3,7 @@
 
 set -euo pipefail
 
-APP_VERSION="latest"
-if [ -f /opt/openhands.env ]; then
-  APP_VERSION_VALUE=$(grep -E '^OPENHANDS_VERSION=' /opt/openhands.env | tail -n 1 | cut -d= -f2-)
-  if [ -n "$APP_VERSION_VALUE" ]; then
-    APP_VERSION="$APP_VERSION_VALUE"
-  fi
-fi
-case "$APP_VERSION" in *'$'*) APP_VERSION="latest" ;; esac
-
-TARGET="${1:-$APP_VERSION}"
+TARGET="${1:-latest}"
 if [ "$TARGET" = "Latest" ] || [ "$TARGET" = "latest" ]; then
   TARGET="latest"
 fi

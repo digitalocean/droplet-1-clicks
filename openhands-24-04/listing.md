@@ -32,7 +32,8 @@ OpenHands Agent Canvas runs the agent server on the host. Prefer at least 4 GB R
 ## Included System Components
 
 - **Ubuntu 24.04 LTS**
-- **OpenHands Agent Canvas** (version pinned in the image build)
+- **OpenHands Agent Canvas** (version pinned in the image build; currently 1.16.0)
+- **Chromium** (`chromium-browser`) for agent browser tooling
 - **Node.js 22** and **uv**
 - **Caddy** reverse proxy (ports 80/443 → Agent Canvas on localhost:8000)
 - **UFW** and **fail2ban**
