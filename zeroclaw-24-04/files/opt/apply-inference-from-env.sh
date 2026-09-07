@@ -49,7 +49,9 @@ write_env_file_kv() {
     grep -v "^${key}=" "$ENV_FILE" >"$tmp" 2>/dev/null || : >"$tmp"
     printf '%s=%q\n' "$key" "$val" >>"$tmp"
     mv "$tmp" "$ENV_FILE"
-    chmod 600 "$ENV_FILE"
+    # Readable by service user (OpenHands-style shared env), not world-readable.
+    chown root:zeroclaw "$ENV_FILE" 2>/dev/null || chown root:root "$ENV_FILE"
+    chmod 640 "$ENV_FILE"
 }
 
 env_value_usable() {
@@ -108,6 +110,7 @@ write_env_file_kv INFERENCE_MODEL "$PRIMARY_MODEL"
 
 systemctl enable zeroclaw
 systemctl restart zeroclaw
+sleep 2
 
 remove_setup_wizard_bashrc_hook
 redact_inference_secrets_from_system_environment
@@ -126,6 +129,11 @@ if [ "$HTTP_STATUS" = "200" ]; then
 else
     echo "Serverless Inference configured from ${ENV_FILE}: model ${PRIMARY_MODEL}"
     echo "Warning: Received HTTP ${HTTP_STATUS:-000} from the Serverless Inference API." >&2
+fi
+
+# Surface pairing code like OpenHands surfaces its API key in MOTD/info.
+if [ -x /opt/show-zeroclaw-pairing.sh ]; then
+    /opt/show-zeroclaw-pairing.sh || /opt/show-zeroclaw-pairing.sh --new || true
 fi
 
 exit 0

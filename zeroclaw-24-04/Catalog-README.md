@@ -58,6 +58,9 @@ systemctl status zeroclaw
 
 # View logs
 journalctl -u zeroclaw -f
+
+# Gateway pairing code (preferred; do not rely on journal alone)
+sudo /opt/show-zeroclaw-pairing.sh
 ```
 
 ### Helper Scripts
@@ -68,6 +71,9 @@ journalctl -u zeroclaw -f
 
 # Show status and version
 /opt/status-zeroclaw.sh
+
+# Show / refresh gateway pairing code
+sudo /opt/show-zeroclaw-pairing.sh
 
 # Update to latest version
 sudo /opt/update-zeroclaw.sh

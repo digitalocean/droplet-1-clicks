@@ -62,9 +62,15 @@ chmod +x /opt/zeroclaw-cli.sh
 chmod +x /opt/setup-zeroclaw-domain.sh
 chmod +x /opt/apply-inference-from-env.sh
 chmod +x /opt/zeroclaw-run-onboard.sh
-chmod 600 /opt/zeroclaw.env
+chmod +x /opt/show-zeroclaw-pairing.sh
+chmod +x /opt/ensure-persistent-journal.sh
+chmod 640 /opt/zeroclaw.env
+chown root:zeroclaw /opt/zeroclaw.env
 chmod +x /etc/setup_wizard.sh
 chmod +x /etc/update-motd.d/99-one-click
 chmod +x /var/lib/cloud/scripts/per-instance/001_onboot
+
+# Persistent journal so journalctl -u zeroclaw works on Marketplace droplets
+/opt/ensure-persistent-journal.sh || true
 
 # Don't enable yet — the setup wizard enables and starts after config is in place

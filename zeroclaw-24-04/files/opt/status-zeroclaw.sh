@@ -19,3 +19,11 @@ echo "http://$myip:42617 (direct, localhost only)"
 echo ""
 echo "=== Quick Status ==="
 su - zeroclaw -c "zeroclaw status" 2>/dev/null || echo "Run setup wizard first: sudo /etc/setup_wizard.sh"
+
+echo ""
+echo "=== Gateway Pairing Code ==="
+if [ -x /opt/show-zeroclaw-pairing.sh ]; then
+  /opt/show-zeroclaw-pairing.sh 2>/dev/null || echo "Run: sudo /opt/show-zeroclaw-pairing.sh"
+else
+  echo "Run: sudo /opt/show-zeroclaw-pairing.sh"
+fi

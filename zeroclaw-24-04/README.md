@@ -65,5 +65,7 @@ ZeroClaw is extremely lightweight (<5MB RAM, ~8.8MB binary). The minimum `s-1vcp
 | `files/etc/update-motd.d/99-one-click` | MOTD with usage instructions |
 | `files/opt/zeroclaw.env` | Environment configuration (`MODEL_ACCESS_KEY`, `INFERENCE_MODEL`) |
 | `files/opt/apply-inference-from-env.sh` | Apply Serverless Inference key from env on boot |
+| `files/opt/show-zeroclaw-pairing.sh` | Print / refresh gateway pairing code |
+| `files/opt/ensure-persistent-journal.sh` | Enable persistent journald for `journalctl` |
 | `files/opt/*.sh` | Helper scripts (restart, status, update, domain, cli) |
 | `files/var/lib/cloud/scripts/per-instance/001_onboot` | First-boot initialization |

@@ -3,6 +3,13 @@
 # Configured as part of the DigitalOcean 1-Click Image build process
 
 myip=$(hostname -I | awk '{print$1}')
+pair_code=""
+if [ -s /root/.zeroclaw_pairing_code ]; then
+  pair_code=$(cat /root/.zeroclaw_pairing_code)
+elif [ -x /opt/show-zeroclaw-pairing.sh ]; then
+  pair_line=$(/opt/show-zeroclaw-pairing.sh 2>/dev/null | head -n1 || true)
+  pair_code=$(printf '%s' "$pair_line" | sed -n 's/^Gateway pairing code: //p')
+fi
 
 cat <<EOF
 ********************************************************************************
@@ -14,7 +21,20 @@ models, tools, memory, and execution so agents can be built once and run
 anywhere. Uses <5MB RAM and starts in <10ms.
 
   Dashboard URL: https://$myip
-  Direct Gateway: http://$myip:42617
+  Direct Gateway: http://127.0.0.1:42617 (loopback; use https://$myip via Caddy)
+EOF
+
+if [ -n "$pair_code" ]; then
+  cat <<EOF
+  Pairing code:  $pair_code
+EOF
+else
+  cat <<EOF
+  Pairing code:  run: sudo /opt/show-zeroclaw-pairing.sh
+EOF
+fi
+
+cat <<EOF
 
   Configuration:
     Config file:    /home/zeroclaw/.zeroclaw/config.toml
@@ -28,11 +48,12 @@ anywhere. Uses <5MB RAM and starts in <10ms.
     Check status:     systemctl status zeroclaw
     View logs:        journalctl -u zeroclaw -f
     System status:    /opt/zeroclaw-cli.sh status
-    System doctor:    /opt/zeroclaw-cli.sh doctor
+    Pairing code:     sudo /opt/show-zeroclaw-pairing.sh
 
   Helper Scripts:
     /opt/restart-zeroclaw.sh       Restart with status check
     /opt/status-zeroclaw.sh        Show status and version
+    /opt/show-zeroclaw-pairing.sh  Show / refresh gateway pairing code
     /opt/update-zeroclaw.sh        Update to latest version
     /opt/setup-zeroclaw-domain.sh  Configure custom domain with TLS
     /opt/zeroclaw-cli.sh           Run ZeroClaw CLI commands

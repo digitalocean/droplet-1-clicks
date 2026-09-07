@@ -11,6 +11,13 @@ sed "s/PLACEHOLDER_IP/${DROPL_IP}/" /etc/caddy/Caddyfile.tmp > /etc/caddy/Caddyf
 sed -e '/Match User root/d' -e '/.*ForceCommand.*droplet.*/d' -i /etc/ssh/sshd_config
 
 chmod +x /opt/apply-inference-from-env.sh
+chmod +x /opt/show-zeroclaw-pairing.sh
+chmod +x /opt/ensure-persistent-journal.sh
+chmod +x /opt/zeroclaw-run-onboard.sh
+
+# Ensure journalctl works for pairing / service debugging (OpenHands relies on
+# MOTD credentials; we also keep journal usable for ZeroClaw daemon logs).
+/opt/ensure-persistent-journal.sh || true
 
 INFERENCE_APPLIED=0
 if /opt/apply-inference-from-env.sh; then
@@ -26,3 +33,46 @@ fi
 systemctl restart ssh
 systemctl enable caddy
 systemctl restart caddy
+
+# OpenHands-style getting-started file with pairing code when available.
+INFO_FILE=/root/zeroclaw_info.txt
+PAIR_LINE=""
+if [ -x /opt/show-zeroclaw-pairing.sh ] && systemctl is-active --quiet zeroclaw; then
+  PAIR_LINE=$(/opt/show-zeroclaw-pairing.sh 2>/dev/null | head -n1 || true)
+fi
+cat > "$INFO_FILE" <<EOF
+================================================================================
+ZeroClaw 1-Click Droplet - Getting Started
+================================================================================
+
+ACCESS:
+  Web UI:        https://${DROPL_IP}
+  Agent UI:      https://${DROPL_IP}/agent
+  ${PAIR_LINE:-Pairing code:  sudo /opt/show-zeroclaw-pairing.sh}
+
+INFERENCE:
+EOF
+if [ "$INFERENCE_APPLIED" = "1" ]; then
+  cat >> "$INFO_FILE" <<'EOF'
+  DigitalOcean Serverless Inference was auto-configured from MODEL_ACCESS_KEY.
+EOF
+else
+  cat >> "$INFO_FILE" <<'EOF'
+  On first SSH login, complete the setup wizard, or run:
+    sudo /etc/setup_wizard.sh
+  Or set MODEL_ACCESS_KEY / INFERENCE_MODEL and:
+    sudo /opt/apply-inference-from-env.sh
+EOF
+fi
+cat >> "$INFO_FILE" <<'EOF'
+
+MANAGEMENT:
+  Status:     /opt/status-zeroclaw.sh
+  Pairing:    /opt/show-zeroclaw-pairing.sh
+  Restart:    /opt/restart-zeroclaw.sh
+  Setup:      /etc/setup_wizard.sh
+  Logs:       journalctl -u zeroclaw -f
+
+================================================================================
+EOF
+chmod 600 "$INFO_FILE"

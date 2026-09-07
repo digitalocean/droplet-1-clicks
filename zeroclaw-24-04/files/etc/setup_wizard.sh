@@ -33,7 +33,8 @@ write_inference_env_key() {
   printf 'MODEL_ACCESS_KEY=%q\n' "$key" >>"${ENV_FILE}.tmp"
   printf 'INFERENCE_MODEL=%q\n' "$model" >>"${ENV_FILE}.tmp"
   mv "${ENV_FILE}.tmp" "$ENV_FILE"
-  chmod 600 "$ENV_FILE"
+  chown root:zeroclaw "$ENV_FILE" 2>/dev/null || true
+  chmod 640 "$ENV_FILE"
 }
 
 DROPL_IP=$(hostname -I | awk '{print$1}')
@@ -177,8 +178,16 @@ echo ""
 echo "To set up a domain with automatic HTTPS, run:"
 echo "  sudo /opt/setup-zeroclaw-domain.sh"
 echo ""
-echo "Check the pairing code with:"
-echo "  journalctl -u zeroclaw --no-pager | grep -i pairing"
+if [ -x /opt/show-zeroclaw-pairing.sh ]; then
+  echo "Gateway pairing code:"
+  /opt/show-zeroclaw-pairing.sh || /opt/show-zeroclaw-pairing.sh --new || true
+  echo ""
+  echo "Show pairing code again anytime with:"
+  echo "  sudo /opt/show-zeroclaw-pairing.sh"
+else
+  echo "Check the pairing code with:"
+  echo "  sudo /opt/show-zeroclaw-pairing.sh"
+fi
 echo ""
 echo "Or use the CLI:"
 echo "  /opt/zeroclaw-cli.sh status"
