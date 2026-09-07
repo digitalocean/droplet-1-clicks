@@ -91,20 +91,42 @@ if [ -z "$MODEL_KEY" ]; then
   exit 0
 fi
 
-read -r -p "Inference model id [minimax-m2.5]: " MODEL_ID
-MODEL_ID="${MODEL_ID:-minimax-m2.5}"
+echo "Choose a default model (you can change it later in Settings > LLM):"
+echo "  Press Enter for MiniMax M2.5, enter a model id, or R for the"
+echo "  Intelligent Inference Router."
+read -r -p "Model id [minimax-m2.5 / R]: " MODEL_SEL
+
+ROUTER_NAME=""
+MODEL_ID="minimax-m2.5"
+if [ "$MODEL_SEL" = "R" ] || [ "$MODEL_SEL" = "r" ]; then
+  echo ""
+  echo "Create a router under Inference > Routers, then enter its name."
+  read -r -p "Router name: " ROUTER_NAME
+  ROUTER_NAME="${ROUTER_NAME#openai/}"
+  ROUTER_NAME="${ROUTER_NAME#digitalocean/}"
+  ROUTER_NAME="${ROUTER_NAME#router:}"
+  if [ -z "$ROUTER_NAME" ]; then
+    echo "No router name entered; keeping MiniMax M2.5."
+  else
+    MODEL_ID="router:${ROUTER_NAME}"
+  fi
+elif [ -n "$MODEL_SEL" ]; then
+  MODEL_ID="$MODEL_SEL"
+fi
 
 # Persist into env file, then apply (plain KEY=value for systemd EnvironmentFile)
 tmp="${ENV_FILE}.tmp"
 touch "$ENV_FILE"
-grep -v -E '^(MODEL_ACCESS_KEY|INFERENCE_MODEL)=' "$ENV_FILE" >"$tmp" 2>/dev/null || : >"$tmp"
+grep -v -E '^(MODEL_ACCESS_KEY|INFERENCE_MODEL|DO_INFERENCE_ROUTER)=' "$ENV_FILE" >"$tmp" 2>/dev/null || : >"$tmp"
 printf 'MODEL_ACCESS_KEY=%s\n' "$MODEL_KEY" >>"$tmp"
 printf 'INFERENCE_MODEL=%s\n' "$MODEL_ID" >>"$tmp"
+printf 'DO_INFERENCE_ROUTER=%s\n' "$ROUTER_NAME" >>"$tmp"
 mv "$tmp" "$ENV_FILE"
 chmod 600 "$ENV_FILE"
 
 export MODEL_ACCESS_KEY="$MODEL_KEY"
 export INFERENCE_MODEL="$MODEL_ID"
+export DO_INFERENCE_ROUTER="$ROUTER_NAME"
 
 echo ""
 echo "Testing connection to DigitalOcean Serverless Inference..."
@@ -131,7 +153,7 @@ cat <<EOF
 
   Open:     https://${myip}
   API Key:  ${API_KEY}
-  Model:    openai/${MODEL_ID} via DigitalOcean Serverless Inference
+  Model:    openai/${MODEL_ID#openai/} via DigitalOcean Serverless Inference
 
   Projects workspace: /home/openhands/projects
 ========================================================================

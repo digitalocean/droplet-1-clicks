@@ -55,11 +55,37 @@ if [ -z "$MODEL_KEY" ]; then
   exit 0
 fi
 
+echo ""
+echo "Choose a default model (you can switch later with /model or -m):"
+echo "  Press Enter for GPT-5.5, or R for the Intelligent Inference Router."
+read -rp "Selection [Enter / R]: " SEL
+
+ROUTER_NAME=""
+CHOSEN_LABEL="GPT-5.5 (openai-gpt-5.5)"
+if [ "$SEL" = "R" ] || [ "$SEL" = "r" ]; then
+  echo ""
+  echo "Create a router under Inference > Routers, then enter its name."
+  read -rp "Router name: " ROUTER_NAME
+  ROUTER_NAME="${ROUTER_NAME#digitalocean/}"
+  ROUTER_NAME="${ROUTER_NAME#openai/}"
+  ROUTER_NAME="${ROUTER_NAME#router:}"
+  if [ -n "$ROUTER_NAME" ]; then
+    CHOSEN_LABEL="Intelligent Inference Router (router:${ROUTER_NAME})"
+  else
+    echo "No router name entered; keeping GPT-5.5."
+    ROUTER_NAME=""
+  fi
+fi
+
 touch "$ENV_FILE"
-grep -v '^MODEL_ACCESS_KEY=' "$ENV_FILE" > "${ENV_FILE}.tmp" 2>/dev/null || : > "${ENV_FILE}.tmp"
+grep -v -E '^(MODEL_ACCESS_KEY|DO_INFERENCE_ROUTER)=' "$ENV_FILE" > "${ENV_FILE}.tmp" 2>/dev/null || : > "${ENV_FILE}.tmp"
 printf 'MODEL_ACCESS_KEY=%q\n' "$MODEL_KEY" >> "${ENV_FILE}.tmp"
+printf 'DO_INFERENCE_ROUTER=%q\n' "$ROUTER_NAME" >> "${ENV_FILE}.tmp"
 mv "${ENV_FILE}.tmp" "$ENV_FILE"
 chmod 600 "$ENV_FILE"
+
+export MODEL_ACCESS_KEY="$MODEL_KEY"
+export DO_INFERENCE_ROUTER="$ROUTER_NAME"
 
 /opt/apply-inference-from-env.sh
 
@@ -67,7 +93,7 @@ echo ""
 echo "========================================================================"
 echo "  Setup complete! Codex CLI is ready to use."
 echo ""
-echo "  Default model: GPT-5.5 (openai-gpt-5.5)"
+echo "  Default model: ${CHOSEN_LABEL}"
 echo ""
 echo "  To start:  cd /path/to/your/project && codex"
 echo "  Config:    /root/.codex/config.toml"

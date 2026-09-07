@@ -1,7 +1,8 @@
 schema_version = 3
 
 # DigitalOcean Serverless Inference (OpenAI-compatible).
-# Default model: kimi-k3. Alternatives: minimax-m2.5, glm-5.3, anthropic-claude-4.5-sonnet.
+# Default model: kimi-k3. Alternatives: minimax-m2.5, glm-5.3, anthropic-claude-4.5-sonnet,
+# or router:<name> for the Intelligent Inference Router (set DO_INFERENCE_ROUTER).
 [providers.models.custom.digitalocean]
 api_key = "PLACEHOLDER"
 uri = "https://inference.do-ai.run/v1"

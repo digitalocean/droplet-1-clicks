@@ -1,5 +1,6 @@
 #!/bin/bash
-# Apply DigitalOcean Serverless Inference from droplet env or /opt/openhands.env.
+# Apply DigitalOcean Serverless Inference from droplet env or /opt/openhands.env
+# (MODEL_ACCESS_KEY, INFERENCE_MODEL, DO_INFERENCE_ROUTER).
 # Returns 0 when a key was applied; 1 when skipped (empty or unset placeholder).
 set -euo pipefail
 
@@ -82,23 +83,47 @@ normalize_model() {
   esac
 }
 
-# Canonical env vars: MODEL_ACCESS_KEY, INFERENCE_MODEL
+# Accept "my-router", "router:my-router", or "openai/router:my-router".
+normalize_router_name() {
+  local n="$1"
+  n="${n#openai/}"
+  n="${n#digitalocean/}"
+  n="${n#router:}"
+  printf '%s' "$n"
+}
+
+# Canonical env vars: MODEL_ACCESS_KEY, INFERENCE_MODEL, DO_INFERENCE_ROUTER
 MODEL_ACCESS_KEY=$(read_config_value MODEL_ACCESS_KEY || true)
 INFERENCE_MODEL=$(read_config_value INFERENCE_MODEL || true)
+DO_INFERENCE_ROUTER=$(read_config_value DO_INFERENCE_ROUTER || true)
 
 if ! env_value_usable "$MODEL_ACCESS_KEY"; then
   exit 1
 fi
 
-if ! env_value_usable "$INFERENCE_MODEL"; then
-  INFERENCE_MODEL="minimax-m2.5"
+write_env_file_kv MODEL_ACCESS_KEY "$MODEL_ACCESS_KEY"
+
+if env_value_usable "$DO_INFERENCE_ROUTER"; then
+  ROUTER_NAME=$(normalize_router_name "$DO_INFERENCE_ROUTER")
+  if [ -n "$ROUTER_NAME" ]; then
+    if ! env_value_usable "$INFERENCE_MODEL"; then
+      INFERENCE_MODEL="minimax-m2.5"
+    fi
+    PRIMARY_MODEL="openai/router:${ROUTER_NAME}"
+    write_env_file_kv INFERENCE_MODEL "${INFERENCE_MODEL#openai/}"
+    write_env_file_kv DO_INFERENCE_ROUTER "$ROUTER_NAME"
+  fi
 fi
 
-INFERENCE_MODEL="${INFERENCE_MODEL#openai/}"
-
-PRIMARY_MODEL=$(normalize_model "$INFERENCE_MODEL")
-write_env_file_kv MODEL_ACCESS_KEY "$MODEL_ACCESS_KEY"
-write_env_file_kv INFERENCE_MODEL "$INFERENCE_MODEL"
+if [ -z "${PRIMARY_MODEL:-}" ]; then
+  if ! env_value_usable "$INFERENCE_MODEL"; then
+    INFERENCE_MODEL="minimax-m2.5"
+  fi
+  INFERENCE_MODEL="${INFERENCE_MODEL#openai/}"
+  PRIMARY_MODEL=$(normalize_model "$INFERENCE_MODEL")
+  write_env_file_kv INFERENCE_MODEL "$INFERENCE_MODEL"
+  write_env_file_kv DO_INFERENCE_ROUTER ""
+fi
 
 mkdir -p "${OPENHANDS_HOME}/.openhands"
 

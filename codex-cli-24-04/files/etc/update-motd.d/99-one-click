@@ -19,7 +19,7 @@ PRE-CONFIGURED MODELS (via DigitalOcean Serverless Inference):
 GETTING STARTED:
 
   1. Configure your DigitalOcean model access key:
-     - Set MODEL_ACCESS_KEY (optional INFERENCE_MODEL) as droplet env vars, or
+     - Set MODEL_ACCESS_KEY (optional INFERENCE_MODEL / DO_INFERENCE_ROUTER) as droplet env vars, or
      - Edit /opt/codex-cli.env and reboot, or
      - On first login, run the setup wizard when prompted
      Create a key at: https://cloud.digitalocean.com/gen-ai
