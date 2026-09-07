@@ -67,15 +67,15 @@ do
         onboard_provider="custom:https://inference.do-ai.run/v1"
         echo "You selected DigitalOcean Serverless Inference."
         echo ""
-        echo "Choose a serverless inference model (default: Kimi K2.5):"
+        echo "Choose a serverless inference model (default: Kimi K3):"
         PS3="Select model (1-4): "
-        inference_options=("Kimi K2.5" "MiniMax M2.5" "GLM 5" "Claude Sonnet 4.5")
+        inference_options=("Kimi K3" "MiniMax M2.5" "GLM-5.3" "Claude Sonnet 4.5")
         select gopt in "${inference_options[@]}"
         do
           case $gopt in
-            "Kimi K2.5")
-              onboard_model="kimi-k2.5"
-              echo "Using Kimi K2.5 (kimi-k2.5)."
+            "Kimi K3")
+              onboard_model="kimi-k3"
+              echo "Using Kimi K3 (kimi-k3)."
               break 2
               ;;
             "MiniMax M2.5")
@@ -83,9 +83,9 @@ do
               echo "Using MiniMax M2.5 (minimax-m2.5)."
               break 2
               ;;
-            "GLM 5")
-              onboard_model="glm-5"
-              echo "Using GLM 5 (glm-5)."
+            "GLM-5.3")
+              onboard_model="glm-5.3"
+              echo "Using GLM-5.3 (glm-5.3)."
               break 2
               ;;
             "Claude Sonnet 4.5")
@@ -127,7 +127,7 @@ do
 done
 
 if [[ "$onboard_provider" == "custom:https://inference.do-ai.run/v1" && -z "$onboard_model" ]]; then
-  onboard_model="kimi-k2.5"
+  onboard_model="kimi-k3"
 fi
 
 echo ""

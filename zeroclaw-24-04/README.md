@@ -20,12 +20,12 @@ Caddy provides HTTPS via IP-based TLS certificates from Let's Encrypt, reverse-p
 
 ### DigitalOcean Serverless Inference
 
-When you choose **DigitalOcean Serverless Inference** in the setup wizard (or pre-configure via env), inference uses `https://inference.do-ai.run/v1` with a DigitalOcean model access key. The default model is **Kimi K2.5** (`kimi-k2.5`). You can pick another model during setup or change `default_model` in `/home/zeroclaw/.zeroclaw/config.toml` later.
+When you choose **DigitalOcean Serverless Inference** in the setup wizard (or pre-configure via env), inference uses `https://inference.do-ai.run/v1` with a DigitalOcean model access key. The default model is **Kimi K3** (`kimi-k3`). You can pick another model during setup or change `default_model` in `/home/zeroclaw/.zeroclaw/config.toml` later.
 
 | Variable | Purpose |
 |----------|---------|
 | `MODEL_ACCESS_KEY` | DigitalOcean Serverless Inference model access key |
-| `INFERENCE_MODEL` | Optional model id (default: `kimi-k2.5`) |
+| `INFERENCE_MODEL` | Optional model id (default: `kimi-k3`) |
 
 Set these as droplet environment variables at create time, or edit `/opt/zeroclaw.env`, then reboot or run:
 
@@ -35,9 +35,9 @@ sudo /opt/apply-inference-from-env.sh
 
 | Model | Model ID |
 |-------|----------|
-| Kimi K2.5 (default) | `kimi-k2.5` |
+| Kimi K3 (default) | `kimi-k3` |
 | MiniMax M2.5 | `minimax-m2.5` |
-| GLM 5 | `glm-5` |
+| GLM-5.3 | `glm-5.3` |
 | Claude Sonnet 4.5 | `anthropic-claude-4.5-sonnet` |
 
 ## Building

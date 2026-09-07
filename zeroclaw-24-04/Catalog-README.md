@@ -36,14 +36,14 @@ With a memory footprint under 5MB and cold start times under 10ms, ZeroClaw is d
 
 ### DigitalOcean Serverless Inference
 
-Serverless Inference uses a single model access key for serverless inference at `https://inference.do-ai.run/v1`. The default model is **Kimi K2.5** (`kimi-k2.5`).
+Serverless Inference uses a single model access key for serverless inference at `https://inference.do-ai.run/v1`. The default model is **Kimi K3** (`kimi-k3`).
 
 | Variable | Purpose |
 |----------|---------|
 | `MODEL_ACCESS_KEY` | DigitalOcean model access key (required for auto-config) |
-| `INFERENCE_MODEL` | Optional model id (default: `kimi-k2.5`) |
+| `INFERENCE_MODEL` | Optional model id (default: `kimi-k3`) |
 
-Supported model IDs include **kimi-k2.5**, **minimax-m2.5**, **glm-5**, and **anthropic-claude-4.5-sonnet**. During interactive setup you can pick a model from the menu. Re-run `sudo /etc/setup_wizard.sh` to switch providers, or edit `default_model` in `/home/zeroclaw/.zeroclaw/config.toml`.
+Supported model IDs include **kimi-k3**, **minimax-m2.5**, **glm-5.3**, and **anthropic-claude-4.5-sonnet**. During interactive setup you can pick a model from the menu. Re-run `sudo /etc/setup_wizard.sh` to switch providers, or edit `default_model` in `/home/zeroclaw/.zeroclaw/config.toml`.
 
 ## Managing ZeroClaw
 
