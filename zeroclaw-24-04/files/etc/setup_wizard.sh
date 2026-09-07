@@ -18,7 +18,9 @@ remove_first_login_hook() {
 inference_already_configured() {
   local api_key
   [ -f "$CONFIG_FILE" ] || return 1
-  api_key=$(grep -E '^api_key\s*=' "$CONFIG_FILE" 2>/dev/null | tail -n 1 | sed 's/^api_key\s*=\s*"\?\([^"]*\)"\?.*/\1/') || return 1
+  # Schema V3 requires a configured agent plus a usable provider api_key.
+  grep -qE '^\[agents\.' "$CONFIG_FILE" 2>/dev/null || return 1
+  api_key=$(grep -E '^api_key[[:space:]]*=' "$CONFIG_FILE" 2>/dev/null | head -n 1 | sed -E 's/^api_key[[:space:]]*=[[:space:]]*"?([^"]*)"?.*/\1/') || return 1
   case "$api_key" in
     ''|PLACEHOLDER|*'${'*) return 1 ;;
   esac
@@ -69,15 +71,15 @@ do
         onboard_provider="custom:https://inference.do-ai.run/v1"
         echo "You selected DigitalOcean Serverless Inference."
         echo ""
-        echo "Choose a serverless inference model (default: Kimi K2.5):"
+        echo "Choose a serverless inference model (default: Kimi K3):"
         PS3="Select model (1-5): "
-        inference_options=("Kimi K2.5" "MiniMax M2.5" "GLM 5" "Claude Sonnet 4.5" "Intelligent Inference Router")
+        inference_options=("Kimi K3" "MiniMax M2.5" "GLM-5.3" "Claude Sonnet 4.5" "Intelligent Inference Router")
         select gopt in "${inference_options[@]}"
         do
           case $gopt in
-            "Kimi K2.5")
-              onboard_model="kimi-k2.5"
-              echo "Using Kimi K2.5 (kimi-k2.5)."
+            "Kimi K3")
+              onboard_model="kimi-k3"
+              echo "Using Kimi K3 (kimi-k3)."
               break 2
               ;;
             "MiniMax M2.5")
@@ -85,9 +87,9 @@ do
               echo "Using MiniMax M2.5 (minimax-m2.5)."
               break 2
               ;;
-            "GLM 5")
-              onboard_model="glm-5"
-              echo "Using GLM 5 (glm-5)."
+            "GLM-5.3")
+              onboard_model="glm-5.3"
+              echo "Using GLM-5.3 (glm-5.3)."
               break 2
               ;;
             "Claude Sonnet 4.5")
@@ -107,8 +109,8 @@ do
                 onboard_router="$ROUTER_NAME"
                 echo "Using Intelligent Inference Router (router:${ROUTER_NAME})."
               else
-                onboard_model="kimi-k2.5"
-                echo "No router name entered; keeping Kimi K2.5."
+                onboard_model="kimi-k3"
+                echo "No router name entered; keeping Kimi K3."
               fi
               break 2
               ;;
@@ -146,7 +148,7 @@ do
 done
 
 if [[ "$onboard_provider" == "custom:https://inference.do-ai.run/v1" && -z "$onboard_model" ]]; then
-  onboard_model="kimi-k2.5"
+  onboard_model="kimi-k3"
 fi
 
 echo ""
@@ -164,9 +166,15 @@ done
 
 if [[ "$onboard_provider" == "custom:https://inference.do-ai.run/v1" ]]; then
   write_inference_env_key "$model_access_key" "$onboard_model" "$onboard_router"
-  /opt/apply-inference-from-env.sh
+  if ! /opt/apply-inference-from-env.sh; then
+    echo "Failed to apply DigitalOcean Serverless Inference. Check /tmp/zeroclaw-onboard.log" >&2
+    exit 1
+  fi
 else
-  /opt/zeroclaw-run-onboard.sh "$model_access_key" "$onboard_provider" "$onboard_model"
+  if ! /opt/zeroclaw-run-onboard.sh "$model_access_key" "$onboard_provider" "$onboard_model"; then
+    echo "Failed to configure provider. Check /tmp/zeroclaw-onboard.log" >&2
+    exit 1
+  fi
   umask 077
   touch "$SETUP_MARKER"
   chmod 600 "$SETUP_MARKER"
@@ -196,11 +204,12 @@ echo ""
 echo "To set up a domain with automatic HTTPS, run:"
 echo "  sudo /opt/setup-zeroclaw-domain.sh"
 echo ""
-echo "Check the pairing code with:"
-echo "  journalctl -u zeroclaw --no-pager | grep -i pairing"
+echo "Get a gateway pairing code with:"
+echo "  /opt/zeroclaw-cli.sh gateway get-paircode --new"
 echo ""
 echo "Or use the CLI:"
 echo "  /opt/zeroclaw-cli.sh status"
+echo "  /opt/zeroclaw-cli.sh agent -a assistant -m \"Hello\""
 echo ""
 echo "Setup complete!"
 

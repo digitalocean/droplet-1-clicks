@@ -14,8 +14,17 @@ if grep -q "tls" /etc/caddy/Caddyfile 2>/dev/null; then
 else
     echo "http://$myip (proxied via Caddy)"
 fi
-echo "http://$myip:42617 (direct, localhost only)"
+echo "http://127.0.0.1:42617 (direct, localhost only)"
 
 echo ""
 echo "=== Quick Status ==="
 su - zeroclaw -c "zeroclaw status" 2>/dev/null || echo "Run setup wizard first: sudo /etc/setup_wizard.sh"
+
+echo ""
+echo "=== Gateway Pairing Code ==="
+su - zeroclaw -c "zeroclaw gateway get-paircode --new" 2>/dev/null \
+  || echo "Run: /opt/zeroclaw-cli.sh gateway get-paircode --new"
+
+echo ""
+echo "=== CLI tip ==="
+echo "/opt/zeroclaw-cli.sh agent -a assistant -m \"Hello\""

@@ -14,14 +14,15 @@ models, tools, memory, and execution so agents can be built once and run
 anywhere. Uses <5MB RAM and starts in <10ms.
 
   Dashboard URL: https://$myip
-  Direct Gateway: http://$myip:42617
+  Direct Gateway: http://127.0.0.1:42617 (loopback; use https://$myip via Caddy)
+  Default agent: assistant
 
   Configuration:
-    Config file:    /home/zeroclaw/.zeroclaw/config.toml
+    Config file:    /home/zeroclaw/.zeroclaw/config.toml (Schema V3)
     Environment:    /opt/zeroclaw.env (MODEL_ACCESS_KEY, INFERENCE_MODEL, DO_INFERENCE_ROUTER)
     Serverless Inference: set MODEL_ACCESS_KEY at create time or in /opt/zeroclaw.env
                     then: sudo /opt/apply-inference-from-env.sh
-    Default model:  Kimi K2.5 (kimi-k2.5) — or: sudo /etc/setup_wizard.sh
+    Default model:  Kimi K3 (kimi-k3) — or: sudo /etc/setup_wizard.sh
     Inference Router: set DO_INFERENCE_ROUTER=<name> (model router:<name>)
 
   Management Commands:
@@ -30,6 +31,8 @@ anywhere. Uses <5MB RAM and starts in <10ms.
     View logs:        journalctl -u zeroclaw -f
     System status:    /opt/zeroclaw-cli.sh status
     System doctor:    /opt/zeroclaw-cli.sh doctor
+    Pairing code:     /opt/zeroclaw-cli.sh gateway get-paircode --new
+    Chat once:        /opt/zeroclaw-cli.sh agent -a assistant -m "Hello"
 
   Helper Scripts:
     /opt/restart-zeroclaw.sh       Restart with status check

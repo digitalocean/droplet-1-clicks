@@ -4,7 +4,7 @@
     "image_name": "zeroclaw-24-04-snapshot-{{timestamp}}",
     "apt_packages": "apt-transport-https ca-certificates curl software-properties-common git jq unzip openssl ufw fail2ban",
     "application_name": "ZeroClaw",
-    "application_version": "v0.1.7-beta.30"
+    "application_version": "v0.8.4"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [

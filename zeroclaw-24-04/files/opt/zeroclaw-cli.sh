@@ -1,2 +1,4 @@
 #!/bin/bash
-su - zeroclaw -c "zeroclaw $*"
+# Preserve quoting when forwarding args to zeroclaw as the service user.
+cmd=$(printf '%q ' zeroclaw "$@")
+su - zeroclaw -c "$cmd"

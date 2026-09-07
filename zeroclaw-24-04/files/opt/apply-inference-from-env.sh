@@ -6,9 +6,9 @@ set -euo pipefail
 
 ENV_FILE=/opt/zeroclaw.env
 SETUP_MARKER=/root/.zeroclaw_setup_complete
-DEFAULT_MODEL=kimi-k2.5
+DEFAULT_MODEL=kimi-k3
 INFERENCE_PROVIDER=custom:https://inference.do-ai.run/v1
-ALLOWED_MODELS="kimi-k2.5 minimax-m2.5 glm-5 anthropic-claude-4.5-sonnet"
+ALLOWED_MODELS="kimi-k3 minimax-m2.5 glm-5.3 anthropic-claude-4.5-sonnet"
 
 remove_setup_wizard_bashrc_hook() {
     [ -f /root/.bashrc ] || return 0
