@@ -95,7 +95,7 @@ Use the `docker-agent` CLI on the Droplet. Paths below are under `/opt/docker-ag
 | Command | Required key |
 |---------|----------------|
 | `docker-agent run .../basic_agent.yaml` | `OPENAI_API_KEY` |
-| `docker-agent run .../do_mmode_agent.yaml` | `DO_MODEL_ACCESS_API_KEY` |
+| `docker-agent run .../do_model_agent.yaml` | `DO_MODEL_ACCESS_API_KEY` |
 
 **Anthropic or Google**
 

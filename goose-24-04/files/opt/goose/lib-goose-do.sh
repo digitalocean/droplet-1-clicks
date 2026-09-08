@@ -48,17 +48,17 @@ goose_do_upsert_config_kv() {
 goose_do_write_profiled() {
     local key="$1"
     umask 077
-    printf 'export DO_do_API_KEY=%q\n' "$key" >"$PROFILED"
+    printf 'export DO_MODEL_ACCESS_API_KEY=%q\n' "$key" >"$PROFILED"
     chmod 600 "$PROFILED"
 }
 
 goose_do_write_secrets_yaml() {
     local key="$1"
     local line
-    line="DO_do_API_KEY: \"$(goose_do_yaml_escape_double "$key")\""
+    line="DO_MODEL_ACCESS_API_KEY: \"$(goose_do_yaml_escape_double "$key")\""
     install -d -m 700 /root/.config/goose
     if [ -f "$GOOSE_SECRETS" ]; then
-        grep -v '^DO_do_API_KEY:' "$GOOSE_SECRETS" >"${GOOSE_SECRETS}.tmp" 2>/dev/null || true
+        grep -v '^DO_MODEL_ACCESS_API_KEY:' "$GOOSE_SECRETS" >"${GOOSE_SECRETS}.tmp" 2>/dev/null || true
         mv -f "${GOOSE_SECRETS}.tmp" "$GOOSE_SECRETS"
     fi
     printf '%s\n' "$line" >>"$GOOSE_SECRETS"
@@ -67,7 +67,7 @@ goose_do_write_secrets_yaml() {
 
 goose_do_remove_secret_line() {
     if [ -f "$GOOSE_SECRETS" ]; then
-        grep -v '^DO_do_API_KEY:' "$GOOSE_SECRETS" >"${GOOSE_SECRETS}.tmp" 2>/dev/null || true
+        grep -v '^DO_MODEL_ACCESS_API_KEY:' "$GOOSE_SECRETS" >"${GOOSE_SECRETS}.tmp" 2>/dev/null || true
         mv -f "${GOOSE_SECRETS}.tmp" "$GOOSE_SECRETS"
         chmod 600 "$GOOSE_SECRETS" 2>/dev/null || true
     fi
