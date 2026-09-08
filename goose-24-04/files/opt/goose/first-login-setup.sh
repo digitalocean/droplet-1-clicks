@@ -144,8 +144,8 @@ else
 fi
 
 echo ""
-# Same path as manual /opt/goose/configure-gradient-key.sh (sync JSON, migrate legacy id, prompt, apply).
-bash /opt/goose/configure-gradient-key.sh --first-login
+# Same path as manual /opt/goose/configure-do-key.sh (sync JSON, migrate legacy id, prompt, apply).
+bash /opt/goose/configure-do-key.sh --first-login
 
 touch "$MARKER"
 sed -i '/# goose-24-04 first-login/,/first-login-setup.sh/d' /root/.bashrc
@@ -158,12 +158,12 @@ if [ "$WEB_SKIP" -eq 1 ]; then
 else
     echo "Web console: https://${PUBLIC_IP}/  (HTTP Basic user: goose)"
 fi
-if [ -f /etc/profile.d/goose-gradient.sh ] || grep -q '^DO_GRADIENT_API_KEY:' /root/.config/goose/secrets.yaml 2>/dev/null; then
-    echo "Goose is ready to run (no need to run 'goose configure' for Gradient). Use 'goose configure' only to add other providers or change defaults."
+if [ -f /etc/profile.d/goose-do.sh ] || grep -q '^DO_MODEL_ACCESS_API_KEY:' /root/.config/goose/secrets.yaml 2>/dev/null; then
+    echo "Goose is ready to run (no need to run 'goose configure' for DigitalOcean Inference). Use 'goose configure' only to add other providers or change defaults."
 else
-    echo "Run 'goose configure' to pick a provider and model, or /opt/goose/configure-gradient-key.sh for DigitalOcean Gradient."
+    echo "Run 'goose configure' to pick a provider and model, or /opt/goose/configure-do-key.sh for DigitalOcean Inference."
 fi
-echo "Model list: /root/.config/goose/custom_providers/digitalocean_gradient.json"
+echo "Model list: /root/.config/goose/custom_providers/digitalocean_model.json"
 echo ""
 echo "Then use the 'goose' command as usual (see 'goose --help')."
 echo ""

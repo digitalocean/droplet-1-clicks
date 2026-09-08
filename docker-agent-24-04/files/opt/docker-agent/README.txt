@@ -12,24 +12,24 @@ Export only what your YAML needs. When using several providers, use this order:
   (1) OPENAI_API_KEY
   (2) ANTHROPIC_API_KEY
   (3) GOOGLE_API_KEY
-  (4) DO_GRADIENT_API_KEY
+  (4) DO_MODEL_ACCESS_API_KEY
 
 Where to get keys:
 
   OpenAI       https://platform.openai.com/api-keys
   Anthropic    https://console.anthropic.com/
   Google       https://aistudio.google.com/apikey
-  Gradient     https://cloud.digitalocean.com/gen-ai
+  DO Inference     https://cloud.digitalocean.com/gen-ai
 
 Example:
 
   export OPENAI_API_KEY=your_api_key_here
   export ANTHROPIC_API_KEY=your_api_key_here
   export GOOGLE_API_KEY=your_api_key_here
-  export DO_GRADIENT_API_KEY=your_gradient_key_here
+  export DO_MODEL_ACCESS_API_KEY=your_do_model_key_here
 
 First SSH: optional prompts save keys to /root/.bashrc (same order as above:
-OpenAI, then Anthropic, then Google, then Gradient). Then:
+OpenAI, then Anthropic, then Google, then DO Inference). Then:
 
   source /root/.bashrc
 
@@ -44,8 +44,8 @@ Bundled examples
   OPENAI_API_KEY:
     docker-agent run /opt/docker-agent/examples/basic_agent.yaml
 
-  DO_GRADIENT_API_KEY:
-    docker-agent run /opt/docker-agent/examples/gradient_agent.yaml
+  DO_MODEL_ACCESS_API_KEY:
+    docker-agent run /opt/docker-agent/examples/do_model_agent.yaml
 
 Anthropic / Google (no dedicated bundled file)
 ----------------------------------------------
@@ -76,7 +76,7 @@ One line per provider (same order as keys)
   OPENAI_API_KEY=k docker-agent run /opt/docker-agent/examples/basic_agent.yaml
   ANTHROPIC_API_KEY=k docker-agent run ./my-agent.yaml
   GOOGLE_API_KEY=k docker-agent run ./my-agent.yaml
-  DO_GRADIENT_API_KEY=k docker-agent run /opt/docker-agent/examples/gradient_agent.yaml
+  DO_MODEL_ACCESS_API_KEY=k docker-agent run /opt/docker-agent/examples/do_model_agent.yaml
 
 CLI help:
 
@@ -128,19 +128,19 @@ CLOUD PROVIDER CHEAT SHEET (token_key must match your export)
   OPENAI_API_KEY        basic_agent.yaml (bundled)
   ANTHROPIC_API_KEY     your YAML or docker-agent new --model anthropic/...
   GOOGLE_API_KEY        your YAML or docker-agent new --model google/...
-  DO_GRADIENT_API_KEY   gradient_agent.yaml (bundled, inference.do-ai.run)
+  DO_MODEL_ACCESS_API_KEY   do_model_agent.yaml (bundled, inference.do-ai.run)
 
-Gradient sample models block:
+DO Inference sample models block:
 
   agents:
     root:
-      model: do_gradient
+      model: do_claude
       instruction: You are a helpful assistant.
   models:
-    do_gradient:
+    do_claude:
       provider: openai
       model: anthropic-claude-4.5-sonnet
       base_url: https://inference.do-ai.run/v1
-      token_key: DO_GRADIENT_API_KEY
+      token_key: DO_MODEL_ACCESS_API_KEY
 
 Support: https://github.com/docker/docker-agent

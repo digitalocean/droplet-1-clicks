@@ -1,5 +1,5 @@
 #!/bin/bash
-# Refresh Gradient declarative JSON from /opt/goose and fix legacy GOOSE_PROVIDER=kimi.
+# Refresh DigitalOcean Inference declarative JSON from /opt/goose and fix legacy GOOSE_PROVIDER=kimi.
 # Run as root after updating /opt/goose from a newer 1-Click build.
 set -euo pipefail
 
@@ -9,10 +9,10 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 # shellcheck source=/dev/null
-. /opt/goose/lib-goose-gradient.sh
+. /opt/goose/lib-goose-do.sh
 
-goose_gradient_sync_declarative_json
-goose_gradient_migrate_legacy_provider
+goose_do_sync_declarative_json
+goose_do_migrate_legacy_provider
 
 echo "Done. Declarative JSON refreshed under /root/.config/goose/custom_providers/ when available."
-echo "If GOOSE_PROVIDER was kimi it is now digitalocean_gradient. Run: goose --help"
+echo "If GOOSE_PROVIDER was kimi it is now digitalocean_model. Run: goose --help"
