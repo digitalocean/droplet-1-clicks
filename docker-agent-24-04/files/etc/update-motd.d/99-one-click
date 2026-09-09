@@ -31,7 +31,7 @@ QUICK START
       export GOOGLE_API_KEY=your_key_here
       export DO_MODEL_ACCESS_API_KEY=your_key_here
 
-    Do model keys: https://cloud.digitalocean.com/gen-ai
+    DO model keys: https://cloud.digitalocean.com/gen-ai
     All key URLs:  /opt/docker-agent/README.txt
 
 (2) RUN EXAMPLES
@@ -78,7 +78,7 @@ RESOURCES
   docker-agent --help   (CLI reference)
 
   Variables: OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, DO_MODEL_ACCESS_API_KEY
-  Do model YAML:       base_url https://inference.do-ai.run/v1
+  DO model YAML:       base_url https://inference.do-ai.run/v1
                        token_key DO_MODEL_ACCESS_API_KEY
 
 ********************************************************************************
