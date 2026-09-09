@@ -6,27 +6,25 @@ myip=$(hostname -I | awk '{print$1}')
 cat <<EOF
 ********************************************************************************
 
-██████╗ ██╗      █████╗ ██╗   ██╗███████╗██╗██████╗ ██╗     ███████╗
-██╔══██╗██║     ██╔══██╗██║   ██║██╔════╝██║██╔══██╗██║     ██╔════╝
-██████╔╝██║     ███████║██║   ██║███████╗██║██████╔╝██║     █████╗  
-██╔═══╝ ██║     ██╔══██║██║   ██║╚════██║██║██╔══██╗██║     ██╔══╝  
-██║     ███████╗██║  ██║╚██████╔╝███████║██║██████╔╝███████╗███████╗
-╚═╝     ╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝╚═════╝ ╚══════╝╚══════╝
-                                                                      
-           🚀 Analytics that respects your users' privacy 🔒
+Welcome to your Plausible Analytics Droplet!
 
-********************************************************************************
+Documentation: https://plausible.io/docs/self-hosting
+Community:     https://github.com/plausible/community-edition
 
-Welcome to your Plausible Analytics droplet!
-📚 Documentation: https://plausible.io/docs/self-hosting
-💬 Community: https://github.com/plausible/analytics
+First-time setup
+  1. SSH in as root to finish setup (IP HTTPS or custom domain).
+  2. Open https://${myip}/register and create the first account (admin).
+  3. Further registrations are invite-only.
 
-🔥 Features:
-  ✓ Privacy-focused web analytics
-  ✓ GDPR, CCPA and PECR compliant
-  ✓ Lightweight script (< 1 KB)
-  ✓ No cookies, no personal data collection
-  ✓ Real-time dashboard
+Access (after setup)
+  https://${myip}
+
+Service helpers
+  /opt/status-plausible.sh
+  /opt/start-plausible.sh
+  /opt/stop-plausible.sh
+  /opt/restart-plausible.sh
+  /opt/setup-plausible-domain.sh
 
 ********************************************************************************
 To delete this message of the day: rm -rf $(readlink -f ${0})

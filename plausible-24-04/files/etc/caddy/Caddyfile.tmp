@@ -1,0 +1,11 @@
+PLACEHOLDER_DOMAIN {
+	tls {
+		issuer acme {
+			dir https://acme-v02.api.letsencrypt.org/directory
+			profile shortlived
+		}
+	}
+	# Caddy reverse_proxy supports WebSockets/LiveView by default.
+	reverse_proxy 127.0.0.1:8000
+	header X-DO-MARKETPLACE "plausible"
+}
