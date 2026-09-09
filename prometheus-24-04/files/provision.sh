@@ -1,14 +1,5 @@
 #!/bin/bash
 
-set -euo pipefail
-
-PROM_VERSION="${application_version:?application_version is required}"
-PROM_VERSION="${PROM_VERSION#v}"
-if [ -z "$PROM_VERSION" ] || [ "$PROM_VERSION" = "latest" ]; then
-  echo "prometheus: application_version must be a concrete release (got '${application_version}')" >&2
-  exit 1
-fi
-
 # Update package lists and upgrade packages
 sudo apt -qqy update
 sudo apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' full-upgrade
@@ -21,8 +12,8 @@ sudo useradd -s /sbin/nologin --system -g prometheus prometheus
 # Create required directories
 sudo mkdir -p /etc/prometheus /var/lib/prometheus
 
-# Download and extract Prometheus (version from Packer application_version)
-curl -sSL "https://github.com/prometheus/prometheus/releases/download/v${PROM_VERSION}/prometheus-${PROM_VERSION}.linux-amd64.tar.gz" | tar -xz
+# Download and extract Prometheus
+curl -sSL https://github.com/prometheus/prometheus/releases/download/v2.54.1/prometheus-2.54.1.linux-amd64.tar.gz | tar -xz
 
 # Move Prometheus binaries to /usr/local/bin
 sudo mv /root/prometheus*/{prometheus,promtool} /usr/local/bin
