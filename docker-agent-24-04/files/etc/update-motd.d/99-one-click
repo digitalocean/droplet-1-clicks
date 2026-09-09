@@ -22,16 +22,16 @@ QUICK START
       OPENAI_API_KEY          OpenAI
       ANTHROPIC_API_KEY       Anthropic
       GOOGLE_API_KEY          Google Gemini
-      DO_GRADIENT_API_KEY     DigitalOcean Inference (Gradient)
+      DO_MODEL_ACCESS_API_KEY     DigitalOcean Inference
 
     Example:
 
       export OPENAI_API_KEY=your_key_here
       export ANTHROPIC_API_KEY=your_key_here
       export GOOGLE_API_KEY=your_key_here
-      export DO_GRADIENT_API_KEY=your_key_here
+      export DO_MODEL_ACCESS_API_KEY=your_key_here
 
-    Gradient keys: https://cloud.digitalocean.com/gen-ai
+    DO model keys: https://cloud.digitalocean.com/gen-ai
     All key URLs:  /opt/docker-agent/README.txt
 
 (2) RUN EXAMPLES
@@ -39,11 +39,11 @@ QUICK START
     Bundled examples:
 
       docker-agent run /opt/docker-agent/examples/basic_agent.yaml
-      docker-agent run /opt/docker-agent/examples/gradient_agent.yaml
+      docker-agent run /opt/docker-agent/examples/do_model_agent.yaml
       docker-agent run /opt/docker-agent/examples/dmr.yaml
       docker-agent run /opt/docker-agent/examples/pirate.yaml
 
-    Keys: basic + gradient need OPENAI / DO_GRADIENT; dmr is local; pirate: see YAML.
+    Keys: basic + do model need OPENAI / DO_MODEL; dmr is local; pirate: see YAML.
 
     Anthropic / Google: set the matching key, then run YAML that uses the same
     token_key. Create a starter with:
@@ -55,7 +55,7 @@ QUICK START
       OPENAI_API_KEY=k docker-agent run /opt/docker-agent/examples/basic_agent.yaml
       ANTHROPIC_API_KEY=k docker-agent run ./your-agent.yaml
       GOOGLE_API_KEY=k docker-agent run ./your-agent.yaml
-      DO_GRADIENT_API_KEY=k docker-agent run /opt/docker-agent/examples/gradient_agent.yaml
+      DO_MODEL_ACCESS_API_KEY=k docker-agent run /opt/docker-agent/examples/do_model_agent.yaml
 
 (3) CREATE AGENTS
 
@@ -77,9 +77,9 @@ RESOURCES
 
   docker-agent --help   (CLI reference)
 
-  Variables: OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, DO_GRADIENT_API_KEY
-  Gradient YAML:       base_url https://inference.do-ai.run/v1
-                       token_key DO_GRADIENT_API_KEY
+  Variables: OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, DO_MODEL_ACCESS_API_KEY
+  DO model YAML:       base_url https://inference.do-ai.run/v1
+                       token_key DO_MODEL_ACCESS_API_KEY
 
 ********************************************************************************
 To delete this message of the day: rm -rf /etc/update-motd.d/99-one-click

@@ -13,7 +13,7 @@ Built on modern AI technologies, Docker Agent offers:
 - **Smart delegation** – Agents automatically route tasks to the most suitable specialist
 - **YAML configuration** – Simple, declarative model and agent configuration
 - **Advanced reasoning** – Built-in "think", "todo", and "memory" tools for complex problem-solving
-- **Multiple AI providers** – Support for OpenAI, Anthropic, Google Gemini, DigitalOcean Inference (Gradient), and Docker Model Runner
+- **Multiple AI providers** – Support for OpenAI, Anthropic, Google Gemini, DigitalOcean Inference, and Docker Model Runner
 
 ## Key Features
 
@@ -37,7 +37,7 @@ Docker Agent is installed as a binary on Ubuntu 24.04 and requires Docker for co
 | Local models (medium) | 8GB | 4 CPU |
 | Local models (large) | 16GB+ | 8 CPU+ |
 
-**Note:** Using cloud AI providers (OpenAI, Anthropic, Google, DigitalOcean Gradient) requires minimal resources. Running local models via Docker Model Runner requires more resources depending on model size.
+**Note:** Using cloud AI providers (OpenAI, Anthropic, Google, DigitalOcean Serverless Inference) requires minimal resources. Running local models via Docker Model Runner requires more resources depending on model size.
 
 ## Getting Started
 
@@ -46,7 +46,7 @@ Docker Agent is installed as a binary on Ubuntu 24.04 and requires Docker for co
 1. **Deploy the Droplet** – Choose this 1-Click App from the DigitalOcean Marketplace.
 2. **SSH into your Droplet** – `ssh root@your-droplet-ip`
 3. **Set API keys** – Export only what your agent YAML needs. If you use several providers, use this order:  
-   `OPENAI_API_KEY` → `ANTHROPIC_API_KEY` → `GOOGLE_API_KEY` → `DO_GRADIENT_API_KEY`  
+   `OPENAI_API_KEY` → `ANTHROPIC_API_KEY` → `GOOGLE_API_KEY` → `DO_MODEL_ACCESS_API_KEY`  
    (Details and key URLs are in [Setting Up API Keys](#setting-up-api-keys) below.)
 4. **Run an agent** – Start with a bundled example, or run your own YAML for Anthropic/Google.
 
@@ -61,7 +61,7 @@ Each provider maps to one environment variable. Export the variables that match 
 | 1 | `OPENAI_API_KEY` | OpenAI | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
 | 2 | `ANTHROPIC_API_KEY` | Anthropic | [console.anthropic.com](https://console.anthropic.com/) |
 | 3 | `GOOGLE_API_KEY` | Google Gemini | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
-| 4 | `DO_GRADIENT_API_KEY` | DigitalOcean Inference (Gradient) | [cloud.digitalocean.com/gen-ai](https://cloud.digitalocean.com/gen-ai) |
+| 4 | `DO_MODEL_ACCESS_API_KEY` | DigitalOcean Inference | [cloud.digitalocean.com/gen-ai](https://cloud.digitalocean.com/gen-ai) |
 
 **Typical `export` block:**
 
@@ -69,7 +69,7 @@ Each provider maps to one environment variable. Export the variables that match 
 export OPENAI_API_KEY=your_openai_key_here
 export ANTHROPIC_API_KEY=your_anthropic_key_here
 export GOOGLE_API_KEY=your_google_key_here
-export DO_GRADIENT_API_KEY=your_gradient_key_here
+export DO_MODEL_ACCESS_API_KEY=your_do_inference_key_here
 ```
 
 **One command per provider (no prior `export`):**
@@ -78,7 +78,7 @@ export DO_GRADIENT_API_KEY=your_gradient_key_here
 OPENAI_API_KEY=your_key docker-agent run /opt/docker-agent/examples/basic_agent.yaml
 ANTHROPIC_API_KEY=your_key docker-agent run ./your-agent.yaml
 GOOGLE_API_KEY=your_key docker-agent run ./your-agent.yaml
-DO_GRADIENT_API_KEY=your_key docker-agent run /opt/docker-agent/examples/gradient_agent.yaml
+DO_MODEL_ACCESS_API_KEY=your_key docker-agent run /opt/docker-agent/examples/do_model_agent.yaml
 ```
 
 Notes:
@@ -95,7 +95,7 @@ Use the `docker-agent` CLI on the Droplet. Paths below are under `/opt/docker-ag
 | Command | Required key |
 |---------|----------------|
 | `docker-agent run .../basic_agent.yaml` | `OPENAI_API_KEY` |
-| `docker-agent run .../gradient_agent.yaml` | `DO_GRADIENT_API_KEY` |
+| `docker-agent run .../do_model_agent.yaml` | `DO_MODEL_ACCESS_API_KEY` |
 
 **Anthropic or Google**
 
@@ -122,7 +122,7 @@ docker-agent run /opt/docker-agent/examples/todo.yaml
 **Summary**
 
 - `basic_agent.yaml` → OpenAI.
-- `gradient_agent.yaml` → Gradient (`base_url` `https://inference.do-ai.run/v1`, `token_key` `DO_GRADIENT_API_KEY`).
+- `do_model_agent.yaml` → DigitalOcean inference (`base_url` `https://inference.do-ai.run/v1`, `token_key` `DO_MODEL_ACCESS_API_KEY`).
 - Anthropic / Google → your own YAML (or from `docker-agent new --model`).
 
 ### Create Custom Agents
@@ -326,8 +326,8 @@ After deployment you have:
 
 ### Next Steps
 
-1. **Keys** – Export `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY`, and/or `DO_GRADIENT_API_KEY` as needed (same order is a good habit).
-2. **Run** – Try `basic_agent.yaml` and `gradient_agent.yaml`, or your YAML for Anthropic/Google.
+1. **Keys** – Export `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY`, and/or `DO_MODEL_ACCESS_API_KEY` as needed (same order is a good habit).
+2. **Run** – Try `basic_agent.yaml` and `do_model_agent.yaml`, or your YAML for Anthropic/Google.
 3. **Create** – Run `docker-agent new` for an interactive agent definition.
 4. **Extend** – Explore MCP tools and multi-agent setups in the upstream docs.
 

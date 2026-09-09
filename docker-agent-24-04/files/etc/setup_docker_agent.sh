@@ -74,18 +74,18 @@ if [[ "${yn,,}" == "y" || "${yn,,}" == "yes" ]]; then
     fi
 fi
 
-read -p "Set DigitalOcean Inference (Gradient) key now? (y/n) [n]: " yn
+read -p "Set DigitalOcean Inference key now? (y/n) [n]: " yn
 yn=${yn:-n}
 if [[ "${yn,,}" == "y" || "${yn,,}" == "yes" ]]; then
-    read -p "Enter your DigitalOcean Gradient model access key: " key
+    read -p "Enter your DigitalOcean Inference model access key: " key
     key=$(strip_quotes "$key")
     if [ -n "$key" ]; then
-        if grep -q 'DO_GRADIENT_API_KEY' "$BASHRC" 2>/dev/null; then
-            sed -i "s|^export DO_GRADIENT_API_KEY=.*|export DO_GRADIENT_API_KEY='$key'|" "$BASHRC"
+        if grep -q 'DO_MODEL_ACCESS_API_KEY' "$BASHRC" 2>/dev/null; then
+            sed -i "s|^export DO_MODEL_ACCESS_API_KEY=.*|export DO_MODEL_ACCESS_API_KEY='$key'|" "$BASHRC"
         else
-            echo "export DO_GRADIENT_API_KEY='$key'" >> "$BASHRC"
+            echo "export DO_MODEL_ACCESS_API_KEY='$key'" >> "$BASHRC"
         fi
-        echo "DO_GRADIENT_API_KEY added to /root/.bashrc."
+        echo "DO_MODEL_ACCESS_API_KEY added to /root/.bashrc."
     fi
 fi
 

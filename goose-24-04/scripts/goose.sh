@@ -51,7 +51,7 @@ goose --version 2>/dev/null || true
 chmod +x /etc/update-motd.d/99-one-click
 chmod +x /opt/goose/first-login-setup.sh
 chmod +x /opt/goose/enable-web-console.sh
-chmod +x /opt/goose/configure-gradient-key.sh
-chmod +x /opt/goose/migrate-gradient-provider-id.sh
-chmod 644 /opt/goose/lib-goose-gradient.sh
+chmod +x /opt/goose/configure-do-key.sh
+chmod +x /opt/goose/migrate-do-provider-id.sh
+chmod 644 /opt/goose/lib-goose-do.sh
 chmod +x /var/lib/cloud/scripts/per-instance/001_onboot

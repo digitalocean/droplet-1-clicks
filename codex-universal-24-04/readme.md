@@ -101,7 +101,7 @@ The update helper pulls the configured image tag from `/opt/codex-universal/.env
 
 - No Caddy or HTTP ports — this is a terminal dev environment, not a web application
 - The upstream image is amd64-only in production; DigitalOcean Droplets use amd64
-- Related: `codex-cli-24-04/` installs the Codex CLI natively with Gradient AI integration
+- Related: `codex-cli-24-04/` installs the Codex CLI natively with DigitalOcean Serverless integration
 
 ## References
 
