@@ -1,0 +1,23 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+Welcome to SVNPlus's One-Click Droplet.
+To keep this Droplet secure, the UFW firewall is enabled.
+All ports are BLOCKED except 22 (SSH), 80 (HTTP), and 443 (HTTPS).
+
+In a web browser, you can view your new SVNPlus site at http://$myip
+
+On the server:
+ * The default web root is located at /var/www/html
+ * Certbot is preinstalled. Run it to configure HTTPS.
+
+For help and more information, visit https://svnplus.com
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
