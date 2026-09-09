@@ -1,4 +1,3 @@
-
 {
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
@@ -28,8 +27,19 @@
     },
     {
       "type": "file",
+      "source": "common/files/var/",
+      "destination": "/var/"
+    },
+    {
+      "type": "file",
       "source": "prometheus-24-04/files/prom-motd",
       "destination": "/etc/update-motd.d/99-one-click-prom"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "chmod +x /etc/update-motd.d/99-one-click-prom"
+      ]
     },
     {
       "type": "file",
@@ -39,6 +49,8 @@
     {
       "type": "shell",
       "environment_vars": [
+        "application_name={{user `application_name`}}",
+        "application_version={{user `application_version`}}",
         "DEBIAN_FRONTEND=noninteractive",
         "LC_ALL=C",
         "LANG=en_US.UTF-8",
@@ -57,6 +69,7 @@
         "LC_CTYPE=en_US.UTF-8"
       ],
       "scripts": [
+        "common/scripts/020-application-tag.sh",
         "common/scripts/900-cleanup.sh",
         "prometheus-24-04/files/ufw.sh"
       ]
