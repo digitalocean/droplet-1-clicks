@@ -4,7 +4,7 @@
     "image_name": "flask-24-04-snapshot-{{timestamp}}",
     "apt_packages": "gunicorn nginx postfix python3 python3-certbot python3-certbot-nginx python3-dev python3-gunicorn python3-netifaces python3-pip python3-setuptools python3-venv python3-gevent",
     "application_name": "Flask",
-    "flask_version": "3.1.3"
+    "application_version": "3.1.3"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
@@ -59,9 +59,9 @@
     {
       "type": "shell",
       "environment_vars": [
-        "FLASK_VERSION={{user `flask_version`}}",
+        "FLASK_VERSION={{user `application_version`}}",
         "application_name={{user `application_name`}}",
-        "application_version={{user `flask_version`}}",
+        "application_version={{user `application_version`}}",
         "DEBIAN_FRONTEND=noninteractive",
         "LC_ALL=C",
         "LANG=en_US.UTF-8",

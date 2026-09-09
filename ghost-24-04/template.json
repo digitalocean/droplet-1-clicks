@@ -3,7 +3,7 @@
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "ghost-24-04-1click-{{timestamp}}",
     "node_version": "22.x",
-    "ghost_version": "6.27.0",
+    "application_version": "6.27.0",
     "ghost_cli_version": "1.29.1",
     "application_name": "Ghost",
     "apt_packages": "fail2ban cloud-image-utils git jq libguestfs-tools make mysql-server nginx postfix python3-certbot super unzip gnupg2 curl"
@@ -60,9 +60,9 @@
     {
       "type": "shell",
       "environment_vars": [
-        "GHOST_VERSION={{user `ghost_version`}}",
+        "GHOST_VERSION={{user `application_version`}}",
         "application_name={{user `application_name`}}",
-        "application_version={{user `ghost_version`}}",
+        "application_version={{user `application_version`}}",
         "ghost_cli_version={{user `ghost_cli_version`}}",
         "NODE_VERSION={{user `node_version`}}",
         "DEBIAN_FRONTEND=noninteractive",
