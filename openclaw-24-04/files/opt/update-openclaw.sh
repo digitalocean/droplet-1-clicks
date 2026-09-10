@@ -105,9 +105,17 @@ ensure_node_for_openclaw() {
     local current
     current="$(node --version 2>/dev/null || echo 'missing')"
     echo "OpenClaw requires Node >=24.16.0 <25 or >=26.1.0 (found ${current})."
-    echo "Upgrading Node.js to 24.x..."
-    curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
-    apt-get install -y nodejs
+    echo "Upgrading Node.js to 24.x via NodeSource apt repository..."
+
+    # Configure the apt repo with a signed keyring (do not curl|bash remote setup scripts).
+    mkdir -p /etc/apt/keyrings
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+        | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+    chmod a+r /etc/apt/keyrings/nodesource.gpg
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_24.x nodistro main" \
+        > /etc/apt/sources.list.d/nodesource.list
+    apt-get update -y
+    DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
 
     if ! node_meets_openclaw_engines; then
         echo "❌ Error: Node still too old after upgrade ($(node --version 2>/dev/null || echo missing))" >&2
