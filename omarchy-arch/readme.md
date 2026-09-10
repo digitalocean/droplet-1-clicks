@@ -60,7 +60,8 @@ min-disk 80 GB).
 | Script | Purpose |
 |---|---|
 | `010-omarchy-install.sh` | Omarchy mirror + clone (pinned `omarchy_ref`, default `v3.8.5`) + **6 unattended-droplet patches** + stock installer under a pty |
-| `020-remote-desktop.sh` | wayvnc (session autostart) + noVNC/websockify systemd service + per-instance onboot install |
+| `020-remote-desktop.sh` | wayvnc (session autostart) + noVNC/websockify systemd service + per-instance onboot install (also installs pwgen/fail2ban from stock mirrors) |
+| `025-fail2ban.sh` | fail2ban sshd jail (systemd journal backend) |
 | `030-optimize.sh` | Disable dead-hardware services, no NTP boot-block, journal cap, no screensaver/effects (CPU rendering), 1280x800@60 |
 | `040-application-tag.sh` | `/var/lib/digitalocean/application.info` (Arch equivalent of the common script) |
 | `900-cleanup.sh` | pacman cache purge, identity/credential scrub, cloud-init instance reset, host-key removal, zero-fill. **Must not use `cloud-init clean`** — it wipes `/var/lib/cloud/scripts/`, deleting the baked per-instance onboot script; it surgically removes `/var/lib/cloud/instances/*` instead (same approach as `common/scripts/900-cleanup.sh`) |
@@ -78,7 +79,12 @@ min-disk 80 GB).
 
 ### First-boot behavior (per droplet)
 
-`files/var/lib/cloud/scripts/per-instance/001_onboot` generates a unique password for the `arch` user (used to unlock the desktop), writes connection instructions + the password to `/etc/motd`, and stores a root-only copy in `/root/.omarchy-credentials`. SSH host keys and the user's SSH keys are provisioned fresh by cloud-init.
+`files/var/lib/cloud/scripts/per-instance/001_onboot` sets a random password for
+the `arch` user with pwgen so the account is never passwordless — it is stored
+only as a hash in `/etc/shadow`, never in a file or the MOTD; users choose
+their own with `passwd` (the MOTD says so). It also writes connection
+instructions to `/etc/motd`. SSH host keys and the user's SSH keys are
+provisioned fresh by cloud-init.
 
 ## Known limitations / future work
 

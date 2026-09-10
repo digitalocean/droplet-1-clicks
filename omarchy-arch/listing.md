@@ -8,24 +8,24 @@
 - Hyprland (Wayland compositor) with the complete Omarchy desktop experience — themes, keybindings, Omarchy menu, webapps
 - Development toolchain: Neovim, mise, Docker, git, and the full Omarchy app suite
 - wayvnc + noVNC: browser-based remote desktop, bound to localhost and accessed over an SSH tunnel (never exposed publicly)
-- ufw firewall (deny incoming, SSH allowed) with a boot-time SSH guard
+- ufw firewall (deny incoming, SSH allowed) with a boot-time SSH guard, plus fail2ban protecting SSH
 - Tuned for cloud: hardware-only services removed, compositor effects disabled for CPU rendering, 13-second boots
 
 ## Getting started
 
-After creating the droplet, log in once to read your unique desktop password from the welcome message:
-
-```
-ssh arch@your_droplet_ip
-```
-
-Then, from your local machine:
+From your local machine, open a tunnel to the droplet's remote desktop:
 
 ```
 ssh -N -L 6080:localhost:6080 arch@your_droplet_ip
 ```
 
-and open **http://localhost:6080/vnc.html** in your browser. Unlock the desktop with the password shown in the MOTD. Press `Super+K` for the keyboard shortcut cheatsheet, `Super+Return` for a terminal, and `Super+Space` for the app launcher.
+and open **http://localhost:6080/vnc.html** in your browser. Press `Super+K` for the keyboard shortcut cheatsheet, `Super+Return` for a terminal, and `Super+Space` for the app launcher.
+
+To be able to lock/unlock the desktop, choose a password for the `arch` user (none is disclosed up front — a random one is set at first boot and stored only as a hash):
+
+```
+ssh arch@your_droplet_ip passwd
+```
 
 ## Managing services
 
@@ -43,4 +43,4 @@ and open **http://localhost:6080/vnc.html** in your browser. Unlock the desktop 
 
 - Graphics are CPU-rendered (no GPU): excellent for terminals, editors, and general development; not suited to video playback or 3D.
 - The droplet has no audio device.
-- SSH password authentication is disabled; access uses your SSH key. The desktop password is unique per droplet and shown in the MOTD.
+- SSH password authentication is disabled; access uses your SSH key, and fail2ban bans repeated failed SSH attempts. The desktop password is whatever you set with `passwd` (a random unpublished one is in place until then).

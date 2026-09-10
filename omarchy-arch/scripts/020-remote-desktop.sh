@@ -8,11 +8,12 @@ sudo pacman -S --noconfirm --needed wayvnc
 
 echo "==> Installing websockify + noVNC"
 # The Omarchy stable mirror is a curated subset without these packages;
-# temporarily swap back to the stock Arch mirrors.
+# temporarily swap back to the stock Arch mirrors. pwgen (used by the onboot
+# script) and fail2ban (configured in 025) ride along in the same window.
 sudo cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.omarchy
 sudo cp /etc/pacman.d/mirrorlist.orig /etc/pacman.d/mirrorlist
 sudo pacman -Syy --noconfirm >/dev/null
-sudo pacman -S --noconfirm --needed python-pipx
+sudo pacman -S --noconfirm --needed python-pipx pwgen fail2ban
 sudo cp /etc/pacman.d/mirrorlist.omarchy /etc/pacman.d/mirrorlist
 sudo pacman -Syy --noconfirm >/dev/null
 

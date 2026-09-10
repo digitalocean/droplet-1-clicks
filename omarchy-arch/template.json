@@ -60,6 +60,7 @@
       ],
       "scripts": [
         "omarchy-arch/scripts/020-remote-desktop.sh",
+        "omarchy-arch/scripts/025-fail2ban.sh",
         "omarchy-arch/scripts/030-optimize.sh",
         "omarchy-arch/scripts/040-application-tag.sh",
         "omarchy-arch/scripts/900-cleanup.sh"

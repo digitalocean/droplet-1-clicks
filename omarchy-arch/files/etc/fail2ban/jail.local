@@ -1,0 +1,9 @@
+[DEFAULT]
+bantime  = 1h
+findtime = 10m
+maxretry = 5
+
+[sshd]
+enabled = true
+# Arch has no auth.log; read sshd from the systemd journal
+backend = systemd

@@ -1,10 +1,12 @@
 #!/bin/bash
 #
-# Per-instance first-boot configuration. Generates a unique desktop password
-# for this droplet and publishes connection instructions via MOTD.
+# Per-instance first-boot configuration.
+#
+# The `arch` user must not be passwordless (the desktop lock screen uses it),
+# so set a random one. It is stored only as a hash in /etc/shadow and never
+# written anywhere else — users set their own with `passwd` (see MOTD).
 
-DESKTOP_PASS=$(tr -dc 'a-z0-9' </dev/urandom | head -c 14)
-echo "arch:${DESKTOP_PASS}" | chpasswd
+echo "arch:$(pwgen -s 24 1)" | chpasswd
 
 DROPLET_IP=$(curl -s --max-time 5 http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address || hostname -i | awk '{print $1}')
 
@@ -17,20 +19,13 @@ cat > /etc/motd <<EOM
 
     1. ssh -N -L 6080:localhost:6080 arch@${DROPLET_IP}
     2. open http://localhost:6080/vnc.html
-    3. unlock password: ${DESKTOP_PASS}
 
   Desktop basics:  Super+K = shortcut cheatsheet
                    Super+Return = terminal, Super+Space = launcher
 
-  The desktop password above is also the password for user 'arch'.
+  To lock/unlock the desktop you need a password for user 'arch'.
+  None is set up front — choose your own by running:  passwd
   Update Omarchy from a desktop terminal:  omarchy-update
  ------------------------------------------------------------------
 
-EOM
-
-# Credentials also stored (root-only) for automation/recovery
-install -m 600 /dev/null /root/.omarchy-credentials
-cat > /root/.omarchy-credentials <<EOM
-user=arch
-desktop_password=${DESKTOP_PASS}
 EOM
