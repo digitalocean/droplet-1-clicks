@@ -5,7 +5,7 @@
     "apt_packages": "fail2ban jq libgl1 libglx-mesa0 ffmpeg libsm6 libxext6 build-essential git-all debian-keyring debian-archive-keyring apt-transport-https curl",
     "application_name": "Ollama",
     "anaconda_version": "2024.06-1",
-    "ollama_version": "0.31.2",
+    "application_version": "0.31.2",
     "open_webui_version": "0.10.2",
     "model_name": "tinyllama"
   },
@@ -62,10 +62,10 @@
       "environment_vars": [
         "ANACONDA_VERSION={{user `anaconda_version`}}",
         "OPEN_WEBUI_VERSION={{user `open_webui_version`}}",
-        "OLLAMA_VERSION={{user `ollama_version`}}",
+        "OLLAMA_VERSION={{user `application_version`}}",
         "MODEL_NAME={{user `model_name`}}",
         "application_name={{user `application_name`}}",
-        "application_version={{user `ollama_version`}}",
+        "application_version={{user `application_version`}}",
         "DEBIAN_FRONTEND=noninteractive",
         "LC_ALL=C",
         "LANG=en_US.UTF-8",
