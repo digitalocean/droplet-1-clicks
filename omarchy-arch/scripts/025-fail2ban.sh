@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# fail2ban with an sshd jail (journal backend — Arch has no auth.log).
+# fail2ban with an sshd jail (journal backend; Arch has no auth.log).
 set -euo pipefail
 
 echo "==> Configuring fail2ban"

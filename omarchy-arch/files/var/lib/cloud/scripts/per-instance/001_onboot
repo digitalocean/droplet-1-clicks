@@ -4,7 +4,7 @@
 #
 # The `arch` user must not be passwordless (the desktop lock screen uses it),
 # so set a random one. It is stored only as a hash in /etc/shadow and never
-# written anywhere else — users set their own with `passwd` (see MOTD).
+# written anywhere else; users set their own with `passwd` (see MOTD).
 
 echo "arch:$(pwgen -s 24 1)" | chpasswd
 
@@ -24,7 +24,7 @@ cat > /etc/motd <<EOM
                    Super+Return = terminal, Super+Space = launcher
 
   To lock/unlock the desktop you need a password for user 'arch'.
-  None is set up front — choose your own by running:  passwd
+  None is set up front. Choose your own by running:  passwd
   Update Omarchy from a desktop terminal:  omarchy-update
  ------------------------------------------------------------------
 

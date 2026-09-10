@@ -1,12 +1,12 @@
 # Omarchy 1-Click builder
 
-Builds a DigitalOcean Marketplace snapshot of [Omarchy](https://omarchy.org) — DHH's Arch Linux + Hyprland desktop OS — running natively on a droplet with browser-based remote desktop access.
+Builds a DigitalOcean Marketplace snapshot of [Omarchy](https://omarchy.org), DHH's Arch Linux + Hyprland desktop OS, running natively on a droplet with browser-based remote desktop access.
 
 ## ⚠️ How this builder differs from the others in this repo
 
 1. **Arch-based, not Ubuntu.** Omarchy requires vanilla Arch. The builder's base is a **custom image** (the official Arch cloud image uploaded to the team account as image ID `244474342`, variable `base_image_id`), not `ubuntu-24-04-x64`. Consequently the shared `common/scripts/*` (apt/lsb_release-based) are not used; Arch equivalents live in `scripts/`.
 2. **SSH user is `arch`, not root.** The Arch cloud image disables root SSH; cloud-init injects keys for the `arch` user (passwordless sudo). All provisioner scripts run as `arch` and `sudo` where needed; files are uploaded to `/tmp/build-files` and moved into place by scripts.
-3. **No Caddy / public HTTP.** The web interface (noVNC) is deliberately localhost-only, reached via SSH tunnel — VNC has weak native auth, so the tunnel *is* the security model.
+3. **No Caddy / public HTTP.** The web interface (noVNC) is deliberately localhost-only, reached via SSH tunnel; VNC has weak native auth, so the tunnel *is* the security model.
 
 ## Base image provenance
 
@@ -15,7 +15,7 @@ Linux project's [arch-boxes](https://gitlab.archlinux.org/archlinux/arch-boxes)
 CI and published on the Arch mirror network:
 
 - Index: <https://geo.mirror.pkgbuild.com/images/> (any Arch mirror carries `images/`)
-- File: `Arch-Linux-x86_64-cloudimg.qcow2` — qcow2 disk image with cloud-init,
+- File: `Arch-Linux-x86_64-cloudimg.qcow2`, a qcow2 disk image with cloud-init,
   default user `arch` (passwordless sudo, no password set), btrfs root
 - `images/latest/` is a **moving target** (new build ~monthly). Versioned
   releases live at `images/v<YYYYMMDD.buildid>/`, each with a `.SHA256` checksum
@@ -24,7 +24,7 @@ CI and published on the Arch mirror network:
   named `arch-cloudimg-omarchy` in the team account) was created 2026-09-07
   from the `v20260901.583572` build
 
-To (re)create the custom image — prefer a pinned version over `latest`:
+To (re)create the custom image (prefer a pinned version over `latest`):
 
 ```bash
 doctl compute image create arch-cloudimg-omarchy --region nyc3 \
@@ -34,7 +34,7 @@ doctl compute image create arch-cloudimg-omarchy --region nyc3 \
 
 Wait for its status to become `available` (`doctl compute image get <id>`),
 then set `base_image_id` in `template.json`. Note: custom images are
-**per-team and per-region** — the ID must exist in the same account and
+**per-team and per-region**: the ID must exist in the same account and
 region (`nyc3`) the build runs in.
 
 ## Prerequisites
@@ -64,7 +64,7 @@ min-disk 80 GB).
 | `025-fail2ban.sh` | fail2ban sshd jail (systemd journal backend) |
 | `030-optimize.sh` | Disable dead-hardware services, no NTP boot-block, journal cap, no screensaver/effects (CPU rendering), 1280x800@60 |
 | `040-application-tag.sh` | `/var/lib/digitalocean/application.info` (Arch equivalent of the common script) |
-| `900-cleanup.sh` | pacman cache purge, identity/credential scrub, cloud-init instance reset, host-key removal, zero-fill. **Must not use `cloud-init clean`** — it wipes `/var/lib/cloud/scripts/`, deleting the baked per-instance onboot script; it surgically removes `/var/lib/cloud/instances/*` instead (same approach as `common/scripts/900-cleanup.sh`) |
+| `900-cleanup.sh` | pacman cache purge, identity/credential scrub, cloud-init instance reset, host-key removal, zero-fill. **Must not use `cloud-init clean`**: it wipes `/var/lib/cloud/scripts/`, deleting the baked per-instance onboot script; it surgically removes `/var/lib/cloud/instances/*` instead (same approach as `common/scripts/900-cleanup.sh`) |
 
 ### The 6 installer patches (all in hardware-specific steps)
 
@@ -80,7 +80,7 @@ min-disk 80 GB).
 ### First-boot behavior (per droplet)
 
 `files/var/lib/cloud/scripts/per-instance/001_onboot` sets a random password for
-the `arch` user with pwgen so the account is never passwordless — it is stored
+the `arch` user with pwgen so the account is never passwordless; it is stored
 only as a hash in `/etc/shadow`, never in a file or the MOTD; users choose
 their own with `passwd` (the MOTD says so). It also writes connection
 instructions to `/etc/motd`. SSH host keys and the user's SSH keys are

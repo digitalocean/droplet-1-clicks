@@ -33,12 +33,12 @@ EOF
 echo "==> Extra close-window binding (browsers on macOS steal Cmd+W over noVNC)"
 cat >> ~/.config/hypr/bindings.conf <<'EOF'
 
-# Close window without Super+W — Cmd+W closes the browser tab when using noVNC on macOS
+# Close window without Super+W: Cmd+W closes the browser tab when using noVNC on macOS
 bind = SUPER, BackSpace, killactive
 EOF
 
 echo "==> Compositor: no animations/blur/shadows/rounding (CPU rendering)"
-# Must be namespaced keys — Hyprland silently ignores one-line `cat { k = v }` blocks
+# Must be namespaced keys: Hyprland silently ignores one-line `cat { k = v }` blocks
 cat >> ~/.config/hypr/hyprland.conf <<'EOF'
 
 # --- Droplet performance (software rendering) ---
