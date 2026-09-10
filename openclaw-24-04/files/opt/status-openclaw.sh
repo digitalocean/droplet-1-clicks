@@ -22,7 +22,7 @@ echo "  Direct loopback URL (SSH tunnel only): http://127.0.0.1:18789"
 echo ""
 echo "=== Update OpenClaw ==="
 echo "  Latest:           sudo /opt/update-openclaw.sh"
-echo "  Specific version: sudo /opt/update-openclaw.sh v2026.9.3"
+echo "  Specific version: sudo /opt/update-openclaw.sh <latest version>   # e.g. 2026.9.3"
 echo "  Rollback:         sudo /opt/update-openclaw.sh --rollback"
 if [ -f /opt/openclaw.env ]; then
     prev=$(grep -E '^OPENCLAW_VERSION_PREVIOUS=' /opt/openclaw.env 2>/dev/null | tail -n 1 | cut -d'=' -f2- || true)

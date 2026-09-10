@@ -46,7 +46,7 @@ on the channels you already use (WhatsApp, Telegram, Slack, Discord, and more).
 
 ⬆️ Update OpenClaw:
   Latest release:     sudo /opt/update-openclaw.sh
-  Specific version:   sudo /opt/update-openclaw.sh v2026.9.3
+  Specific version:   sudo /opt/update-openclaw.sh <latest version>   # e.g. 2026.9.3
   Rollback previous:  sudo /opt/update-openclaw.sh --rollback
   (Upgrades Node automatically if the release requires a newer runtime.
    Rollback restores the prior npm package only, not config migrations.)
