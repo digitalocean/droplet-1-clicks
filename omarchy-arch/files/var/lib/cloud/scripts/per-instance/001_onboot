@@ -1,0 +1,36 @@
+#!/bin/bash
+#
+# Per-instance first-boot configuration. Generates a unique desktop password
+# for this droplet and publishes connection instructions via MOTD.
+
+DESKTOP_PASS=$(tr -dc 'a-z0-9' </dev/urandom | head -c 14)
+echo "arch:${DESKTOP_PASS}" | chpasswd
+
+DROPLET_IP=$(curl -s --max-time 5 http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address || hostname -i | awk '{print $1}')
+
+cat > /etc/motd <<EOM
+
+ ------------------------------------------------------------------
+  Omarchy on DigitalOcean
+ ------------------------------------------------------------------
+  See the desktop in your browser (from your local machine):
+
+    1. ssh -N -L 6080:localhost:6080 arch@${DROPLET_IP}
+    2. open http://localhost:6080/vnc.html
+    3. unlock password: ${DESKTOP_PASS}
+
+  Desktop basics:  Super+K = shortcut cheatsheet
+                   Super+Return = terminal, Super+Space = launcher
+
+  The desktop password above is also the password for user 'arch'.
+  Update Omarchy from a desktop terminal:  omarchy-update
+ ------------------------------------------------------------------
+
+EOM
+
+# Credentials also stored (root-only) for automation/recovery
+install -m 600 /dev/null /root/.omarchy-credentials
+cat > /root/.omarchy-credentials <<EOM
+user=arch
+desktop_password=${DESKTOP_PASS}
+EOM

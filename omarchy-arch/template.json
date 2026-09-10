@@ -1,0 +1,69 @@
+{
+  "variables": {
+    "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
+    "image_name": "omarchy-arch-snapshot-{{timestamp}}",
+    "base_image_id": "244474342",
+    "application_name": "Omarchy",
+    "application_version": "3.8.5",
+    "omarchy_ref": "v3.8.5"
+  },
+  "sensitive-variables": ["do_api_token"],
+  "builders": [
+    {
+      "type": "digitalocean",
+      "api_token": "{{user `do_api_token`}}",
+      "image": "{{user `base_image_id`}}",
+      "region": "nyc3",
+      "size": "s-2vcpu-4gb",
+      "ssh_username": "arch",
+      "snapshot_name": "{{user `image_name`}}"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "inline": [
+        "cloud-init status --wait",
+        "mkdir -p /tmp/build-files"
+      ]
+    },
+    {
+      "type": "file",
+      "source": "omarchy-arch/files/",
+      "destination": "/tmp/build-files/"
+    },
+    {
+      "type": "shell",
+      "expect_disconnect": true,
+      "environment_vars": [
+        "application_name={{user `application_name`}}",
+        "application_version={{user `application_version`}}",
+        "omarchy_ref={{user `omarchy_ref`}}"
+      ],
+      "scripts": [
+        "omarchy-arch/scripts/010-omarchy-install.sh"
+      ]
+    },
+    {
+      "type": "shell",
+      "start_retry_timeout": "10m",
+      "pause_before": "10s",
+      "scripts": [
+        "omarchy-arch/scripts/015-wait-install.sh"
+      ]
+    },
+    {
+      "type": "shell",
+      "environment_vars": [
+        "application_name={{user `application_name`}}",
+        "application_version={{user `application_version`}}"
+      ],
+      "scripts": [
+        "omarchy-arch/scripts/020-remote-desktop.sh",
+        "omarchy-arch/scripts/030-optimize.sh",
+        "omarchy-arch/scripts/040-application-tag.sh",
+        "omarchy-arch/scripts/900-cleanup.sh"
+      ]
+    }
+  ]
+}
