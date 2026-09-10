@@ -8,8 +8,8 @@ ufw allow 443
 ufw limit ssh/tcp
 ufw --force enable
 
-# Install Node.js 22 (required for Openclaw)
-curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+# Install Node.js 24 (OpenClaw requires >=24.16.0 <25 || >=26.1.0)
+curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
 apt-get install -y nodejs
 
 # Install Caddy (reverse proxy with automatic TLS)

@@ -40,10 +40,16 @@ on the channels you already use (WhatsApp, Telegram, Slack, Discord, and more).
   - /opt/stop-openclaw.sh      (stop gateway)
   - /opt/restart-openclaw.sh   (restart with status check)
   - /opt/status-openclaw.sh    (show status and token)
-  - /opt/update-openclaw.sh    (update to latest version)
   - /opt/openclaw-cli.sh       (run CLI commands)
   - /opt/openclaw-control-ui-pairing.sh    (full Control UI pairing walkthrough)
   - /opt/openclaw-approve-ui-pairing.sh    (approve pending pairing only)
+
+⬆️ Update OpenClaw:
+  Latest release:     sudo /opt/update-openclaw.sh
+  Specific version:   sudo /opt/update-openclaw.sh v2026.9.3
+  Rollback previous:  sudo /opt/update-openclaw.sh --rollback
+  (Upgrades Node automatically if the release requires a newer runtime.
+   Rollback restores the prior npm package only, not config migrations.)
 
 🔒 Custom domain (HTTPS):
   HTTPS is already enabled on this droplet IP (shortlived TLS via Caddy).

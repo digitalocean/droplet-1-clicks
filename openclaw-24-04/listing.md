@@ -32,8 +32,8 @@ OpenClaw runs the gateway on the host and uses Docker for sandboxes. Prefer at l
 ## Included System Components
 
 - **Ubuntu 24.04 LTS**
-- **OpenClaw** (version pinned in the image build)
-- **Node.js 22** and **Docker**
+- **OpenClaw** `v2026.9.3` (version pinned in the image build)
+- **Node.js 24** and **Docker**
 - **Caddy** reverse proxy (ports 80/443 → gateway on localhost:18789)
 - **UFW** and **fail2ban**
 - Dedicated **`openclaw`** system user
@@ -76,10 +76,27 @@ If Serverless Inference was not passed at create time, the first-login wizard ca
 | Stop | `/opt/stop-openclaw.sh` |
 | Restart | `/opt/restart-openclaw.sh` |
 | Status | `/opt/status-openclaw.sh` |
-| Update | `/opt/update-openclaw.sh` |
+| Update (latest) | `sudo /opt/update-openclaw.sh` |
+| Update (specific version) | `sudo /opt/update-openclaw.sh v2026.9.3` |
+| Rollback | `sudo /opt/update-openclaw.sh --rollback` |
 | Domain TLS | `/opt/setup-openclaw-domain.sh` |
 | Re-run setup | `/etc/setup_wizard.sh` |
 | Control UI pairing | `/opt/openclaw-control-ui-pairing.sh` |
+
+### Updating OpenClaw
+
+```bash
+# Install the latest release from npm (default)
+sudo /opt/update-openclaw.sh
+
+# Install a specific version
+sudo /opt/update-openclaw.sh v2026.9.3
+
+# Roll back to the previous package version (saved automatically on upgrade)
+sudo /opt/update-openclaw.sh --rollback
+```
+
+Before each successful version change, the script stores the prior pin as `OPENCLAW_VERSION_PREVIOUS` in `/opt/openclaw.env`. Rollback reinstalls that npm package and restarts the gateway; it does not undo config or workspace migrations. Prefer the SSH helper over the Control UI update button on this 1-Click image.
 
 systemd: `systemctl {start|stop|restart|status} openclaw`  
 Logs: `journalctl -u openclaw -f`
