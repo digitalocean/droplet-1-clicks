@@ -8,9 +8,16 @@ ufw allow 443
 ufw limit ssh/tcp
 ufw --force enable
 
-# Install Node.js 22 (required for Openclaw)
-curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
-apt-get install -y nodejs
+# Install Node.js 24 (OpenClaw requires >=24.16.0 <25 || >=26.1.0)
+# Use a signed apt keyring instead of curling a remote setup script into bash.
+mkdir -p /etc/apt/keyrings
+curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+    | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+chmod a+r /etc/apt/keyrings/nodesource.gpg
+echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_24.x nodistro main" \
+    > /etc/apt/sources.list.d/nodesource.list
+apt-get update -y
+DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
 
 # Install Caddy (reverse proxy with automatic TLS)
 curl -1sLf "https://dl.cloudsmith.io/public/caddy/stable/gpg.key" | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg

@@ -40,10 +40,27 @@ on the channels you already use (WhatsApp, Telegram, Slack, Discord, and more).
   - /opt/stop-openclaw.sh      (stop gateway)
   - /opt/restart-openclaw.sh   (restart with status check)
   - /opt/status-openclaw.sh    (show status and token)
-  - /opt/update-openclaw.sh    (update to latest version)
   - /opt/openclaw-cli.sh       (run CLI commands)
   - /opt/openclaw-control-ui-pairing.sh    (full Control UI pairing walkthrough)
   - /opt/openclaw-approve-ui-pairing.sh    (approve pending pairing only)
+
+⬆️ Update OpenClaw:
+  Latest release:     sudo /opt/update-openclaw.sh
+  Specific version:   sudo /opt/update-openclaw.sh <latest version>   # e.g. 2026.9.3
+  Rollback previous:  sudo /opt/update-openclaw.sh --rollback
+  (Rollback reinstalls the version from before the last update
+   (OPENCLAW_VERSION_PREVIOUS). For any other pin, use the specific-version
+   command above. Upgrades Node automatically if needed. Rollback restores
+   the prior npm package only, not config migrations.)
+  If UI/CLI breaks after update or rollback, repair with doctor:
+    sudo -u openclaw openclaw doctor
+        # interactive checks; prompts YES/NO when fixes are needed
+    sudo -u openclaw openclaw doctor --fix
+        # apply recommended repairs (--repair is the same)
+    Optional flags (combine with --fix as needed):
+      --yes              accept defaults without prompting
+      --non-interactive  no prompts; safe migrations/repairs only
+    Then: sudo systemctl restart openclaw
 
 🔒 Custom domain (HTTPS):
   HTTPS is already enabled on this droplet IP (shortlived TLS via Caddy).

@@ -55,8 +55,8 @@ make build-openclaw-24-04
 
 ## What Gets Installed
 
-- **OpenClaw** (npm package version from `application_version` in `template.json`)
-- **Node.js 22** and **Docker** (sandbox image built at snapshot time and on first boot)
+- **OpenClaw** `v2026.9.3` (pinned via `application_version` in `template.json`)
+- **Node.js 24** and **Docker** (sandbox image built at snapshot time and on first boot)
 - **Caddy** – reverse proxy on ports 80/443 to `127.0.0.1:18789` with shortlived TLS by IP
 - **UFW** – SSH (rate-limited), HTTP, HTTPS
 - **fail2ban**
@@ -86,7 +86,15 @@ make build-openclaw-24-04
 
 ## Version Pinning
 
-Edit `application_version` in `template.json` (OpenClaw npm version, e.g. `v2026.8.1`), then rebuild.
+Edit `application_version` in `template.json` (OpenClaw npm version, e.g. `v2026.9.3`), then rebuild.
+
+## On-droplet updates (shown in MOTD)
+
+```bash
+sudo /opt/update-openclaw.sh              # latest from npm
+sudo /opt/update-openclaw.sh v2026.9.3    # specific version
+sudo /opt/update-openclaw.sh --rollback   # previous pin (OPENCLAW_VERSION_PREVIOUS)
+```
 
 ## License
 

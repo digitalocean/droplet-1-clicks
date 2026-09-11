@@ -49,9 +49,10 @@ jq --arg token "$GATEWAY_TOKEN" \
        )
      | .tools = (if (.tools | type) == "object" then .tools else {} end)
      | .tools.deny = (((.tools.deny // []) + ["sessions_send"]) | unique)
-     | .session = (if (.session | type) == "object" then .session else {} end)
-     | .session.agentToAgent = (if (.session.agentToAgent | type) == "object" then .session.agentToAgent else {} end)
-     | .session.agentToAgent.maxPingPongTurns = 0
+     # OpenClaw 2026.9.x removed session.agentToAgent (built-in defaults).
+     # Strip it so upgraded droplets keep a valid config for CLI pairing.
+     | del(.session.agentToAgent)
+     | if (.session | type) == "object" and (.session | length) == 0 then del(.session) else . end
      | .gateway.controlUi.allowedOrigins = (
          if ($pub != "" and $pub != $prv) then
            ["https://" + $pub, "http://" + $pub, "https://" + $prv, "http://" + $prv]

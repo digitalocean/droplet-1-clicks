@@ -32,8 +32,8 @@ OpenClaw runs the gateway on the host and uses Docker for sandboxes. Prefer at l
 ## Included System Components
 
 - **Ubuntu 24.04 LTS**
-- **OpenClaw** (version pinned in the image build)
-- **Node.js 22** and **Docker**
+- **OpenClaw** `v2026.9.3` (version pinned in the image build)
+- **Node.js 24** and **Docker**
 - **Caddy** reverse proxy (ports 80/443 → gateway on localhost:18789)
 - **UFW** and **fail2ban**
 - Dedicated **`openclaw`** system user
@@ -76,10 +76,43 @@ If Serverless Inference was not passed at create time, the first-login wizard ca
 | Stop | `/opt/stop-openclaw.sh` |
 | Restart | `/opt/restart-openclaw.sh` |
 | Status | `/opt/status-openclaw.sh` |
-| Update | `/opt/update-openclaw.sh` |
+| Update (latest) | `sudo /opt/update-openclaw.sh` |
+| Update (specific version) | `sudo /opt/update-openclaw.sh 2026.9.3` |
+| Rollback | `sudo /opt/update-openclaw.sh --rollback` (version before last update only) |
 | Domain TLS | `/opt/setup-openclaw-domain.sh` |
 | Re-run setup | `/etc/setup_wizard.sh` |
 | Control UI pairing | `/opt/openclaw-control-ui-pairing.sh` |
+
+### Updating OpenClaw
+
+```bash
+# Install the latest release from npm (default)
+sudo /opt/update-openclaw.sh
+
+# Install a specific version
+sudo /opt/update-openclaw.sh 2026.9.3
+
+# Roll back to the version from before the last update (OPENCLAW_VERSION_PREVIOUS)
+sudo /opt/update-openclaw.sh --rollback
+```
+
+Before each successful version change, the script stores the prior pin as `OPENCLAW_VERSION_PREVIOUS` in `/opt/openclaw.env`. `--rollback` reinstalls that package only — it is not a picker for arbitrary older releases. To install any other pin, use the specific-version command above. Rollback does not undo config or workspace migrations. Prefer the SSH helper over the Control UI update button on this 1-Click image.
+
+If the Control UI or CLI misbehaves after an update or rollback, run OpenClaw doctor and choose the posture you want:
+
+```bash
+# Interactive checks (prompts YES/NO when fixes are needed)
+sudo -u openclaw openclaw doctor
+
+# Apply recommended repairs (--repair is the same)
+sudo -u openclaw openclaw doctor --fix
+
+# Optional flags (combine with --fix as needed):
+#   --yes              accept defaults without prompting
+#   --non-interactive  no prompts; safe migrations/repairs only
+
+sudo systemctl restart openclaw
+```
 
 systemd: `systemctl {start|stop|restart|status} openclaw`  
 Logs: `journalctl -u openclaw -f`
