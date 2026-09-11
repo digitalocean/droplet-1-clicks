@@ -1,0 +1,38 @@
+---
+
+- name: Security Plugin configuration | Create local temporary directory for certificates generation
+  file:
+    path: /tmp/opensearch-nodecerts
+    state: directory
+
+- name: Security Plugin configuration | Download certificates generation tool
+  get_url:
+    url: https://search.maven.org/remotecontent?filepath=com/floragunn/search-guard-tlstool/1.5/search-guard-tlstool-1.5.tar.gz
+    dest: /tmp/opensearch-nodecerts/search-guard-tlstool.tar.gz
+
+- name: Unpack nodecerts tarball
+  unarchive:
+    copy: no
+    src: "/tmp/opensearch-nodecerts/search-guard-tlstool.tar.gz"
+    dest: "{{ nodecerts_home }}"
+    owner: "{{ opensearch_user }}"
+    group: "{{ opensearch_group }}"
+
+- name: Security Plugin configuration | Make the executable file
+  file:
+    path: "{{ nodecerts_home }}/tools/sgtlstool.sh"
+    mode: a+x
+
+- name: Add nodecerts template file
+  copy:
+    src: tlsconfig.yml.template
+    dest: "{{ nodecerts_home }}/tlsconfig.yml.template"
+    owner: "{{ opensearch_user }}"
+    group: "{{ opensearch_group }}"
+
+- name: Add internal users config template
+  copy:
+    src: internal_users.yml.template
+    dest: "{{ opensearch_config_home }}/internal_users.yml.template"
+    owner: "{{ opensearch_user }}"
+    group: "{{ opensearch_group }}"
