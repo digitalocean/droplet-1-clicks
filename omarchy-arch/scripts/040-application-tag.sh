@@ -4,16 +4,15 @@
 set -euo pipefail
 
 build_date=$(date +%Y-%m-%d)
-. /etc/os-release
 distro_arch="$(uname -m)"
 
 sudo mkdir -p /var/lib/digitalocean
-cat <<EOM | sudo tee -a /var/lib/digitalocean/application.info >/dev/null
+cat <<EOM | sudo tee /var/lib/digitalocean/application.info >/dev/null
 application_name="${application_name}"
 build_date="${build_date}"
-distro="${NAME}"
+distro="Omarchy (Arch Linux)"
 distro_release="rolling"
-distro_codename="${ID}"
+distro_codename="omarchy"
 distro_arch="${distro_arch}"
 application_version="${application_version}"
 EOM

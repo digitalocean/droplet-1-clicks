@@ -1,93 +1,83 @@
 # Omarchy 1-Click builder
 
-Builds a DigitalOcean Marketplace snapshot of [Omarchy](https://omarchy.org), DHH's Arch Linux + Hyprland desktop OS, running natively on a droplet with browser-based remote desktop access.
+Builds a DigitalOcean Marketplace snapshot of [Omarchy](https://omarchy.org),
+DHH's Arch Linux + Hyprland desktop OS, running natively on a droplet with
+browser-based remote desktop access.
 
-## ⚠️ How this builder differs from the others in this repo
+## Two-stage pipeline (4.x)
 
-1. **Arch-based, not Ubuntu.** Omarchy requires vanilla Arch. The builder's base is a **custom image** (the official Arch cloud image uploaded to the team account as image ID `244474342`, variable `base_image_id`), not `ubuntu-24-04-x64`. Consequently the shared `common/scripts/*` (apt/lsb_release-based) are not used; Arch equivalents live in `scripts/`.
-2. **SSH user is `arch`, not root.** The Arch cloud image disables root SSH; cloud-init injects keys for the `arch` user (passwordless sudo). All provisioner scripts run as `arch` and `sudo` where needed; files are uploaded to `/tmp/build-files` and moved into place by scripts.
-3. **No Caddy / public HTTP.** The web interface (noVNC) is deliberately localhost-only, reached via SSH tunnel; VNC has weak native auth, so the tunnel *is* the security model.
+Omarchy 4.x installs exclusively from its ISO; there is no script installer to
+run on an existing system (that was the 3.x approach this builder originally
+used). The build is therefore split:
 
-## Base image provenance
+| Stage | Where | What |
+|---|---|---|
+| **Base image** | KVM VM, see [base-image/](base-image/README.md) | Stock ISO autoinstall + only what a droplet needs to boot and be reachable: BIOS boot path, cloud-init (DO datasource), passwordless sudo, scrub |
+| **Packer** (this directory) | `packer build omarchy-arch/template.json` | Everything else, reviewable here: remote desktop (wayvnc + noVNC), fail2ban, autologin, cloud tuning, per-instance onboot, application tag, cleanup |
 
-The base is the **official Arch Linux cloud image**, built and signed by the Arch
-Linux project's [arch-boxes](https://gitlab.archlinux.org/archlinux/arch-boxes)
-CI and published on the Arch mirror network:
+The base image changes only when a new Omarchy version ships; day-to-day
+changes to the 1-Click live in the Packer scripts.
 
-- Index: <https://geo.mirror.pkgbuild.com/images/> (any Arch mirror carries `images/`)
-- File: `Arch-Linux-x86_64-cloudimg.qcow2`, a qcow2 disk image with cloud-init,
-  default user `arch` (passwordless sudo, no password set), btrfs root
-- `images/latest/` is a **moving target** (new build ~monthly). Versioned
-  releases live at `images/v<YYYYMMDD.buildid>/`, each with a `.SHA256` checksum
-  and a `.sig` GPG signature alongside
-- The custom image currently referenced by `base_image_id` (`244474342`,
-  named `arch-cloudimg-omarchy` in the team account) was created 2026-09-07
-  from the `v20260901.583572` build
+## How this builder differs from the others in this repo
 
-To (re)create the custom image (prefer a pinned version over `latest`):
-
-```bash
-doctl compute image create arch-cloudimg-omarchy --region nyc3 \
-  --image-url "https://geo.mirror.pkgbuild.com/images/v20260901.583572/Arch-Linux-x86_64-cloudimg-20260901.583572.qcow2" \
-  --image-distribution "Arch Linux"
-```
-
-Wait for its status to become `available` (`doctl compute image get <id>`),
-then set `base_image_id` in `template.json`. Note: custom images are
-**per-team and per-region**: the ID must exist in the same account and
-region (`nyc3`) the build runs in.
-
-## Prerequisites
-
-- `DIGITALOCEAN_API_TOKEN` exported (same as other builders)
-- The base custom image available in the account/region (see above)
+1. **Arch/Omarchy-based, not Ubuntu.** The builder's base is a custom image
+   (variable `base_image_id`), not `ubuntu-24-04-x64`; the shared
+   `common/scripts/*` (apt-based) are not used.
+2. **SSH user is `arch`, not root.** cloud-init injects keys for the `arch`
+   user (passwordless sudo). Files are uploaded to `/tmp/build-files` and
+   moved into place by scripts.
+3. **No Caddy / public HTTP.** The web interface (noVNC) is deliberately
+   localhost-only, reached via SSH tunnel; VNC has weak native auth, so the
+   tunnel is the security model.
+4. **Desktop config is Lua** (4.x API): `o.launch_on_start(...)`,
+   `o.bind("SUPER + BackSpace", ...)`, `hl.config({...})`. Note the parser
+   silently ignores invalid syntax only in .conf files; Lua errors surface as
+   a config-error banner in the session.
 
 ## Build
 
-From the **repo root** (script paths in `template.json` are repo-relative,
-matching the other builders):
+From the **repo root**, with `DIGITALOCEAN_API_TOKEN` exported and
+`base_image_id` in `template.json` pointing at the current base image:
 
 ```bash
 packer build omarchy-arch/template.json
 ```
 
-Takes ~45–55 minutes (≈950 packages, an 80 GB free-space zero-fill, and
-snapshot creation). Build droplet: `s-2vcpu-4gb` (80 GB disk ⇒ snapshot
-min-disk 80 GB).
+Takes ~10-15 minutes (packages, config, fstrim, snapshot). Build droplet:
+`s-2vcpu-4gb` (80 GB disk ⇒ snapshot min-disk 80 GB).
 
 ## What the provisioners do
 
 | Script | Purpose |
 |---|---|
-| `010-omarchy-install.sh` | Omarchy mirror + clone (pinned `omarchy_ref`, default `v3.8.5`) + **6 unattended-droplet patches** + stock installer under a pty |
-| `020-remote-desktop.sh` | wayvnc (session autostart) + noVNC/websockify systemd service + per-instance onboot install (also installs pwgen/fail2ban from stock mirrors) |
-| `025-fail2ban.sh` | fail2ban sshd jail (systemd journal backend) |
-| `030-optimize.sh` | Disable dead-hardware services, no NTP boot-block, journal cap, no screensaver/effects (CPU rendering), 1280x800@60 |
-| `040-application-tag.sh` | `/var/lib/digitalocean/application.info` (Arch equivalent of the common script) |
-| `900-cleanup.sh` | pacman cache purge, identity/credential scrub, cloud-init instance reset, host-key removal, zero-fill. **Must not use `cloud-init clean`**: it wipes `/var/lib/cloud/scripts/`, deleting the baked per-instance onboot script; it surgically removes `/var/lib/cloud/instances/*` instead (same approach as `common/scripts/900-cleanup.sh`) |
-
-### The 6 installer patches (all in hardware-specific steps)
-
-| File | Why |
-|---|---|
-| `install/preflight/guard.sh` | Requires limine bootloader / physical-machine layout |
-| `install/login/limine-snapper.sh` | **Must not touch the bootloader.** Its own guard is defeated because base packages install the `limine` package |
-| `install/login/hibernation.sh` | No hibernation in a VM |
-| `install/login/plymouth.sh` | Boot splash invisible on a droplet; avoids initramfs risk |
-| `install/first-run/firewall.sh` | First desktop boot enables ufw **deny-all → SSH lockout**; patch inserts `ufw allow 22/tcp` (path is `install/config/firewall.sh` on 4.x) |
-| `install/post-install/finished.sh` | Interactive reboot prompt would hang an unattended build |
+| `020-remote-desktop.sh` | SDDM autologin, wayvnc (session autostart, localhost), noVNC/websockify systemd service, MOTD-on-ssh, per-instance onboot install |
+| `025-fail2ban.sh` | fail2ban sshd jail (systemd journal backend) + a one-line patch for the fail2ban 1.1.1 / Python 3.14 startup crash (upstream; a fixed package simply overwrites it) |
+| `030-optimize.sh` | Disable dead-hardware services, journal cap, **stay-awake** (4.x's idle screensaver renders at 120fps; users re-enable with `omarchy toggle idle`), 1280x800@60 scale 1, no compositor effects, Super+BackSpace close binding |
+| `035-do-agent.sh` | DigitalOcean monitoring agent (pinned release tarball; no Arch package, so no repo auto-updates; bump `DO_AGENT_VERSION` on rebuilds) |
+| `040-application-tag.sh` | `/var/lib/digitalocean/application.info` |
+| `900-cleanup.sh` | pacman cache purge, identity/credential scrub (host keys shredded), cloud-init instance reset, journal **deletion** (truncated journals are corrupt and break fail2ban), fstrim (measured: 6.3 GiB snapshots vs 76 GiB with dd zero-fill on DO). **Must not use `cloud-init clean`**: it wipes `/var/lib/cloud/scripts/`, deleting the baked per-instance onboot script |
 
 ### First-boot behavior (per droplet)
 
-`files/var/lib/cloud/scripts/per-instance/001_onboot` sets a random password for
-the `arch` user with pwgen so the account is never passwordless; it is stored
-only as a hash in `/etc/shadow`, never in a file or the MOTD; users choose
-their own with `passwd` (the MOTD says so). It also writes connection
-instructions to `/etc/motd`. SSH host keys and the user's SSH keys are
-provisioned fresh by cloud-init.
+`files/var/lib/cloud/scripts/per-instance/001_onboot` sets a random password
+for the `arch` user with pwgen so the account never keeps the build password;
+it is stored only as a hash in `/etc/shadow`, never in a file or the MOTD;
+users choose their own with `passwd` (the MOTD says so). It also writes
+connection instructions to `/etc/motd`. SSH host keys and the user's SSH keys
+are provisioned fresh by cloud-init.
 
-## Known limitations / future work
+## What droplets gain vs 3.x
 
-- **Omarchy 4.x**: upstream is rewriting its installer (ISO-first, different layout). This builder pins 3.8.x; expect rework when 4.0 stabilizes.
+- Omarchy is a pacman package (`omarchy 4.x`): `omarchy-update -y` updates
+  non-interactively.
+- limine + snapper boot-snapshot integration works (the 3.x build had to skip
+  the bootloader entirely); update rollback from the boot menu is available.
+- The installer opens SSH itself when built with authorized_keys (no more
+  first-boot firewall lockout class of bugs; the `ensure-ssh-firewall`
+  boot guard remains as insurance).
+
+## Known limitations
+
 - CPU-rendered graphics (no video/3D), no audio device.
-- `omarchy-update` works in place for packages/kernel (validated), but requires a login shell and interactive prompts; major version jumps should be image rebuilds.
+- Marketplace `img_check` rejects non-listed distros (Arch); a policy
+  conversation with the Marketplace team, not a technical gap.

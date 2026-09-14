@@ -4,11 +4,12 @@
 
 ## System components
 
-- Omarchy 3.8.5 on Arch Linux (rolling release)
+- Omarchy 4.0.3 on Arch Linux (rolling release)
 - Hyprland (Wayland compositor) with the complete Omarchy desktop experience: themes, keybindings, Omarchy menu, webapps
 - Development toolchain: Neovim, mise, Docker, git, and the full Omarchy app suite
 - wayvnc + noVNC: browser-based remote desktop, bound to localhost and accessed over an SSH tunnel (never exposed publicly)
 - ufw firewall (deny incoming, SSH allowed) with a boot-time SSH guard, plus fail2ban protecting SSH
+- DigitalOcean monitoring agent: droplet graphs and alerting work out of the box
 - Tuned for cloud: hardware-only services removed, compositor effects disabled for CPU rendering, 13-second boots
 
 ## System requirements
@@ -20,6 +21,38 @@
 - A modern browser and an SSH key for access; no VNC client needed
 
 ## Getting started
+
+### Key bindings
+
+Omarchy is keyboard-first. Over a remote desktop your Super key arrives as
+Cmd (macOS) or Win (Windows), and the host OS intercepts several of those
+combos before the browser sees them, so this image binds every essential
+action on **Alt** as well. Use whichever works on your platform:
+
+| Action | Primary | Remote-friendly |
+|---|---|---|
+| Terminal | `Super + Return` | `Alt + Return` |
+| Omarchy menu / launcher | `Super + Space` | `Alt + Space` |
+| Key bindings cheatsheet | `Super + K` | `Alt + K` |
+| Close window | `Super + W` or `Super + Backspace` | `Alt + Backspace` |
+| Full screen | `Super + F` | `Alt + F` |
+| Workspaces 1-4 | `Super + 1..4` | `Alt + 1..4` |
+
+Tip: put your browser in fullscreen and most Super combos work directly.
+
+**Set your own:** add bindings to `~/.config/hypr/bindings.lua`, then run
+`hyprctl reload`. A plain string runs a command; window operations use the
+`hl.dsp` helpers; unbind a default before reassigning its key:
+
+```lua
+o.bind("SUPER + SHIFT + R", "SSH to my server", "alacritty -e ssh my-server")
+o.bind("ALT + T", "Toggle floating", hl.dsp.window.float({ action = "toggle" }))
+hl.unbind("SUPER + SPACE")  -- then rebind it below
+```
+
+Browse everything current with `omarchy menu keybindings --print`.
+
+### Connect
 
 From your local machine, open a tunnel to the droplet's remote desktop:
 
@@ -44,25 +77,26 @@ ssh arch@your_droplet_ip passwd
 ## Updates
 
 - **System packages** (including security fixes): `sudo pacman -Syu`
-- **Omarchy itself:** run `omarchy-update` from a terminal *inside the desktop* (or via `bash -lic omarchy-update` over SSH). Confirm prompts interactively.
-- Major Omarchy version upgrades (e.g. 4.x) are best adopted by creating a new droplet from an updated image rather than upgrading in place.
+- **Omarchy itself:** `omarchy-update -y` from any terminal or over SSH (non-interactive).
+- Updates take btrfs snapshots automatically; a broken update can be rolled back from the boot menu (limine + snapper).
+- Major Omarchy version jumps are best adopted by creating a new droplet from an updated image rather than upgrading in place.
 
 ## Disabled by default (and how to re-enable)
 
 To keep the image lean and fast on a virtual machine, some stock Omarchy behavior is turned off:
 
-- **Hardware services with no droplet hardware:** Bluetooth (`bluetooth`), Wi-Fi (`iwd`), printing (`cups`), network discovery (`avahi-daemon`), power profiles (`power-profiles-daemon`). These are masked; re-enable any of them with:
+- **Hardware services with no droplet hardware:** Bluetooth (`bluetooth`), printing (`cups`), network discovery (`avahi-daemon`), power profiles (`power-profiles-daemon`). These are masked; re-enable any of them with:
   ```
   sudo systemctl unmask <service> && sudo systemctl enable --now <service>
   ```
-- **Screensaver and idle auto-lock:** they render continuously, wasting CPU on an unattended server. Restore Omarchy's defaults with:
+- **Screensaver and idle auto-lock:** they render continuously, wasting CPU on an unattended server. The image ships with Omarchy's "Stay Awake" toggle on; re-enable idling with:
   ```
-  cp ~/.local/share/omarchy/config/hypr/hypridle.conf ~/.config/hypr/hypridle.conf && sudo systemctl restart sddm
+  omarchy toggle idle
   ```
-- **Compositor effects** (animations, blur, shadows, rounded corners), expensive under CPU rendering. Delete the `# --- Droplet performance` block at the end of `~/.config/hypr/hyprland.conf` and run `hyprctl reload`.
-- **Display is fixed at 1280x800@60.** Change it live with `hyprctl keyword monitor Virtual-1,1920x1080@60,auto,1` (persist it in `~/.config/hypr/monitors.conf`). Higher resolutions cost CPU.
-- **Boot no longer waits for NTP sync** (`systemd-time-wait-sync` disabled; time still syncs in the background); re-enable with `sudo systemctl enable systemd-time-wait-sync`.
-- **Not installed at all** (not applicable to droplets): hibernation, the Plymouth boot splash, and Omarchy's limine bootloader/snapshot integration; the image keeps the standard cloud bootloader.
+- **Compositor effects** (animations, blur, shadows, rounded corners), expensive under CPU rendering. Delete the `-- Droplet performance` block at the end of `~/.config/hypr/looknfeel.lua` and run `hyprctl reload`.
+- **Display is fixed at 1280x800@60.** Change it live with `hyprctl keyword monitor Virtual-1,1920x1080@60,auto,1` (persist it in `~/.config/hypr/monitors.lua`). Higher resolutions cost CPU.
+- **UKI boot images are disabled** (`ENABLE_UKI=no` drop-in): DigitalOcean droplets boot via BIOS, which requires classic kernel+initramfs limine entries. Do not re-enable UKI on a droplet; the machine will not boot.
+- **Not installed at all** (not applicable to droplets): hibernation and the Plymouth boot splash. Omarchy's limine + snapper snapshot/rollback integration IS included and working.
 
 ## Notes
 
