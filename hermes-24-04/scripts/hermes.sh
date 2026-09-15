@@ -49,6 +49,20 @@ if [ ! -x "$HERMES_BIN" ]; then
     exit 1
 fi
 
+# Tag-only shallow clones leave detached HEAD without origin/main, which breaks
+# `hermes update`. Expand remotes and fetch main/tags so helpers can upgrade.
+HERMES_AGENT_DIR="$HERMES_HOME/hermes-agent"
+if [ -d "$HERMES_AGENT_DIR/.git" ]; then
+    su - "$HERMES_USER" -c "
+        set -e
+        cd $HERMES_AGENT_DIR
+        git remote set-branches origin '*' >/dev/null 2>&1 || true
+        git fetch --unshallow origin >/dev/null 2>&1 || true
+        git fetch origin main >/dev/null 2>&1 || true
+        git fetch --tags origin >/dev/null 2>&1 || true
+    " || true
+fi
+
 # Put a root-friendly wrapper on PATH while keeping the real user install intact.
 cat > /usr/local/bin/hermes <<'EOF'
 #!/bin/sh
@@ -60,10 +74,21 @@ chmod +x /opt/hermes/hermes-cli.sh
 chmod +x /opt/hermes/status-hermes.sh
 chmod +x /opt/hermes/update-hermes.sh
 chmod +x /opt/hermes/doctor-hermes.sh
+chmod +x /opt/hermes/remediate-npm.sh
 chmod +x /opt/hermes/apply-inference-from-env.sh
 chmod +x /var/lib/digitalocean/inference-models.sh
 chmod +x /etc/setup_wizard.sh
 chmod +x /etc/update-motd.d/99-one-click
 chmod +x /var/lib/cloud/scripts/per-instance/001_onboot
+
+# Record the image pin for /opt/hermes/update-hermes.sh.
+if grep -q '^HERMES_VERSION=' /opt/hermes/hermes.env 2>/dev/null; then
+    sed -i "s|^HERMES_VERSION=.*|HERMES_VERSION=${APP_VERSION}|" /opt/hermes/hermes.env
+else
+    printf '\nHERMES_VERSION=%s\n' "$APP_VERSION" >> /opt/hermes/hermes.env
+fi
+
+# Clear npm advisories that hermes doctor flags on web / ui-tui workspaces.
+/opt/hermes/remediate-npm.sh || true
 
 su - "$HERMES_USER" -c "$HERMES_BIN --version" || true
