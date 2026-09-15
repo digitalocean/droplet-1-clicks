@@ -2,27 +2,50 @@
 #
 # Per-instance first-boot configuration.
 # The arch user must not keep the build password; set a random one. It is
-# stored only as a hash in /etc/shadow; users pick their own with `passwd`.
+# stored only as a hash in /etc/shadow; the setup assistant replaces it with
+# the user's choice on first login.
 
 echo "arch:$(pwgen -s 24 1)" | chpasswd
+# The ISO autoinstall gives root the build password (cidata root_enc_password);
+# lock it: console/SSH root logins are never needed (arch has NOPASSWD sudo)
+passwd -l root >/dev/null
 
-DROPLET_IP=$(curl -s --max-time 5 http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address || hostname -i | awk '{print $1}')
+# Droplet IP via metadata, with retry (network may still be settling) and a
+# private-IP fallback so a broken metadata call cannot leave PLACEHOLDERs.
+meta() { curl -fsS --retry 10 --retry-connrefused --max-time 2 "$1"; }
+DROPLET_PUBLIC_IP="$(meta http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)"
+DROPLET_PRIVATE_IP="$(hostname -I | awk '{print $1}')"
+DROPLET_IP="${DROPLET_PUBLIC_IP:-$DROPLET_PRIVATE_IP}"
+
+# Render both Caddy configs with this droplet's IP (templates preserved for
+# re-renders). Until the setup assistant runs, serve the setup-pending page.
+for f in /etc/caddy/Caddyfile.setup-pending /etc/caddy/Caddyfile.live; do
+  [ -f "$f" ] && sed -i "s/PLACEHOLDER_DOMAIN/${DROPLET_IP}/" "$f"
+done
+if [ ! -f /var/lib/digitalocean/omarchy_setup_complete ]; then
+  cp /etc/caddy/Caddyfile.setup-pending /etc/caddy/Caddyfile
+fi
+# Enable + restart unconditionally: caddy is disabled at build time
+systemctl enable caddy
+systemctl restart caddy
 
 cat > /etc/motd <<EOM
 
  ------------------------------------------------------------------
   Omarchy on DigitalOcean
  ------------------------------------------------------------------
-  See the desktop in your browser (from your local machine):
+  Desktop in your browser:  https://${DROPLET_IP}
 
-    1. ssh -N -L 6080:localhost:6080 arch@${DROPLET_IP}
-    2. open http://localhost:6080/vnc.html
+  First time here? The setup assistant starts on your first login
+  (this console or ssh) and asks you to choose the password.
+  Change it later with:  omarchy-vnc-password
 
-  Desktop basics:  Super+K = shortcut cheatsheet
-                   Super+Space = Omarchy menu and app launcher
+  Prefer no public endpoint? Disable it and use an SSH tunnel:
+    sudo systemctl disable --now caddy
+    ssh -N -L 6080:localhost:6080 arch@${DROPLET_IP}
+    then open http://localhost:6080/vnc.html
 
-  To lock/unlock the desktop you need a password for user 'arch'.
-  None is set up front. Choose your own by running:  passwd
+  Desktop basics:  Super+K or Alt+K = shortcut cheatsheet
   Update Omarchy and system packages:  omarchy-update -y
  ------------------------------------------------------------------
 

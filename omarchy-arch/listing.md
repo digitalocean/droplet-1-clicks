@@ -7,9 +7,9 @@
 - Omarchy 4.0.3 on Arch Linux (rolling release)
 - Hyprland (Wayland compositor) with the complete Omarchy desktop experience: themes, keybindings, Omarchy menu, webapps
 - Development toolchain: Neovim, mise, Docker, git, and the full Omarchy app suite
-- wayvnc + noVNC: browser-based remote desktop, bound to localhost and accessed over an SSH tunnel (never exposed publicly)
+- Browser remote desktop at `https://<droplet-ip>`: Caddy with an automatic Let's Encrypt certificate for the droplet's IP, password-protected; wayvnc + noVNC underneath (VNC itself never exposed publicly)
 - ufw firewall (deny incoming, SSH allowed) with a boot-time SSH guard, plus fail2ban protecting SSH
-- DigitalOcean monitoring agent: droplet graphs and alerting work out of the box
+- DigitalOcean agents: monitoring (metrics) and droplet-agent (the control panel's web console)
 - Tuned for cloud: hardware-only services removed, compositor effects disabled for CPU rendering, 13-second boots
 
 ## System requirements
@@ -54,23 +54,30 @@ Browse everything current with `omarchy menu keybindings --print`.
 
 ### Connect
 
-From your local machine, open a tunnel to the droplet's remote desktop:
+1. Open the **Console** from your droplet's page (or `ssh arch@your_droplet_ip`).
+   The setup assistant starts automatically and asks you to choose a password.
+2. Open **https://your_droplet_ip** and sign in as `omarchy` with that password.
+   You're on the desktop. (Give a new droplet a minute for its TLS
+   certificate to be issued.)
+
+The same password unlocks the desktop lock screen. Change it any time with
+`omarchy-vnc-password`. Until setup runs, the page shows instructions instead
+of the desktop, and nothing is reachable without the password afterwards; only
+hashes are stored on the droplet.
+
+**Prefer no public endpoint?** Disable it and tunnel instead:
 
 ```
+sudo systemctl disable --now caddy
 ssh -N -L 6080:localhost:6080 arch@your_droplet_ip
 ```
 
-and open **http://localhost:6080/vnc.html** in your browser. Press `Super+K` for the keyboard shortcut cheatsheet, `Super+Return` for a terminal, and `Super+Space` for the app launcher.
-
-To be able to lock/unlock the desktop, choose a password for the `arch` user (none is disclosed up front; a random one is set at first boot and stored only as a hash):
-
-```
-ssh arch@your_droplet_ip passwd
-```
+then open http://localhost:6080/vnc.html locally.
 
 ## Managing services
 
-- **Remote desktop (noVNC):** `sudo systemctl {start|stop|restart|status} novnc`
+- **Public desktop page (Caddy):** `sudo systemctl {start|stop|restart|status} caddy`
+- **Remote desktop backend (noVNC):** `sudo systemctl {start|stop|restart|status} novnc`
 - **Desktop session:** `sudo systemctl restart sddm` (restarts the Hyprland session)
 - **VNC server:** wayvnc starts with the desktop session automatically
 
@@ -102,4 +109,4 @@ To keep the image lean and fast on a virtual machine, some stock Omarchy behavio
 
 - Graphics are CPU-rendered (no GPU): excellent for terminals, editors, and general development; not suited to video playback or 3D.
 - The droplet has no audio device.
-- SSH password authentication is disabled; access uses your SSH key, and fail2ban bans repeated failed SSH attempts. The desktop password is whatever you set with `passwd` (a random unpublished one is in place until then).
+- SSH password authentication is disabled; access uses your SSH key, and fail2ban bans repeated failed SSH attempts. The desktop/web password is whatever the setup assistant set (a random unpublished one guards the account until then), stored only as hashes.

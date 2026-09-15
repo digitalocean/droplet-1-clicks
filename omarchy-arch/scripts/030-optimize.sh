@@ -14,6 +14,10 @@ sudo systemctl mask \
   bluetooth.service cups.service avahi-daemon.service \
   power-profiles-daemon.service 2>/dev/null || true
 
+echo "==> Firewall: allow http/https (ACME challenge + the public desktop page)"
+sudo ufw allow http >/dev/null
+sudo ufw allow https >/dev/null
+
 echo "==> Unattended updates: silence sudo -v (omarchy-update validates credentials under a pty)"
 # The ISO installer leaves a password-required rule (04_arch); with default
 # verifypw=all, ANY passworded rule makes `sudo -v` prompt, hanging

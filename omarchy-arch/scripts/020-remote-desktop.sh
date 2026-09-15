@@ -12,10 +12,14 @@ Session=omarchy
 EOF
 
 echo "==> Installing wayvnc + websockify + noVNC"
-sudo pacman -S --noconfirm --needed wayvnc python-pipx git pwgen 2>&1 | tail -1
-pipx install websockify
-git clone --depth 1 https://github.com/novnc/noVNC ~/novnc
-rm -rf ~/novnc/.git
+# websockify lives in a SYSTEM venv and noVNC under /usr/share: service
+# dependencies do not belong in a user home (pipx venvs hard-code absolute
+# home paths and break if the home ever moves or the user changes).
+sudo pacman -S --noconfirm --needed wayvnc python git pwgen 2>&1 | tail -1
+sudo python3 -m venv /opt/websockify
+sudo /opt/websockify/bin/pip -q install websockify
+sudo git clone --depth 1 https://github.com/novnc/noVNC /usr/share/novnc
+sudo rm -rf /usr/share/novnc/.git
 
 echo "==> wayvnc autostarts with the session (4.x lua config API)"
 grep -q wayvnc ~/.config/hypr/autostart.lua ||
@@ -29,6 +33,18 @@ sudo systemctl enable novnc.service ensure-ssh-firewall.service
 
 echo "==> Enabling MOTD on login"
 sudo cp /tmp/build-files/etc/ssh/sshd_config.d/10-omarchy-motd.conf /etc/ssh/sshd_config.d/
+
+echo "==> Public HTTPS access: Caddy (LE short-lived IP cert) + setup assistant"
+sudo pacman -S --noconfirm --needed caddy 2>&1 | tail -1
+sudo mkdir -p /etc/caddy /usr/share/omarchy-droplet/setup-pending
+sudo cp /tmp/build-files/etc/caddy/Caddyfile.setup-pending /etc/caddy/
+sudo cp /tmp/build-files/etc/caddy/Caddyfile.live /etc/caddy/
+sudo cp /tmp/build-files/usr/share/omarchy-droplet/setup-pending/index.html /usr/share/omarchy-droplet/setup-pending/
+sudo install -m 755 /tmp/build-files/usr/local/bin/omarchy-droplet-setup /usr/local/bin/
+sudo install -m 755 /tmp/build-files/usr/local/bin/omarchy-vnc-password /usr/local/bin/
+sudo install -m 644 /tmp/build-files/etc/profile.d/omarchy-first-setup.sh /etc/profile.d/
+# no cert attempts at build time: the droplet IP does not exist yet
+sudo systemctl disable --now caddy 2>/dev/null || true
 
 echo "==> Installing per-instance onboot script (unique password + MOTD per droplet)"
 sudo mkdir -p /var/lib/cloud/scripts/per-instance

@@ -3,7 +3,7 @@ Description=noVNC websocket proxy for wayvnc (localhost only)
 After=network.target
 
 [Service]
-ExecStart=/home/arch/.local/bin/websockify --web /home/arch/novnc 127.0.0.1:6080 127.0.0.1:5900
+ExecStart=/opt/websockify/bin/websockify --web /usr/share/novnc 127.0.0.1:6080 127.0.0.1:5900
 User=arch
 Restart=on-failure
 

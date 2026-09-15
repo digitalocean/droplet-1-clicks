@@ -29,7 +29,7 @@ EOF
 sudo tee /etc/cloud/cloud.cfg.d/91_default_user.cfg >/dev/null <<'EOF'
 system_info:
   default_user:
-    name: arch
+    name: omarchy
     groups: [wheel]
     shell: /bin/bash
 EOF

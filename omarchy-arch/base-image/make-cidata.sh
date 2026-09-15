@@ -67,7 +67,7 @@ PYEOF
 python3 - "$OUT/user_credentials.json" "$HASH" <<'PYEOF'
 import json, sys
 json.dump({"root_enc_password": sys.argv[2],
-           "users": [{"enc_password": sys.argv[2], "groups": [], "sudo": True, "username": "arch"}]},
+           "users": [{"enc_password": sys.argv[2], "groups": [], "sudo": True, "username": "omarchy"}]},
           open(sys.argv[1], "w"), indent=2)
 PYEOF
 
