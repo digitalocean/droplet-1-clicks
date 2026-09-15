@@ -34,6 +34,15 @@ Helper scripts:
   /opt/hermes/hermes-cli.sh
   /opt/hermes/apply-inference-from-env.sh
 
+Update Hermes:
+  Latest release:     sudo /opt/hermes/update-hermes.sh
+  Specific version:   sudo /opt/hermes/update-hermes.sh <latest version>   # e.g. v2026.9.14
+  If CLI misbehaves after update, repair with doctor:
+    /opt/hermes/doctor-hermes.sh
+        # remediates npm advisories, then runs hermes doctor
+    /opt/hermes/doctor-hermes.sh --fix
+        # apply recommended repairs when supported
+
 Documentation: https://hermes-agent.nousresearch.com/docs/
 GitHub:        https://github.com/NousResearch/hermes-agent
 
