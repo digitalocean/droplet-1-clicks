@@ -1,0 +1,11 @@
+PLACEHOLDER_DOMAIN {
+    tls {
+        issuer acme {
+            dir https://acme-v02.api.letsencrypt.org/directory
+            profile shortlived
+        }
+    }
+    root * /usr/share/omarchy-droplet/setup-pending
+    file_server
+    header X-DO-MARKETPLACE "omarchy"
+}

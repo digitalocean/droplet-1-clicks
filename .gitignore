@@ -6,3 +6,4 @@ crash.log
 
 # For built boxes
 *.box
+.claude

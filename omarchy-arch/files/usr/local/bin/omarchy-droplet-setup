@@ -1,0 +1,57 @@
+#!/bin/bash
+#
+# First-run setup for the Omarchy droplet: choose the password that unlocks
+# both the desktop lock screen (user account) and the https:// remote desktop
+# (Caddy basic_auth). Only hashes are stored: sha512 in /etc/shadow, bcrypt in
+# the Caddyfile. Re-run any time to change the password.
+#
+# Usage: omarchy-droplet-setup [--password <pass>]   (interactive if omitted)
+set -euo pipefail
+
+MARKER=/var/lib/digitalocean/omarchy_setup_complete
+LIVE_TEMPLATE=/etc/caddy/Caddyfile.live
+ACTIVE=/etc/caddy/Caddyfile
+
+if (( EUID != 0 )); then
+  exec sudo "$0" "$@"
+fi
+
+PASSWORD=""
+if [[ ${1:-} == "--password" ]]; then
+  PASSWORD="${2:?--password needs a value}"
+else
+  echo
+  echo "  Omarchy droplet setup"
+  echo "  Choose a password for the desktop and https access (user: omarchy)."
+  echo
+  while true; do
+    read -rsp "  Password: " PASSWORD; echo
+    read -rsp "  Confirm:  " CONFIRM; echo
+    [[ ${#PASSWORD} -ge 8 ]] || { echo "  Use at least 8 characters."; continue; }
+    [[ $PASSWORD == "$CONFIRM" ]] || { echo "  Passwords do not match, try again."; continue; }
+    break
+  done
+fi
+
+# 1. account password (lock screen), stored as a hash in /etc/shadow
+echo "arch:${PASSWORD}" | chpasswd
+
+# 2. https basic_auth, stored as a bcrypt hash in the Caddyfile
+HASH=$(caddy hash-password --plaintext "$PASSWORD")
+if [[ ! -f $LIVE_TEMPLATE ]]; then
+  echo "Error: $LIVE_TEMPLATE missing (first boot may not have finished)." >&2
+  exit 1
+fi
+sed "s|PLACEHOLDER_HASH|${HASH}|" "$LIVE_TEMPLATE" > "$ACTIVE"
+systemctl enable caddy >/dev/null 2>&1 || true
+systemctl reload-or-restart caddy
+
+mkdir -p "$(dirname "$MARKER")"
+touch "$MARKER"
+
+IP=$(curl -fsS --max-time 3 http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || hostname -I | awk '{print $1}')
+echo
+echo "  Done. Your desktop:  https://${IP}"
+echo "  Sign in as:          omarchy"
+echo "  Change it any time:  omarchy-vnc-password"
+echo

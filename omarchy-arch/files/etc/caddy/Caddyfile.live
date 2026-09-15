@@ -1,0 +1,14 @@
+PLACEHOLDER_DOMAIN {
+    tls {
+        issuer acme {
+            dir https://acme-v02.api.letsencrypt.org/directory
+            profile shortlived
+        }
+    }
+    basic_auth {
+        omarchy PLACEHOLDER_HASH
+    }
+    redir / /vnc.html?autoconnect=true&resize=scale
+    reverse_proxy 127.0.0.1:6080
+    header X-DO-MARKETPLACE "omarchy"
+}
