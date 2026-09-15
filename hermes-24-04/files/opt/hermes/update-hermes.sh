@@ -97,7 +97,7 @@ current_installed_version() {
 
     if [ -x "$HERMES_BIN" ]; then
         # e.g. "Hermes Agent v0.21.3 (2026.9.14)" → v2026.9.14
-        from_cli="$("$HERMES_BIN" --version 2>/dev/null | head -n 1 || true)"
+        from_cli="$(su - "$HERMES_USER" -c "$(printf '%q' "$HERMES_BIN") --version" 2>/dev/null | head -n 1 || true)"
         if [[ "$from_cli" =~ \(([0-9]{4}\.[0-9]+\.[0-9]+(\.[0-9]+)?)\) ]]; then
             normalize_version "${BASH_REMATCH[1]}"
             return 0

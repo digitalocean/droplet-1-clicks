@@ -61,7 +61,7 @@ chmod 0755 "$tmp"
 if [ "$(id -un)" = "$HERMES_USER" ]; then
     HERMES_AGENT_DIR="$HERMES_AGENT_DIR" bash "$tmp" || true
 elif [ "$(id -u)" -eq 0 ]; then
-    su - "$HERMES_USER" -c "HERMES_AGENT_DIR=$(printf '%q' "$HERMES_AGENT_DIR") bash $tmp" || true
+    su - "$HERMES_USER" -c "HERMES_AGENT_DIR=$(printf '%q' "$HERMES_AGENT_DIR") bash $(printf '%q' "$tmp")" || true
 else
     HERMES_AGENT_DIR="$HERMES_AGENT_DIR" bash "$tmp" || true
 fi
