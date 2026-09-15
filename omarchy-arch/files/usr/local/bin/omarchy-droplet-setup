@@ -19,6 +19,7 @@ fi
 PASSWORD=""
 if [[ ${1:-} == "--password" ]]; then
   PASSWORD="${2:?--password needs a value}"
+  [[ ${#PASSWORD} -ge 8 ]] || { echo "Error: use at least 8 characters." >&2; exit 1; }
 else
   echo
   echo "  Omarchy droplet setup"
@@ -43,6 +44,8 @@ if [[ ! -f $LIVE_TEMPLATE ]]; then
   exit 1
 fi
 sed "s|PLACEHOLDER_HASH|${HASH}|" "$LIVE_TEMPLATE" > "$ACTIVE"
+chmod 640 "$ACTIVE"
+chown root:caddy "$ACTIVE" 2>/dev/null || chmod 600 "$ACTIVE"
 systemctl enable caddy >/dev/null 2>&1 || true
 systemctl reload-or-restart caddy
 

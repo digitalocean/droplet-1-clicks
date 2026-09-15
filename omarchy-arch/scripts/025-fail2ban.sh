@@ -1,11 +1,14 @@
 #!/bin/bash
 #
-# fail2ban with an sshd jail (journal backend; Arch has no auth.log).
+# fail2ban: sshd jail (journal backend; Arch has no auth.log) plus
+# caddy-auth for brute-force of the public desktop/https password.
 set -euo pipefail
 
 echo "==> Configuring fail2ban"
 sudo pacman -S --noconfirm --needed fail2ban 2>&1 | tail -1
 sudo cp /tmp/build-files/etc/fail2ban/jail.local /etc/fail2ban/jail.local
+sudo install -D -m 644 /tmp/build-files/etc/fail2ban/filter.d/caddy-auth.conf \
+  /etc/fail2ban/filter.d/caddy-auth.conf
 sudo systemctl enable fail2ban.service
 
 # fail2ban 1.1.1 crashes on Python 3.14 (asyncore accept() may return None;

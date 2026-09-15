@@ -57,7 +57,7 @@ Takes ~10-15 minutes (packages, config, fstrim, snapshot). Build droplet:
 | Script | Purpose |
 |---|---|
 | `020-remote-desktop.sh` | SDDM autologin, wayvnc (session autostart, localhost), noVNC/websockify systemd service, Caddy + Caddyfiles + setup assistant + first-login hook, MOTD-on-ssh, per-instance onboot install |
-| `025-fail2ban.sh` | fail2ban sshd jail (systemd journal backend) + a one-line patch for the fail2ban 1.1.1 / Python 3.14 startup crash (upstream; a fixed package simply overwrites it) |
+| `025-fail2ban.sh` | fail2ban sshd jail (systemd journal backend) + caddy-auth jail (failed desktop/https passwords) + a one-line patch for the fail2ban 1.1.1 / Python 3.14 startup crash (upstream; a fixed package simply overwrites it) |
 | `030-optimize.sh` | Disable dead-hardware services, journal cap, **stay-awake** (4.x's idle screensaver renders at 120fps; users re-enable with `omarchy toggle idle`), 1280x800@60 scale 1, no compositor effects, Super+BackSpace close binding |
 | `035-do-agent.sh` | DigitalOcean monitoring agent (pinned release tarball; no Arch package, so no repo auto-updates; bump `DO_AGENT_VERSION` on rebuilds) |
 | `036-droplet-agent.sh` | DigitalOcean droplet-agent (control panel web console); pinned release binary + upstream unit |

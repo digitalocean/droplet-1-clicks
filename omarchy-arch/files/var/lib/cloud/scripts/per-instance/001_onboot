@@ -24,6 +24,8 @@ for f in /etc/caddy/Caddyfile.setup-pending /etc/caddy/Caddyfile.live; do
 done
 if [ ! -f /var/lib/digitalocean/omarchy_setup_complete ]; then
   cp /etc/caddy/Caddyfile.setup-pending /etc/caddy/Caddyfile
+  chmod 640 /etc/caddy/Caddyfile
+  chown root:caddy /etc/caddy/Caddyfile 2>/dev/null || chmod 600 /etc/caddy/Caddyfile
 fi
 # Enable + restart unconditionally: caddy is disabled at build time
 systemctl enable caddy

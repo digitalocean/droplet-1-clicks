@@ -5,6 +5,18 @@ PLACEHOLDER_DOMAIN {
             profile shortlived
         }
     }
+    log {
+        output file /var/log/caddy/access.log {
+            roll_size 10MiB
+            roll_keep 5
+        }
+        format filter {
+            wrap json
+            fields {
+                request>headers>Authorization regexp .+ REDACTED
+            }
+        }
+    }
     basic_auth {
         omarchy PLACEHOLDER_HASH
     }

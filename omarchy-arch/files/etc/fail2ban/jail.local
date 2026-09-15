@@ -2,8 +2,24 @@
 bantime  = 1h
 findtime = 10m
 maxretry = 5
+# Escalate repeat offenders: an attacker who waits out a ban and resumes gets
+# 1h, 2h, 4h ... capped at 48h, instead of a fresh hour every time. fail2ban
+# already doubles per prior ban, so bantime.factor stays at its default of 1.
+bantime.increment = true
+bantime.maxtime = 48h
 
 [sshd]
 enabled = true
 # Arch has no auth.log; read sshd from the systemd journal
 backend = systemd
+
+[caddy-auth]
+enabled = true
+filter  = caddy-auth
+logpath = /var/log/caddy/access.log
+# Same threshold as sshd: 5 failed desktop-password attempts in 10m -> 1h ban
+maxretry = 5
+# Caddy serves HTTP/3, so a tcp-only ban leaves brute-force over QUIC on
+# udp/443 working. Ban both. Separate names keep one chain per protocol.
+action = iptables-multiport[name=caddy-auth, port="http,https", protocol=tcp]
+         iptables-multiport[name=caddy-auth-h3, port="https", protocol=udp]

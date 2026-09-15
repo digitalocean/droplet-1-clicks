@@ -8,7 +8,7 @@
 - Hyprland (Wayland compositor) with the complete Omarchy desktop experience: themes, keybindings, Omarchy menu, webapps
 - Development toolchain: Neovim, mise, Docker, git, and the full Omarchy app suite
 - Browser remote desktop at `https://<droplet-ip>`: Caddy with an automatic Let's Encrypt certificate for the droplet's IP, password-protected; wayvnc + noVNC underneath (VNC itself never exposed publicly)
-- ufw firewall (deny incoming, SSH allowed) with a boot-time SSH guard, plus fail2ban protecting SSH
+- ufw firewall (deny incoming; SSH, HTTP, and HTTPS allowed) with a boot-time SSH guard, plus fail2ban protecting SSH and the desktop/https password
 - DigitalOcean agents: monitoring (metrics) and droplet-agent (the control panel's web console)
 - Tuned for cloud: hardware-only services removed, compositor effects disabled for CPU rendering, 13-second boots
 
@@ -80,6 +80,7 @@ then open http://localhost:6080/vnc.html locally.
 - **Remote desktop backend (noVNC):** `sudo systemctl {start|stop|restart|status} novnc`
 - **Desktop session:** `sudo systemctl restart sddm` (restarts the Hyprland session)
 - **VNC server:** wayvnc starts with the desktop session automatically
+- **fail2ban (SSH + desktop password):** `sudo fail2ban-client status caddy-auth`. Unban an IP with `sudo fail2ban-client set caddy-auth unbanip <ip>`
 
 ## Updates
 
@@ -109,4 +110,4 @@ To keep the image lean and fast on a virtual machine, some stock Omarchy behavio
 
 - Graphics are CPU-rendered (no GPU): excellent for terminals, editors, and general development; not suited to video playback or 3D.
 - The droplet has no audio device.
-- SSH password authentication is disabled; access uses your SSH key, and fail2ban bans repeated failed SSH attempts. The desktop/web password is whatever the setup assistant set (a random unpublished one guards the account until then), stored only as hashes.
+- SSH password authentication is disabled; access uses your SSH key, and fail2ban bans repeated failed SSH attempts. The desktop/https password is whatever the setup assistant set (a random unpublished one guards the account until then), stored only as hashes. fail2ban also bans IPs that fail the desktop password five times in ten minutes.
