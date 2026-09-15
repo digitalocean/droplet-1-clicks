@@ -4,7 +4,7 @@
 
 ## System components
 
-- Omarchy 4.0.3 on Arch Linux (rolling release)
+- Omarchy 4.0.3 (Latest ISO)
 - Hyprland (Wayland compositor) with the complete Omarchy desktop experience: themes, keybindings, Omarchy menu, webapps
 - Development toolchain: Neovim, mise, Docker, git, and the full Omarchy app suite
 - Browser remote desktop at `https://<droplet-ip>`: Caddy with an automatic Let's Encrypt certificate for the droplet's IP, password-protected; wayvnc + noVNC underneath (VNC itself never exposed publicly)
