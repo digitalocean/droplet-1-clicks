@@ -34,7 +34,7 @@ OpenHands Agent Canvas runs the agent server on the host. Prefer at least 4 GB R
 - **Ubuntu 24.04 LTS**
 - **OpenHands Agent Canvas** (version pinned in the image build; currently 1.16.0)
 - **Chromium** (`chromium-browser`) for agent browser tooling
-- **Node.js 22** and **uv**
+- **Node.js 22** (the update helper upgrades to Node 24.x when Agent Canvas 1.17+ is selected) and **uv**
 - **Caddy** reverse proxy (ports 80/443 → Agent Canvas on localhost:8000)
 - **UFW** and **fail2ban**
 - Dedicated **`openhands`** system user
@@ -76,9 +76,32 @@ If Serverless Inference was not passed at create time, the first-login wizard ca
 | Stop | `/opt/stop-openhands.sh` |
 | Restart | `/opt/restart-openhands.sh` |
 | Status | `/opt/status-openhands.sh` |
-| Update | `/opt/update-openhands.sh` |
+| Update (latest) | `sudo /opt/update-openhands.sh` |
+| Update (specific version) | `sudo /opt/update-openhands.sh 1.16.0` |
+| List versions | `sudo /opt/update-openhands.sh --list` |
+| Rollback | `sudo /opt/update-openhands.sh --rollback` (version before last update only) |
 | Domain TLS | `/opt/setup-openhands-domain.sh` |
 | Re-run setup | `/etc/setup_wizard.sh` |
+
+### Updating OpenHands
+
+```bash
+# Install the latest release from npm (default)
+sudo /opt/update-openhands.sh
+
+# List recent npm versions without installing
+sudo /opt/update-openhands.sh --list
+
+# Install a specific version
+sudo /opt/update-openhands.sh 1.16.0
+
+# Roll back to the version from before the last update (OPENHANDS_VERSION_PREVIOUS)
+sudo /opt/update-openhands.sh --rollback
+```
+
+The image ships **Node.js 22** and Agent Canvas **1.16.0**. Agent Canvas **1.17+** requires **Node >=24**, so the helper upgrades Node automatically if needed.
+
+Before each successful version change, the script stores the prior pin as `OPENHANDS_VERSION_PREVIOUS` in `/opt/openhands.env`. `--rollback` reinstalls that package only — it is not a picker for arbitrary older releases. To install any other pin, use the specific-version command above. Rollback does not undo Agent Canvas config or workspace migrations.
 
 systemd: `systemctl {start|stop|restart|status} openhands`  
 Logs: `journalctl -u openhands -f`

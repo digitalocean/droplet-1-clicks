@@ -45,15 +45,15 @@ fi
 # Install Agent Canvas (OpenHands product UI)
 npm install -g "@openhands/agent-canvas@${APP_VERSION}"
 
-if ! command -v agent-canvas >/dev/null 2>&1; then
-  echo "ERROR: agent-canvas not found on PATH after npm install." >&2
+# systemd ExecStart is /usr/local/bin/agent-canvas. Link the package file, not
+# `command -v` (PATH prefers /usr/local/bin and ln -sfn onto itself is circular).
+CANVAS_MJS="$(npm prefix -g)/lib/node_modules/@openhands/agent-canvas/bin/agent-canvas.mjs"
+if [ ! -e "$CANVAS_MJS" ]; then
+  echo "ERROR: ${CANVAS_MJS} not found after npm install." >&2
   exit 1
 fi
-
-# Stable absolute path for systemd ExecStart
-CANVAS_BIN="$(command -v agent-canvas)"
-ln -sfn "$CANVAS_BIN" /usr/local/bin/agent-canvas
-agent-canvas --version || true
+ln -sfn "$CANVAS_MJS" /usr/local/bin/agent-canvas
+/usr/local/bin/agent-canvas --version || true
 
 # Persist version into env template
 if [ -f /opt/openhands.env ]; then
