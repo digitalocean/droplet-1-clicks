@@ -5,18 +5,30 @@ APP_VERSION="${application_version:-1.16.0}"
 OPENHANDS_USER=openhands
 OPENHANDS_HOME=/home/openhands
 
-# HTTP/HTTPS via Caddy; Agent Canvas ingress stays on loopback :8000
 ufw allow 80/tcp comment 'HTTP'
 ufw allow 443/tcp comment 'HTTPS'
 ufw limit ssh/tcp
+
+# Agent Canvas serves ingress on :8000 across all interfaces and upstream has no
+# bind-to-loopback option (its agent-server and automation backends do pass
+# --host 127.0.0.1). Deny :8000 explicitly rather than relying on the default
+# incoming policy: UFW matches rules in order, so this keeps the ingress private
+# even if someone later relaxes the default or appends an allow rule. Loopback is
+# accepted in before.rules, so Caddy and SSH tunnels are unaffected.
+ufw deny 8000/tcp comment 'Agent Canvas ingress: reach via Caddy on 443'
+
 ufw --force enable
 
-# Chromium (browser tooling for agents); also in template apt_packages
-apt-get install -y chromium-browser
-
-# Node.js 22 (required by Agent Canvas)
-curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
-apt-get install -y nodejs
+# Node.js 24 (Agent Canvas 1.16 needs >=22.12.0, 1.17+ needs >=24)
+# Use a signed apt keyring instead of curling a remote setup script into bash.
+mkdir -p /etc/apt/keyrings
+curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+  | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+chmod a+r /etc/apt/keyrings/nodesource.gpg
+echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_24.x nodistro main" \
+  > /etc/apt/sources.list.d/nodesource.list
+apt-get update -y
+DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
 
 # Caddy reverse proxy
 curl -1sLf "https://dl.cloudsmith.io/public/caddy/stable/gpg.key" \

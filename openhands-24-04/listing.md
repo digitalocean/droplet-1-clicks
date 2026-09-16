@@ -34,8 +34,8 @@ OpenHands Agent Canvas runs the agent server on the host. Prefer at least 4 GB R
 - **Ubuntu 24.04 LTS**
 - **OpenHands Agent Canvas** (version pinned in the image build; currently 1.16.0)
 - **Chromium** (`chromium-browser`) for agent browser tooling
-- **Node.js 22** (the update helper upgrades to Node 24.x when Agent Canvas 1.17+ is selected) and **uv**
-- **Caddy** reverse proxy (ports 80/443 → Agent Canvas on localhost:8000)
+- **Node.js 24** and **uv**
+- **Caddy** reverse proxy (ports 80/443 → Agent Canvas on port 8000, which UFW denies from the internet)
 - **UFW** and **fail2ban**
 - Dedicated **`openhands`** system user
 
@@ -99,7 +99,7 @@ sudo /opt/update-openhands.sh 1.16.0
 sudo /opt/update-openhands.sh --rollback
 ```
 
-The image ships **Node.js 22** and Agent Canvas **1.16.0**. Agent Canvas **1.17+** requires **Node >=24**, so the helper upgrades Node automatically if needed.
+The image ships **Node.js 24** and Agent Canvas **1.16.0**, so every current Agent Canvas release installs as-is. On older droplets that still have Node 22, the helper upgrades Node before installing Agent Canvas 1.17+.
 
 Before each successful version change, the script stores the prior pin as `OPENHANDS_VERSION_PREVIOUS` in `/opt/openhands.env`. `--rollback` reinstalls that package only — it is not a picker for arbitrary older releases. To install any other pin, use the specific-version command above. Rollback does not undo Agent Canvas config or workspace migrations.
 

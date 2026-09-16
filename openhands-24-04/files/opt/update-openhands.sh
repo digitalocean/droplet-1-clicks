@@ -8,9 +8,9 @@
 #   /opt/update-openhands.sh --list       # print recent versions and exit
 #   /opt/update-openhands.sh --rollback   # reinstall OPENHANDS_VERSION_PREVIOUS
 #
-# Agent Canvas 1.17+ requires Node >=24. This 1-Click originally shipped Node 22,
-# so installing "latest" without a Node upgrade fails. The helper upgrades Node
-# via the NodeSource 24.x apt repo when the chosen version needs it.
+# Agent Canvas 1.17+ requires Node >=24. Current images ship Node 24, but earlier
+# ones shipped Node 22, where installing "latest" fails without a Node upgrade.
+# The helper upgrades Node via the NodeSource 24.x apt repo when needed.
 
 set -euo pipefail
 
@@ -35,8 +35,8 @@ Usage: /opt/update-openhands.sh [version|--list|--rollback]
   --list               Print current, latest, and recent versions, then exit
   --rollback           Reinstall OPENHANDS_VERSION_PREVIOUS from /opt/openhands.env
 
-Agent Canvas 1.17+ needs Node >=24. If this droplet still has Node 22, the
-helper upgrades Node to 24.x before installing those versions.
+Agent Canvas 1.17+ needs Node >=24. If this droplet was built from an older
+image with Node 22, the helper upgrades Node to 24.x before installing.
 EOF
 }
 
@@ -151,22 +151,67 @@ node_meets_engines() {
 }
 
 install_node_24() {
+  local tmp_key backup_dir f rc=0
   echo "Installing Node.js 24.x from NodeSource (signed apt repo)..."
   mkdir -p /etc/apt/keyrings
-  tmp_key=$(mktemp)
-  curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
-    | gpg --dearmor >"$tmp_key"
-  install -m 0644 "$tmp_key" /etc/apt/keyrings/nodesource.gpg
+
+  tmp_key="$(mktemp)"
+  if ! curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+    | gpg --dearmor >"$tmp_key"; then
+    rm -f "$tmp_key"
+    echo "Error: could not fetch the NodeSource signing key" >&2
+    return 1
+  fi
+  if ! install -m 0644 "$tmp_key" /etc/apt/keyrings/nodesource.gpg; then
+    rm -f "$tmp_key"
+    echo "Error: could not install the NodeSource keyring" >&2
+    return 1
+  fi
   rm -f "$tmp_key"
-  # Replace any Node 22 NodeSource entries from the original image install.
-  # setup_22.x writes the deb822 nodesource.sources; older setups wrote
-  # nodesource.list. Remove both so only the 24.x entry below is left.
+
+  # Replace any older NodeSource entry (images built before Node 24 used
+  # setup_22.x, which writes the deb822 nodesource.sources; some setups wrote
+  # nodesource.list). Keep copies so a failed apt run can be rolled back.
+  backup_dir="$(mktemp -d)"
+  if [ -z "$backup_dir" ] || [ ! -d "$backup_dir" ]; then
+    echo "Error: could not create a temp dir for the apt source backup" >&2
+    return 1
+  fi
+  for f in nodesource.list nodesource.sources; do
+    if [ -e "/etc/apt/sources.list.d/$f" ]; then
+      cp -a "/etc/apt/sources.list.d/$f" "${backup_dir}/$f"
+    fi
+  done
   rm -f /etc/apt/sources.list.d/nodesource.list \
         /etc/apt/sources.list.d/nodesource.sources
-  echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_24.x nodistro main" \
-    > /etc/apt/sources.list.d/nodesource.list
-  apt-get update -y
-  DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
+
+  # Every step is checked: callers use `if ! install_node_24`, which disables
+  # errexit inside this function.
+  if ! printf '%s\n' \
+    "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_24.x nodistro main" \
+    > /etc/apt/sources.list.d/nodesource.list; then
+    echo "Error: could not write the NodeSource 24.x apt entry" >&2
+    rc=1
+  elif ! apt-get update -y; then
+    rc=1
+  elif ! DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs; then
+    rc=1
+  fi
+
+  if [ "$rc" -ne 0 ]; then
+    echo "Error: Node.js 24 install failed; restoring the previous apt sources" >&2
+    rm -f /etc/apt/sources.list.d/nodesource.list \
+          /etc/apt/sources.list.d/nodesource.sources
+    for f in nodesource.list nodesource.sources; do
+      if [ -e "${backup_dir}/$f" ]; then
+        cp -a "${backup_dir}/$f" "/etc/apt/sources.list.d/$f"
+      fi
+    done
+    # Refresh lists so apt stops serving metadata for the entry just removed.
+    apt-get update -y >/dev/null 2>&1 || true
+  fi
+  rm -rf "$backup_dir"
+  return "$rc"
 }
 
 ensure_node_for_version() {
@@ -180,7 +225,11 @@ ensure_node_for_version() {
 
   current="$(node --version 2>/dev/null || echo missing)"
   echo "Agent Canvas ${ver} requires Node ${req:-unknown} (found ${current})."
-  install_node_24
+  # Runs before the service is stopped, so OpenHands keeps serving on failure.
+  if ! install_node_24; then
+    echo "Error: could not upgrade Node; OpenHands is untouched." >&2
+    exit 1
+  fi
 
   if ! node_meets_engines "$req"; then
     echo "Error: Node still too old after upgrade ($(node --version 2>/dev/null || echo missing))" >&2
@@ -288,7 +337,12 @@ relink_canvas_bin() {
     return 1
   fi
 
-  ln -sfn "$canvas_bin" "$dest"
+  # Checked explicitly: callers invoke this function in an `if`, which disables
+  # errexit for the whole body, so a silent ln failure would look like success.
+  if ! ln -sfn "$canvas_bin" "$dest"; then
+    echo "Error: could not link ${dest} -> ${canvas_bin}" >&2
+    return 1
+  fi
   resolved="$(readlink -f "$dest" 2>/dev/null || true)"
   if [ -z "$resolved" ] || [ ! -e "$resolved" ]; then
     echo "Error: ${dest} does not resolve after relink (got '${resolved}')" >&2
@@ -341,16 +395,60 @@ dump_openhands_failure() {
   journalctl -u openhands -n 80 --no-pager 2>&1 || true
 }
 
+unit_restart_count() {
+  systemctl show -p NRestarts --value openhands 2>/dev/null || echo 0
+}
+
 wait_until_active() {
-  local i
+  local i restarts_before
   # RestartSec=5, and a new Agent Canvas may spend several seconds on uvx.
   for i in $(seq 1 15); do
     if systemctl is-active --quiet openhands; then
-      return 0
+      break
     fi
     sleep 2
   done
+  systemctl is-active --quiet openhands || return 1
+
+  # Type=simple reports active as soon as the process forks, so a crash loop
+  # would otherwise look like a successful update. Watch just past RestartSec,
+  # returning as soon as the unit drops out or systemd restarts it.
+  restarts_before="$(unit_restart_count)"
+  for i in 1 2 3 4; do
+    sleep 2
+    systemctl is-active --quiet openhands || return 1
+    [ "$(unit_restart_count)" = "$restarts_before" ] || return 1
+  done
+  return 0
+}
+
+# Best-effort recovery for failures after the service was stopped. This does not
+# reinstall anything: npm may already have replaced the package, so it brings up
+# whatever is on disk now and shows logs if that will not start.
+restart_after_failure() {
+  echo "Restarting OpenHands on the currently installed version..." >&2
+  if systemctl start openhands && wait_until_active; then
+    echo "OpenHands is running again." >&2
+    return 0
+  fi
+  echo "Error: OpenHands did not come back up." >&2
+  dump_openhands_failure
   return 1
+}
+
+# The env file is the only record of what is installed: status output reads
+# OPENHANDS_VERSION and --rollback reads OPENHANDS_VERSION_PREVIOUS. Call this as
+# soon as npm has replaced the package, so an early exit cannot leave the droplet
+# running one version and reporting another.
+record_installed_version() {
+  local version="$1"
+  if [ -n "${BEFORE_VERSION}" ] && [ "${BEFORE_VERSION}" != "latest" ] \
+    && [ "${BEFORE_VERSION}" != "${version}" ] \
+    && [ "$(read_env_kv OPENHANDS_VERSION_PREVIOUS || true)" != "${BEFORE_VERSION}" ]; then
+    set_env_kv OPENHANDS_VERSION_PREVIOUS "${BEFORE_VERSION}"
+    echo "Saved previous version for rollback: ${BEFORE_VERSION}"
+  fi
+  set_env_kv OPENHANDS_VERSION "${version}"
 }
 
 MODE="update"
@@ -408,25 +506,28 @@ ensure_node_for_version "$TARGET"
 stop_openhands
 
 if install_agent_canvas "$TARGET"; then
+  # npm has already replaced the package, so the code on disk is $TARGET even if a
+  # step below fails. $TARGET is a concrete version by now (version_exists above
+  # rejects anything npm does not list), so record it before any early exit.
+  record_installed_version "$TARGET"
+  INSTALLED_VERSION="$TARGET"
+
   if ! relink_canvas_bin; then
     echo "Error: failed to relink agent-canvas after install" >&2
-    systemctl start openhands || true
+    restart_after_failure || true
     exit 1
   fi
 
-  INSTALLED_VERSION="$(npm_installed_version || true)"
-  if [ -z "${INSTALLED_VERSION}" ]; then
-    echo "Error: package installed but version could not be detected" >&2
-    systemctl start openhands || true
-    exit 1
+  DETECTED_VERSION="$(npm_installed_version || true)"
+  if [ -z "${DETECTED_VERSION}" ]; then
+    # npm_installed_version swallows npm/jq errors, so an empty result means the
+    # query failed, not that the install did. Trust the version npm just installed.
+    echo "Warning: npm did not report an installed version; assuming ${TARGET}." >&2
+  elif [ "${DETECTED_VERSION}" != "${INSTALLED_VERSION}" ]; then
+    echo "Warning: npm reports ${DETECTED_VERSION}, not the requested ${TARGET}." >&2
+    INSTALLED_VERSION="${DETECTED_VERSION}"
+    record_installed_version "$INSTALLED_VERSION"
   fi
-
-  if [ -n "${BEFORE_VERSION}" ] && [ "${BEFORE_VERSION}" != "latest" ] \
-    && [ "${BEFORE_VERSION}" != "${INSTALLED_VERSION}" ]; then
-    set_env_kv OPENHANDS_VERSION_PREVIOUS "${BEFORE_VERSION}"
-    echo "Saved previous version for rollback: ${BEFORE_VERSION}"
-  fi
-  set_env_kv OPENHANDS_VERSION "${INSTALLED_VERSION}"
 
   echo "Starting OpenHands..."
   if systemctl start openhands; then
@@ -452,6 +553,6 @@ if install_agent_canvas "$TARGET"; then
   fi
 else
   echo "Error: failed to install ${NPM_PKG}@${TARGET}" >&2
-  systemctl start openhands || true
+  restart_after_failure || true
   exit 1
 fi

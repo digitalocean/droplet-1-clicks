@@ -20,7 +20,7 @@ pub=$(curl -fsS --retry 3 --retry-connrefused --max-time 3 \
   http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)
 priv=$(hostname -I | awk '{print $1}')
 host="${pub:-$priv}"
-echo "  https://${host}/   (Caddy -> Agent Canvas on 127.0.0.1:8000)"
+echo "  https://${host}/   (Caddy -> Agent Canvas on :8000; UFW denies 8000)"
 echo "  Loopback (SSH tunnel): http://127.0.0.1:8000"
 
 echo ""
