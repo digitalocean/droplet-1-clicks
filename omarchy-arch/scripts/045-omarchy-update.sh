@@ -16,6 +16,13 @@
 # the packages are already installed by that point.
 set -euo pipefail
 
+# 030-optimize.sh puts OMARCHY_PATH in /etc/environment, which only applies to
+# new logins: Packer runs every provisioner over the connection it opened
+# before that script existed, so the variable is absent here and
+# omarchy-update-dev dies on it under set -u. Set it for this script's
+# children rather than depending on the session.
+export OMARCHY_PATH="${OMARCHY_PATH:-/usr/share/omarchy}"
+
 echo "==> Updating Omarchy and system packages (from $(pacman -Q omarchy))"
 
 # Repeat the answer rather than sending it once: the prompt appears minutes
