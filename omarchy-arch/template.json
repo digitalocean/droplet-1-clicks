@@ -1,0 +1,53 @@
+{
+  "variables": {
+    "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
+    "image_name": "omarchy-arch-snapshot-{{timestamp}}",
+    "base_image_id": "245452059",
+    "application_name": "Omarchy",
+    "application_version": "4.0.3"
+  },
+  "sensitive-variables": [
+    "do_api_token"
+  ],
+  "builders": [
+    {
+      "type": "digitalocean",
+      "api_token": "{{user `do_api_token`}}",
+      "image": "{{user `base_image_id`}}",
+      "region": "nyc3",
+      "size": "s-2vcpu-4gb",
+      "ssh_username": "arch",
+      "snapshot_name": "{{user `image_name`}}"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "inline": [
+        "cloud-init status --wait || true",
+        "mkdir -p /tmp/build-files"
+      ]
+    },
+    {
+      "type": "file",
+      "source": "omarchy-arch/files/",
+      "destination": "/tmp/build-files/"
+    },
+    {
+      "type": "shell",
+      "environment_vars": [
+        "application_name={{user `application_name`}}",
+        "application_version={{user `application_version`}}"
+      ],
+      "scripts": [
+        "omarchy-arch/scripts/020-remote-desktop.sh",
+        "omarchy-arch/scripts/025-fail2ban.sh",
+        "omarchy-arch/scripts/030-optimize.sh",
+        "omarchy-arch/scripts/035-do-agent.sh",
+        "omarchy-arch/scripts/036-droplet-agent.sh",
+        "omarchy-arch/scripts/040-application-tag.sh",
+        "omarchy-arch/scripts/900-cleanup.sh"
+      ]
+    }
+  ]
+}
