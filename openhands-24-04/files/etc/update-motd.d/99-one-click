@@ -42,10 +42,7 @@ and automations. Run agents on this droplet and connect from your browser.
   Specific version:   sudo /opt/update-openhands.sh <version>   # e.g. 1.16.0
   List versions:      sudo /opt/update-openhands.sh --list
   Rollback previous:  sudo /opt/update-openhands.sh --rollback
-  (No-args installs latest. --list prints recent npm versions without
-   changing anything. Rollback reinstalls OPENHANDS_VERSION_PREVIOUS.
-   For any other pin, pass that version. Upgrades Node if needed.
-   Rollback restores the prior npm package only, not config migrations.)
+  (No-args = latest. Rollback restores the prior package, not config.)
 
 📚 Docs: https://docs.openhands.dev/
 🔗 Site: https://www.openhands.dev/

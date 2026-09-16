@@ -130,6 +130,8 @@ stable_versions() {
     | awk '{ a[NR] = $0 } END { for (i = NR; i >= 1; i--) print a[i] }'
 }
 
+# Floor-only: Agent Canvas currently publishes engines.node as ">=X" or
+# ">=X.Y.Z". A future range with an upper bound would be ignored here.
 node_meets_engines() {
   local req="$1"
   [ -z "$req" ] && return 0
@@ -157,7 +159,10 @@ install_node_24() {
   install -m 0644 "$tmp_key" /etc/apt/keyrings/nodesource.gpg
   rm -f "$tmp_key"
   # Replace any Node 22 NodeSource entries from the original image install.
-  rm -f /etc/apt/sources.list.d/nodesource.sources
+  # setup_22.x writes the deb822 nodesource.sources; older setups wrote
+  # nodesource.list. Remove both so only the 24.x entry below is left.
+  rm -f /etc/apt/sources.list.d/nodesource.list \
+        /etc/apt/sources.list.d/nodesource.sources
   echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_24.x nodistro main" \
     > /etc/apt/sources.list.d/nodesource.list
   apt-get update -y
@@ -403,7 +408,11 @@ ensure_node_for_version "$TARGET"
 stop_openhands
 
 if install_agent_canvas "$TARGET"; then
-  relink_canvas_bin
+  if ! relink_canvas_bin; then
+    echo "Error: failed to relink agent-canvas after install" >&2
+    systemctl start openhands || true
+    exit 1
+  fi
 
   INSTALLED_VERSION="$(npm_installed_version || true)"
   if [ -z "${INSTALLED_VERSION}" ]; then
