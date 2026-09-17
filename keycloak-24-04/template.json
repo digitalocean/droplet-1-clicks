@@ -4,7 +4,7 @@
     "image_name": "keycloak-24-04-snapshot-{{timestamp}}",
     "apt_packages": "postgresql docker.io docker-compose super nginx python3 python3-certbot python3-certbot-nginx",
     "application_name": "Keycloak",
-    "application_version": "latest"
+    "application_version": "26.7.4"
   },
   "sensitive-variables": [
     "do_api_token"
@@ -15,7 +15,7 @@
       "api_token": "{{user `do_api_token`}}",
       "image": "ubuntu-24-04-x64",
       "region": "nyc3",
-      "size": "s-1vcpu-1gb",
+      "size": "s-2vcpu-2gb",
       "ssh_username": "root",
       "snapshot_name": "{{user `image_name`}}"
     }
