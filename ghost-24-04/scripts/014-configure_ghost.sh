@@ -13,6 +13,10 @@ sudo -E bash nodesource_setup.sh
 sudo apt-get update
 sudo apt-get install nodejs -y
 
+# Ghost 6+ installs dependencies with pnpm via Corepack (Ghost-CLI >= 1.29.2).
+corepack enable
+corepack prepare pnpm@latest --activate
+
 useradd --home-dir /home/ghost-mgr \
         --shell /bin/bash \
         --create-home \
