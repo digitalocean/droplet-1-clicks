@@ -31,12 +31,18 @@ and automations. Run agents on this droplet and connect from your browser.
 🔧 Management:
   Restart:  /opt/restart-openhands.sh
   Status:   /opt/status-openhands.sh
-  Update:   /opt/update-openhands.sh
   Domain:   /opt/setup-openhands-domain.sh
   Setup:    /etc/setup_wizard.sh
 
   systemctl {start|stop|restart|status} openhands
   journalctl -u openhands -f
+
+⬆️ Update OpenHands:
+  Latest release:     sudo /opt/update-openhands.sh
+  Specific version:   sudo /opt/update-openhands.sh <version>   # e.g. 1.16.0
+  List versions:      sudo /opt/update-openhands.sh --list
+  Rollback previous:  sudo /opt/update-openhands.sh --rollback
+  (No-args = latest. Rollback restores the prior package, not config.)
 
 📚 Docs: https://docs.openhands.dev/
 🔗 Site: https://www.openhands.dev/
