@@ -13,6 +13,13 @@ sudo -E bash nodesource_setup.sh
 sudo apt-get update
 sudo apt-get install nodejs -y
 
+# Ghost 6+ installs dependencies with pnpm via Corepack (Ghost-CLI >= 1.29.2).
+# Refresh Corepack first — NodeSource's bundled Corepack can fail with
+# "Cannot find matching keyid" when fetching pnpm. Ghost-CLI then uses
+# `corepack pnpm` with the version from Ghost's packageManager field.
+npm install -g corepack@latest
+corepack enable
+
 useradd --home-dir /home/ghost-mgr \
         --shell /bin/bash \
         --create-home \
