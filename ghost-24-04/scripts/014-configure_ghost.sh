@@ -6,9 +6,11 @@
 GHOST_VERSION="${GHOST_VERSION:-${application_version}}"
 
 # Pull engines from the Ghost npm package (no Node required yet).
+# Use printf (not echo): some Ghost versions embed backslashes in scripts metadata;
+# zsh/bash echo can mangle them and break jq ("Invalid escape").
 GHOST_META=$(curl -fsSL "https://registry.npmjs.org/ghost/${GHOST_VERSION}")
-NODE_RANGE=$(echo "$GHOST_META" | jq -r '.engines.node // empty')
-CLI_RANGE=$(echo "$GHOST_META" | jq -r '.engines.cli // empty')
+NODE_RANGE=$(printf '%s' "$GHOST_META" | jq -r '.engines.node // empty')
+CLI_RANGE=$(printf '%s' "$GHOST_META" | jq -r '.engines.cli // empty')
 
 if [ -z "${NODE_RANGE}" ]; then
     echo "Failed to resolve engines.node for ghost@${GHOST_VERSION}" >&2
