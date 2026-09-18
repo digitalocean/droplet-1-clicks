@@ -5,11 +5,10 @@
 
 GHOST_VERSION="${GHOST_VERSION:-${application_version}}"
 
-# Pull engines + packageManager from the Ghost npm package (no Node required yet).
+# Pull engines from the Ghost npm package (no Node required yet).
 GHOST_META=$(curl -fsSL "https://registry.npmjs.org/ghost/${GHOST_VERSION}")
 NODE_RANGE=$(echo "$GHOST_META" | jq -r '.engines.node // empty')
 CLI_RANGE=$(echo "$GHOST_META" | jq -r '.engines.cli // empty')
-PACKAGE_MANAGER=$(echo "$GHOST_META" | jq -r '.packageManager // empty')
 
 if [ -z "${NODE_RANGE}" ]; then
     echo "Failed to resolve engines.node for ghost@${GHOST_VERSION}" >&2
@@ -41,15 +40,12 @@ sudo -E bash nodesource_setup.sh
 sudo apt-get update
 sudo apt-get install nodejs -y
 
-# pnpm: use Ghost's packageManager pin when present (e.g. pnpm@12.4.0+sha512...), else latest.
-if echo "${PACKAGE_MANAGER}" | grep -q '^pnpm@'; then
-    PNPM_VERSION=$(echo "${PACKAGE_MANAGER}" | sed -n 's/^pnpm@\([^+[:space:]]*\).*/\1/p')
-else
-    PNPM_VERSION="latest"
-fi
-echo "Ghost ${GHOST_VERSION} packageManager='${PACKAGE_MANAGER:-unset}'; preparing pnpm@${PNPM_VERSION}"
+# Ghost 6+ installs dependencies with pnpm via Corepack (Ghost-CLI >= 1.29.2).
+# Refresh Corepack first — NodeSource's bundled Corepack can fail with
+# "Cannot find matching keyid" when fetching pnpm. Ghost-CLI then uses
+# `corepack pnpm` with the version from Ghost's packageManager field.
+npm install -g corepack@latest
 corepack enable
-corepack prepare "pnpm@${PNPM_VERSION}" --activate
 
 useradd --home-dir /home/ghost-mgr \
         --shell /bin/bash \

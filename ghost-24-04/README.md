@@ -41,7 +41,7 @@ You need [Packer](https://www.packer.io/intro/getting-started/install.html) and 
 * `image_name` — Snapshot name; default pattern includes `ghost-24-04-1click-` and a timestamp.
 * `application_version` — Ghost npm package version installed on first boot (default matches Ghost 6.x).
 * `node_version` — Optional NodeSource stream override (e.g. `24.x`). When empty (default), Node is taken from `ghost@<application_version>`’s `engines.node` (first `^MAJOR` → `MAJOR.x`).
-* At build time the script also resolves **Ghost-CLI** from `engines.cli` and **pnpm** from Ghost’s `packageManager` field (falls back to `pnpm@latest` if unset).
+* At build time the script also resolves **Ghost-CLI** from `engines.cli`. With Corepack enabled, Ghost-CLI uses `corepack pnpm` and the version from Ghost’s `packageManager` field (not pinned in the image).
 
 Override at build time with [Packer `-var`](https://developer.hashicorp.com/packer/docs/templates/hcl/variables).
 
