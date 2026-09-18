@@ -4,7 +4,7 @@
     "image_name": "plex-24-04-snapshot-{{timestamp}}",
     "apt_packages": "apt-transport-https ca-certificates curl software-properties-common jq docker.io docker-compose-v2 fail2ban gnupg",
     "application_name": "Plex Media Server",
-    "application_version": "1.43.2.10687-563d026ea"
+    "application_version": "1.43.4.10903-e5521bd8c"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [

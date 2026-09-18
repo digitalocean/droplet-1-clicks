@@ -11,11 +11,11 @@ fi
 
 cd /opt/plex
 
-latest=$(curl -fsSL "https://hub.docker.com/v2/repositories/plexinc/pms-docker/tags?page_size=100&ordering=-last_updated" \
-  | jq -r '[.results[].name | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+-[0-9a-f]+$"))] | .[0]')
+latest=$(curl -fsSL "https://plex.tv/api/downloads/5.json" | jq -r '.computer.Linux.version')
+latest="${latest#v}"
 
 if [ -z "$latest" ] || [ "$latest" = "null" ]; then
-    echo "Error: Failed to determine latest Plex version from Docker Hub"
+    echo "Error: Failed to determine latest Plex version from plex.tv"
     exit 1
 fi
 
