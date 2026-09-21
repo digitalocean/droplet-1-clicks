@@ -1,0 +1,16 @@
+[Unit]
+Description=Twenty CRM Service
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/twenty
+TimeoutStartSec=600
+ExecStart=/usr/bin/docker compose -f /opt/twenty/docker-compose.yml up -d --wait
+ExecStop=/usr/bin/docker compose -f /opt/twenty/docker-compose.yml down
+ExecReload=/usr/bin/docker compose -f /opt/twenty/docker-compose.yml restart
+
+[Install]
+WantedBy=multi-user.target
