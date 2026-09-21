@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+
+# Terminal color codes
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+NC='\033[0m' # No Color
+
+cat << 'EOF'
+ __      __           ___                 _     
+ \ \    / /_  _ ___  / __|___  _ _  ___ _| |_   
+  \ \/\/ /| || / _ \| (_ / _ \| ' \/ -_)_  _|   
+   \_/\_/  \_, \___/ \___\___/|_||_\___| |_|    
+           |__/    VYBENCH DROPLET APPLIANCE   
+EOF
+
+echo -e "${BOLD}Welcome to the official Vyogo vybench 1-Click Droplet Appliance!${NC}"
+echo -e "Turnkey ERPNext, CRM, HRMS & Frappe app ecosystem powered by FPM.\n"
+
+if [ -f "/root/.vybench_credentials" ]; then
+  echo -e "${GREEN}${BOLD}✓ System Credentials & URLs:${NC}"
+  echo -e "  Credentials file:  ${BOLD}/root/.vybench_credentials${NC}"
+  grep "App URL:" /root/.vybench_credentials 2>/dev/null || true
+  grep "Administrator Username:" /root/.vybench_credentials 2>/dev/null || true
+  echo ""
+else
+  echo -e "${CYAN}* Initial site deployment in progress (first boot)...${NC}"
+  echo -e "  Monitor with:  journalctl -u vybench-first-boot -f\n"
+fi
+
+echo -e "${BLUE}${BOLD}Quick Commands:${NC}"
+echo -e "  Site CLI:          vybench.bench --help"
+echo -e "  Install Apps:      vybench.fpm install <app-name>  (e.g., hrms, crm)"
+echo -e "  Service Status:    snap services vybench"
+echo -e "  Restart Stack:     snap restart vybench"
+echo -e "  Add Custom Domain: vybench.bench setup add-domain <domain>"
+echo -e "  Configure SSL:     certbot --nginx -d <domain>\n"
+
+echo -e "${BOLD}Resources & Support:${NC}"
+echo -e "  FPM App Catalog:   https://fpm.vyogo.tech"
+echo -e "  Managed Cloud:     https://console.vyogo.cloud"
+echo -e "  Vyogo Home:        https://vyogo.tech"
+echo -e "  Support:           support@vyogo.tech"
+echo "----------------------------------------------------------------------"
