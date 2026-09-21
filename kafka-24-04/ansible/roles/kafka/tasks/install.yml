@@ -1,4 +1,13 @@
 ---
+- name: Install | Require kafka_version and kafka_sha512 from Packer
+  assert:
+    that:
+      - kafka_version is defined
+      - kafka_version | length > 0
+      - kafka_sha512 is defined
+      - kafka_sha512 is regex('^[0-9a-f]{128}$')
+    fail_msg: "kafka_version and kafka_sha512 (128 lowercase hex chars) must be passed from Packer extra-vars (template.json)"
+
 - name: Install | Setup nofile limit for kafka user
   community.general.pam_limits:
     domain: kafka
@@ -11,21 +20,31 @@
     paths: "{{ kafka_dir }}"
   register: kafka_files_found
 
-- name: Install | Download kafka
+- name: Install | Download and unpack Kafka
   when: kafka_files_found.matched == 0
-  get_url:
-    url: "{{ kafka_url }}"
-    checksum: "{{ kafka_archive_checksum }}"
-    dest: "/tmp/kafka_{{ kafka_scala_version }}-{{ kafka_version }}.tar.gz"
+  block:
+    - name: Install | Download kafka
+      get_url:
+        url: "{{ kafka_url }}"
+        checksum: "sha512:{{ kafka_sha512 }}"
+        dest: "/tmp/kafka_{{ kafka_scala_version }}-{{ kafka_version }}.tar.gz"
+      register: kafka_download
+      ignore_errors: true
 
-- name: Install | Unpack tarball
-  when: kafka_files_found.matched == 0
-  unarchive:
-    copy: no
-    src: "/tmp/kafka_{{ kafka_scala_version }}-{{ kafka_version }}.tar.gz"
-    dest: "{{ kafka_dir }}"
-    extra_opts:
-      - --strip-components=1
+    - name: Install | Download kafka from Apache archive
+      when: kafka_download is failed
+      get_url:
+        url: "{{ kafka_archive_url }}"
+        checksum: "sha512:{{ kafka_sha512 }}"
+        dest: "/tmp/kafka_{{ kafka_scala_version }}-{{ kafka_version }}.tar.gz"
+
+    - name: Install | Unpack tarball
+      unarchive:
+        copy: no
+        src: "/tmp/kafka_{{ kafka_scala_version }}-{{ kafka_version }}.tar.gz"
+        dest: "{{ kafka_dir }}"
+        extra_opts:
+          - --strip-components=1
 
 - name: Install | Change kafka folder ownership to kafka
   file:

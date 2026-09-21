@@ -5,10 +5,19 @@
     state: directory
     owner: kafka
     group: kafka
+    mode: "0750"
   loop:
     - "{{ kafka_dir }}"
     - "{{ data_dir }}"
     - "{{ templates_dir }}"
+
+- name: Files | Create Kafka log directory
+  file:
+    path: "{{ log_dir }}"
+    state: directory
+    owner: syslog
+    group: adm
+    mode: "0755"
 
 - name: Files | Copy first-boot templates
   copy:
@@ -19,11 +28,6 @@
     - server.properties.tmpl
     - example.librdkafka.config.tmpl
     - README.md.tmpl
-
-- name: Files | ZooKeeper systemd service
-  template:
-    src: zookeeper.service.j2
-    dest: /etc/systemd/system/zookeeper.service
 
 - name: Files | MOTD
   template:
