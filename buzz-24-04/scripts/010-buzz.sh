@@ -60,8 +60,9 @@ echo "Pulling Buzz stack images (relay ${APP_VERSION})..."
 docker pull "${BUZZ_IMAGE}"
 docker pull postgres:17.10-alpine
 docker pull redis:7.4.10-alpine
-docker pull minio/minio:RELEASE.2025-09-07T16-13-09Z
-docker pull minio/mc:RELEASE.2025-08-13T08-35-41Z
+# Docker Hub minio/* repos were removed (2026); pull from Quay.
+docker pull quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+docker pull quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
 
 systemctl enable fail2ban
 systemctl restart fail2ban
