@@ -1,0 +1,58 @@
+#!/bin/bash
+
+set -euo pipefail
+
+export JAVA_HOME="{{ opensearch_home }}/jdk"
+
+export OPENSEARCH_CONFIG_HOME="{{ opensearch_config_home }}"
+
+# Total memory in KB
+totalMemKB=$(awk '/MemTotal:/ { print $2 }' /proc/meminfo)
+
+# heap size in MB
+export OPENSEARCH_MAX_MEMORY=$(($totalMemKB*55/100/1024));
+export DASHBOARDS_MAX_MEMORY=$(($totalMemKB*3/100/1024));
+
+if [ ! -f "{{ opensearch_config_file }}" ]
+then
+  gomplate -d ip_address="http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address" -f {{ nodecerts_home }}/tlsconfig.yml.template -o {{ nodecerts_home }}/tlsconfig.yml
+
+  ./{{ nodecerts_home }}/tools/sgtlstool.sh -c {{ nodecerts_home }}/tlsconfig.yml -ca -crt -t {{ opensearch_config_home }} -v
+
+  chmod 0600 {{ opensearch_config_home }}/root-ca.pem {{ opensearch_config_home }}/root-ca.key {{ opensearch_config_home }}/opensearch.key {{ opensearch_config_home }}/opensearch.pem {{ opensearch_config_home }}/opensearch_http.key {{ opensearch_config_home }}/opensearch_http.pem {{ opensearch_config_home }}/admin.key {{ opensearch_config_home }}/admin.pem
+
+  chown {{ opensearch_user }}:{{ opensearch_group }} {{ opensearch_config_home }}/root-ca.pem {{ opensearch_config_home }}/root-ca.key {{ opensearch_config_home }}/opensearch.key {{ opensearch_config_home }}/opensearch.pem {{ opensearch_config_home }}/opensearch_http.key {{ opensearch_config_home }}/opensearch_http.pem {{ opensearch_config_home }}/admin.key {{ opensearch_config_home }}/admin.pem
+
+  ADMIN_PASSWORD=$(openssl rand -hex 20)
+  echo "$ADMIN_PASSWORD" > /home/{{ opensearch_user }}/admin_password.txt
+  export KIBANA_PASSWORD=$(openssl rand -hex 20)
+  echo "$KIBANA_PASSWORD" > /home/{{ opensearch_user }}/kibana_password.txt
+
+  export ADMIN_PASSWORD_HASH=$({{ opensearch_security_plugin_tools_path }}/hash.sh -p "$ADMIN_PASSWORD" | tail -1)
+  export KIBANA_PASSWORD_HASH=$({{ opensearch_security_plugin_tools_path }}/hash.sh -p "$KIBANA_PASSWORD" | tail -1)
+
+  gomplate -d admin_password="env:ADMIN_PASSWORD_HASH" -d kibanaserver_password="env:KIBANA_PASSWORD_HASH" -f "{{ opensearch_config_home }}/internal_users.yml.template" -o "{{ opensearch_security_plugin_conf_path }}/internal_users.yml"
+
+  gomplate -d droplet_name="http://169.254.169.254/metadata/v1/hostname" -d ip_address="http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address" -f "{{ opensearch_config_file }}.template" -o "{{ opensearch_config_file }}"
+
+  gomplate -d max_memory="env:OPENSEARCH_MAX_MEMORY" -f "$OPENSEARCH_CONFIG_HOME/jvm.options.template" -o "$OPENSEARCH_CONFIG_HOME/jvm.options"
+
+  chown -R {{ opensearch_user }}:{{ opensearch_group }} {{ opensearch_home }}
+
+  systemctl enable --now opensearch.service
+else
+   echo "{{ opensearch_config_file }} exists, not doing anything."
+fi
+
+if [ ! -f "{{ opensearch_dashboards_config_file }}" ]
+then
+  gomplate -d kibanaserver_password="env:KIBANA_PASSWORD" -d ip_address="http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address" -d opensearch_config_home="env:OPENSEARCH_CONFIG_HOME" -f "{{ opensearch_dashboards_config_file }}.template" -o "{{ opensearch_dashboards_config_file }}"
+
+  gomplate -d max_memory="env:DASHBOARDS_MAX_MEMORY" -f "{{ opensearch_dashboards_config_home }}/jvm.options.template" -o "{{ opensearch_dashboards_config_home }}/jvm.options"
+
+  chown -R {{ opensearch_user }}:{{ opensearch_group }} {{ opensearch_dashboards_home }}
+
+  systemctl enable --now opensearch_dashboards.service
+else
+   echo "{{ opensearch_dashboards_config_file }} exists, not doing anything."
+fi

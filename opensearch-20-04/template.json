@@ -1,0 +1,87 @@
+
+{
+  "variables": {
+    "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
+    "image_name": "opensearch-20-04-snapshot-{{timestamp}}",
+    "apt_packages": "wget",
+    "application_name": "OpenSearch",
+    "application_version": "1.3.1"
+  },
+  "sensitive-variables": ["do_api_token"],
+  "builders": [
+    {
+      "type": "digitalocean",
+      "api_token": "{{user `do_api_token`}}",
+      "image": "ubuntu-20-04-x64",
+      "region": "nyc3",
+      "size": "s-4vcpu-8gb",
+      "ssh_username": "root",
+      "snapshot_name": "{{user `image_name`}}"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "inline": [
+        "cloud-init status --wait"
+      ]
+    },
+    {
+      "type": "file",
+      "source": "common/files/var/",
+      "destination": "/var/"
+    },
+    {
+      "type": "file",
+      "source": "opensearch-20-04/files/etc/",
+      "destination": "/etc/"
+    },
+    {
+      "type": "shell",
+      "environment_vars": [
+        "DEBIAN_FRONTEND=noninteractive",
+        "LC_ALL=C",
+        "LANG=en_US.UTF-8",
+        "LC_CTYPE=en_US.UTF-8"
+      ],
+      "inline": [
+        "apt -qqy update",
+        "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' full-upgrade",
+        "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' install {{user `apt_packages`}}",
+        "apt-get -qqy clean"
+      ]
+    },
+    {
+      "type": "shell",
+      "environment_vars": [
+        "application_name={{user `application_name`}}",
+        "application_version={{user `application_version`}}",
+        "DEBIAN_FRONTEND=noninteractive",
+        "LC_ALL=C",
+        "LANG=en_US.UTF-8",
+        "LC_CTYPE=en_US.UTF-8"
+      ],
+      "scripts": [
+        "opensearch-20-04/scripts/014-ufw-opensearch.sh",
+        "common/scripts/020-application-tag.sh",
+        "common/scripts/900-cleanup.sh"
+      ]
+    },
+    {
+      "type": "ansible",
+      "playbook_file": "./opensearch-20-04/ansible/opensearch-playbook.yml",
+      "user": "root",
+      "ansible_env_vars": [
+        "ANSIBLE_HOST_KEY_CHECKING=False",
+        "ANSIBLE_SSH_ARGS='-o ForwardAgent=yes -o ControlMaster=auto -o ControlPersist=60s'",
+        "ANSIBLE_NOCOLOR=True"
+      ]
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "rm -rf /root/.ansible"
+      ]
+    }
+  ]
+}
