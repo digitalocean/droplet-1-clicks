@@ -55,10 +55,10 @@ Logs: `/var/log/kafka/kafka.log` and `journalctl -u kafka`.
 
 ### Update
 
-This image is rebuilt for Marketplace Autoupdate from `application_version` and `kafka_sha512` in `template.json`. To change the version on a **new** image:
+This image is rebuilt for Marketplace Autoupdate from `application_version` in `template.json`. To change the version on a **new** image:
 
-1. Set `application_version` and the matching `kafka_sha512` (128 lowercase hex chars from the Apache `.sha512` file) in `kafka-24-04/template.json`.
-2. Rebuild with Packer (`make build-kafka-24-04` or `packer build -var application_version=4.3.1 -var kafka_sha512=<digest> kafka-24-04/template.json`).
+1. Set `application_version` in `kafka-24-04/template.json` (for example `4.3.1`).
+2. Rebuild with Packer (`make build-kafka-24-04` or `packer build -var application_version=4.3.1 kafka-24-04/template.json`). The installer fetches Apache's official SHA-512 for that version.
 
 In-place upgrades of an existing Droplet are not supported by this 1-Click. Stand up a new Droplet from the updated snapshot and migrate producers/consumers.
 

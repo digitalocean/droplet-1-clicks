@@ -39,20 +39,17 @@ packer validate kafka-24-04/template.json
 packer build kafka-24-04/template.json
 ```
 
-Autoupdate (and manual version bumps) must pass **both** the Marketplace pin and the Apache SHA-512 (128 lowercase hex chars, no `sha512:` prefix):
+Autoupdate (and manual version bumps) only need `application_version`. Ansible fetches the matching Apache SHA-512 at build time:
 
 ```bash
-packer build \
-  -var 'application_version=4.3.1' \
-  -var 'kafka_sha512=c7d7b2318cb51aa0c61d3246a51c349210073c5c9b754947ef965a439f2f939e8600f204e134a75ac31faf3829c9370960ef7c6a9886c8a1dbf0339a21f4c54c' \
-  kafka-24-04/template.json
+packer build -var 'application_version=4.3.1' kafka-24-04/template.json
 ```
 
 ## How It Works
 
 1. Packer waits for cloud-init, then runs `kafka-24-04/ansible/kafka.yml` as root.
-2. Ansible installs OpenJDK 17 JRE, downloads `kafka_2.13-<version>.tgz` from Apache (pinned `kafka_sha512` from `template.json`, falling back to the archive URL), and ships first-boot templates under `/opt/kafka/do-templates`.
-3. `application_version` and `kafka_sha512` are passed as `--extra-vars` so Autoupdate can change the tarball without editing Ansible defaults. Always update the digest when the version changes.
+2. Ansible installs OpenJDK 17 JRE, downloads `kafka_2.13-<version>.tgz` from Apache, verifies it against the official `.sha512` file (downloads.apache.org, then the archive), and ships first-boot templates under `/opt/kafka/do-templates`.
+3. `application_version` is passed as `--extra-vars kafka_version=...` so Autoupdate can change the tarball without editing Ansible defaults.
 4. `018-force-ssh-logout.sh` blocks SSH until per-instance setup finishes.
 5. On first boot, `001_onboot` writes `server.properties`, formats KRaft storage (`kafka-storage.sh format --standalone`), enables `kafka.service`, and writes `/opt/kafka/one-click-ssl/`.
 
@@ -60,7 +57,7 @@ packer build \
 
 | Path | Purpose |
 |------|---------|
-| `template.json` | Packer build template (`application_version` + `kafka_sha512` pins) |
+| `template.json` | Packer build template (`application_version` is the Kafka pin) |
 | `ansible/kafka.yml` | Playbook (OpenJDK + Kafka roles) |
 | `ansible/requirements.yml` | `community.general` collection |
 | `ansible/roles/kafka/` | Download, UFW, MOTD, onboot, KRaft templates |

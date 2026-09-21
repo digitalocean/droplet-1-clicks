@@ -3,8 +3,7 @@
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "kafka-24-04-snapshot-{{timestamp}}",
     "application_name": "Kafka",
-    "application_version": "4.3.1",
-    "kafka_sha512": "c7d7b2318cb51aa0c61d3246a51c349210073c5c9b754947ef965a439f2f939e8600f204e134a75ac31faf3829c9370960ef7c6a9886c8a1dbf0339a21f4c54c"
+    "application_version": "4.3.1"
   },
   "sensitive-variables": [
     "do_api_token"
@@ -38,7 +37,7 @@
       "user": "root",
       "extra_arguments": [
         "--extra-vars",
-        "kafka_version={{user `application_version`}} kafka_sha512={{user `kafka_sha512`}}"
+        "kafka_version={{user `application_version`}}"
       ],
       "ansible_env_vars": [
         "ANSIBLE_HOST_KEY_CHECKING=False",

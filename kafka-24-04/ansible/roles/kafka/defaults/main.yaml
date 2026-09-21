@@ -1,7 +1,7 @@
 ---
-# kafka_version and kafka_sha512 are set only by Packer from template.json:
-#   --extra-vars kafka_version={{user `application_version`}} kafka_sha512={{user `kafka_sha512`}}
-# Do not pin a Kafka version or digest here.
+# kafka_version is set only by Packer from template.json:
+#   --extra-vars kafka_version={{user `application_version`}}
+# Do not pin a Kafka version here. SHA-512 is fetched from Apache at build time.
 kafka_scala_version: "2.13"
 
 data_dir: /var/lib/kafka
