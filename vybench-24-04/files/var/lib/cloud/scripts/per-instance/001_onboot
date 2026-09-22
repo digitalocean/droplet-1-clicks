@@ -1,0 +1,6 @@
+#!/bin/bash
+# Remove the build-time SSH lock added by common/scripts/018-force-ssh-logout.sh.
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+systemctl restart ssh 2>/dev/null || systemctl restart sshd 2>/dev/null || true

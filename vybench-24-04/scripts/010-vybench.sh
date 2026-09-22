@@ -117,6 +117,9 @@ snap services vybench
 # 7. Configure first-boot service and enable user lingering
 echo "==> Setting up first-boot initialization service..."
 chmod 0755 /opt/vybench/first_boot.sh
+if [ -f /var/lib/cloud/scripts/per-instance/001_onboot ]; then
+  chmod 0755 /var/lib/cloud/scripts/per-instance/001_onboot
+fi
 rm -f /opt/vybench/.first_boot_done /root/.vybench_credentials
 
 systemctl daemon-reload

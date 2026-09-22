@@ -4,6 +4,15 @@ set -euo pipefail
 SENTINEL="/opt/vybench/.first_boot_done"
 CREDENTIALS_FILE="/root/.vybench_credentials"
 
+# The image build appends a ForceCommand so Packer disconnects. Remove it
+# before anything else so SSH works while site creation is still running.
+if grep -q 'ForceCommand echo "Please wait while we get your droplet ready..."' /etc/ssh/sshd_config; then
+  sed -e '/Match User root/d' \
+      -e '/.*ForceCommand.*droplet.*/d' \
+      -i /etc/ssh/sshd_config
+  systemctl restart ssh 2>/dev/null || systemctl restart sshd 2>/dev/null || true
+fi
+
 if [ -f "$SENTINEL" ]; then
   echo "First boot initialization already completed. Exiting."
   exit 0
