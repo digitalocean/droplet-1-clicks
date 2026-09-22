@@ -1,0 +1,49 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+pub=$(curl -fsS --retry 3 --retry-connrefused --max-time 3 \
+  http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)
+myip="${pub:-$(hostname -I | awk '{print$1}')}"
+password=$(grep "^INITIAL_PASSWORD=" /opt/omniroute/.env 2>/dev/null | cut -d= -f2-)
+
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's One-Click OmniRoute Droplet.
+
+OmniRoute is a self-hosted AI gateway: one OpenAI-compatible endpoint with
+smart routing across providers. This image prefers DigitalOcean Serverless
+Inference when you supply a model access key.
+
+🌐 Access:
+  Dashboard: https://$myip
+  API:       https://$myip/v1
+  Password:  $password
+
+  Sign in with the password above.
+  Password file: /opt/omniroute/.env (INITIAL_PASSWORD)
+
+📝 First steps:
+  1. Open the Dashboard and sign in
+  2. Complete the SSH setup wizard for DigitalOcean Serverless Inference
+     (optional: Intelligent Inference Router), or set MODEL_ACCESS_KEY
+  3. Create an Endpoint API key, then point clients at https://$myip/v1
+
+🔧 Management:
+  Restart:  /opt/restart-omniroute.sh
+  Status:   /opt/status-omniroute.sh
+  Update:   /opt/update-omniroute.sh
+  Domain:   /opt/setup-omniroute-domain.sh
+  Setup:    /etc/setup_wizard.sh
+  Logs:     /opt/omniroute/run.sh logs
+
+  systemctl {start|stop|restart|status} omniroute
+  journalctl -u omniroute -f
+
+📚 Docs: https://github.com/diegosouzapw/OmniRoute
+🔗 Site: https://omniroute.online
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF

@@ -1,0 +1,11 @@
+[Unit]
+Description=Apply OmniRoute Serverless Inference config after cloud-init user-data
+After=cloud-init.service omniroute.service
+ConditionPathExists=!/opt/omniroute/.provider-configured
+
+[Service]
+Type=oneshot
+ExecStart=/opt/retry-apply-inference-after-cloud-init.sh
+
+[Install]
+WantedBy=multi-user.target

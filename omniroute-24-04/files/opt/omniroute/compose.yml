@@ -1,0 +1,67 @@
+name: omniroute
+
+services:
+  redis:
+    image: docker.io/library/redis:8.6.5-alpine
+    container_name: omniroute-redis
+    restart: unless-stopped
+    # Compose-network only — not published to the host (Buzz pattern).
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD}
+    volumes:
+      - omniroute-redis-data:/data
+    command:
+      [
+        "redis-server",
+        "--save",
+        "60",
+        "1",
+        "--loglevel",
+        "warning",
+        "--requirepass",
+        "${REDIS_PASSWORD:?set REDIS_PASSWORD}",
+      ]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  omniroute:
+    image: ${OMNIROUTE_IMAGE:-diegosouzapw/omniroute:latest}
+    container_name: omniroute
+    restart: unless-stopped
+    stop_grace_period: 40s
+    depends_on:
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      DATA_DIR: /app/data
+      PORT: "20128"
+      DASHBOARD_PORT: "20128"
+      HOST: "0.0.0.0"
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      AUTH_COOKIE_SECURE: "true"
+      OMNIROUTE_TRUST_PROXY: "1"
+      OMNIROUTE_MEMORY_MB: ${OMNIROUTE_MEMORY_MB:-2048}
+    # Bind to loopback — Caddy on the host terminates TLS and proxies here.
+    ports:
+      - "127.0.0.1:20128:20128"
+    volumes:
+      - omniroute-data:/app/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node healthcheck.mjs || wget -qO- http://127.0.0.1:20128/ >/dev/null || curl -fsS http://127.0.0.1:20128/ >/dev/null",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  omniroute-data:
+  omniroute-redis-data:
