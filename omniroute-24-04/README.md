@@ -62,7 +62,7 @@ make build-omniroute-24-04
 
 ## First Boot Behavior
 
-1. Generates `INITIAL_PASSWORD`, `JWT_SECRET`, and `API_KEY_SECRET`
+1. Generates `INITIAL_PASSWORD`, `JWT_SECRET`, `API_KEY_SECRET`, and `REDIS_PASSWORD`
 2. Installs Caddyfile (shortlived TLS for droplet IP) and starts `omniroute` + `caddy`
 3. If `MODEL_ACCESS_KEY` is set (droplet env or `/opt/omniroute/.env`), configures the DigitalOcean provider and skips the wizard
 4. Otherwise hooks `/etc/setup_wizard.sh` into root `.bashrc` for first login

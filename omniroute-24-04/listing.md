@@ -90,7 +90,7 @@ curl https://your-droplet-ip/v1/chat/completions \
 | Status | `/opt/status-omniroute.sh` |
 | Update | `/opt/update-omniroute.sh` |
 | Domain TLS | `/opt/setup-omniroute-domain.sh` |
-| Re-run setup | `/etc/setup_wizard.sh` |
+| Re-run setup | `/etc/setup_wizard.sh --force` |
 | Logs | `/opt/omniroute/run.sh logs` |
 
 systemd: `systemctl {start|stop|restart|status} omniroute`  
