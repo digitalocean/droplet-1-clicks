@@ -1,0 +1,155 @@
+#!/bin/bash
+set -euo pipefail
+
+set -a
+# shellcheck source=/dev/null
+source /etc/environment 2>/dev/null || true
+set +a
+
+ENV_FILE=/opt/omniroute/.env
+INFO_FILE=/root/omniroute_info.txt
+
+write_env_kv() {
+  local key="$1" val="$2" tmp="${ENV_FILE}.tmp"
+  touch "$ENV_FILE"
+  grep -v "^${key}=" "$ENV_FILE" >"$tmp" 2>/dev/null || : >"$tmp"
+  printf '%s=%s\n' "$key" "$val" >>"$tmp"
+  mv "$tmp" "$ENV_FILE"
+  chmod 600 "$ENV_FILE"
+}
+
+meta() { curl -fsS --retry 10 --retry-connrefused --max-time 2 "$1"; }
+DROPLET_PUBLIC_IP="$(meta http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)"
+DROPLET_PRIVATE_IP="$(hostname -I | awk '{print $1}')"
+DROPLET_IP="${DROPLET_PUBLIC_IP:-$DROPLET_PRIVATE_IP}"
+
+# Generate per-droplet secrets
+if grep -q "PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT" "$ENV_FILE" 2>/dev/null; then
+  echo "Generating OmniRoute secrets (INITIAL_PASSWORD, JWT_SECRET, API_KEY_SECRET, REDIS_PASSWORD)..."
+  NEW_PASSWORD="$(openssl rand -base64 24 | tr -d '=+/' | cut -c1-24)"
+  NEW_JWT="$(openssl rand -hex 48)"
+  NEW_API_SECRET="$(openssl rand -hex 32)"
+  NEW_REDIS_PASSWORD="$(openssl rand -base64 32 | tr -d '=+/' | cut -c1-32)"
+  write_env_kv INITIAL_PASSWORD "$NEW_PASSWORD"
+  write_env_kv JWT_SECRET "$NEW_JWT"
+  write_env_kv API_KEY_SECRET "$NEW_API_SECRET"
+  write_env_kv REDIS_PASSWORD "$NEW_REDIS_PASSWORD"
+fi
+
+# Point public URLs at this droplet's IP (domain helper rewrites later)
+if grep -q "PLACEHOLDER_DOMAIN" "$ENV_FILE" 2>/dev/null; then
+  echo "Configuring OmniRoute public URLs for ${DROPLET_IP}..."
+  sed -i "s|PLACEHOLDER_DOMAIN|${DROPLET_IP}|g" "$ENV_FILE"
+fi
+
+# Install Caddyfile and substitute droplet IP for shortlived TLS
+if [ -f /etc/caddy/Caddyfile.tmp ]; then
+  mv /etc/caddy/Caddyfile.tmp /etc/caddy/Caddyfile
+fi
+if grep -q "PLACEHOLDER_DOMAIN" /etc/caddy/Caddyfile 2>/dev/null; then
+  echo "Configuring Caddy with droplet IP address..."
+  sed -i "s/PLACEHOLDER_DOMAIN/${DROPLET_IP}/" /etc/caddy/Caddyfile
+fi
+systemctl enable caddy
+systemctl restart caddy
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+chmod +x /opt/apply-inference-from-env.sh
+chmod +x /opt/retry-apply-inference-after-cloud-init.sh
+
+# Start stack before applying inference (CLI runs inside the container)
+systemctl enable omniroute
+systemctl restart omniroute
+
+INFERENCE_APPLIED=0
+if /opt/apply-inference-from-env.sh; then
+  INFERENCE_APPLIED=1
+  echo "Serverless Inference pre-configured from droplet environment."
+elif ! grep -q 'setup_wizard.sh' /root/.bashrc 2>/dev/null; then
+  cat >> /root/.bashrc <<'EOM'
+
+chmod +x /etc/setup_wizard.sh
+/etc/setup_wizard.sh
+EOM
+
+  # Startup scripts may write MODEL_ACCESS_KEY after this script; retry after cloud-init.
+  systemctl daemon-reload
+  systemctl enable omniroute-apply-inference.service
+  systemctl start omniroute-apply-inference.service || true
+fi
+
+PASSWORD="$(grep -E '^INITIAL_PASSWORD=' "$ENV_FILE" | tail -n 1 | cut -d= -f2-)"
+
+cat > "$INFO_FILE" << EOF
+================================================================================
+OmniRoute 1-Click Droplet - Getting Started
+================================================================================
+
+OmniRoute is a self-hosted AI gateway with a dashboard and OpenAI-compatible API.
+It runs behind Caddy with shortlived TLS on your droplet IP.
+
+ACCESS:
+  Dashboard:  https://${DROPLET_IP}
+  API:        https://${DROPLET_IP}/v1
+  Password:   ${PASSWORD}
+
+  Sign in with the password above (also in /opt/omniroute/.env as INITIAL_PASSWORD).
+  Create an Endpoint API key in the dashboard to call /v1 from clients.
+
+LLM / SERVERLESS INFERENCE:
+EOF
+
+if [ "$INFERENCE_APPLIED" = "1" ]; then
+  cat >> "$INFO_FILE" << 'EOF'
+  DigitalOcean Serverless Inference was auto-configured from MODEL_ACCESS_KEY.
+  Confirm models under Providers in the web UI.
+EOF
+else
+  cat >> "$INFO_FILE" << 'EOF'
+  On first SSH login, the setup wizard can configure DigitalOcean Serverless Inference.
+  Or set MODEL_ACCESS_KEY / INFERENCE_MODEL / DO_INFERENCE_ROUTER as droplet env vars and recreate,
+  or run: sudo /etc/setup_wizard.sh
+  Or add any provider in the OmniRoute dashboard.
+EOF
+fi
+
+cat >> "$INFO_FILE" << 'EOF'
+
+MANAGEMENT:
+  Start:     /opt/start-omniroute.sh   (or systemctl start omniroute)
+  Stop:      /opt/stop-omniroute.sh
+  Restart:   /opt/restart-omniroute.sh
+  Status:    /opt/status-omniroute.sh
+  Update:    /opt/update-omniroute.sh
+  Domain TLS:/opt/setup-omniroute-domain.sh
+  Logs:      /opt/omniroute/run.sh logs
+  Doctor:    curl -fsS http://127.0.0.1:20128/api/health
+  Re-apply:  /opt/apply-inference-from-env.sh
+  Setup:     /etc/setup_wizard.sh --force
+
+PATHS:
+  Stack:     /opt/omniroute
+  Env:       /opt/omniroute/.env  (symlink: /opt/omniroute.env)
+  Info:      /root/omniroute_info.txt
+
+SECURITY:
+  Port 20128 is bound to localhost; only HTTPS (80/443 via Caddy) is public.
+  Keep INITIAL_PASSWORD, JWT_SECRET, API_KEY_SECRET, and REDIS_PASSWORD private.
+  Prefer a DigitalOcean Cloud Firewall restricting SSH (and optionally HTTP) to your IP.
+
+DOCS:
+  https://github.com/diegosouzapw/OmniRoute
+  https://omniroute.online
+
+================================================================================
+EOF
+chmod 600 "$INFO_FILE"
+
+systemctl restart ssh
+
+echo "OmniRoute first-boot initialization complete!"
+echo "Access info saved to ${INFO_FILE}"
