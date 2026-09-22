@@ -1,8 +1,17 @@
 #!/bin/bash
 #
-# Remote desktop for Omarchy 4.x: SDDM autologin into the omarchy session,
-# wayvnc + noVNC, both localhost-only (access via SSH tunnel).
+# Remote desktop for Omarchy 4.x: SDDM autologin into the omarchy session plus
+# hypr-rdp, a native RDP server for Hyprland, listening on the droplet's public
+# IP. RDP carries its own TLS and authentication, so unlike the previous
+# noVNC/wayvnc stack there is no reverse proxy in front of it and no tunnel to
+# set up: any RDP client connects straight to <droplet-ip>:3389.
 set -euo pipefail
+
+HYPR_RDP_VERSION="0.1.6"
+# Pinned by digest as well as version: this binary terminates TLS on a public
+# port, so a silently replaced release asset is worth more here than the
+# convenience of skipping the check. Recompute with sha256sum when bumping.
+HYPR_RDP_SHA256="f6f52a4683c6a6aae7543a13dbe445e7494e4e77a0e2e794a644740827ed304a"
 
 echo "==> SDDM autologin (stock 4.x waits at the greeter; a droplet has no keyboard)"
 sudo tee /etc/sddm.conf.d/20-autologin.conf >/dev/null <<'EOF'
@@ -11,52 +20,64 @@ User=arch
 Session=omarchy
 EOF
 
-echo "==> Installing wayvnc + websockify + noVNC"
-# websockify lives in a SYSTEM venv and noVNC under /usr/share: service
-# dependencies do not belong in a user home (pipx venvs hard-code absolute
-# home paths and break if the home ever moves or the user changes).
-sudo pacman -S --noconfirm --needed wayvnc python git pwgen 2>&1 | tail -1
-sudo python3 -m venv /opt/websockify
-sudo /opt/websockify/bin/pip -q install websockify
-sudo git clone --depth 1 https://github.com/novnc/noVNC /usr/share/novnc
-sudo rm -rf /usr/share/novnc/.git
+echo "==> Installing hypr-rdp ${HYPR_RDP_VERSION} runtime dependencies"
+# The upstream release ships a bare binary, so the shared libraries the AUR
+# package would have pulled in have to be named here. pipewire is listed even
+# though Omarchy already ships it: it is what carries audio to the client, and
+# naming it means a future base image that drops it fails the build instead of
+# silently shipping a desktop with no sound. pwgen and openssl are for the
+# per-instance onboot script (random account password, per-droplet cert).
+sudo pacman -S --noconfirm --needed \
+  fuse3 libpulse libva libxkbcommon mesa pipewire pipewire-pulse \
+  pwgen openssl 2>&1 | tail -1
 
-echo "==> wayvnc autostarts with the session (4.x lua config API)"
-grep -q wayvnc ~/.config/hypr/autostart.lua ||
-  echo 'o.launch_on_start("wayvnc 127.0.0.1 5900")' >> ~/.config/hypr/autostart.lua
+echo "==> Installing hypr-rdp ${HYPR_RDP_VERSION}"
+# Pinned release binary rather than the AUR package: the AUR builds this Rust
+# project from source (minutes of build-droplet time) and always tracks the
+# newest version, which would make image contents depend on build date. Bump
+# HYPR_RDP_VERSION to move. The tarball is flat, hence the temporary directory.
+curl -fsSL "https://github.com/MuNeNICK/hypr-rdp/releases/download/v${HYPR_RDP_VERSION}/hypr-rdp-v${HYPR_RDP_VERSION}-x86_64-linux.tar.gz" \
+  -o /tmp/hypr-rdp.tgz
+echo "${HYPR_RDP_SHA256}  /tmp/hypr-rdp.tgz" | sha256sum -c -
+rm -rf /tmp/hypr-rdp-unpack && mkdir -p /tmp/hypr-rdp-unpack
+tar xzf /tmp/hypr-rdp.tgz -C /tmp/hypr-rdp-unpack
+sudo install -m 755 /tmp/hypr-rdp-unpack/hypr-rdp /usr/local/bin/hypr-rdp
+rm -rf /tmp/hypr-rdp.tgz /tmp/hypr-rdp-unpack
+/usr/local/bin/hypr-rdp --version
+
+echo "==> hypr-rdp config directory (the certificate is written on first boot)"
+# Root-owned, group arch. hypr-rdp runs inside the arch user's graphical session
+# and only ever reads what is in here, so it does not need write access to its
+# own TLS key or to the options file its launcher sources.
+sudo install -d -m 750 -o root -g arch /etc/hypr-rdp
+sudo install -m 644 -o root -g arch /tmp/build-files/etc/hypr-rdp/options /etc/hypr-rdp/options
+
+echo "==> Installing the hypr-rdp user service"
+# A systemd *user* service, not a Hyprland autostart entry: Omarchy 4.x starts
+# the session through uwsm, so the user manager has WAYLAND_DISPLAY and
+# HYPRLAND_INSTANCE_SIGNATURE in its environment and can bind the server's
+# lifetime to graphical-session.target. Autostart lines get neither ordering
+# nor a restart policy.
+sudo install -m 644 /tmp/build-files/etc/systemd/user/hypr-rdp.service /etc/systemd/user/
+# --global enables it for every user without needing a live user manager during
+# the build (packer's ssh session has no graphical session of its own).
+sudo systemctl --global enable hypr-rdp.service
 
 echo "==> Installing systemd units"
-sudo cp /tmp/build-files/etc/systemd/system/novnc.service /etc/systemd/system/
 sudo cp /tmp/build-files/etc/systemd/system/ensure-ssh-firewall.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable novnc.service ensure-ssh-firewall.service
+sudo systemctl enable ensure-ssh-firewall.service
 
 echo "==> Enabling MOTD on login"
 sudo cp /tmp/build-files/etc/ssh/sshd_config.d/10-omarchy-motd.conf /etc/ssh/sshd_config.d/
 
-echo "==> Public HTTPS access: Caddy (LE short-lived IP cert) + setup assistant"
-sudo pacman -S --noconfirm --needed caddy 2>&1 | tail -1
-# The caddy package ships tmpfiles.d for /var/log/caddy, but that runs from a
-# pacman hook; create it here so the build cannot fail on hook ordering.
-# The access log must exist before Caddy's first write so fail2ban's
-# caddy-auth jail has a file to watch from the moment it starts.
-sudo install -d -m 750 -o caddy -g caddy /var/log/caddy
-sudo touch /var/log/caddy/access.log
-sudo chown caddy:caddy /var/log/caddy/access.log
-sudo chmod 640 /var/log/caddy/access.log
-sudo mkdir -p /etc/caddy /usr/share/omarchy-droplet/setup-pending
-sudo cp /tmp/build-files/etc/caddy/Caddyfile.setup-pending /etc/caddy/
-sudo cp /tmp/build-files/etc/caddy/Caddyfile.live /etc/caddy/
-sudo chmod 640 /etc/caddy/Caddyfile.setup-pending /etc/caddy/Caddyfile.live
-sudo chown root:caddy /etc/caddy/Caddyfile.setup-pending /etc/caddy/Caddyfile.live
-sudo cp /tmp/build-files/usr/share/omarchy-droplet/setup-pending/index.html /usr/share/omarchy-droplet/setup-pending/
+echo "==> Installing the setup assistant + first-login hook"
 sudo install -m 755 /tmp/build-files/usr/local/bin/omarchy-droplet-setup /usr/local/bin/
-sudo install -m 755 /tmp/build-files/usr/local/bin/omarchy-vnc-password /usr/local/bin/
+sudo install -m 755 /tmp/build-files/usr/local/bin/omarchy-rdp-server /usr/local/bin/
+sudo install -m 755 /tmp/build-files/usr/local/bin/omarchy-rdp-password /usr/local/bin/
 sudo install -m 644 /tmp/build-files/etc/profile.d/omarchy-first-setup.sh /etc/profile.d/
-# no cert attempts at build time: the droplet IP does not exist yet
-sudo systemctl disable --now caddy 2>/dev/null || true
 
-echo "==> Installing per-instance onboot script (unique password + MOTD per droplet)"
+echo "==> Installing per-instance onboot script (unique password + cert + MOTD per droplet)"
 sudo mkdir -p /var/lib/cloud/scripts/per-instance
 sudo cp /tmp/build-files/var/lib/cloud/scripts/per-instance/001_onboot /var/lib/cloud/scripts/per-instance/001_onboot
 sudo chown root:root /var/lib/cloud/scripts/per-instance/001_onboot

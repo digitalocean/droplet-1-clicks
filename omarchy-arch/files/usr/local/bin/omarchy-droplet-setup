@@ -1,60 +1,143 @@
 #!/bin/bash
 #
-# First-run setup for the Omarchy droplet: choose the password that unlocks
-# both the desktop lock screen (user account) and the https:// remote desktop
-# (Caddy basic_auth). Only hashes are stored: sha512 in /etc/shadow, bcrypt in
-# the Caddyfile. Re-run any time to change the password.
+# Sets the password for the Omarchy droplet: the desktop lock screen (the arch
+# account) and the remote desktop over RDP, which are kept as one password.
+# Also the reset path: re-run it any time to choose a new one.
 #
-# Usage: omarchy-droplet-setup [--password <pass>]   (interactive if omitted)
+# Where the password ends up, and why it is split:
+#
+#   /etc/shadow          yescrypt hash, persistent. The only thing written to disk.
+#   /run/hypr-rdp/...    plaintext, tmpfs, RAM only. Never reaches the disk, so
+#                        it cannot turn up in a snapshot, an image or a backup,
+#                        and a reboot destroys it.
+#
+# RDP forces that split. Its network level authentication negotiates NTLM, where
+# the server has to hold the password itself to compute the challenge response,
+# so it cannot verify against /etc/shadow: the yescrypt hash there is one-way
+# and cannot produce the NT hash NTLM needs. Some recoverable copy must therefore
+# exist while the server is running. Keeping that copy in tmpfs is what stops it
+# from being *stored*, at the cost of re-arming after a reboot, which is a
+# deliberate trade: a rebooted droplet serves nothing on 3389 until a human
+# comes back over SSH.
+#
+# Usage:
+#   omarchy-droplet-setup                     # prompts
+#   omarchy-droplet-setup --password-stdin    # reads the password from stdin
+#   omarchy-droplet-setup --password <pass>   # convenient, but see below
+#
+# Prefer --password-stdin in scripts. This script re-execs itself through sudo,
+# and sudo logs the command line it was given, so --password puts the secret in
+# the journal.
 set -euo pipefail
 
 MARKER=/var/lib/digitalocean/omarchy_setup_complete
-LIVE_TEMPLATE=/etc/caddy/Caddyfile.live
-ACTIVE=/etc/caddy/Caddyfile
+CONF_DIR=/etc/hypr-rdp
+RUN_DIR=/run/hypr-rdp
+PASSWORD_FILE="$RUN_DIR/password"
+DESKTOP_USER=arch
 
 if (( EUID != 0 )); then
   exec sudo "$0" "$@"
 fi
 
+# Check every precondition BEFORE touching anything. Writing the password first
+# and failing afterwards used to leave the worst possible state: the account
+# password silently changed, a password file present (so the service's
+# ConditionPathExists passed and it restart-looped against the missing
+# certificate), and no completion marker, so this ran again at the next login.
+for f in "$CONF_DIR/tls.crt" "$CONF_DIR/tls.key"; do
+  [[ -s $f ]] || {
+    echo "Error: $f is missing or empty (first boot may not have finished)." >&2
+    echo "       Nothing has been changed. Retry once cloud-init has run." >&2
+    exit 1
+  }
+done
+
+FIRST_RUN=true
+[[ -f $MARKER ]] && FIRST_RUN=false
+
 PASSWORD=""
-if [[ ${1:-} == "--password" ]]; then
-  PASSWORD="${2:?--password needs a value}"
-  [[ ${#PASSWORD} -ge 8 ]] || { echo "Error: use at least 8 characters." >&2; exit 1; }
-else
-  echo
-  echo "  Omarchy droplet setup"
-  echo "  Choose a password for the desktop and https access (user: omarchy)."
-  echo
-  while true; do
-    read -rsp "  Password: " PASSWORD; echo
-    read -rsp "  Confirm:  " CONFIRM; echo
-    [[ ${#PASSWORD} -ge 8 ]] || { echo "  Use at least 8 characters."; continue; }
-    [[ $PASSWORD == "$CONFIRM" ]] || { echo "  Passwords do not match, try again."; continue; }
-    break
-  done
-fi
+case "${1:-}" in
+  --password)
+    PASSWORD="${2:?--password needs a value}"
+    ;;
+  --password-stdin)
+    IFS= read -r PASSWORD || true
+    ;;
+  "")
+    echo
+    if $FIRST_RUN; then
+      echo "  Omarchy droplet setup"
+      echo "  Choose a password for the desktop and remote access (user: omarchy)."
+    else
+      echo "  Omarchy remote desktop is locked after a reboot."
+      echo "  Re-enter your password to start it again (user: omarchy)."
+    fi
+    echo
+    while true; do
+      read -rsp "  Password: " PASSWORD; echo
+      read -rsp "  Confirm:  " CONFIRM; echo
+      [[ ${#PASSWORD} -ge 8 ]] || { echo "  Use at least 8 characters."; continue; }
+      [[ $PASSWORD == "$CONFIRM" ]] || { echo "  Passwords do not match, try again."; continue; }
+      break
+    done
+    ;;
+  *)
+    echo "Usage: omarchy-droplet-setup [--password <pass> | --password-stdin]" >&2
+    exit 2
+    ;;
+esac
+[[ ${#PASSWORD} -ge 8 ]] || { echo "Error: use at least 8 characters." >&2; exit 1; }
 
-# 1. account password (lock screen), stored as a hash in /etc/shadow
-echo "arch:${PASSWORD}" | chpasswd
+# 1. account password (lock screen, sudo), hashed into /etc/shadow. Re-running
+# with a different password changes both, on purpose: there is one password.
+echo "${DESKTOP_USER}:${PASSWORD}" | chpasswd
 
-# 2. https basic_auth, stored as a bcrypt hash in the Caddyfile
-HASH=$(caddy hash-password --plaintext "$PASSWORD")
-if [[ ! -f $LIVE_TEMPLATE ]]; then
-  echo "Error: $LIVE_TEMPLATE missing (first boot may not have finished)." >&2
-  exit 1
-fi
-sed "s|PLACEHOLDER_HASH|${HASH}|" "$LIVE_TEMPLATE" > "$ACTIVE"
-chmod 640 "$ACTIVE"
-chown root:caddy "$ACTIVE" 2>/dev/null || chmod 600 "$ACTIVE"
-systemctl enable caddy >/dev/null 2>&1 || true
-systemctl reload-or-restart caddy
+# 2. RDP password into tmpfs. Created with its final permissions before any
+# content is written, so the secret is never briefly world-readable. Root-owned
+# and group-readable: hypr-rdp runs as arch and only ever reads it, and should
+# not be able to rewrite its own credentials.
+install -d -m 750 -o root -g "$DESKTOP_USER" "$RUN_DIR"
+install -m 640 -o root -g "$DESKTOP_USER" /dev/null "$PASSWORD_FILE"
+printf '%s\n' "$PASSWORD" > "$PASSWORD_FILE"
 
 mkdir -p "$(dirname "$MARKER")"
 touch "$MARKER"
 
 IP=$(curl -fsS --max-time 3 http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || hostname -I | awk '{print $1}')
+
+# 3. (re)start the server. It is a *user* service belonging to the desktop
+# session, so it has to be addressed through that user's systemd manager rather
+# than the system one we are running under.
+UID_DESKTOP=$(id -u "$DESKTOP_USER")
+RUNTIME_DIR="/run/user/${UID_DESKTOP}"
+if [[ ! -S ${RUNTIME_DIR}/bus ]]; then
+  # No user manager at all, so this is the pre-session case rather than a
+  # failure: the unit is enabled and will start with the desktop.
+  echo
+  echo "  Password set. The desktop session has not started yet; the remote"
+  echo "  desktop will come up with it."
+elif ! ERR=$(sudo -u "$DESKTOP_USER" XDG_RUNTIME_DIR="$RUNTIME_DIR" \
+             systemctl --user restart hypr-rdp.service 2>&1); then
+  # A real failure. Saying "the session is not up yet" here, as this script
+  # once did, tells the user the opposite of the truth.
+  echo "Error: the password was set but the remote desktop failed to start." >&2
+  [[ -n $ERR ]] && echo "  ${ERR}" >&2
+  sudo -u "$DESKTOP_USER" XDG_RUNTIME_DIR="$RUNTIME_DIR" \
+    systemctl --user status --no-pager --lines 20 hypr-rdp.service >&2 2>/dev/null || true
+  exit 1
+fi
+
 echo
-echo "  Done. Your desktop:  https://${IP}"
-echo "  Sign in as:          omarchy"
-echo "  Change it any time:  omarchy-vnc-password"
+echo "  Done. Connect any RDP client to:  ${IP}:3389"
+echo "  Sign in as:                       omarchy"
+echo
+echo "  The password is held in memory only, never written to disk, so a"
+echo "  reboot switches the remote desktop off. Run omarchy-rdp-password"
+echo "  over SSH to turn it back on, or to choose a new password."
+if $FIRST_RUN; then
+  echo
+  echo "  The certificate is self-signed and generated on this droplet, so your"
+  echo "  client will ask you to trust it the first time."
+fi
 echo

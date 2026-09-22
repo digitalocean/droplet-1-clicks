@@ -1,10 +1,15 @@
 {
+  "_comment": "Standard build by default. For the GPU variant (NVIDIA drivers + Ollama with models baked in) add -var-file=omarchy-arch/gpu.vars.json, which flips gpu_available and moves the build to a GPU droplet. See readme.md, 'Optional GPU image'.",
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "omarchy-arch-snapshot-{{timestamp}}",
     "base_image_id": "245452059",
     "application_name": "Omarchy",
-    "application_version": "4.0.4"
+    "application_version": "4.0.4",
+    "gpu_available": "false",
+    "region": "nyc3",
+    "size": "s-2vcpu-4gb",
+    "ollama_models": "qwen3.8:27b-mtp-q8_0 qwen3.8-flash-next:125b-a6b-q4_K_M gemma4:31b-it-q8_0 qwen3.8:27b-bf16"
   },
   "sensitive-variables": [
     "do_api_token"
@@ -14,8 +19,8 @@
       "type": "digitalocean",
       "api_token": "{{user `do_api_token`}}",
       "image": "{{user `base_image_id`}}",
-      "region": "nyc3",
-      "size": "s-2vcpu-4gb",
+      "region": "{{user `region`}}",
+      "size": "{{user `size`}}",
       "ssh_username": "arch",
       "snapshot_name": "{{user `image_name`}}"
     }
@@ -37,7 +42,9 @@
       "type": "shell",
       "environment_vars": [
         "application_name={{user `application_name`}}",
-        "application_version={{user `application_version`}}"
+        "application_version={{user `application_version`}}",
+        "gpu_available={{user `gpu_available`}}",
+        "ollama_models={{user `ollama_models`}}"
       ],
       "scripts": [
         "omarchy-arch/scripts/020-remote-desktop.sh",
@@ -47,6 +54,8 @@
         "omarchy-arch/scripts/036-droplet-agent.sh",
         "omarchy-arch/scripts/040-application-tag.sh",
         "omarchy-arch/scripts/045-omarchy-update.sh",
+        "omarchy-arch/scripts/optional/050-nvidia.sh",
+        "omarchy-arch/scripts/optional/060-ollama.sh",
         "omarchy-arch/scripts/900-cleanup.sh"
       ]
     }

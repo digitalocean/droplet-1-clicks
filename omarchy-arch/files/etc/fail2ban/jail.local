@@ -13,13 +13,18 @@ enabled = true
 # Arch has no auth.log; read sshd from the systemd journal
 backend = systemd
 
-[caddy-auth]
+[rdp-limit]
 enabled = true
-filter  = caddy-auth
-logpath = /var/log/caddy/access.log
-# Same threshold as sshd: 5 failed desktop-password attempts in 10m -> 1h ban
-maxretry = 5
-# Caddy serves HTTP/3, so a tcp-only ban leaves brute-force over QUIC on
-# udp/443 working. Ban both. Separate names keep one chain per protocol.
-action = iptables-multiport[name=caddy-auth, port="http,https", protocol=tcp]
-         iptables-multiport[name=caddy-auth-h3, port="https", protocol=udp]
+filter  = ufw-limit
+# The hits come from the kernel's ufw log lines, not a file on disk.
+backend = systemd
+journalmatch = _TRANSPORT=kernel
+# Deliberately not the sshd threshold of 5-failures-means-guessing. ufw has
+# already dropped this source's excess connections by the time a line is
+# logged, and the kernel throttles that logging to 3 lines a minute, so 10 hits
+# is roughly four minutes of someone still hammering the port. A user whose
+# client reconnects a few times in a burst trips ufw briefly and is never
+# banned; only sustained attempts reach this jail.
+maxretry = 10
+findtime = 30m
+action = iptables-multiport[name=rdp, port="3389", protocol=tcp]

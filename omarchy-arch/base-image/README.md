@@ -2,7 +2,7 @@
 
 The Packer builder in the parent directory starts from a **base custom image**:
 a stock Omarchy 4.x ISO autoinstall with only the changes a droplet needs
-before Packer can reach it. Everything user-visible (VNC stack, fail2ban,
+before Packer can reach it. Everything user-visible (remote desktop, fail2ban,
 tuning, onboot) lives in the Packer provisioners, not here.
 
 ## Why a VM pipeline at all

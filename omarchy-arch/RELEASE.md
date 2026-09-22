@@ -109,15 +109,46 @@ bar (all must pass on a fresh droplet, ~2 min after creation):
 ```bash
 doctl compute droplet create omarchy-validate --region nyc3 \
   --size s-4vcpu-8gb --image <snapshot-id> --ssh-keys <your-key-id> --wait
-ssh omarchy@<ip> '
-  pacman -Q omarchy; pgrep Hyprland && pgrep wayvnc
-  systemctl is-active novnc fail2ban do-agent
+ssh arch@<ip> '
+  pacman -Q omarchy; pgrep Hyprland
+  systemctl is-active fail2ban do-agent
   systemctl --failed --no-legend | wc -l          # expect 0
+  systemctl --user --failed --no-legend | wc -l   # expect 0 (hypr-rdp is a USER unit)
   grep -c passwd /etc/motd                        # expect 1, and NO password in it
   sudo ufw status | grep -c "^22"                 # expect >=1
+  sudo ufw status | grep "3389"                   # expect LIMIT, not ALLOW
+  test -s /etc/hypr-rdp/tls.crt && echo cert-ok   # generated at first boot
+  ss -ltn | grep -c 3389                          # expect 0 BEFORE setup runs
+  test -e /run/hypr-rdp/password && echo BAD      # must NOT exist yet
+  sudo fail2ban-client status rdp-limit >/dev/null && echo jail-ok
   echo $OMARCHY_PATH                              # expect /usr/share/omarchy
   omarchy-update -y                               # must complete unattended
 '
+```
+
+The SSH user is `arch`, matching `ssh_username` in the template.
+
+Then arm the desktop and confirm it actually serves, which the checks above
+deliberately cannot cover (nothing listens until a password exists). Use
+`--password-stdin`: the assistant re-execs through sudo, and sudo logs the
+command line, so `--password` would put the secret in the journal.
+
+```bash
+ssh arch@<ip> 'printf %s "<8+ chars>" | sudo omarchy-droplet-setup --password-stdin'
+ssh arch@<ip> 'ss -ltn | grep 3389'   # now expect a listener
+```
+
+Connect a real RDP client to `<ip>:3389` as user `omarchy`: accept the
+self-signed certificate, confirm the desktop appears at your client's own
+resolution, and check that audio reaches your machine.
+
+Finally, verify the password really is not persisted, which is the property the
+whole credential design rests on:
+
+```bash
+ssh arch@<ip> 'sudo reboot' ; sleep 60
+ssh arch@<ip> 'ss -ltn | grep -c 3389'   # expect 0: the secret died with the RAM
+ssh arch@<ip> 'sudo grep -rl "<the password>" /etc /var 2>/dev/null | head'  # expect nothing
 ```
 
 Also confirm the snapshot size is in the ~6-7 GiB range (a 70+ GiB snapshot

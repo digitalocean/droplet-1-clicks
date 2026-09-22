@@ -4,7 +4,7 @@
 #   1. BIOS boot path (DO custom images boot with BIOS; the ISO installs UEFI-only)
 #   2. cloud-init with the DigitalOcean datasource (SSH key injection)
 #   3. passwordless sudo (Packer provisioners depend on it)
-# Everything else (VNC, fail2ban, tuning, onboot) is installed by the
+# Everything else (remote desktop, fail2ban, tuning, onboot) is installed by the
 # omarchy-arch Packer builder. Run as arch; bootstrap NOPASSWD sudo first.
 set -euo pipefail
 

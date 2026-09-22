@@ -11,41 +11,60 @@ echo "arch:$(pwgen -s 24 1)" | chpasswd
 passwd -l root >/dev/null
 
 # Droplet IP via metadata, with retry (network may still be settling) and a
-# private-IP fallback so a broken metadata call cannot leave PLACEHOLDERs.
+# private-IP fallback so a broken metadata call cannot leave the MOTD blank.
 meta() { curl -fsS --retry 10 --retry-connrefused --max-time 2 "$1"; }
 DROPLET_PUBLIC_IP="$(meta http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)"
 DROPLET_PRIVATE_IP="$(hostname -I | awk '{print $1}')"
 DROPLET_IP="${DROPLET_PUBLIC_IP:-$DROPLET_PRIVATE_IP}"
 
-# Render both Caddy configs with this droplet's IP (templates preserved for
-# re-renders). Until the setup assistant runs, serve the setup-pending page.
-for f in /etc/caddy/Caddyfile.setup-pending /etc/caddy/Caddyfile.live; do
-  [ -f "$f" ] && sed -i "s/PLACEHOLDER_DOMAIN/${DROPLET_IP}/" "$f"
-done
-if [ ! -f /var/lib/digitalocean/omarchy_setup_complete ]; then
-  cp /etc/caddy/Caddyfile.setup-pending /etc/caddy/Caddyfile
-  chmod 640 /etc/caddy/Caddyfile
-  chown root:caddy /etc/caddy/Caddyfile 2>/dev/null || chmod 600 /etc/caddy/Caddyfile
+# Per-droplet TLS keypair for hypr-rdp. Generated here rather than baked into
+# the image on purpose: a key shipped in the snapshot would be the same key on
+# every droplet created from it, so anyone with the image could decrypt anyone
+# else's session. Self-signed either way, since a public CA will not certify an
+# IP address for RDP; clients prompt once to trust it.
+#
+# Root-owned, group arch: hypr-rdp runs as arch and only reads these.
+install -d -m 750 -o root -g arch /etc/hypr-rdp
+# Both halves are checked. Testing only the certificate would skip regeneration
+# on a droplet that somehow kept the cert but lost the key, leaving a server
+# that can never start and an error that points at the wrong file.
+if [ ! -s /etc/hypr-rdp/tls.crt ] || [ ! -s /etc/hypr-rdp/tls.key ]; then
+  # Errors are left on stderr for cloud-init to capture. Swallowing them meant
+  # a failure here surfaced much later as the setup assistant complaining that
+  # "first boot may not have finished", which is not the same problem.
+  if openssl req -x509 -newkey rsa:2048 -nodes -days 3650 \
+       -keyout /etc/hypr-rdp/tls.key -out /etc/hypr-rdp/tls.crt \
+       -subj "/CN=${DROPLET_IP}" \
+       -addext "subjectAltName=IP:${DROPLET_IP}" >/dev/null; then
+    chown root:arch /etc/hypr-rdp/tls.key /etc/hypr-rdp/tls.crt
+    chmod 640 /etc/hypr-rdp/tls.key
+    chmod 644 /etc/hypr-rdp/tls.crt
+  else
+    echo "ERROR: could not generate the hypr-rdp TLS keypair; the remote desktop will not start" >&2
+  fi
 fi
-# Enable + restart unconditionally: caddy is disabled at build time
-systemctl enable caddy
-systemctl restart caddy
 
 cat > /etc/motd <<EOM
 
  ------------------------------------------------------------------
   Omarchy on DigitalOcean
  ------------------------------------------------------------------
-  Desktop in your browser:  https://${DROPLET_IP}
+  Desktop over RDP:  ${DROPLET_IP}:3389   (user: omarchy)
 
-  First time here? The setup assistant starts on your first login
-  (this console or ssh) and asks you to choose the password.
-  Change it later with:  omarchy-vnc-password
+  Connect with any RDP client: Windows App / Microsoft Remote
+  Desktop on macOS and Windows, Remmina or FreeRDP on Linux.
 
-  Prefer no public endpoint? Disable it and use an SSH tunnel:
-    sudo systemctl disable --now caddy
-    ssh -N -L 6080:localhost:6080 arch@${DROPLET_IP}
-    then open http://localhost:6080/vnc.html
+  The remote desktop is OFF until you set a password, and the
+  password is held in memory only, never written to disk, so every
+  reboot switches it off again. Turn it on from this console or
+  over SSH with:
+      omarchy-rdp-password
+
+  Prefer no public endpoint? Put this in /etc/hypr-rdp/options:
+      BIND="127.0.0.1:3389"
+  then 'systemctl --user restart hypr-rdp', drop the firewall rule
+  with 'sudo ufw delete limit 3389/tcp', and tunnel instead:
+      ssh -N -L 3389:localhost:3389 arch@${DROPLET_IP}
 
   Desktop basics:  Super+K or Alt+K = shortcut cheatsheet
   Update Omarchy and system packages:  omarchy-update -y

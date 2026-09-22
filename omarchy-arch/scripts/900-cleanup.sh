@@ -19,6 +19,21 @@ sudo rm -rf /var/log/journal/*
 # from the snapshot, and shredding covers any extent TRIM might skip
 sudo shred --remove /etc/ssh/ssh_host_*key 2>/dev/null
 sudo rm -f /etc/ssh/ssh_host_*key*
+# Same reasoning for the remote desktop's TLS keypair. A normal build never
+# creates it (001_onboot does, at first boot), but anyone who ran that script
+# while debugging on the build droplet would otherwise ship one shared private
+# key to every droplet created from the snapshot.
+sudo shred --remove /etc/hypr-rdp/tls.key 2>/dev/null
+sudo rm -f /etc/hypr-rdp/tls.key /etc/hypr-rdp/tls.crt
+# The RDP password lives in tmpfs and so cannot reach the image, but hypr-rdp
+# also reads ~/.config/hypr-rdp/config.toml, which accepts a plaintext
+# `password` key. That one IS on disk, so anyone who hand-tested with a config
+# file would bake their password into the snapshot.
+rm -f ~/.config/hypr-rdp/config.toml
+sudo rm -rf /run/hypr-rdp
+# Clearing the marker puts the setup assistant back in front of the customer's
+# first login.
+sudo rm -f /var/lib/digitalocean/omarchy_setup_complete
 # NOT `cloud-init clean`: it would wipe all of /var/lib/cloud, including the
 # baked-in per-instance onboot script.
 sudo rm -rf /var/lib/cloud/instances/* /var/lib/cloud/instance /var/lib/cloud/data/*
