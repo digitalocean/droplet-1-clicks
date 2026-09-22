@@ -1,0 +1,16 @@
+[Unit]
+Description=Vyogo vybench Droplet First Boot Initialization
+After=network-online.target snapd.service snap.vybench.mariadb.service
+Wants=network-online.target
+ConditionPathExists=!/opt/vybench/.first_boot_done
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+TimeoutStartSec=infinity
+ExecStart=/opt/vybench/first_boot.sh
+StandardOutput=journal+console
+StandardError=journal+console
+
+[Install]
+WantedBy=multi-user.target
