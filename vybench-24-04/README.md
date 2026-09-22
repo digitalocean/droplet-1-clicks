@@ -10,7 +10,8 @@ This repository builds an official Ubuntu 24.04 LTS DigitalOcean Droplet snapsho
 
 Key architectural features:
 * **All-in-One Supervised Stack**: The `vybench` snap packages MariaDB 10.11+, Redis 7, Nginx, Python 3.14, Node.js 24, Yarn, wkhtmltopdf, and ERPNext as monitored daemons. No separate system-level service installations.
-* **Stable Channel Enforcement**: The build installs exclusively from `--channel=stable` to ensure production reliability.
+* **Stable Channel Enforcement**: The build installs exclusively from `--channel=stable` to ensure production reliability and automatic security/bug-fix updates via `snap refresh`.
+* **Optional Block Storage for persistent data**: `vybench-volume.service` runs before the database starts. If a DigitalOcean Block Storage volume is attached (at creation or later, followed by a reboot), it moves the database/sites/uploads onto it and bind-mounts it over the snap's data path -- so the Droplet's own disk can be resized/rebuilt without losing data. With no volume attached, everything works exactly as before, on the Droplet's local disk.
 * **Instant App Additions via FPM**: Frappe apps are installed pre-compiled via `vybench.fpm` without compilation or memory spikes.
 * **Automated First-Boot Provisioning**: A lightweight systemd oneshot service (`vybench-first-boot.service`) initializes the primary site at first boot, secures MariaDB root credentials, and writes administrative access details to `/root/.vybench_credentials`.
 * **Out-of-the-Box Hardening**: UFW firewall restricts traffic to ports 22, 80, and 443; Fail2ban protects SSH; sensitive tokens and keys are sanitized before snapshot creation.
@@ -28,14 +29,16 @@ vybench-24-04/
 ├── listing.md                         # Paste-ready Vendor Portal copy
 ├── template.json                      # Packer template
 ├── scripts/
-│   └── 010-vybench.sh                 # snap install (stable), firewall, services
+│   └── 010-vybench.sh                 # snap install (stable), firewall, services, volume ordering
 └── files/
     ├── etc/systemd/system/
-    │   └── vybench-first-boot.service
+    │   ├── vybench-first-boot.service
+    │   └── vybench-volume.service     # Binds a Block Storage volume, if attached, before mariadb starts
     ├── etc/update-motd.d/
-    │   └── 99-one-click               # Login banner
+    │   └── 99-one-click               # Login banner (shows persistent-storage status)
     └── opt/vybench/
-        └── first_boot.sh              # Creates the first ERPNext site
+        ├── first_boot.sh              # Creates the first ERPNext site
+        └── mount_volume.sh            # Detects/formats/bind-mounts an attached Block Storage volume
 ```
 
 Shared Marketplace cleanup lives in `common/scripts/` (`900-cleanup.sh`, image check) and is wired from `template.json`.
@@ -103,13 +106,15 @@ To test your new snapshot before submitting to the portal:
    * [ ] `ufw status verbose` shows only ports 22, 80, and 443 allowed.
    * [ ] ERPNext web login page is accessible at `http://<droplet-ip>`.
    * [ ] Logging in as `Administrator` with the generated password succeeds.
+   * [ ] (Optional) Attach a Block Storage volume before creating the Droplet: after boot, `mount | grep vybench/common` shows a bind mount, and `/var/snap/vybench/common/.vybench-on-volume` exists.
+   * [ ] `snap refresh vybench` and `snap revert vybench` both complete cleanly and the site keeps serving HTTP 200 throughout.
 
 ---
 
 ## Maintenance & Updates
 
 When publishing an updated version:
-1. Confirm `snap info vybench` shows the stable revision you want baked in (revision 36 is `16.0.0`).
+1. Confirm `snap info vybench` shows the stable revision you want baked in.
 2. From the repo root, run `make build-vybench-24-04` to create a fresh snapshot. The image install does not refresh after bake, so a new snapshot is how new Droplets pick up a newer stable snap.
 3. Submit the new snapshot ID as a new version in the DO Vendor Portal.
 

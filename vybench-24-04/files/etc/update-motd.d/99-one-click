@@ -29,6 +29,14 @@ else
   echo -e "  Monitor with:  journalctl -u vybench-first-boot -f\n"
 fi
 
+if [ -f /var/snap/vybench/common/.vybench-on-volume ]; then
+  echo -e "${GREEN}${BOLD}✓ Persistent storage:${NC} Block Storage volume"
+else
+  echo -e "${CYAN}* Persistent storage:${NC} Droplet disk"
+  echo -e "  Attach a Block Storage volume and reboot to keep the database and sites off the Droplet disk."
+fi
+echo ""
+
 echo -e "${BLUE}${BOLD}Quick Commands:${NC}"
 echo -e "  Terminal UI:       sudo vybench.tui"
 echo -e "  Site CLI:          vybench.bench --help"

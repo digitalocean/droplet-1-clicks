@@ -71,6 +71,29 @@ mkdir -p /var/snap/vybench/common/nginx/{conf.d,logs,tmp}
 chown -R snap_daemon:snap_daemon /var/snap/vybench/common/nginx
 chmod 775 /var/snap/vybench/common/nginx
 
+echo "==> Materialising writable bench for marketplace apps..."
+snap run --shell vybench.bench -c '
+  . /snap/vybench/current/bin/snap-common.sh
+  materialise_bench
+'
+
+echo "==> Installing latest FPM binary..."
+LATEST_FPM_TAG=$(curl -sSL "https://api.github.com/repos/vyogotech/fpm/releases/latest" 2>/dev/null | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' || true)
+if [ -n "$LATEST_FPM_TAG" ]; then
+  mkdir -p /var/snap/vybench/common/bin
+  ARCH=$(uname -m)
+  [ "$ARCH" = "x86_64" ] && ARCH="amd64"
+  [ "$ARCH" = "aarch64" ] && ARCH="arm64"
+  if curl -sSL -f -o /var/snap/vybench/common/bin/fpm "https://github.com/vyogotech/fpm/releases/download/${LATEST_FPM_TAG}/fpm-linux-${ARCH}"; then
+    chown -R snap_daemon:snap_daemon /var/snap/vybench/common/bin 2>/dev/null || true
+    chmod 0755 /var/snap/vybench/common/bin/fpm
+    cp -f /var/snap/vybench/common/bin/fpm /usr/local/bin/fpm || true
+    echo "  Latest FPM (${LATEST_FPM_TAG}) installed to /var/snap/vybench/common/bin/fpm"
+  else
+    echo "  WARNING: Failed to download FPM release ${LATEST_FPM_TAG}, falling back to bundled FPM."
+  fi
+fi
+
 snap set vybench mode=production
 snap set vybench nginx=true
 snap set vybench nginx-port=80
@@ -116,14 +139,39 @@ snap services vybench
 
 # 7. Configure first-boot service and enable user lingering
 echo "==> Setting up first-boot initialization service..."
-chmod 0755 /opt/vybench/first_boot.sh
+chmod 0755 /opt/vybench/first_boot.sh /opt/vybench/mount_volume.sh
 if [ -f /var/lib/cloud/scripts/per-instance/001_onboot ]; then
   chmod 0755 /var/lib/cloud/scripts/per-instance/001_onboot
 fi
 rm -f /opt/vybench/.first_boot_done /root/.vybench_credentials
 
+# Order every snap.vybench.*.service behind vybench-volume.service, so a Block
+# Storage volume (if attached) is bind-mounted onto /var/snap/vybench/common
+# before MariaDB/etc. ever touch it. Strict confinement won't let the mariadb
+# service plug removable-media or follow a symlink to /mnt, so this bind-mount
+# indirection (done once, on boot, before the services start) is how a
+# Block Storage volume's data ends up backing the snap's own data path.
+found=0
+for unit in /etc/systemd/system/snap.vybench.*.service; do
+  [ -e "$unit" ] || continue
+  found=1
+  name=$(basename "$unit")
+  mkdir -p "/etc/systemd/system/${name}.d"
+  cat > "/etc/systemd/system/${name}.d/volume.conf" <<'EOF'
+[Unit]
+After=vybench-volume.service
+Wants=vybench-volume.service
+EOF
+done
+
+if [ "$found" -ne 1 ]; then
+  echo "ERROR: no snap.vybench units found to order behind block storage."
+  exit 1
+fi
+
 systemctl daemon-reload
 systemctl enable vybench-first-boot.service
+systemctl enable vybench-volume.service
 
 # Enable lingering for root so snapd child scopes under user@0.service are never
 # terminated when temporary SSH sessions (e.g. cloud-init, smoke test polling, user logins) disconnect.

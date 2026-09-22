@@ -4,15 +4,6 @@ set -euo pipefail
 SENTINEL="/opt/vybench/.first_boot_done"
 CREDENTIALS_FILE="/root/.vybench_credentials"
 
-# The image build appends a ForceCommand so Packer disconnects. Remove it
-# before anything else so SSH works while site creation is still running.
-if grep -q 'ForceCommand echo "Please wait while we get your droplet ready..."' /etc/ssh/sshd_config; then
-  sed -e '/Match User root/d' \
-      -e '/.*ForceCommand.*droplet.*/d' \
-      -i /etc/ssh/sshd_config
-  systemctl restart ssh 2>/dev/null || systemctl restart sshd 2>/dev/null || true
-fi
-
 if [ -f "$SENTINEL" ]; then
   echo "First boot initialization already completed. Exiting."
   exit 0
@@ -20,6 +11,13 @@ fi
 
 # Ensure user lingering is active so snapd user scopes are not killed by systemd-logind
 loginctl enable-linger root 2>/dev/null || true
+
+# Move data onto an attached Block Storage volume before the site is created.
+# vybench-volume.service normally does this first; this call covers a volume
+# that showed up after that unit ran.
+if [ -x /opt/vybench/mount_volume.sh ]; then
+  /opt/vybench/mount_volume.sh
+fi
 
 echo "======================================================================"
 echo "          Vyogo vybench Droplet - First Boot Initialization          "
@@ -90,6 +88,12 @@ echo "Detected public IP: $DROPLET_IP"
 
 SITE_NAME="$DROPLET_IP"
 
+if [ -f /var/snap/vybench/common/.vybench-on-volume ]; then
+  STORAGE_LINE="Block Storage volume (database, sites, and uploads)"
+else
+  STORAGE_LINE="Droplet disk. Attach a Block Storage volume and reboot to move site data onto it."
+fi
+
 # ── 5. Create initial ERPNext site ──
 echo "Creating primary site ($SITE_NAME) with ERPNext..."
 echo "This may take 2-5 minutes depending on the Droplet size."
@@ -117,9 +121,9 @@ Administrator Password:  ${ADMIN_PASS}
 
 MariaDB Root Password:   ${DB_ROOT_PASS}
 Primary Site Name:       ${SITE_NAME}
+Persistent storage:      ${STORAGE_LINE}
 
 Quick Start:
-- Terminal UI:           sudo vybench.tui
 - Add a domain:          vybench.bench setup add-domain <domain>
 - SSL Setup:             certbot --nginx -d <domain>
 - Install FPM apps:      vybench.fpm install <app-name>
