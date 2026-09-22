@@ -56,6 +56,22 @@ useradd --home-dir /home/ghost-mgr \
         --groups sudo \
         ghost-mgr
 
+# ghost stop/start/restart require the install dir (unlike ghost status/ls).
+# Land interactive ghost-mgr shells in /var/www/ghost so those commands work.
+cat > /home/ghost-mgr/.bashrc <<'EOF'
+# ~/.bashrc: executed by bash(1) for non-login shells.
+case $- in
+    *i*) ;;
+      *) return ;;
+esac
+
+# DigitalOcean Ghost 1-Click: manage Ghost from its install directory
+if [ -d /var/www/ghost ] && [ "$PWD" = "$HOME" ]; then
+    cd /var/www/ghost || true
+fi
+EOF
+chown ghost-mgr:ghost-mgr /home/ghost-mgr/.bashrc
+
 cat > /etc/sudoers.d/99-do-ghost <<EOM
 # Created by DigitalOcean 1-Click for Ghost CLI management.
 ghost-mgr ALL=(ALL) NOPASSWD:ALL
