@@ -110,6 +110,7 @@ MariaDB Root Password:   ${DB_ROOT_PASS}
 Primary Site Name:       ${SITE_NAME}
 
 Quick Start:
+- Terminal UI:           sudo vybench.tui
 - Add a domain:          vybench.bench setup add-domain <domain>
 - SSL Setup:             certbot --nginx -d <domain>
 - Install FPM apps:      vybench.fpm install <app-name>

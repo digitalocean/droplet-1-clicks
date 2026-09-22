@@ -20,32 +20,25 @@ Key architectural features:
 
 ## Directory Structure
 
+This image lives in the [digitalocean/droplet-1-clicks](https://github.com/digitalocean/droplet-1-clicks) layout. Build from the repository root.
+
 ```text
-vybench-droplet/
-├── .gitignore
-├── Makefile                           # Convenience targets (init, validate, build)
-├── README.md                          # Repository and build documentation
-├── VENDOR-PORTAL.md                   # Paste-ready DO Vendor Portal listing copy
-├── packer/
-│   ├── plugins.pkr.hcl               # Packer digitalocean plugin requirements
-│   ├── variables.pkr.hcl             # Variables (region, size, base_image, token)
-│   └── vybench-droplet.pkr.hcl       # Main Packer build template
+vybench-24-04/
+├── README.md
+├── listing.md                         # Paste-ready Vendor Portal copy
+├── template.json                      # Packer template
 ├── scripts/
-│   ├── 01-system-setup.sh            # OS upgrades, UFW firewall, fail2ban
-│   ├── 02-snap-install.sh            # Installs vybench snap (channel=stable)
-│   ├── 03-snap-configure.sh          # Enables production mode & Nginx; asserts service health
-│   ├── 04-first-boot-setup.sh        # Deploys first-boot script & systemd unit
-│   ├── 05-motd-banner.sh             # Installs custom terminal login banner
-│   ├── 90-do-cleanup.sh              # Marketplace sanitization (keys, logs, machine-id)
-│   └── 99-img-check.sh               # Official DO Marketplace validation script
-├── files/
-│   ├── etc/update-motd.d/
-│   │   └── 99-vybench-banner          # Branded login MOTD script
-│   └── opt/vybench/
-│       └── first_boot.sh              # First-boot site creation script
-└── docs/assets/
-    └── icon.png                       # 512x512 PNG icon for DO Vendor Portal
+│   └── 010-vybench.sh                 # snap install (stable), firewall, services
+└── files/
+    ├── etc/systemd/system/
+    │   └── vybench-first-boot.service
+    ├── etc/update-motd.d/
+    │   └── 99-one-click               # Login banner
+    └── opt/vybench/
+        └── first_boot.sh              # Creates the first ERPNext site
 ```
+
+Shared Marketplace cleanup lives in `common/scripts/` (`900-cleanup.sh`, image check) and is wired from `template.json`.
 
 ---
 
@@ -54,48 +47,30 @@ vybench-droplet/
 1. **Packer** (>= 1.8.0):
    ```bash
    brew install hashicorp/tap/packer
-   # Or download binary from https://www.packer.io/downloads
    ```
-2. **DigitalOcean Personal Access Token**:
-   Generate a Read & Write token in your [DigitalOcean API Settings](https://cloud.digitalocean.com/account/api/tokens).
-   Export the token to your environment:
+2. **DigitalOcean Personal Access Token** with read and write access:
    ```bash
-   export DIGITALOCEAN_TOKEN="dop_v1_xxxxxxxxxxxxxxxxxxxxxxxx"
+   export DIGITALOCEAN_API_TOKEN="your-token"
    ```
 
 ---
 
 ## Building the Image
 
-### 1. Initialize Packer Plugins
-Installs the required `digitalocean` Packer plugin:
+From the repository root, with `DIGITALOCEAN_API_TOKEN` set:
+
 ```bash
-make init
-# or: packer init packer/
+make validate-vybench-24-04
+make build-vybench-24-04
 ```
 
-### 2. Validate Configuration
-Checks HCL syntax and configuration validity:
-```bash
-make validate
-# or: packer validate packer/
-```
+That launches an 8 GB Droplet (`s-4vcpu-8gb`) in `sgp1`, installs `vybench` from the stable channel, powers it down, and saves a snapshot named `vybench-24-04-snapshot-<timestamp>`.
 
-### 3. Build the Marketplace Snapshot
-Launches an 8 GB Droplet (`s-4vcpu-8gb`) in `sgp1`, provisions all components, runs validation, powers down, and saves the snapshot:
-```bash
-make build
-# or: packer build packer/
-```
+The same commands directly:
 
-#### Customizing Build Parameters
-You can override default variables on the command line:
 ```bash
-# Build in a different region:
-packer build -var 'region=nyc3' packer/
-
-# Specify custom snapshot name:
-packer build -var 'snapshot_name=vybench-v1-release' packer/
+packer validate vybench-24-04/template.json
+packer build vybench-24-04/template.json
 ```
 
 ---
@@ -104,9 +79,9 @@ packer build -var 'snapshot_name=vybench-v1-release' packer/
 
 1. Log in to the [DigitalOcean Vendor Portal](https://cloud.digitalocean.com/vendorportal).
 2. Create or select your 1-Click Application: **ERPNext, CRM, HRMS & the Frappe App Ecosystem by Vyogo**.
-3. Under **Images / Versions**, select the snapshot created by Packer (e.g. `vybench-droplet-20260921-xxxxxx`).
-4. Copy the listing metadata, tagline, descriptions, and post-install instructions directly from [VENDOR-PORTAL.md](VENDOR-PORTAL.md).
-5. Upload the logo icon located at `docs/assets/icon.png`.
+3. Under **Images / Versions**, select the snapshot created by Packer (`vybench-24-04-snapshot-<timestamp>`).
+4. Copy the listing metadata, tagline, descriptions, and post-install instructions from [listing.md](listing.md).
+5. Upload the 512×512 logo. The listing points at `docs/assets/icon.png` in the vybench-droplet repo (`https://raw.githubusercontent.com/vyogotech/frappe-operator/release/docs/assets/icon.png`).
 6. Submit the version for DigitalOcean Marketplace review.
 
 ---
@@ -122,7 +97,7 @@ To test your new snapshot before submitting to the portal:
    ssh root@<droplet-ip>
    ```
 4. Confirm the following:
-   * [ ] The branded MOTD banner appears with the app URL and quick commands.
+   * [ ] The branded MOTD banner appears with the app URL, `sudo vybench.tui`, and quick commands.
    * [ ] `/root/.vybench_credentials` exists and contains randomized passwords.
    * [ ] `snap services vybench` shows all services (mariadb, redis, web, workers, scheduler, socketio, nginx) as `active`.
    * [ ] `ufw status verbose` shows only ports 22, 80, and 443 allowed.
@@ -134,8 +109,8 @@ To test your new snapshot before submitting to the portal:
 ## Maintenance & Updates
 
 When publishing an updated version:
-1. Update `vybench` snap if needed (`snap refresh vybench --channel=stable`).
-2. Run `make build` to create a fresh snapshot.
+1. Confirm `snap info vybench` shows the stable revision you want baked in (revision 36 is `16.0.0`).
+2. From the repo root, run `make build-vybench-24-04` to create a fresh snapshot. The image install does not refresh after bake, so a new snapshot is how new Droplets pick up a newer stable snap.
 3. Submit the new snapshot ID as a new version in the DO Vendor Portal.
 
 ---

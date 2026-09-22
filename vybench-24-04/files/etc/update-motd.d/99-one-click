@@ -30,6 +30,7 @@ else
 fi
 
 echo -e "${BLUE}${BOLD}Quick Commands:${NC}"
+echo -e "  Terminal UI:       sudo vybench.tui"
 echo -e "  Site CLI:          vybench.bench --help"
 echo -e "  Install Apps:      vybench.fpm install <app-name>  (e.g., hrms, crm)"
 echo -e "  Service Status:    snap services vybench"

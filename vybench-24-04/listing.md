@@ -97,18 +97,21 @@ Frappe Framework and ERPNext are open-source trademarks of Frappe Technologies P
    http://<your-droplet-ip>
    Log in as user 'Administrator' with the generated password.
 
-4. Add a Custom Domain:
+4. Open the terminal UI in the same SSH session:
+   sudo vybench.tui
+
+5. Add a Custom Domain:
    vybench.bench setup add-domain yourdomain.com
    snap restart vybench
 
-5. Enable HTTPS / Let's Encrypt SSL:
+6. Enable HTTPS / Let's Encrypt SSL:
    certbot --nginx -d yourdomain.com
 
-6. Install additional apps from FPM (e.g., HRMS, CRM):
+7. Install additional apps from FPM (e.g., HRMS, CRM):
    vybench.fpm install hrms
    vybench.bench --site <site-name> install-app hrms
 
-7. Manage stack services:
+8. Manage stack services:
    snap services vybench
    snap restart vybench
 ```
