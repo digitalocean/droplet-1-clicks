@@ -76,8 +76,8 @@ cat <<'EOF'
 
 Configure Serverless Inference so OmniRoute uses DigitalOcean as its preferred
 provider. Create a model access key at:
-  https://cloud.digitalocean.com/gen-ai
-  (API Keys > Model Access Keys)
+  https://cloud.digitalocean.com/model-studio/manage-keys
+  (cloud console: Inference > Manage > Create Model Access Key)
 
 You can also skip and add any provider later in the OmniRoute dashboard.
 

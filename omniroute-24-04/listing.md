@@ -58,7 +58,7 @@ Prefer at least 4 GB RAM for the dashboard and light chat.
 ssh root@your-droplet-ip
 ```
 
-If Serverless Inference was not passed at create time, the first-login wizard can configure a DigitalOcean Serverless Inference model access key. After the key, press Enter for the default/live model, enter a model id, or `R` for the Intelligent Inference Router. Create keys at https://cloud.digitalocean.com/gen-ai/model-access-keys.
+If Serverless Inference was not passed at create time, the first-login wizard can configure a DigitalOcean Serverless Inference model access key. After the key, press Enter for the default/live model, enter a model id, or `R` for the Intelligent Inference Router. Create keys at https://cloud.digitalocean.com/model-studio/manage-keys (Inference > Manage > Create Model Access Key).
 
 ### 4. Create an Endpoint API key and call the API
 
