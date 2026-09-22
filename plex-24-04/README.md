@@ -38,7 +38,7 @@ packer build \
 /opt/update-plex.sh
 ```
 
-This fetches the latest versioned tag from Docker Hub, updates `docker-compose.yml`, pulls the image, and restarts the service.
+This fetches the latest Linux version from plex.tv, updates `docker-compose.yml`, pulls the image, and restarts the service.
 
 ## First-time claim
 

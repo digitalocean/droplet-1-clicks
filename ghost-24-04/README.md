@@ -39,7 +39,7 @@ You need [Packer](https://www.packer.io/intro/getting-started/install.html) and 
 
 * `do_api_token` — API token; defaults to `DIGITALOCEAN_API_TOKEN`.
 * `image_name` — Snapshot name; default pattern includes `ghost-24-04-1click-` and a timestamp.
-* `ghost_version` — Ghost npm package version installed on first boot (default matches Ghost 6.x).
+* `application_version` — Ghost npm package version installed on first boot (default matches Ghost 6.x).
 * `ghost_cli_version` — Global `ghost-cli` version.
 * `node_version` — NodeSource stream (e.g. `22.x` for Node 22 LTS).
 
