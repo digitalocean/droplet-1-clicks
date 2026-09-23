@@ -1,4 +1,7 @@
 #!/bin/bash
+set -euo pipefail
+
+application_version="${application_version:?application_version is required}"
 
 # Update package lists and upgrade packages
 sudo apt -qqy update
@@ -13,7 +16,7 @@ sudo useradd -s /sbin/nologin --system -g prometheus prometheus
 sudo mkdir -p /etc/prometheus /var/lib/prometheus
 
 # Download and extract Prometheus
-curl -sSL "https://github.com/prometheus/prometheus/releases/download/v${application_version}/prometheus-${application_version}.linux-amd64.tar.gz" | tar -xz
+curl -fsSL "https://github.com/prometheus/prometheus/releases/download/v${application_version}/prometheus-${application_version}.linux-amd64.tar.gz" | tar -xz
 
 # Move Prometheus binaries to /usr/local/bin
 sudo mv /root/prometheus*/{prometheus,promtool} /usr/local/bin
@@ -27,6 +30,9 @@ sudo chown prometheus:prometheus /usr/local/bin/promtool
 sudo mv /root/prometheus*/prometheus.yml /etc/prometheus
 sudo chown -R prometheus:prometheus /etc/prometheus /var/lib/prometheus
 
+# Remove extracted release directory
+sudo rm -rf /root/prometheus-*
+
 # Reload systemd to recognize the new service
 sudo systemctl daemon-reload
 
@@ -34,7 +40,6 @@ sudo systemctl daemon-reload
 sudo systemctl enable prometheus
 sudo systemctl start prometheus
 
-
-#Clean up
+# Clean up
 sleep 5
 sudo apt-get -qqy clean
