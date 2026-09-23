@@ -33,13 +33,12 @@ sudo chown -R prometheus:prometheus /etc/prometheus /var/lib/prometheus
 # Remove extracted release directory
 sudo rm -rf /root/prometheus-*
 
-# Reload systemd to recognize the new service
-sudo systemctl daemon-reload
+# Ensure MOTD script is executable
+sudo chmod +x /etc/update-motd.d/99-one-click-prom
 
-# Enable and start the Prometheus service
+# Reload systemd and enable Prometheus for first boot (do not start during image build)
+sudo systemctl daemon-reload
 sudo systemctl enable prometheus
-sudo systemctl start prometheus
 
 # Clean up
-sleep 5
 sudo apt-get -qqy clean
