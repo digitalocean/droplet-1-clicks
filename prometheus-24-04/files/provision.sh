@@ -13,7 +13,7 @@ sudo groupadd --system prometheus
 sudo useradd -s /sbin/nologin --system -g prometheus prometheus
 
 # Create required directories
-sudo mkdir -p /etc/prometheus /var/lib/prometheus
+sudo mkdir -p /etc/prometheus /var/lib/prometheus /var/lib/digitalocean
 
 # Download and extract Prometheus
 curl -fsSL "https://github.com/prometheus/prometheus/releases/download/v${application_version}/prometheus-${application_version}.linux-amd64.tar.gz" | tar -xz
