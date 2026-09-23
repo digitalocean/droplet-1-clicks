@@ -1,0 +1,30 @@
+[DEFAULT]
+bantime  = 1h
+findtime = 10m
+maxretry = 5
+# Escalate repeat offenders: an attacker who waits out a ban and resumes gets
+# 1h, 2h, 4h ... capped at 48h, instead of a fresh hour every time. fail2ban
+# already doubles per prior ban, so bantime.factor stays at its default of 1.
+bantime.increment = true
+bantime.maxtime = 48h
+
+[sshd]
+enabled = true
+# Arch has no auth.log; read sshd from the systemd journal
+backend = systemd
+
+[rdp-limit]
+enabled = true
+filter  = ufw-limit
+# The hits come from the kernel's ufw log lines, not a file on disk.
+backend = systemd
+journalmatch = _TRANSPORT=kernel
+# Deliberately not the sshd threshold of 5-failures-means-guessing. ufw has
+# already dropped this source's excess connections by the time a line is
+# logged, and the kernel throttles that logging to 3 lines a minute, so 10 hits
+# is roughly four minutes of someone still hammering the port. A user whose
+# client reconnects a few times in a burst trips ufw briefly and is never
+# banned; only sustained attempts reach this jail.
+maxretry = 10
+findtime = 30m
+action = iptables-multiport[name=rdp, port="3389", protocol=tcp]

@@ -1,0 +1,11 @@
+[Unit]
+Description=Ensure SSH is always allowed through ufw (droplet lockout guard)
+After=ufw.service network-pre.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/ufw allow 22/tcp
+
+[Install]
+WantedBy=multi-user.target
