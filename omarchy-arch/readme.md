@@ -236,6 +236,11 @@ every repeated attempt gets banned.
   non-interactively.
 - limine + snapper boot-snapshot integration works (the 3.x build had to skip
   the bootloader entirely); update rollback from the boot menu is available.
+  This needs the per-instance fix-up in `001_onboot`: limine tags its OS entry
+  with the machine-id of the machine that generated the config, so without it
+  every droplet inherits the build droplet's entry, `limine-snapper-sync` never
+  finds the entry it owns, and `snapper-cleanup.service` fails on its daily
+  timer while snapshots silently never reach the boot menu.
 - The installer opens SSH itself when built with authorized_keys (no more
   first-boot firewall lockout class of bugs; the `ensure-ssh-firewall`
   boot guard remains as insurance).

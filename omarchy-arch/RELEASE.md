@@ -121,6 +121,11 @@ ssh arch@<ip> '
   ss -ltn | grep -c 3389                          # expect 0 BEFORE setup runs
   test -e /run/hypr-rdp/password && echo BAD      # must NOT exist yet
   sudo fail2ban-client status rdp-limit >/dev/null && echo jail-ok
+  # limine.conf must have been regenerated for THIS droplet, not the builder.
+  # If this fails, snapper-cleanup.service fails daily and snapshots never
+  # reach the boot menu, which the failed-units count above also catches.
+  sudo grep -q "machine-id=$(cat /etc/machine-id)" /boot/limine.conf && echo limine-ok
+  sudo ls -d /boot/*/ | grep -c .                 # expect 3: current id, EFI, loader
   echo $OMARCHY_PATH                              # expect /usr/share/omarchy
   omarchy-update -y                               # must complete unattended
 '

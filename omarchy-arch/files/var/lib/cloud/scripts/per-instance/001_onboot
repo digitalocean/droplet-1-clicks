@@ -44,6 +44,48 @@ if [ ! -s /etc/hypr-rdp/tls.crt ] || [ ! -s /etc/hypr-rdp/tls.key ]; then
   fi
 fi
 
+# Rebuild the bootloader config against THIS droplet's machine-id.
+#
+# limine.conf is generated at image build time, and limine tags its OS entry
+# with the machine-id of the machine that generated it. systemd issues a fresh
+# machine-id on first boot, so every droplet inherits an entry belonging to the
+# build droplet. That still boots, because the entry's payload paths are baked
+# in, which is what makes the breakage quiet: limine-snapper-sync can no longer
+# find the OS entry it owns, so snapper-cleanup.service fails on its daily
+# timer and btrfs snapshots never become boot entries. Setting TARGET_OS_NAME
+# does not help, because successive builds leave several identically named
+# "Omarchy" entries that the name alone cannot disambiguate.
+#
+# Regenerating here is safe: the running kernel is already in memory, and the
+# new config is only kept after it has been checked.
+MACHINE_ID=$(cat /etc/machine-id)
+if command -v limine-update >/dev/null && [ -s /boot/limine.conf ] &&
+   ! grep -q "machine-id=${MACHINE_ID}" /boot/limine.conf; then
+  mv /boot/limine.conf /boot/limine.conf.stale
+  if limine-update >/dev/null 2>&1 &&
+     [ -s /boot/limine.conf ] &&
+     grep -q "machine-id=${MACHINE_ID}" /boot/limine.conf &&
+     grep -qE '^[[:space:]]*//' /boot/limine.conf; then
+    rm -f /boot/limine.conf.stale
+    # Snapshot boot entries. Best effort: a failure here costs the snapshot
+    # menu, not the ability to boot, so it must not abort first-boot setup.
+    limine-snapper-sync >/dev/null 2>&1 || true
+    # Reclaim the build-time kernel payloads, ~40 MB per stale machine-id.
+    # Only 32-character all-hex directories are touched, so EFI/ and loader/
+    # are never candidates.
+    for d in /boot/*/; do
+      b=${d%/}; b=${b##*/}
+      [ "$b" = "$MACHINE_ID" ] && continue
+      case "$b" in *[!0-9a-f]*) continue ;; esac
+      [ ${#b} -eq 32 ] || continue
+      rm -rf "$d"
+    done
+  else
+    echo "ERROR: limine.conf regeneration failed; keeping the build-time config" >&2
+    mv -f /boot/limine.conf.stale /boot/limine.conf
+  fi
+fi
+
 cat > /etc/motd <<EOM
 
  ------------------------------------------------------------------
