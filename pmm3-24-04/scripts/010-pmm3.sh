@@ -6,7 +6,7 @@ mkdir -p /opt/pmm3
 
 # Download and install PMM3 using the official script
 echo "Downloading PMM3 installer..."
-curl -fsSL https://raw.githubusercontent.com/percona/pmm/refs/heads/v3/get-pmm.sh -o /opt/pmm3/get-pmm.sh
+curl -fsSL https://raw.githubusercontent.com/percona/pmm/v3/get-pmm.sh -o /opt/pmm3/get-pmm.sh
 chmod +x /opt/pmm3/get-pmm.sh
 
 # Run PMM3 installer
@@ -68,9 +68,9 @@ echo "  • Official Docs: https://docs.percona.com/percona-monitoring-and-manag
 echo "  • Getting Started: https://docs.percona.com/percona-monitoring-and-management/get-started/"
 echo ""
 echo -e "${YELLOW}Service Management:${NC}"
-echo "  • Check status: systemctl status pmm-agent"
-echo "  • View logs: journalctl -u pmm-agent -f"
-echo "  • Configuration: /usr/local/percona/pmm2/"
+echo "  • Check status: docker ps --filter name=pmm-server"
+echo "  • View logs: docker logs -f pmm-server"
+echo "  • Restart: docker restart pmm-server"
 echo ""
 echo -e "${YELLOW}Security Information:${NC}"
 echo "To keep this Droplet secure, the UFW firewall is enabled."
@@ -105,13 +105,10 @@ cat > /var/lib/cloud/scripts/per-instance/01-setup-pmm3.sh << 'EOF'
 # Set the hostname to 'pmm3'
 hostnamectl set-hostname pmm3
 
-# Ensure Docker is running (if PMM3 uses Docker)
+# Ensure Docker and the PMM Server container are running
 systemctl enable docker
 systemctl start docker
-
-# Ensure PMM services are running
-systemctl enable pmm-agent || true
-systemctl start pmm-agent || true
+docker start pmm-server || true
 
 EOF
 
@@ -179,9 +176,11 @@ The script will:
 
 ## Service Management
 
-- Check PMM status: `systemctl status pmm-agent`
-- View PMM logs: `journalctl -u pmm-agent -f`
-- Configuration directory: `/usr/local/percona/pmm2/`
+PMM Server runs as a Docker container (`pmm-server`).
+
+- Check status: `docker ps --filter name=pmm-server`
+- View logs: `docker logs -f pmm-server`
+- Restart: `docker restart pmm-server`
 
 ## Documentation
 
