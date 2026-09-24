@@ -1,20 +1,23 @@
 #!/bin/bash
+set -euo pipefail
 
 # Scripts in this directory will be executed by cloud-init on the first boot of droplets
-# created from your image.  Things like generating passwords, configuration requiring IP address
-# or other items that will be unique to each instance should be done in scripts here.
+# created from your image. Items unique per instance (IP-dependent config, updates, etc.)
+# should be done here.
 
-# Install latest updates on first boot
+unlock_ssh() {
+  sed -e '/Match User root/d' \
+      -e '/.*ForceCommand.*droplet.*/d' \
+      -i /etc/ssh/sshd_config
+  systemctl restart ssh
+}
+# Always remove the SSH ForceCommand lock, even if updates fail
+trap unlock_ssh EXIT
+
+# Refresh discourse_docker so first-login setup uses current installer scripts
 cd /var/discourse
 git pull
 
-DEBIAN_FRONTEND=noninteractive
+export DEBIAN_FRONTEND=noninteractive
 apt-get update
 UCF_FORCE_CONFFOLD=1 apt-get -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' -qqy upgrade
-
-# Remove the ssh force logout command
-sed -e '/Match User root/d' \
-    -e '/.*ForceCommand.*droplet.*/d' \
-    -i /etc/ssh/sshd_config
-
-systemctl restart ssh
