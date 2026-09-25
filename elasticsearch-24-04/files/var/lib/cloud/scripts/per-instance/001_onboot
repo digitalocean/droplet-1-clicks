@@ -1,21 +1,37 @@
 #!/bin/bash
 
-sudo apt-get --assume-yes update && sudo NEEDRESTART_MODE=a apt-get --assume-yes install elasticsearch
+# Unlock SSH early so QA / users can connect while Elasticsearch starts and
+# passwords are generated. Do not wait for apt/install (now done in Packer).
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
 
-# Set host for the ElasticSearch server
-cat >> /etc/elasticsearch/elasticsearch.yml <<EOM
-network.host: 0.0.0.0
-EOM
+systemctl restart ssh
 
-# Set permissions for ElasticSearch logs
-sudo chmod 755 -R /var/log/elasticsearch/
-
-# Start elastic service
+# Start elastic service (package + config applied during image build)
 sudo systemctl daemon-reload
 
 sudo systemctl enable elasticsearch.service
 
 sudo systemctl start elasticsearch.service
+
+# systemctl start returns before ES is listening; wait until HTTPS :9200 responds
+# (401 is expected with security enabled and no credentials yet).
+echo "Waiting for Elasticsearch to become ready on https://localhost:9200 ..."
+ready=0
+for _ in $(seq 1 60); do
+  code=$(curl -sk -o /dev/null -w "%{http_code}" --connect-timeout 2 --max-time 5 \
+    https://localhost:9200/ 2>/dev/null || true)
+  if [ "$code" = "200" ] || [ "$code" = "401" ]; then
+    ready=1
+    break
+  fi
+  sleep 5
+done
+if [ "$ready" -ne 1 ]; then
+  echo "Elasticsearch did not become ready in time; check: systemctl status elasticsearch" >&2
+  exit 1
+fi
 
 # Generate random password for elastic, kibana and logstash users
 export elasticPass=$(echo "y" | /usr/share/elasticsearch/bin/elasticsearch-reset-password -u elastic --url https://localhost:9200 | awk '/^New/{print $3}')
@@ -30,10 +46,3 @@ KIBANA_PASSWORD=${kibanaPass}
 LOGSTASH_SYSTEM_PASSWORD=${logstashSystemPass}
 KIBANA_ENROLLMENT_TOKEN=${kibanaEnrollmentToken}
 EOM
-
-# Remove the ssh force logout command
-sed -e '/Match User root/d' \
-    -e '/.*ForceCommand.*droplet.*/d' \
-    -i /etc/ssh/sshd_config
-
-systemctl restart ssh
