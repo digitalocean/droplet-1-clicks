@@ -2,6 +2,21 @@
 #
 # Configured as part of the DigitalOcean 1-Click Image build process
 
+if [ ! -f /root/.digitalocean_passwords ]; then
+  cat <<EOF
+********************************************************************************
+
+ElasticSearch first-boot setup is still running or failed.
+Wait a few minutes, then re-open this console, or check:
+  systemctl status elasticsearch
+  journalctl -u cloud-final -n 100 --no-pager
+  ls -l /root/.digitalocean_passwords
+
+********************************************************************************
+EOF
+  exit 0
+fi
+
 # Read in the passwords....
 . /root/.digitalocean_passwords
 
