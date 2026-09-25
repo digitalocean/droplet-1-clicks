@@ -3,7 +3,7 @@
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "kafka-24-04-snapshot-{{timestamp}}",
     "application_name": "Kafka",
-    "application_version": "3.1.0"
+    "application_version": "4.3.1"
   },
   "sensitive-variables": [
     "do_api_token"
@@ -14,7 +14,7 @@
       "api_token": "{{user `do_api_token`}}",
       "image": "ubuntu-24-04-x64",
       "region": "nyc3",
-      "size": "s-1vcpu-1gb",
+      "size": "s-2vcpu-4gb",
       "ssh_username": "root",
       "snapshot_name": "{{user `image_name`}}"
     }
@@ -35,6 +35,10 @@
       "type": "ansible",
       "playbook_file": "kafka-24-04/ansible/kafka.yml",
       "user": "root",
+      "extra_arguments": [
+        "--extra-vars",
+        "kafka_version={{user `application_version`}}"
+      ],
       "ansible_env_vars": [
         "ANSIBLE_HOST_KEY_CHECKING=False",
         "ANSIBLE_SSH_ARGS=-o ControlMaster=auto -o ControlPersist=60s -o ForwardAgent=yes",
