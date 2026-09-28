@@ -36,7 +36,7 @@ chmod +x /var/lib/cloud/scripts/per-instance/001_onboot
 echo "Generating Rails application..."
 if ! docker run --rm -v "/opt/rails-app":/app -w /app ruby:${ruby_version}-slim bash -c "
   apt-get update -qq && apt-get install -y build-essential libpq-dev nodejs npm git curl libyaml-dev pkg-config &&
-  gem install rails -v ${rails_version} &&
+  gem install rails -v ${application_version} &&
   rails new . --database=postgresql --skip-git --force &&
   echo 'Rails application generated successfully'
 "; then
@@ -55,30 +55,30 @@ sed -i "s/{{RUBY_VERSION}}/${ruby_version}/g" /opt/rails-app/Dockerfile
 
 # Update Gemfile
 sed -i "s/{{RUBY_VERSION}}/${ruby_version}/g" /opt/rails-app/Gemfile
-sed -i "s/{{RAILS_VERSION}}/${rails_version}/g" /opt/rails-app/Gemfile
+sed -i "s/{{RAILS_VERSION}}/${application_version}/g" /opt/rails-app/Gemfile
 
 # Update environment template
-sed -i "s/Rails 8\.0\.3/Rails ${rails_version}/g" /opt/rails-app/env.template
+sed -i "s/Rails 8\.0\.3/Rails ${application_version}/g" /opt/rails-app/env.template
 
 # Update systemd service
-sed -i "s/Rails 8\.0\.3/Rails ${rails_version}/g" /etc/systemd/system/rails-app.service
+sed -i "s/Rails 8\.0\.3/Rails ${application_version}/g" /etc/systemd/system/rails-app.service
 
 # Update MOTD
-sed -i "s/{{RAILS_VERSION}}/${rails_version}/g" /etc/update-motd.d/99-one-click
+sed -i "s/{{RAILS_VERSION}}/${application_version}/g" /etc/update-motd.d/99-one-click
 sed -i "s/{{RUBY_VERSION}}/${ruby_version}/g" /etc/update-motd.d/99-one-click
 
 # Update onboot script
-sed -i "s/{{RAILS_VERSION}}/${rails_version}/g" /var/lib/cloud/scripts/per-instance/001_onboot
+sed -i "s/{{RAILS_VERSION}}/${application_version}/g" /var/lib/cloud/scripts/per-instance/001_onboot
 
 # Update welcome page
-sed -i "s/{{RAILS_VERSION}}/${rails_version}/g" /var/lib/digitalocean/index.html
+sed -i "s/{{RAILS_VERSION}}/${application_version}/g" /var/lib/digitalocean/index.html
 sed -i "s/{{RUBY_VERSION}}/${ruby_version}/g" /var/lib/digitalocean/index.html
 
 # Update loading page
-sed -i "s/{{RAILS_VERSION}}/${rails_version}/g" /opt/rails-app/loading.html
+sed -i "s/{{RAILS_VERSION}}/${application_version}/g" /opt/rails-app/loading.html
 
 # Update Gemfile with correct Rails version
-sed -i "s/{{RAILS_VERSION}}/${rails_version}/g" /opt/rails-app/Gemfile
+sed -i "s/{{RAILS_VERSION}}/${application_version}/g" /opt/rails-app/Gemfile
 sed -i "s/{{RUBY_VERSION}}/${ruby_version}/g" /opt/rails-app/Gemfile
 
 # Copy welcome page and documentation to Rails directory
@@ -86,7 +86,7 @@ cp /var/lib/digitalocean/index.html /opt/rails-app/public/
 cp /var/lib/digitalocean/README.md /opt/rails-app/
 
 # Update README.md in Rails directory with current versions
-sed -i "s/{{rails_version}}/${rails_version}/g" /opt/rails-app/README.md
+sed -i "s/{{application_version}}/${application_version}/g" /opt/rails-app/README.md
 sed -i "s/{{ruby_version}}/${ruby_version}/g" /opt/rails-app/README.md
 
 # Update Rails configuration for production
@@ -119,7 +119,7 @@ docker pull nginx:alpine || true
 
 echo "Docker images pre-pulled for faster startup"
 
-echo "Rails ${rails_version} application setup complete!"
+echo "Rails ${application_version} application setup complete!"
 echo "Application is available at http://your-server-ip"
 echo ""
 echo "Management commands:"
