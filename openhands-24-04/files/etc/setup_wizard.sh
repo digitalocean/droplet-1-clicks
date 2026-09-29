@@ -80,7 +80,11 @@ You can also skip and set any provider later in Settings > LLM.
 
 EOF
 
-read -r -p "Enter your DigitalOcean model access key (or press Enter to skip): " MODEL_KEY
+old_histfile="${HISTFILE-}"
+unset HISTFILE
+read -rsp "Enter your DigitalOcean model access key (or press Enter to skip): " MODEL_KEY
+echo ""
+[ -n "${old_histfile:-}" ] && export HISTFILE="$old_histfile"
 
 if [ -z "$MODEL_KEY" ]; then
   echo ""
