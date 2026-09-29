@@ -5,7 +5,7 @@
     "image_name": "rabbitmq-24-04-snapshot-{{timestamp}}",
     "apt_packages": "curl wget gnupg apt-transport-https",
     "application_name": "RabbitMQ",
-    "application_version": "3.12.2"
+    "application_version": "4.3.6"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
@@ -53,7 +53,6 @@
       "inline": [
         "apt -qqy update",
         "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' full-upgrade",
-        "add-apt-repository -y ppa:ondrej/php",
         "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' install {{user `apt_packages`}}",
         "apt-get -qqy clean"
       ]
