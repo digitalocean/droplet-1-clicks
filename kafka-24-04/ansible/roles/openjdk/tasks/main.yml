@@ -1,12 +1,8 @@
 ---
-- name: Add Ubuntu OpenJDK repo
-  apt_repository: repo='ppa:openjdk-r/ppa' state=present
-
-- name: Install JRE and JDK
+- name: Install OpenJDK JRE
   apt:
     pkg:
       - openjdk-{{java_version}}-jre-headless
-      - openjdk-{{java_version}}-jdk
     state: present
     update_cache: yes
   environment:

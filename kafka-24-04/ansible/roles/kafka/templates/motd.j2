@@ -2,12 +2,47 @@
 #
 # Configured as part of the DigitalOcean 1-Click Image build process
 
+ssl_dir="{{ kafka_dir }}/one-click-ssl"
+client_config="${ssl_dir}/example.librdkafka.config"
+client_readme="${ssl_dir}/README.md"
+
+scram_user=""
+scram_password=""
+if [ -r "${client_config}" ]; then
+  scram_user=$(sed -n 's/^sasl.username=//p' "${client_config}")
+  scram_password=$(sed -n 's/^sasl.password=//p' "${client_config}")
+fi
+
+if [ -n "${scram_user}" ]; then
+  creds_block="External client credentials (SCRAM-SHA-256 on port 9093):
+    User: ${scram_user}
+    Pass: ${scram_password}
+
+  These values are stored in:
+    ${client_config}
+
+  TLS material for clients:
+    ${ssl_dir}/ca.crt
+    ${ssl_dir}/.keystore_password
+
+  Copy them off the Droplet:
+    scp root@<droplet-ip>:'${ssl_dir}/{ca.crt,example.librdkafka.config,.keystore_password}' ."
+else
+  creds_block="First-boot setup is still generating TLS and SCRAM credentials.
+  After kafka.service is up, the user and password will be in:
+    ${client_config}
+  Keystore password:
+    ${ssl_dir}/.keystore_password"
+fi
+
 cat <<EOF
 ********************************************************************************
-Welcome to DigitalOcean's 1-Click Kafka/ZooKeeper Droplet.
+Welcome to DigitalOcean's 1-Click Kafka Droplet (KRaft mode, no ZooKeeper).
 Kafka is running as a systemd service (kafka.service).
 To keep this Droplet secure, the UFW firewall is enabled.
 All ports are BLOCKED except 22 (SSH) and 9093 (Kafka SSL).
+
+${creds_block}
 
 To get started on this server:
 
@@ -32,9 +67,9 @@ To get started on this server:
       --topic quickstart \\
       --bootstrap-server localhost:9092
 
- * Learn more about configuring your clients by running:
+ * Client guide (TLS / kcat):
 
-    less {{ kafka_dir }}/one-click-ssl/README.md
+    less ${client_readme}
 
 ********************************************************************************
 To delete this message of the day: rm -rf $(readlink -f ${0})
