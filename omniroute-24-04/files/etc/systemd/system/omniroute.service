@@ -1,0 +1,19 @@
+[Unit]
+Description=OmniRoute AI gateway
+Documentation=https://github.com/diegosouzapw/OmniRoute
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/omniroute
+ExecStart=/opt/start-omniroute.sh
+ExecStop=/opt/stop-omniroute.sh
+TimeoutStartSec=600
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
