@@ -8,7 +8,10 @@ cat <<EOF
 
 Welcome to the DigitalOcean Discourse 1-Click Application
 
+Droplet IP: ${myip}
+
 On your first login you will be prompted to configure your Discourse installation.
+You will need a domain name pointed at this Droplet and SMTP credentials.
 
 All Discourse scripts and files may be found in /var/discourse and the setup
 utility can be run again by launching discourse-setup in that directory.
