@@ -148,7 +148,7 @@ fi
 
 docker stop campfire 2>/dev/null || true
 docker rm campfire 2>/dev/null || true
-if docker run \
+if ! docker run \
   --detach \
   --name campfire \
   --publish 80:80 --publish 443:443 \
@@ -156,11 +156,20 @@ if docker run \
   --volume campfire:/rails/storage \
   --env-file /opt/campfire.env \
   campfire; then
-    echo "✅ Campfire updated and restarted successfully!"
-    exit 0
+  echo "❌ Error: Failed to start Campfire" >&2
+  exit 1
 fi
 
-echo "❌ Error: Failed to start Campfire"
+# docker run -d can succeed even if the process exits immediately
+for _ in $(seq 1 15); do
+  if [ "$(docker inspect -f '{{.State.Running}}' campfire 2>/dev/null)" = "true" ]; then
+    echo "✅ Campfire updated and restarted successfully!"
+    exit 0
+  fi
+  sleep 1
+done
+
+echo "❌ Error: Campfire container is not running after fallback start" >&2
 exit 1
 EOF
 
