@@ -46,14 +46,53 @@ This 1-Click defaults to a **2 vCPU / 4 GB** Droplet. Droplets under 2 GB RAM wi
 | `/var/discourse/launcher` | Start/stop/rebuild the Discourse app container |
 | `/opt/digitalocean_discourse/setup_discourse.sh` | First-login wrapper (removed from bashrc after success) |
 
-## Common Commands
+## Managing Discourse
+
+Discourse is managed with the official `/var/discourse/launcher` tool (not systemd). Run these from `/var/discourse` after first-login setup completes.
+
+### Start
+
+```bash
+cd /var/discourse
+./launcher start app
+```
+
+### Stop
+
+```bash
+cd /var/discourse
+./launcher stop app
+```
+
+### Restart
 
 ```bash
 cd /var/discourse
 ./launcher restart app
+```
+
+### Update
+
+Pull the latest Discourse image and rebuild the app container:
+
+```bash
+cd /var/discourse
 ./launcher rebuild app
+```
+
+### Status and logs
+
+```bash
+cd /var/discourse
+./launcher status app
 ./launcher logs app
-./discourse-setup          # re-run setup (reuses values from app.yml when present)
+```
+
+### Re-run setup
+
+```bash
+cd /var/discourse
+./discourse-setup   # reuses values from app.yml when present
 ```
 
 ## Security Notes

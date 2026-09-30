@@ -10,6 +10,10 @@ set -euo pipefail
 mkdir -p /var/discourse
 git clone --depth 1 https://github.com/discourse/discourse_docker.git /var/discourse
 
+chmod +x /opt/digitalocean_discourse/setup_discourse.sh
+chmod +x /etc/update-motd.d/99-one-click
+chmod +x /var/lib/cloud/scripts/per-instance/001_onboot
+
 # Add first-login task
 cat >> /root/.bashrc <<EOM
 /opt/digitalocean_discourse/setup_discourse.sh
