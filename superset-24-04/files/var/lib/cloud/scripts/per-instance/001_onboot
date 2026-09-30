@@ -1,0 +1,114 @@
+#!/bin/bash
+
+unlock_ssh() {
+  sed -e '/Match User root/d' \
+      -e '/.*ForceCommand.*droplet.*/d' \
+      -i /etc/ssh/sshd_config
+  systemctl restart ssh || systemctl restart sshd || true
+}
+
+trap unlock_ssh EXIT
+
+set -euo pipefail
+
+mkdir -p /var/log
+touch /var/log/superset-firstboot.log
+chmod 600 /var/log/superset-firstboot.log
+exec > >(tee -a /var/log/superset-firstboot.log) 2>&1
+
+echo "=== $(date -Is) Apache Superset first boot ==="
+
+metadata_state() {
+  if [[ -f /var/lib/digitalocean/superset-metadata-db ]]; then
+    tr -d '[:space:]' < /var/lib/digitalocean/superset-metadata-db
+  fi
+}
+
+recreate_superset() {
+  systemctl stop superset >/dev/null 2>&1 || true
+  docker rm -f superset >/dev/null 2>&1 || true
+  systemctl daemon-reload
+  systemctl enable superset
+  systemctl restart superset
+}
+
+if [[ -f /var/lib/superset/setup-complete ]]; then
+  # bootstrap-superset.sh rewrites the metadata URI and the state file back to
+  # local, so a completed Droplet must not run it while retrying Managed Postgres.
+  if [[ -f /root/.digitalocean_dbaas_credentials && "$(metadata_state)" != "managed" ]]; then
+    echo "Setup completed on local Postgres. Retrying Managed Postgres."
+    if [[ ! -s /etc/superset/admin.password ]]; then
+      echo "Admin password file is missing. Cannot retry Managed Postgres." >&2
+      exit 1
+    fi
+    PASSWORD="$(tr -d '\n' < /etc/superset/admin.password)"
+    export PASSWORD
+    if ! bash /var/lib/digitalocean/setup-dbaas.sh; then
+      echo "Managed Postgres setup failed." >&2
+      exit 1
+    fi
+    if [[ "$(metadata_state)" == "managed" ]]; then
+      recreate_superset
+    else
+      echo "Managed Postgres was not adopted. Leaving the existing container."
+      systemctl enable superset
+      systemctl restart superset
+    fi
+    exit 0
+  fi
+  echo "Setup already completed. Starting services."
+  systemctl enable superset
+  systemctl restart superset
+  exit 0
+fi
+
+# Local PostgreSQL 16, the source database, and a local metadata URI.
+/opt/bootstrap-superset.sh
+
+echo "Checking for an attached Managed Postgres database"
+for _ in $(seq 1 3); do
+  if [[ -f /root/.digitalocean_dbaas_credentials ]]; then
+    break
+  fi
+  sleep 5
+done
+
+PASSWORD="$(tr -d '\n' < /etc/superset/admin.password)"
+export PASSWORD
+
+# Do not source setup-dbaas.sh. A non-zero exit leaves Superset stopped.
+if ! bash /var/lib/digitalocean/setup-dbaas.sh; then
+  echo "Managed Postgres setup failed. Superset was not started." >&2
+  exit 1
+fi
+
+metadata_db=""
+if [[ -f /var/lib/digitalocean/superset-metadata-db ]]; then
+  metadata_db="$(tr -d '[:space:]' < /var/lib/digitalocean/superset-metadata-db)"
+fi
+if [[ "$metadata_db" != "managed" ]]; then
+  echo "Configuring Superset on local PostgreSQL."
+  env PASSWORD="$PASSWORD" bash /var/lib/digitalocean/finish-setup.sh
+fi
+
+recreate_superset
+
+# Longer than superset.service TimeoutStartSec (120s) so a slow first start
+# can still pass and record setup-complete.
+echo "Waiting for Superset health check"
+healthy=0
+for _ in $(seq 1 90); do
+  if curl -fsS --max-time 3 http://127.0.0.1:8088/health >/dev/null; then
+    healthy=1
+    break
+  fi
+  sleep 2
+done
+if [[ "$healthy" != "1" ]]; then
+  echo "Superset did not become healthy. The admin password will stay hidden." >&2
+  exit 1
+fi
+
+touch /var/lib/superset/setup-complete
+chmod 644 /var/lib/superset/setup-complete
+echo "=== $(date -Is) first boot succeeded ==="

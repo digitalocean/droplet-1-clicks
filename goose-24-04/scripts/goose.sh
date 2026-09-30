@@ -33,7 +33,18 @@ systemctl daemon-reload
 systemctl enable ttyd-goose
 
 # Goose CLI: install during image build so a broken upstream installer fails Packer, not customer first login.
+# Vendor Portal versions are semver without a leading v (1.50.0). GitHub release tags are v1.50.0.
+# "stable" and "canary" are tag names and stay unchanged.
 GOOSE_REL="${application_version:-stable}"
+case "$GOOSE_REL" in
+  v[0-9]*)
+    export GOOSE_VERSION="$GOOSE_REL"
+    ;;
+  [0-9]*)
+    GOOSE_REL="v${GOOSE_REL}"
+    export GOOSE_VERSION="$GOOSE_REL"
+    ;;
+esac
 GOOSE_INSTALLER=/tmp/goose-download-cli.sh
 rm -f "$GOOSE_INSTALLER"
 curl -fsSL "https://github.com/aaif-goose/goose/releases/download/${GOOSE_REL}/download_cli.sh" -o "$GOOSE_INSTALLER"
