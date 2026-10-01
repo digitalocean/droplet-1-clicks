@@ -1,0 +1,181 @@
+#!/bin/bash
+set -euo pipefail
+
+set -a
+# shellcheck source=/dev/null
+source /etc/environment 2>/dev/null || true
+set +a
+
+# shellcheck source=/opt/qm/env-lib.sh
+source /opt/qm/env-lib.sh
+
+INFO_FILE=/root/qm_info.txt
+DROPLET_IP="$(droplet_ip)"
+
+# --- Generate per-droplet signing secrets --------------------------------
+if env_is_placeholder CORE_SIGNING_SECRET; then
+  echo "Generating QM signing secrets..."
+  for key in CORE_SIGNING_SECRET CAPABILITY_SECRET PORTAL_IDENTITY_SECRET \
+             CONNECTOR_SECRET_KEY SKILL_SIGNING_SECRET PORTAL_SESSION_SECRET \
+             AUTH_TOKEN_SECRET; do
+    write_env_kv "$key" "$(openssl rand -hex 32)"
+  done
+  # portal authenticates to the embedded auth broker as an OIDC client using
+  # OIDC_CLIENT_ID/OIDC_CLIENT_SECRET (plugins/portal/src/index.ts), while the
+  # broker itself is configured with AUTH_CLIENT_ID/AUTH_CLIENT_SECRET
+  # (plugins/auth/src/config.ts) — these must be the exact same values on
+  # both sides, there is no fallback between the two names.
+  CLIENT_SECRET="$(openssl rand -hex 32)"
+  write_env_kv AUTH_CLIENT_SECRET "$CLIENT_SECRET"
+  write_env_kv OIDC_CLIENT_SECRET "$CLIENT_SECRET"
+  write_env_kv AUTH_SIGNING_JWK "$(python3 /opt/qm/gen-secrets.py jwk)"
+fi
+
+# --- Generate the Postgres password + DATABASE_URL -----------------------
+if env_is_placeholder POSTGRES_PASSWORD; then
+  PG_PASSWORD="$(openssl rand -hex 24)"
+  write_env_kv POSTGRES_PASSWORD "$PG_PASSWORD"
+  write_env_kv DATABASE_URL "postgresql://qm:${PG_PASSWORD}@postgres:5432/qm?sslmode=disable"
+fi
+
+# --- Point the public origin at this droplet's IP (no domain) ------------
+if grep -q "PLACEHOLDER_DOMAIN" "$ENV_FILE" 2>/dev/null; then
+  sed -i "s|PLACEHOLDER_DOMAIN|${DROPLET_IP}|g" "$ENV_FILE"
+fi
+
+# --- Install Caddy (HTTPS on the bare IP, Let's Encrypt short-lived cert) -
+# QM's sign-in flow (password form + the CLI's admin-login link) refuses to
+# work at all over plain HTTP on a public IP — see README.md "Why Caddy".
+if [ -f /etc/caddy/Caddyfile.tmp ]; then
+  mv /etc/caddy/Caddyfile.tmp /etc/caddy/Caddyfile
+fi
+if grep -q "PLACEHOLDER_DOMAIN" /etc/caddy/Caddyfile 2>/dev/null; then
+  sed -i "s/PLACEHOLDER_DOMAIN/${DROPLET_IP}/" /etc/caddy/Caddyfile
+fi
+systemctl enable caddy
+systemctl restart caddy
+
+# Remove the ssh force logout command installed at build time
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+chmod +x /opt/qm/gen-secrets.py /etc/setup_wizard.sh
+
+# Pick a model provider from droplet env vars: an explicit MODEL_PROVIDER
+# wins, otherwise infer from whichever single key was supplied (default
+# anthropic, matching env.template's default).
+MODEL_PROVIDER_ENV="${MODEL_PROVIDER:-}"
+if [ -z "$MODEL_PROVIDER_ENV" ]; then
+  if [ -n "${OPENAI_API_KEY:-}" ] && [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+    MODEL_PROVIDER_ENV=openai
+  else
+    MODEL_PROVIDER_ENV=anthropic
+  fi
+fi
+HAS_MODEL_KEY=0
+if [ "$MODEL_PROVIDER_ENV" = openai ] && [ -n "${OPENAI_API_KEY:-}" ]; then
+  HAS_MODEL_KEY=1
+elif [ "$MODEL_PROVIDER_ENV" = anthropic ] && [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+  HAS_MODEL_KEY=1
+fi
+
+STACK_STARTED=0
+if [ -n "${ADMIN_EMAIL:-}" ] && [ "$HAS_MODEL_KEY" = 1 ] && [ -n "${E2B_API_KEY:-}" ]; then
+  echo "Configuring QM from droplet environment variables..."
+  ADMIN_PASSWORD="${ADMIN_PASSWORD:-$(openssl rand -base64 18 | tr -d '=+/' | cut -c1-18)}"
+  PW_HASH="$(printf '%s\n' "$ADMIN_PASSWORD" | python3 /opt/qm/gen-secrets.py hash-password)"
+  write_env_kv MODEL_PROVIDER "$MODEL_PROVIDER_ENV"
+  write_env_kv ANTHROPIC_API_KEY "${ANTHROPIC_API_KEY:-}"
+  write_env_kv OPENAI_API_KEY "${OPENAI_API_KEY:-}"
+  write_env_kv E2B_API_KEY "$E2B_API_KEY"
+  write_env_kv ADMIN_GRANTS "${ADMIN_EMAIL}:org_admin"
+  write_env_kv AUTH_ALLOWED_EMAILS "$ADMIN_EMAIL"
+  write_env_kv OIDC_ALLOWED_EMAILS "$ADMIN_EMAIL"
+  write_env_kv AUTH_PASSWORD_USERS "${ADMIN_EMAIL}:${PW_HASH}"
+
+  (cd /opt/qm && docker compose up -d)
+  echo "Containers are up — giving Postgres + core a moment to finish starting (30s)..."
+  sleep 30
+  STACK_STARTED=1
+elif ! grep -q 'setup_wizard.sh' /root/.bashrc 2>/dev/null; then
+  cat >> /root/.bashrc <<'EOM'
+
+chmod +x /etc/setup_wizard.sh
+/etc/setup_wizard.sh
+EOM
+fi
+
+cat > "$INFO_FILE" << EOF
+================================================================================
+QM 1-Click Droplet - Getting Started
+================================================================================
+
+QM (https://github.com/yc-software/qm) is a self-hosted multiplayer agent
+harness. This droplet runs core, web-ui, and portal (auth and admin run
+embedded, not as separate containers) plus a bundled Postgres.
+
+ACCESS:
+  Web UI:   https://${DROPLET_IP}
+  (Caddy uses a Let's Encrypt short-lived certificate for the bare IP —
+  your browser may not trust it yet and show a warning; see README.md.)
+EOF
+
+if [ "$STACK_STARTED" = "1" ]; then
+  cat >> "$INFO_FILE" << EOF
+  Admin:    ${ADMIN_EMAIL}
+  Password: ${ADMIN_PASSWORD}
+  Model:    ${MODEL_PROVIDER_ENV}
+
+  Your QM is ready. Sign in with the credentials above (also in
+  /opt/qm/.env as AUTH_PASSWORD_USERS). This is the only sign-in method
+  configured — see README.md to add real email or SSO sign-in later.
+EOF
+else
+  cat >> "$INFO_FILE" << 'EOF'
+  QM is not started yet — the admin email and API keys were not set as
+  droplet environment variables. Finish setup over SSH:
+
+    ssh root@<droplet-ip>
+
+  The setup wizard runs automatically on first login, or manually with:
+    sudo /etc/setup_wizard.sh
+EOF
+fi
+
+cat >> "$INFO_FILE" << 'EOF'
+
+MANAGEMENT:
+  Start:    /opt/start-qm.sh     (or systemctl-free: docker compose -f /opt/qm/compose.yml up -d)
+  Stop:     /opt/stop-qm.sh
+  Restart:  /opt/restart-qm.sh
+  Status:   /opt/status-qm.sh
+  Update:   /opt/update-qm.sh
+  Logs:     docker compose -f /opt/qm/compose.yml logs -f
+  Setup:    sudo /etc/setup_wizard.sh
+
+PATHS:
+  Stack:    /opt/qm
+  Env:      /opt/qm/.env  (symlink: /opt/qm.env)
+  Info:     /root/qm_info.txt
+
+SECURITY:
+  Portal is served over HTTPS via Caddy on this droplet's public IP (no
+  domain — Let's Encrypt's short-lived IP-certificate program). Browsers
+  don't universally trust this cert type yet, so you'll likely see a
+  warning on first visit; verify the fingerprint if that matters to you.
+  core/web-ui/Postgres stay bound to loopback, not publicly reachable.
+  Prefer a DigitalOcean Cloud Firewall restricting SSH (and optionally
+  HTTP/HTTPS) to your IP.
+
+DOCS:
+  https://github.com/yc-software/qm
+
+================================================================================
+EOF
+chmod 600 "$INFO_FILE"
+
+systemctl restart ssh
+
+echo "QM first-boot initialization complete!"
+echo "Access info saved to ${INFO_FILE}"
