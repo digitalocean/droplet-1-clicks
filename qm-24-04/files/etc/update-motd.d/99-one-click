@@ -6,7 +6,7 @@ cat <<EOF
 QM — https://${myip}/
 
 Full access info: /root/qm_info.txt
-Manage: /opt/start-qm.sh  /opt/stop-qm.sh  /opt/restart-qm.sh  /opt/status-qm.sh  /opt/update-qm.sh
+Manage: /srv/qm/start-qm.sh  /srv/qm/stop-qm.sh  /srv/qm/restart-qm.sh  /srv/qm/status-qm.sh  /srv/qm/update-qm.sh
 Setup:  sudo /etc/setup_wizard.sh
 
 ********************************************************************************

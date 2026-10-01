@@ -1,7 +1,7 @@
 #!/bin/bash
 # Shared helpers for 001_onboot and /etc/setup_wizard.sh. Source, don't run.
 
-ENV_FILE=/opt/qm/.env
+ENV_FILE=/srv/qm/.env
 
 write_env_kv() {
   local key="$1" val="$2" tmp="${ENV_FILE}.tmp"

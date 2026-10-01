@@ -60,25 +60,25 @@ Visit `https://your-droplet-ip` and sign in with the email/password from setup. 
 
 | Action | Command |
 |--------|---------|
-| Start | `/opt/start-qm.sh` |
-| Stop | `/opt/stop-qm.sh` |
-| Restart | `/opt/restart-qm.sh` |
-| Status | `/opt/status-qm.sh` |
-| Update | `/opt/update-qm.sh` |
+| Start | `/srv/qm/start-qm.sh` |
+| Stop | `/srv/qm/stop-qm.sh` |
+| Restart | `/srv/qm/restart-qm.sh` |
+| Status | `/srv/qm/status-qm.sh` |
+| Update | `/srv/qm/update-qm.sh` |
 | Re-run setup | `/etc/setup_wizard.sh --force` |
-| Logs | `docker compose -f /opt/qm/compose.yml logs -f` |
+| Logs | `docker compose -f /srv/qm/compose.yml logs -f` |
 
 ### Configuration paths
 
-- Env / secrets: `/opt/qm/.env` (symlink `/opt/qm.env`)
-- Compose stack: `/opt/qm`
+- Env / secrets: `/srv/qm/.env` (symlink `/srv/qm.env`)
+- Compose stack: `/srv/qm`
 - Getting started: `/root/qm_info.txt`
 
 ## Security notes
 
 - Portal is served over **HTTPS** via Caddy on the droplet's public IP, using Let's Encrypt's short-lived certificate program for bare IPs (no domain needed). Expect a browser warning on first visit until that program is more widely trusted — the connection is still encrypted.
 - Only `portal`'s port is reachable from Caddy (bound to loopback in the compose network); `core`, `web-ui`, and Postgres stay entirely internal. Prefer a DigitalOcean Cloud Firewall restricting SSH (and optionally HTTP/HTTPS) to your IP.
-- Keep every value in `/opt/qm/.env` private — it holds the signing secrets, the admin password hash, and both API keys.
+- Keep every value in `/srv/qm/.env` private — it holds the signing secrets, the admin password hash, and both API keys.
 
 ## Additional Resources
 

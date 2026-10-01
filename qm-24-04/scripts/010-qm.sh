@@ -55,23 +55,23 @@ docker pull ghcr.io/yc-software/qm/web-ui@sha256:eb4fda23cbeba3b7884efdea8fc8155
 docker pull ghcr.io/yc-software/qm/portal@sha256:7f643afce9d67f7bc71f9b954c5257e77e40795f47d89d751fce6a8caf753806
 docker pull docker.io/library/postgres:16
 
-printf '%s\n' "${application_version}" > /opt/qm/.qm-version
+printf '%s\n' "${application_version}" > /srv/qm/.qm-version
 
 # Materialize .env from the non-hidden Packer template (Packer may skip dotfiles)
-if [ -f /opt/qm/env.template ]; then
-  cp /opt/qm/env.template /opt/qm/.env
-  chmod 600 /opt/qm/.env
+if [ -f /srv/qm/env.template ]; then
+  cp /srv/qm/env.template /srv/qm/.env
+  chmod 600 /srv/qm/.env
 fi
 
-# Convenience symlink matching this repo's other 1-clicks (/opt/<app>.env)
-ln -sfn /opt/qm/.env /opt/qm.env
+# Convenience symlink matching this repo's other 1-clicks (/<app>.env)
+ln -sfn /srv/qm/.env /srv/qm.env
 
-chmod +x /opt/qm/gen-secrets.py
-chmod +x /opt/start-qm.sh
-chmod +x /opt/stop-qm.sh
-chmod +x /opt/restart-qm.sh
-chmod +x /opt/status-qm.sh
-chmod +x /opt/update-qm.sh
+chmod +x /srv/qm/gen-secrets.py
+chmod +x /srv/qm/start-qm.sh
+chmod +x /srv/qm/stop-qm.sh
+chmod +x /srv/qm/restart-qm.sh
+chmod +x /srv/qm/status-qm.sh
+chmod +x /srv/qm/update-qm.sh
 chmod +x /etc/setup_wizard.sh
 chmod +x /etc/update-motd.d/99-one-click
 chmod +x /var/lib/cloud/scripts/per-instance/001_onboot

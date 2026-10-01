@@ -11,7 +11,7 @@ name: qm
 # Images are pinned to the digests published in the v0.1.13 release's
 # images.json (https://github.com/yc-software/qm/releases/tag/v0.1.13).
 # To move to a newer release, fetch that release's images.json and replace
-# the three digests below, then run /opt/update-qm.sh.
+# the three digests below, then run /srv/qm/update-qm.sh.
 
 services:
   postgres:

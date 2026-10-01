@@ -6,8 +6,8 @@ set -a
 source /etc/environment 2>/dev/null || true
 set +a
 
-# shellcheck source=/opt/qm/env-lib.sh
-source /opt/qm/env-lib.sh
+# shellcheck source=/srv/qm/env-lib.sh
+source /srv/qm/env-lib.sh
 
 INFO_FILE=/root/qm_info.txt
 DROPLET_IP="$(droplet_ip)"
@@ -28,7 +28,7 @@ if env_is_placeholder CORE_SIGNING_SECRET; then
   CLIENT_SECRET="$(openssl rand -hex 32)"
   write_env_kv AUTH_CLIENT_SECRET "$CLIENT_SECRET"
   write_env_kv OIDC_CLIENT_SECRET "$CLIENT_SECRET"
-  write_env_kv AUTH_SIGNING_JWK "$(python3 /opt/qm/gen-secrets.py jwk)"
+  write_env_kv AUTH_SIGNING_JWK "$(python3 /srv/qm/gen-secrets.py jwk)"
 fi
 
 # --- Generate the Postgres password + DATABASE_URL -----------------------
@@ -60,7 +60,7 @@ sed -e '/Match User root/d' \
     -e '/.*ForceCommand.*droplet.*/d' \
     -i /etc/ssh/sshd_config
 
-chmod +x /opt/qm/gen-secrets.py /etc/setup_wizard.sh
+chmod +x /srv/qm/gen-secrets.py /etc/setup_wizard.sh
 
 # Pick a model provider from droplet env vars: an explicit MODEL_PROVIDER
 # wins, otherwise infer from whichever single key was supplied (default
@@ -84,7 +84,7 @@ STACK_STARTED=0
 if [ -n "${ADMIN_EMAIL:-}" ] && [ "$HAS_MODEL_KEY" = 1 ] && [ -n "${E2B_API_KEY:-}" ]; then
   echo "Configuring QM from droplet environment variables..."
   ADMIN_PASSWORD="${ADMIN_PASSWORD:-$(openssl rand -base64 18 | tr -d '=+/' | cut -c1-18)}"
-  PW_HASH="$(printf '%s\n' "$ADMIN_PASSWORD" | python3 /opt/qm/gen-secrets.py hash-password)"
+  PW_HASH="$(printf '%s\n' "$ADMIN_PASSWORD" | python3 /srv/qm/gen-secrets.py hash-password)"
   write_env_kv MODEL_PROVIDER "$MODEL_PROVIDER_ENV"
   write_env_kv ANTHROPIC_API_KEY "${ANTHROPIC_API_KEY:-}"
   write_env_kv OPENAI_API_KEY "${OPENAI_API_KEY:-}"
@@ -94,7 +94,7 @@ if [ -n "${ADMIN_EMAIL:-}" ] && [ "$HAS_MODEL_KEY" = 1 ] && [ -n "${E2B_API_KEY:
   write_env_kv OIDC_ALLOWED_EMAILS "$ADMIN_EMAIL"
   write_env_kv AUTH_PASSWORD_USERS "${ADMIN_EMAIL}:${PW_HASH}"
 
-  (cd /opt/qm && docker compose up -d)
+  (cd /srv/qm && docker compose up -d)
   echo "Containers are up — giving Postgres + core a moment to finish starting (30s)..."
   sleep 30
   STACK_STARTED=1
@@ -128,7 +128,7 @@ if [ "$STACK_STARTED" = "1" ]; then
   Model:    ${MODEL_PROVIDER_ENV}
 
   Your QM is ready. Sign in with the credentials above (also in
-  /opt/qm/.env as AUTH_PASSWORD_USERS). This is the only sign-in method
+  /srv/qm/.env as AUTH_PASSWORD_USERS). This is the only sign-in method
   configured — see README.md to add real email or SSO sign-in later.
 EOF
 else
@@ -146,17 +146,17 @@ fi
 cat >> "$INFO_FILE" << 'EOF'
 
 MANAGEMENT:
-  Start:    /opt/start-qm.sh     (or systemctl-free: docker compose -f /opt/qm/compose.yml up -d)
-  Stop:     /opt/stop-qm.sh
-  Restart:  /opt/restart-qm.sh
-  Status:   /opt/status-qm.sh
-  Update:   /opt/update-qm.sh
-  Logs:     docker compose -f /opt/qm/compose.yml logs -f
+  Start:    /srv/qm/start-qm.sh     (or systemctl-free: docker compose -f /srv/qm/compose.yml up -d)
+  Stop:     /srv/qm/stop-qm.sh
+  Restart:  /srv/qm/restart-qm.sh
+  Status:   /srv/qm/status-qm.sh
+  Update:   /srv/qm/update-qm.sh
+  Logs:     docker compose -f /srv/qm/compose.yml logs -f
   Setup:    sudo /etc/setup_wizard.sh
 
 PATHS:
-  Stack:    /opt/qm
-  Env:      /opt/qm/.env  (symlink: /opt/qm.env)
+  Stack:    /srv/qm
+  Env:      /srv/qm/.env  (symlink: /srv/qm.env)
   Info:     /root/qm_info.txt
 
 SECURITY:

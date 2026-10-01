@@ -35,8 +35,8 @@
     },
     {
       "type": "file",
-      "source": "qm-24-04/files/opt/",
-      "destination": "/opt/"
+      "source": "qm-24-04/files/srv/",
+      "destination": "/srv/"
     },
     {
       "type": "file",

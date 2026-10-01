@@ -5,8 +5,8 @@
 
 set -euo pipefail
 
-# shellcheck source=/opt/qm/env-lib.sh
-source /opt/qm/env-lib.sh
+# shellcheck source=/srv/qm/env-lib.sh
+source /srv/qm/env-lib.sh
 
 remove_first_login_hook() {
   if [ -f /root/.bashrc ]; then
@@ -88,7 +88,7 @@ echo ""
 echo ""
 echo "Generating the password hash and starting QM..."
 
-PW_HASH="$(printf '%s\n' "$ADMIN_PASSWORD" | python3 /opt/qm/gen-secrets.py hash-password)"
+PW_HASH="$(printf '%s\n' "$ADMIN_PASSWORD" | python3 /srv/qm/gen-secrets.py hash-password)"
 write_env_kv MODEL_PROVIDER "$MODEL_PROVIDER"
 write_env_kv ANTHROPIC_API_KEY "$ANTHROPIC_API_KEY"
 write_env_kv OPENAI_API_KEY "$OPENAI_API_KEY"
@@ -98,7 +98,7 @@ write_env_kv AUTH_ALLOWED_EMAILS "$ADMIN_EMAIL"
 write_env_kv OIDC_ALLOWED_EMAILS "$ADMIN_EMAIL"
 write_env_kv AUTH_PASSWORD_USERS "${ADMIN_EMAIL}:${PW_HASH}"
 
-(cd /opt/qm && docker compose up -d)
+(cd /srv/qm && docker compose up -d)
 
 echo ""
 echo "Containers are up — giving Postgres + core a moment to finish starting (30s)..."

@@ -6,7 +6,7 @@ This directory contains the Packer builder configuration for creating a QM 1-Cli
 
 [QM](https://github.com/yc-software/qm) is an open-source multiplayer agent harness. This builder creates an Ubuntu 24.04 LTS Droplet running QM's `core`, `web-ui`, and `portal` services (auth embedded in portal, admin embedded in web-ui — matching upstream's own Helm chart) behind Docker Compose, plus a bundled Postgres. Agent turns themselves run externally on [e2b](https://e2b.dev), not on this droplet.
 
-**Why not the official `qm` CLI?** QM ships its own CLI (`@yc-software/qm`) with a `docker` deploy target, but that target's sandbox-backend policy (`cli/src/providers.ts`) refuses `e2b` on every target — it only allows `local` (mounts the host's Docker socket into `core`), `sprites`, `agent37`, or `superserve`. `core`'s own runtime validation (`src/deployment/secret-schema.ts`) has no such restriction: `e2b` is a first-class, fully supported sandbox backend there. So this builder bypasses the CLI entirely and wires the same published images the upstream Helm chart uses (`deploy/helm/values.yaml`) by hand in `files/opt/qm/compose.yml` — the same approach this repo's `qm-kubernetes` stack already takes (raw Helm values instead of the CLI).
+**Why not the official `qm` CLI?** QM ships its own CLI (`@yc-software/qm`) with a `docker` deploy target, but that target's sandbox-backend policy (`cli/src/providers.ts`) refuses `e2b` on every target — it only allows `local` (mounts the host's Docker socket into `core`), `sprites`, `agent37`, or `superserve`. `core`'s own runtime validation (`src/deployment/secret-schema.ts`) has no such restriction: `e2b` is a first-class, fully supported sandbox backend there. So this builder bypasses the CLI entirely and wires the same published images the upstream Helm chart uses (`deploy/helm/values.yaml`) by hand in `files/srv/qm/compose.yml` — the same approach this repo's `qm-kubernetes` stack already takes (raw Helm values instead of the CLI).
 
 ## Directory Structure
 
@@ -22,11 +22,11 @@ qm-24-04/
     │   ├── caddy/Caddyfile.tmp
     │   ├── setup_wizard.sh
     │   └── update-motd.d/99-one-click
-    ├── opt/
-    │   ├── start|stop|restart|status|update-qm.sh
+    ├── srv/
     │   └── qm/
+    │       ├── start|stop|restart|status|update-qm.sh
     │       ├── compose.yml
-    │       ├── env.template     # → /opt/qm/.env on install
+    │       ├── env.template     # → /srv/qm/.env on install
     │       ├── env-lib.sh       # shared helpers for 001_onboot + setup_wizard.sh
     │       └── gen-secrets.py   # EC P-256 JWK + scrypt password hash (stdlib only)
     └── var/lib/cloud/scripts/per-instance/001_onboot
@@ -73,7 +73,7 @@ So every sign-in path QM ships refuses plain HTTP on a public IP, full stop. The
 ## First Boot Behavior
 
 1. Generates the 8 signing secrets QM needs (`openssl rand -hex 32` each), an EC P-256 JWK for the embedded auth broker, and the Postgres password.
-2. Rewrites the public-origin placeholders in `/opt/qm/.env` to `https://<droplet-ip>`.
+2. Rewrites the public-origin placeholders in `/srv/qm/.env` to `https://<droplet-ip>`.
 3. Installs the Caddyfile and starts Caddy (TLS on the droplet IP — see "Why Caddy" above).
 4. If `ADMIN_EMAIL`, a model key (`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`), and `E2B_API_KEY` are all set as droplet environment variables, finishes configuration (generating a random admin password unless `ADMIN_PASSWORD` is also set) and starts the stack immediately — waiting 30s after `docker compose up -d` for Postgres/core to finish starting before declaring it ready. An explicit `MODEL_PROVIDER` env var picks between them; otherwise it's inferred from whichever single key was supplied, defaulting to `anthropic`.
 5. Otherwise hooks `/etc/setup_wizard.sh` into root's `.bashrc` for first SSH login, and leaves the stack stopped until that wizard runs.
@@ -90,7 +90,7 @@ These are internal implementation details of an early-stage upstream project (`@
 
 ## Version Pinning
 
-Image digests are hardcoded in `files/opt/qm/compose.yml` (see the comment at its top). To move to a newer release: fetch that release's `images.json` from the [releases page](https://github.com/yc-software/qm/releases), copy the new `core`/`web-ui`/`portal` digests into `compose.yml` and `scripts/010-qm.sh`, rebuild the image, then on a running droplet run `/opt/update-qm.sh`.
+Image digests are hardcoded in `files/srv/qm/compose.yml` (see the comment at its top). To move to a newer release: fetch that release's `images.json` from the [releases page](https://github.com/yc-software/qm/releases), copy the new `core`/`web-ui`/`portal` digests into `compose.yml` and `scripts/010-qm.sh`, rebuild the image, then on a running droplet run `/srv/qm/update-qm.sh`.
 
 ## Droplet Size
 
