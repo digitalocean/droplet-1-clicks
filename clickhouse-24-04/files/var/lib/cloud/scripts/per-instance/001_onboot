@@ -1,0 +1,67 @@
+#!/bin/bash
+# First-boot: set ClickHouse default password and start the server.
+# Must not rely on interactive /root/.bashrc — Marketplace autoupdate QA
+# uses non-interactive SSH and never runs the old first-login hook.
+
+set -euo pipefail
+
+# clickhouse status / --pid-file need this dir (/var/run is tmpfs).
+mkdir -p /var/run/clickhouse-server
+chown clickhouse:clickhouse /var/run/clickhouse-server 2>/dev/null || true
+
+if [ -x /opt/digitalocean_clickhouse/setup_password.sh ]; then
+    /opt/digitalocean_clickhouse/setup_password.sh
+fi
+
+# Ensure the unit is enabled and running (setup_password starts it; re-check here).
+systemctl enable clickhouse-server >/dev/null 2>&1 || true
+systemctl start clickhouse-server || service clickhouse-server start || clickhouse start || true
+
+# Wait until clickhouse reports running (QA test3 checks this).
+# Do not clear SSH ForceCommand until the process is confirmed up.
+clickhouse_running() {
+    clickhouse status 2>/dev/null | grep -q "The process with pid = .* is running\." \
+        || systemctl is-active --quiet clickhouse-server
+}
+
+i=0
+while [ "$i" -lt 90 ]; do
+    if clickhouse_running; then
+        break
+    fi
+    i=$((i + 1))
+    sleep 2
+done
+
+if ! clickhouse_running; then
+    echo "ERROR: clickhouse-server did not become ready within 180s; leaving SSH ForceCommand in place." >&2
+    exit 1
+fi
+
+# Remove only the DigitalOcean first-boot ForceCommand block installed by
+# common/scripts/018-force-ssh-logout.sh (Match User root + droplet ForceCommand).
+# Do not delete unrelated "Match User root" stanzas.
+SSHD_CONFIG=/etc/ssh/sshd_config
+if grep -q 'ForceCommand.*droplet' "$SSHD_CONFIG" 2>/dev/null; then
+    awk '
+        /^Match User root$/ {
+            pending = $0
+            next
+        }
+        pending != "" {
+            if ($0 ~ /ForceCommand.*droplet/) {
+                pending = ""
+                next
+            }
+            print pending
+            pending = ""
+        }
+        { print }
+        END {
+            if (pending != "") print pending
+        }
+    ' "$SSHD_CONFIG" > "${SSHD_CONFIG}.tmp" \
+        && mv "${SSHD_CONFIG}.tmp" "$SSHD_CONFIG"
+fi
+
+systemctl restart ssh
