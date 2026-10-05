@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-APP_VERSION="${application_version:-1.16.0}"
+APP_VERSION="${application_version:-1.18.0}"
 OPENHANDS_USER=openhands
 OPENHANDS_HOME=/home/openhands
 
