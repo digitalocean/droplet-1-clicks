@@ -8,7 +8,10 @@ APP_VERSION="3.2.1"
 if [ -f /var/lib/digitalocean/application.info ]; then
 	# shellcheck disable=SC1091
 	. /var/lib/digitalocean/application.info
-	APP_VERSION="${application_version:-$APP_VERSION}"
+	# Empty application_version (autoupdate APT path) must not wipe the default.
+	if [ -n "${application_version:-}" ]; then
+		APP_VERSION="$application_version"
+	fi
 fi
 APP_VERSION="${APP_VERSION#v}"
 CE_TAG="v${APP_VERSION}"
