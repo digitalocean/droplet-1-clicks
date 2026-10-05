@@ -32,7 +32,7 @@ OpenHands Agent Canvas runs the agent server on the host. Prefer at least 4 GB R
 ## Included System Components
 
 - **Ubuntu 24.04 LTS**
-- **OpenHands Agent Canvas** (version pinned in the image build; currently 1.16.0)
+- **OpenHands Agent Canvas** (version pinned in the image build; currently 1.19.0)
 - **Chromium** (`chromium-browser`) for agent browser tooling
 - **Node.js 24** and **uv**
 - **Caddy** reverse proxy (ports 80/443 → Agent Canvas on port 8000, which UFW denies from the internet)
@@ -60,7 +60,7 @@ OpenHands Agent Canvas runs the agent server on the host. Prefer at least 4 GB R
 ssh root@your-droplet-ip
 ```
 
-If Serverless Inference was not passed at create time, the first-login wizard can configure a DigitalOcean Serverless Inference model access key. After the key, press Enter for MiniMax M2.5, enter a model id, or `R` for the Intelligent Inference Router. Create keys at https://cloud.digitalocean.com/gen-ai/model-access-keys.
+If Serverless Inference was not passed at create time, the first-login wizard can configure a DigitalOcean Serverless Inference model access key. After the key, press Enter for MiniMax M2.5, enter a model id, or `R` for the Intelligent Inference Router. Create keys at https://cloud.digitalocean.com/model-studio/manage-keys (Inference > Manage > Create Model Access Key).
 
 ### 4. Configure LLM and start working
 
@@ -99,7 +99,7 @@ sudo /opt/update-openhands.sh 1.16.0
 sudo /opt/update-openhands.sh --rollback
 ```
 
-The image ships **Node.js 24** and Agent Canvas **1.16.0**, so every current Agent Canvas release installs as-is. On older droplets that still have Node 22, the helper upgrades Node before installing Agent Canvas 1.17+.
+The image ships **Node.js 24** and Agent Canvas **1.19.0**, so every current Agent Canvas release installs as-is. On older droplets that still have Node 22, the helper upgrades Node before installing Agent Canvas 1.17+.
 
 Before each successful version change, the script stores the prior pin as `OPENHANDS_VERSION_PREVIOUS` in `/opt/openhands.env`. `--rollback` reinstalls that package only — it is not a picker for arbitrary older releases. To install any other pin, use the specific-version command above. Rollback does not undo Agent Canvas config or workspace migrations.
 
@@ -120,6 +120,8 @@ When configured, OpenHands uses the OpenAI-compatible Serverless Inference endpo
 - Base URL: `https://inference.do-ai.run/v1`
 - Model form: `openai/<model-id>` (default `openai/minimax-m2.5`)
 - Intelligent Inference Router: set `DO_INFERENCE_ROUTER=<name>` (or pick `R` in the setup wizard) to use `openai/router:<name>` with the same key
+
+Create model access keys at https://cloud.digitalocean.com/model-studio/manage-keys (Inference > Manage > Create Model Access Key).
 
 You can change the model in Settings > LLM or by re-running the setup wizard.
 

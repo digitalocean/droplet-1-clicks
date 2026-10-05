@@ -54,7 +54,7 @@ make build-openhands-24-04
 
 ## What Gets Installed
 
-- **OpenHands Agent Canvas** (`@openhands/agent-canvas@1.16.0`, from `application_version` in `template.json`)
+- **OpenHands Agent Canvas** (`@openhands/agent-canvas@1.19.0`, from `application_version` in `template.json`)
 - **Chromium** (`chromium-browser`) for agent browser tooling
 - **Node.js 24** (NodeSource, signed apt repo) and **uv** (agent-server / automation via uvx)
 - **Caddy** – reverse proxy on ports 80/443 to Agent Canvas on port 8000 with shortlived TLS by IP
