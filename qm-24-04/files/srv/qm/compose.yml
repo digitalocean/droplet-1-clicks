@@ -1,0 +1,74 @@
+name: qm
+
+# QM (https://github.com/yc-software/qm) has no published docker-compose file
+# of its own — its official `qm` CLI drives a `docker` deploy target instead,
+# but that target's own sandbox-backend policy refuses e2b/sprites/etc. This
+# compose file plays the same role as this repo's qm-kubernetes/values.yml:
+# it wires the same images the upstream Helm chart uses (deploy/helm) by hand,
+# matching how that chart embeds "auth" inside portal and "admin" inside
+# web-ui rather than running them as separate containers.
+#
+# Images are pinned to the digests published in the v0.1.13 release's
+# images.json (https://github.com/yc-software/qm/releases/tag/v0.1.13).
+# To move to a newer release, fetch that release's images.json and replace
+# the three digests below, then run /srv/qm/update-qm.sh.
+
+services:
+  postgres:
+    image: docker.io/library/postgres:16
+    container_name: qm-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: qm
+      POSTGRES_USER: qm
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - qm-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qm"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  core:
+    image: ghcr.io/yc-software/qm/core@sha256:24f58b9b72c4413c6004001be6844087169c855e6bd28d6a8bcc06d62faa5987
+    container_name: qm-core
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - qm-coredata:/data
+
+  web-ui:
+    image: ghcr.io/yc-software/qm/web-ui@sha256:eb4fda23cbeba3b7884efdea8fc815558ecfecb1564c8e36f5c6b1ae6f742d8e
+    container_name: qm-web-ui
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - core
+
+  portal:
+    image: ghcr.io/yc-software/qm/portal@sha256:7f643afce9d67f7bc71f9b954c5257e77e40795f47d89d751fce6a8caf753806
+    container_name: qm-portal
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - core
+      - web-ui
+    # Public front door — everything else (core, web-ui, postgres) stays
+    # internal to the compose network. Bound to loopback only: Caddy (a host
+    # systemd service, not a compose service — see /etc/caddy/Caddyfile)
+    # terminates TLS on 80/443 and reverse-proxies here. QM's own sign-in
+    # flow (both the password form and the CLI's admin-login link) refuses
+    # to work at all without HTTPS or literal "localhost" — see README.md.
+    ports:
+      - "127.0.0.1:8081:8080"
+
+volumes:
+  qm-pgdata:
+  qm-coredata:
