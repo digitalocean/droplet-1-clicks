@@ -6,7 +6,7 @@
     "apt_packages": "apt-transport-https gnupg2 nginx wget curl unzip git python3-certbot-nginx",
     "application_name": "MERN",
     "mongo_version": "8.0",
-    "application_version": "8.0.17",
+    "application_version": "8.0.32",
     "node_version": "20.x"
   },
   "sensitive-variables": ["do_api_token"],
