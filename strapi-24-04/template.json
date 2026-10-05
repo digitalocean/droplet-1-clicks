@@ -4,7 +4,7 @@
     "image_name": "strapi-24-04-snapshot-{{timestamp}}",
     "apt_packages": "apt-transport-https ca-certificates curl software-properties-common git build-essential libsystemd-dev jq unzip docker.io docker-compose-v2",
     "application_name": "Strapi",
-    "application_version": "5.0.0"
+    "application_version": "5.56.0"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
