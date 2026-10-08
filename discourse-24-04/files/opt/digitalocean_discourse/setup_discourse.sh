@@ -1,4 +1,6 @@
 #!/bin/bash
+set -euo pipefail
+
 clear
 echo "----------------------------------------------------------------------------"
 echo "This script will configure your Discourse installation"
@@ -14,22 +16,24 @@ echo "--------------------------------------------------------------------------
 echo "When you are ready to proceed, press Enter"
 echo "To cancel setup, press Ctrl+C and this script will be run again on your next login"
 
-read wait
+read -r _
 cd /var/discourse
 
-if ./discourse-setup; then
-  clear
-  echo "Discourse is now installed.  Log into your admin account in a browser to continue"
-  echo "configuring Discourse."
+while true; do
+  if ./discourse-setup; then
+    clear
+    echo "Discourse is now installed.  Log into your admin account in a browser to continue"
+    echo "configuring Discourse."
 
-  cp -f /etc/skel/.bashrc /root/.bashrc
-else
+    cp -f /etc/skel/.bashrc /root/.bashrc
+    exit 0
+  fi
+
   echo ""
   echo "----------------------------------------------------------------------------"
-  echo "The setup script failed with the provided Discourse details"
-  echo "It will rerun. Please address the above issues"
+  echo "The setup script failed with the provided Discourse details."
+  echo "Press Enter to try again, or Ctrl+C to cancel"
+  echo "(setup will run again automatically on your next login)."
   echo "----------------------------------------------------------------------------"
-  echo "When you are ready to proceed, press Enter"
-  echo "To cancel setup, press Ctrl+C and this script will be run again on your next login"
-  read wait
-fi
+  read -r _
+done
