@@ -2,6 +2,24 @@
 # This script is designed to run once for initial Kafka configuration.
 set -euo pipefail
 
+oneclick_cleanup() {
+  sed -e '/Match User root/d' \
+      -e '/.*ForceCommand.*droplet.*/d' \
+      -i /etc/ssh/sshd_config
+
+  systemctl restart ssh
+}
+
+cleanup() {
+  if [ -n "${tmp_dir:-}" ]; then
+    rm -rf "$tmp_dir"
+  fi
+  oneclick_cleanup
+}
+
+# Unlock SSH on every exit so a failed first boot cannot leave ForceCommand in place.
+trap cleanup EXIT
+
 # j2 templated variables
 kafka_dir="{{ kafka_dir }}"
 data_dir="{{ data_dir }}"
@@ -15,17 +33,14 @@ private_ip=$(curl -w "\n" http://169.254.169.254/metadata/v1/interfaces/private/
 # SSL
 ssl_dir="${kafka_dir}/one-click-ssl"
 mkdir -p "$ssl_dir"
+chmod 0700 "$ssl_dir"
 keystore_password="$(openssl rand -base64 12)"
 echo "$keystore_password" > "${ssl_dir}/.keystore_password"
+chmod 0600 "${ssl_dir}/.keystore_password"
 
-# Generate default Kafka credentials
-kafka_default_user=$(openssl rand -base64 45)
+# Generate default Kafka credentials (fixed username, random password)
+kafka_default_user="doadmin"
 kafka_default_password=$(openssl rand -base64 45)
-
-cleanup() {
-  rm -rf "$tmp_dir"
-}
-trap cleanup EXIT
 
 gen_cert() {
   declare dest_dir="$ssl_dir"
@@ -78,7 +93,9 @@ EOF
   keytool -keystore kafka.truststore.jks -alias CARoot -import -file ca.crt -storepass "$keystore_password" -keypass "$keystore_password" -noprompt
 
   chown -R kafka:kafka "$dest_dir"
-  chmod -R 400 ${dest_dir}/*
+  chmod 0700 "$dest_dir"
+  chmod 400 ${dest_dir}/*
+  chmod 0600 "${dest_dir}/.keystore_password"
 
   popd
 }
@@ -101,10 +118,38 @@ configure_kafka_properties() {
   chmod 640 "${kafka_dir}/config/server.properties"
 }
 
+format_kraft_storage() {
+  # Combined-mode KRaft requires a unique cluster ID and formatted storage on first boot.
+  declare cluster_id
+  cluster_id="$("${kafka_dir}/bin/kafka-storage.sh" random-uuid)"
+
+  runuser -u kafka -- "${kafka_dir}/bin/kafka-storage.sh" format \
+    --standalone \
+    --cluster-id "${cluster_id}" \
+    --config "${kafka_dir}/config/server.properties" \
+    --add-scram "SCRAM-SHA-256=[name=\"${kafka_default_user}\",password=\"${kafka_default_password}\"]"
+}
+
+wait_for_kafka() {
+  echo "Waiting for Kafka to accept connections..."
+  declare i
+  for i in $(seq 1 60); do
+    if "${kafka_dir}/bin/kafka-topics.sh" --bootstrap-server 127.0.0.1:9092 --list >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 2
+  done
+
+  echo "Kafka did not become ready on localhost:9092" >&2
+  systemctl status kafka --no-pager || true
+  journalctl -u kafka -n 80 --no-pager || true
+  return 1
+}
+
 configure_kafka_service() {
-  # Dynamically set heap size based on physical memory available
-  declare phys_mem="$(($(getconf _PHYS_PAGES) * $(getconf PAGE_SIZE) / (1000 * 1000)))"
-  declare max_heap="$(($phys_mem * 80/100))m"
+  # Cap heap at half of RAM so OS, metaspace, and KRaft native memory cannot OOM first boot.
+  declare phys_mem="$(($(getconf _PHYS_PAGES) * $(getconf PAGE_SIZE) / (1024 * 1024)))"
+  declare max_heap="$((phys_mem / 2))m"
 
   # Render systemd service file
   (
@@ -114,15 +159,12 @@ configure_kafka_service() {
   )
 
   chmod 640 "/etc/systemd/system/kafka.service"
+  systemctl daemon-reload
   systemctl enable --now kafka.service
 
   echo "Ensuring Kafka is running..."
-  sleep 5
   systemctl is-active --quiet kafka
-}
-
-add_kafka_default_user() {
-  "${kafka_dir}/bin/kafka-configs.sh" --bootstrap-server localhost:9092 --alter --add-config "SCRAM-SHA-256=[password=$kafka_default_password]" --entity-type users --entity-name "$kafka_default_user"
+  wait_for_kafka
 }
 
 add_example_config() {
@@ -132,6 +174,8 @@ add_example_config() {
     kafka_default_password="$kafka_default_password" \
     gomplate -f "${templates_dir}/example.librdkafka.config.tmpl" -o "${ssl_dir}/example.librdkafka.config"
   )
+  chown kafka:kafka "${ssl_dir}/example.librdkafka.config"
+  chmod 0600 "${ssl_dir}/example.librdkafka.config"
 }
 
 add_readme() {
@@ -142,18 +186,9 @@ add_readme() {
   )
 }
 
-oneclick_cleanup() {
-  sed -e '/Match User root/d' \
-      -e '/.*ForceCommand.*droplet.*/d' \
-      -i /etc/ssh/sshd_config
-
-  systemctl restart ssh
-}
-
 gen_cert
 configure_kafka_properties
+format_kraft_storage
 configure_kafka_service
-add_kafka_default_user
 add_example_config
 add_readme
-oneclick_cleanup

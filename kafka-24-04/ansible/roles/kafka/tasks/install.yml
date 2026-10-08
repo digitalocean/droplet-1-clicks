@@ -1,4 +1,9 @@
 ---
+- name: Install | Require kafka_version from Packer application_version
+  fail:
+    msg: "kafka_version must be passed from Packer extra-vars (template.json application_version)"
+  when: kafka_version is not defined or (kafka_version | length) == 0
+
 - name: Install | Setup nofile limit for kafka user
   community.general.pam_limits:
     domain: kafka
@@ -11,21 +16,71 @@
     paths: "{{ kafka_dir }}"
   register: kafka_files_found
 
-- name: Install | Download kafka
+- name: Install | Download and unpack Kafka
   when: kafka_files_found.matched == 0
-  get_url:
-    url: "{{ kafka_url }}"
-    checksum: "{{ kafka_archive_checksum }}"
-    dest: "/tmp/kafka_{{ kafka_scala_version }}-{{ kafka_version }}.tar.gz"
+  block:
+    - name: Install | Probe primary Kafka mirror checksum
+      uri:
+        url: "{{ kafka_url }}.sha512"
+        return_content: true
+        status_code: [200]
+      register: kafka_primary_checksum
+      failed_when: false
 
-- name: Install | Unpack tarball
-  when: kafka_files_found.matched == 0
-  unarchive:
-    copy: no
-    src: "/tmp/kafka_{{ kafka_scala_version }}-{{ kafka_version }}.tar.gz"
-    dest: "{{ kafka_dir }}"
-    extra_opts:
-      - --strip-components=1
+    - name: Install | Fetch Apache archive checksum
+      when: kafka_primary_checksum.status | default(0) != 200
+      uri:
+        url: "{{ kafka_archive_url }}.sha512"
+        return_content: true
+        status_code: [200]
+      register: kafka_archive_checksum_resp
+
+    - name: Install | Select Kafka download URL and checksum body
+      set_fact:
+        kafka_download_url: "{{ kafka_url if kafka_primary_checksum.status | default(0) == 200 else kafka_archive_url }}"
+        kafka_checksum_content: "{{ kafka_primary_checksum.content if kafka_primary_checksum.status | default(0) == 200 else kafka_archive_checksum_resp.content }}"
+
+    - name: Install | Write Apache checksum file
+      copy:
+        dest: /tmp/kafka.tgz.sha512
+        content: "{{ kafka_checksum_content }}"
+
+    - name: Install | Parse Kafka SHA-512 checksum
+      shell: |
+        python3 - <<'PY'
+        import re, pathlib
+        text = pathlib.Path("/tmp/kafka.tgz.sha512").read_text()
+        if ":" in text:
+            hexpart = text.split(":", 1)[1]
+        elif "=" in text:
+            hexpart = text.split("=", 1)[1]
+        else:
+            hexpart = text.split()[0]
+        digest = re.sub(r"[^0-9a-fA-F]", "", hexpart).lower()
+        if len(digest) != 128:
+            raise SystemExit("parsed digest length %s, expected 128" % len(digest))
+        print(digest)
+        PY
+      register: kafka_sha_parse
+      changed_when: false
+
+    - name: Install | Set Kafka checksum
+      set_fact:
+        kafka_archive_checksum: "sha512:{{ kafka_sha_parse.stdout | trim }}"
+
+    - name: Install | Download kafka
+      get_url:
+        url: "{{ kafka_download_url }}"
+        checksum: "{{ kafka_archive_checksum }}"
+        dest: "/tmp/kafka_{{ kafka_scala_version }}-{{ kafka_version }}.tar.gz"
+
+    - name: Install | Unpack tarball
+      unarchive:
+        copy: no
+        src: "/tmp/kafka_{{ kafka_scala_version }}-{{ kafka_version }}.tar.gz"
+        dest: "{{ kafka_dir }}"
+        extra_opts:
+          - --strip-components=1
 
 - name: Install | Change kafka folder ownership to kafka
   file:
