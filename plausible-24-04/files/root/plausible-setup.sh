@@ -3,12 +3,18 @@ set -euo pipefail
 
 INSTALL_DIR="/docker/plausible"
 CE_REPO="https://github.com/plausible/community-edition.git"
-APP_VERSION="v3.2.1"
+# Bare semver to match autoupdate latestversion/plausible-analytics.sh
+APP_VERSION="3.2.1"
 if [ -f /var/lib/digitalocean/application.info ]; then
 	# shellcheck disable=SC1091
 	. /var/lib/digitalocean/application.info
-	APP_VERSION="${application_version:-$APP_VERSION}"
+	# Empty application_version (autoupdate APT path) must not wipe the default.
+	if [ -n "${application_version:-}" ]; then
+		APP_VERSION="$application_version"
+	fi
 fi
+APP_VERSION="${APP_VERSION#v}"
+CE_TAG="v${APP_VERSION}"
 
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
@@ -26,6 +32,17 @@ cleanup_docker() {
 	docker ps -a --filter "name=plausible" --format '{{.ID}}' | xargs -r docker rm -f 2>/dev/null || true
 }
 
+clone_ce() {
+	echo "Cloning Plausible Community Edition (${CE_TAG})..."
+	git clone --depth 1 --branch "$CE_TAG" "$CE_REPO" .
+}
+
+pin_compose_image() {
+	if [ -f compose.yml ] && grep -q "ghcr.io/plausible/community-edition:" compose.yml; then
+		sed -i "s|ghcr.io/plausible/community-edition:[^[:space:]]*|ghcr.io/plausible/community-edition:${CE_TAG}|g" compose.yml
+	fi
+}
+
 if [ -d .git ]; then
 	remote_url="$(git remote get-url origin 2>/dev/null || true)"
 	if [[ "$remote_url" != *community-edition* ]]; then
@@ -35,24 +52,19 @@ if [ -d .git ]; then
 		rm -rf "$INSTALL_DIR"
 		mkdir -p "$INSTALL_DIR"
 		cd "$INSTALL_DIR"
-		git clone --depth 1 "$CE_REPO" .
+		clone_ce
 	else
-		echo "Repository already exists. Updating..."
+		echo "Repository already exists. Updating to ${CE_TAG}..."
 		cleanup_docker
-		git pull --rebase --autostash || true
+		git fetch --depth 1 origin "$CE_TAG" || true
+		git checkout -B "$CE_TAG" "FETCH_HEAD" 2>/dev/null || git checkout "$CE_TAG" || true
+		git pull --rebase --autostash origin "$CE_TAG" 2>/dev/null || true
 	fi
 else
-	echo "Cloning Plausible Community Edition (image pin ${APP_VERSION})..."
-	git clone --depth 1 "$CE_REPO" .
+	clone_ce
 fi
 
-# Keep application_version aligned with the compose image tag when present
-if grep -q "ghcr.io/plausible/community-edition:" compose.yml 2>/dev/null; then
-	image_pin="$(sed -n 's/.*ghcr.io\/plausible\/community-edition:\([^[:space:]]*\).*/\1/p' compose.yml | head -1)"
-	if [ -n "$image_pin" ]; then
-		APP_VERSION="$image_pin"
-	fi
-fi
+pin_compose_image
 
 echo "=== Plausible Analytics Setup ==="
 echo ""
