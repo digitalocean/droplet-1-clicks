@@ -16,9 +16,10 @@ trap 'rm -rf "$tmpdir"' EXIT
 # shellcheck source=/dev/null
 source /opt/codex-cli-download.sh
 
+# SHA256 comes from the GitHub release digest for this tag — not Packer
+# template vars — so autoupdate can bump application_version alone.
 echo "Installing Codex CLI ${CODEX_VERSION} from GitHub release..."
-install_codex_binaries "$CODEX_RELEASE" "$tmpdir" \
-  "${codex_tarball_sha256:-}" "${bwrap_tarball_sha256:-}"
+install_codex_binaries "$CODEX_RELEASE" "$tmpdir"
 
 cat > /usr/local/bin/codex << 'EOF'
 #!/bin/bash
