@@ -42,7 +42,7 @@ download_codex_release_asset() {
     # bump cannot reuse a stale checksum from an older pin.
     expected_sha256=$(fetch_release_asset_digest "$tag" "$asset_name" || true)
 
-    if [ -z "$expected_sha256" ] || [ "$expected_sha256" = "null" ]; then
+    if [ -z "$expected_sha256" ]; then
         echo "Error: Could not determine SHA256 for ${asset_name} (tag ${tag})." >&2
         echo "GitHub asset digests are unavailable for some older uploads." >&2
         return 1
