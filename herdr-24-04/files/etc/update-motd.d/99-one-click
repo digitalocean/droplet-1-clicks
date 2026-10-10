@@ -1,0 +1,80 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's One-Click Herdr Droplet.
+
+Herdr is the terminal runtime your coding agents run in. SSH in, run herdr,
+and the agents below are already on PATH. You do not need to install them.
+
+PREINSTALLED AGENTS:
+  claude        Claude Code
+  codex         OpenAI Codex CLI
+  opencode      OpenCode
+  grok          Grok Build
+  kilo          Kilo Code CLI
+  cursor-agent  Cursor Agent CLI
+
+GETTING STARTED:
+
+  1. Open Herdr (the server is already running):
+       herdr
+
+  2. In a pane, start an agent from /root/workspace or any project:
+       claude
+       codex
+       opencode
+       grok
+       kilo
+       cursor-agent
+
+  3. Detach with Ctrl-b then q. Agents keep running. Reattach with herdr.
+
+CONNECT FROM YOUR LAPTOP:
+
+  Install Herdr on the laptop (https://herdr.dev/docs/install/), then add
+  ~/.ssh/config. The Host name is what you pass to herdr --remote:
+
+    Host herdr-droplet
+      HostName your-droplet-ip
+      User root
+      IdentityFile ~/.ssh/id_ed25519
+
+  Check the alias from the laptop, exit that shell, then attach:
+    ssh herdr-droplet
+    exit
+    herdr --remote herdr-droplet
+
+  Or skip the config entry:
+    herdr --remote ssh://root@your-droplet-ip
+
+  Detach with Ctrl-b then q. Agents keep running on this Droplet.
+
+Each agent still needs its own login the first time you start it. Herdr
+integrations for these agents are already installed, so Herdr can restore
+their sessions after a server restart.
+
+Sign-in helpers:
+  Claude Code:   claude
+  Codex:         codex login
+  OpenCode:      opencode auth login
+  Grok Build:    grok login --device-auth
+  Kilo Code:     kilo auth
+  Cursor:        cursor-agent login
+
+Helper commands:
+  Status:          /opt/status-herdr.sh
+  Start server:    /opt/start-herdr.sh
+  Stop server:     /opt/stop-herdr.sh
+  Restart server:  /opt/restart-herdr.sh
+  Update Herdr:    /opt/update-herdr.sh
+  Update agents:   /opt/update-agents.sh
+
+Documentation: https://herdr.dev/docs/
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
