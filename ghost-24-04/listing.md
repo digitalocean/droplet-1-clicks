@@ -27,15 +27,17 @@ A DigitalOcean 1-Click Droplet running **Ghost** (publishing platform) on **Ubun
 
 ## Service Management
 
-Use **`ghost-mgr`** for Ghost (run from `/var/www/ghost` or use `ghost` CLI which knows the install path):
+Use **`ghost-mgr`** for Ghost. After `sudo -i -u ghost-mgr` you start in `/var/www/ghost`.
 
-| Action | Command (as `ghost-mgr`, or with `sudo -u ghost-mgr -H bash -lc '...'`) |
-|--------|--------------------------------------------------------------------------|
+`ghost status` / `ghost ls` work from any directory. **`ghost stop` / `start` / `restart` / `update` must run from `/var/www/ghost`** (or pass `--dir /var/www/ghost`). From home they error with “Working directory is not a recognisable Ghost installation” and do not change the running service.
+
+| Action | Command (as `ghost-mgr`) |
+|--------|--------------------------|
 | Ghost status | `ghost status` |
-| Stop | `ghost stop` |
-| Start | `ghost start` |
-| Restart | `ghost restart` |
-| Update Ghost | `ghost update` (from the install directory) |
+| Stop | `ghost stop` (from `/var/www/ghost`, or `ghost stop --dir /var/www/ghost`) |
+| Start | `ghost start` (from `/var/www/ghost`, or `ghost start --dir /var/www/ghost`) |
+| Restart | `ghost restart` (from `/var/www/ghost`, or `ghost restart --dir /var/www/ghost`) |
+| Update Ghost | `ghost update` (from `/var/www/ghost`) |
 | Logs | `ghost log` or files under `/var/www/ghost/content/logs/` |
 
 Core stack services (run as root):
