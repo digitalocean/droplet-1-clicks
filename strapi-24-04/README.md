@@ -4,11 +4,11 @@ This repository contains the Packer configuration and supporting files to build 
 
 ## Overview
 
-Strapi is a leading open-source headless CMS that gives developers the freedom to use their favorite tools and frameworks while allowing editors to manage content using an intuitive admin panel. This 1-Click application deploys Strapi v5.0.0 with PostgreSQL 16 on Ubuntu 24.04 LTS using Docker containers.
+Strapi is a leading open-source headless CMS that gives developers the freedom to use their favorite tools and frameworks while allowing editors to manage content using an intuitive admin panel. This 1-Click application deploys Strapi v5.56.0 with PostgreSQL 16 on Ubuntu 24.04 LTS using Docker containers.
 
 ## What's Included
 
-- **Strapi v5.0.0** - Latest version of the headless CMS
+- **Strapi v5.56.0** - Latest version of the headless CMS
 - **Node.js 22 (Alpine)** - JavaScript runtime for Strapi
 - **PostgreSQL 16 (Alpine)** - Production-ready database
 - **Docker & Docker Compose** - Container orchestration
@@ -250,7 +250,7 @@ After building:
 
 ## Version Information
 
-- **Strapi**: 5.0.0
+- **Strapi**: 5.56.0
 - **Node.js**: 22 (Alpine Linux)
 - **PostgreSQL**: 16 (Alpine Linux)
 - **Ubuntu**: 24.04 LTS
