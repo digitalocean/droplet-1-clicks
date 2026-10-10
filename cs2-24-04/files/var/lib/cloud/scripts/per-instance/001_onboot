@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# Start the CS2 dedicated server
+sudo -u linuxgsm bash -c "cd /home/linuxgsm && ./cs2server start"
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
