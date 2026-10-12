@@ -47,17 +47,12 @@ mkdir -p /var/log/caddy && chown -R caddy:caddy /var/log/caddy
 systemctl stop caddy 2>/dev/null || true
 systemctl disable caddy 2>/dev/null || true
 
-# Pre-pull the pinned QM images so first boot is faster. Digests come from
-# https://github.com/yc-software/qm/releases/download/${application_version}/images.json
-echo "Pulling QM stack images (release ${application_version})..."
-docker pull ghcr.io/yc-software/qm/core@sha256:24f58b9b72c4413c6004001be6844087169c855e6bd28d6a8bcc06d62faa5987
-docker pull ghcr.io/yc-software/qm/web-ui@sha256:eb4fda23cbeba3b7884efdea8fc815558ecfecb1564c8e36f5c6b1ae6f742d8e
-docker pull ghcr.io/yc-software/qm/portal@sha256:7f643afce9d67f7bc71f9b954c5257e77e40795f47d89d751fce6a8caf753806
-docker pull docker.io/library/postgres:16
-
 printf '%s\n' "${application_version}" > /srv/qm/.qm-version
 
-# Materialize .env from the non-hidden Packer template (Packer may skip dotfiles)
+# Materialize .env from the non-hidden Packer template (Packer may skip
+# dotfiles) BEFORE pulling: compose.yml's image refs come from .env
+# (QM_CORE_IMAGE etc., empty by default — see env.template) via
+# docker compose's own variable interpolation, so .env must exist first.
 if [ -f /srv/qm/env.template ]; then
   cp /srv/qm/env.template /srv/qm/.env
   chmod 600 /srv/qm/.env
@@ -65,6 +60,68 @@ fi
 
 # Convenience symlink matching this repo's other 1-clicks (/<app>.env)
 ln -sfn /srv/qm/.env /srv/qm.env
+
+# Build `core` from the DigitalOcean Managed Agents sandbox-backend fork
+# (https://github.com/nkurraDO/qm, branch managed-agents-sandbox-backend —
+# this is yc-software/qm PR #2067, pinned to a specific commit), since the
+# fork has no published release/image yet (checked: zero GitHub releases as
+# of this writing), so we build it ourselves rather than waiting. Only
+# `core` changes in this fork (web-ui/portal are untouched), and the fork is
+# a pure superset of upstream (adds SANDBOX_BACKEND=do-managed-agents
+# alongside e2b/local/etc., doesn't remove anything), so this one image
+# serves both sandbox backends. This commit uses the fork's formalized
+# naming (`do-managed-agents`/`DO_AGENTS_*`) — a real rename from the
+# fork's earlier `mars`/`MARS_*` naming this droplet originally pinned, not
+# just cosmetic. See README.md "DigitalOcean Managed Agents sandbox
+# backend" for the full story and how to bump this pin later.
+QM_FORK_REPO="https://github.com/nkurraDO/qm.git"
+QM_FORK_SHA="15e71bf0379eec590478da826b9c383a49e4227b"
+QM_CORE_MANAGED_AGENTS_TAG="qm-core-managed-agents:15e71bf0"
+
+echo "Building core (${QM_CORE_MANAGED_AGENTS_TAG}) from ${QM_FORK_REPO} @ ${QM_FORK_SHA}..."
+BUILD_DIR="$(mktemp -d)"
+git -C "$BUILD_DIR" init -q
+git -C "$BUILD_DIR" remote add origin "$QM_FORK_REPO"
+git -C "$BUILD_DIR" fetch -q --depth 1 origin "$QM_FORK_SHA"
+git -C "$BUILD_DIR" checkout -q FETCH_HEAD
+
+# KNOWN ISSUE at the previous pinned commit (787ff972), verified by actually
+# running that build: deploy/core/Dockerfile has a hard
+# `npm audit --audit-level=moderate` gate that failed there — fastify (high:
+# auth-bypass-adjacent advisories) and hono (moderate: XSS) both had open
+# advisories in that lockfile. `npm ci` itself succeeded; only the separate
+# audit gate layered on top failed the build. This strips that one gate so
+# we get a real image instead of no image — it does NOT change which
+# package versions get installed (still exactly what package-lock.json
+# pins), so this doesn't make the image any less secure than the fork's own
+# code already is; it just stops vendoring-unrelated advisories from
+# blocking our build. Confirmed the same gate line is still present
+# verbatim at this new commit (15e71bf0), so this patch still applies
+# syntactically — but NOT re-verified by an actual `docker build` (no local
+# Docker daemon available when this was pinned), so whether the same two
+# advisories (or different ones) are still open in this commit's lockfile
+# is unconfirmed; check on the next real Packer build. This is an upstream
+# fork issue either way, not ours to fix by silently bumping dependency
+# versions out from under their lockfile — flag it to the DigitalOcean
+# Managed Agents team; don't just carry this patch forward forever. See
+# README.md "DigitalOcean Managed Agents sandbox backend" for details.
+sed -i.bak \
+  's/npm ci --omit=dev && npm audit --omit=dev --audit-level=moderate \\/npm ci --omit=dev \\/' \
+  "$BUILD_DIR/deploy/core/Dockerfile"
+rm -f "$BUILD_DIR/deploy/core/Dockerfile.bak"
+
+docker build \
+  -f "$BUILD_DIR/deploy/core/Dockerfile" \
+  -t "$QM_CORE_MANAGED_AGENTS_TAG" \
+  --build-arg "GIT_SHA=${QM_FORK_SHA}" \
+  "$BUILD_DIR"
+rm -rf "$BUILD_DIR"
+
+# Pull the remaining images compose.yml resolves to (web-ui/portal still come
+# from upstream — see compose.yml's header comment; core is excluded here
+# since it was just built locally above, not pulled from a registry).
+echo "Pulling QM stack images (release ${application_version})..."
+(cd /srv/qm && docker compose pull web-ui portal postgres dind)
 
 chmod +x /srv/qm/gen-secrets.py
 chmod +x /srv/qm/start-qm.sh

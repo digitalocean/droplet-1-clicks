@@ -8,16 +8,38 @@ name: qm
 # matching how that chart embeds "auth" inside portal and "admin" inside
 # web-ui rather than running them as separate containers.
 #
-# Images are pinned to the digests published in the v0.1.13 release's
-# images.json (https://github.com/yc-software/qm/releases/tag/v0.1.13).
-# To move to a newer release, fetch that release's images.json and replace
-# the three digests below, then run /srv/qm/update-qm.sh.
+# web-ui/portal are pinned to the digests published in the v0.1.13 release's
+# images.json (https://github.com/yc-software/qm/releases/tag/v0.1.13) and
+# pulled from upstream's registry (docker compose pull in scripts/010-qm.sh).
+#
+# core is instead built from source at Packer build time from the
+# DigitalOcean Managed Agents sandbox-backend fork (https://github.com/nkurraDO/qm,
+# branch managed-agents-sandbox-backend — yc-software/qm PR #2067, pinned
+# commit 15e71bf0), since that fork has no published image yet — see
+# scripts/010-qm.sh for the build and README.md "DigitalOcean Managed Agents
+# sandbox backend" for why. The fork only touches core and is a pure
+# superset of upstream (adds SANDBOX_BACKEND=do-managed-agents, doesn't
+# remove e2b/local/etc.), so this one image serves either sandbox backend
+# the setup wizard offers.
+#
+# To move core to a newer fork commit: bump QM_FORK_SHA and
+# QM_CORE_MANAGED_AGENTS_TAG in scripts/010-qm.sh and the default below,
+# then rebuild the image. To move web-ui/portal to a newer upstream release:
+# fetch that release's images.json and replace their digests below, then run
+# /srv/qm/update-qm.sh.
 
 services:
+  # Gated behind the "local-postgres" profile so an attached DigitalOcean
+  # Managed Database (DBaaS) can replace it entirely: 001_onboot leaves
+  # COMPOSE_PROFILES=local-postgres in .env by default (this service runs),
+  # or blank when DBaaS is detected (it doesn't) — see env-lib.sh's
+  # bootstrap_do_dbaas and README.md "Attached DigitalOcean Managed
+  # Database" for the full story.
   postgres:
     image: docker.io/library/postgres:16
     container_name: qm-postgres
     restart: unless-stopped
+    profiles: ["local-postgres"]
     environment:
       POSTGRES_DB: qm
       POSTGRES_USER: qm
@@ -30,20 +52,55 @@ services:
       timeout: 5s
       retries: 10
 
+  # A nested, isolated Docker daemon dedicated to QM's own "publish a web
+  # app" feature (DEPLOY_PROVIDER=docker, QM's default) — core needs some
+  # Docker daemon reachable to run a published app, and this keeps that
+  # daemon separate from the real host Docker running this very stack
+  # (postgres/core/web-ui/portal/caddy), rather than mounting the host's
+  # own /var/run/docker.sock into core — see README.md "Docker-in-Docker
+  # for app publishing" for the full security tradeoff this was chosen
+  # over (host-socket mount gives a published app effective root on this
+  # droplet; an external deploy target needs a whole separate credential
+  # we don't collect). privileged:true is the real cost here — needed for
+  # dind to create its own nested namespaces/cgroups/mounts at all.
+  dind:
+    image: docker:27-dind
+    container_name: qm-dind
+    restart: unless-stopped
+    privileged: true
+    environment:
+      DOCKER_TLS_CERTDIR: ""
+    volumes:
+      - qm-dind-data:/var/lib/docker
+    command: ["--host=unix:///var/run/docker.sock", "--host=tcp://0.0.0.0:2375"]
+    healthcheck:
+      test: ["CMD", "docker", "info"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   core:
-    image: ghcr.io/yc-software/qm/core@sha256:24f58b9b72c4413c6004001be6844087169c855e6bd28d6a8bcc06d62faa5987
+    image: ${QM_CORE_IMAGE:-qm-core-managed-agents:15e71bf0}
     container_name: qm-core
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      DOCKER_HOST: tcp://dind:2375
     depends_on:
       postgres:
+        condition: service_healthy
+        # Not required when the "local-postgres" profile is inactive (the
+        # DBaaS path) — otherwise core would refuse to start without a
+        # service that was never meant to run.
+        required: false
+      dind:
         condition: service_healthy
     volumes:
       - qm-coredata:/data
 
   web-ui:
-    image: ghcr.io/yc-software/qm/web-ui@sha256:eb4fda23cbeba3b7884efdea8fc815558ecfecb1564c8e36f5c6b1ae6f742d8e
+    image: ${QM_WEBUI_IMAGE:-ghcr.io/yc-software/qm/web-ui@sha256:eb4fda23cbeba3b7884efdea8fc815558ecfecb1564c8e36f5c6b1ae6f742d8e}
     container_name: qm-web-ui
     restart: unless-stopped
     env_file:
@@ -52,7 +109,7 @@ services:
       - core
 
   portal:
-    image: ghcr.io/yc-software/qm/portal@sha256:7f643afce9d67f7bc71f9b954c5257e77e40795f47d89d751fce6a8caf753806
+    image: ${QM_PORTAL_IMAGE:-ghcr.io/yc-software/qm/portal@sha256:7f643afce9d67f7bc71f9b954c5257e77e40795f47d89d751fce6a8caf753806}
     container_name: qm-portal
     restart: unless-stopped
     env_file:
@@ -72,3 +129,4 @@ services:
 volumes:
   qm-pgdata:
   qm-coredata:
+  qm-dind-data:

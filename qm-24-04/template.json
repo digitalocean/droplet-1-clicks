@@ -2,7 +2,7 @@
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "qm-24-04-snapshot-{{timestamp}}",
-    "apt_packages": "apt-transport-https ca-certificates curl software-properties-common openssl python3 jq unzip ufw gnupg fail2ban",
+    "apt_packages": "apt-transport-https ca-certificates curl software-properties-common openssl python3 jq unzip ufw gnupg fail2ban git",
     "application_name": "QM",
     "application_version": "v0.1.13"
   },
