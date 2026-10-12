@@ -60,9 +60,9 @@ echo "Pulling Buzz stack images (relay ${APP_VERSION})..."
 docker pull "${BUZZ_IMAGE}"
 docker pull postgres:17.10-alpine
 docker pull redis:7.4.10-alpine
-# Docker Hub minio/* repos were removed (2026); pull from Quay.
-docker pull quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
-docker pull quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
+# Silo/mc pins match compose.yml (upstream block/buzz deploy/compose).
+docker pull pgsty/silo:RELEASE.2026-09-16T00-00-00Z@sha256:635197cb9f36d01bee221d34d1c7d7960f6a95c48b0b6c01d99cd13bdae51a46
+docker pull pgsty/mc:RELEASE.2026-09-16T00-00-00Z@sha256:cfc83108c3abb371f8fb84d99c1fdc88f8c237e022409b0081fb7c0a3be634dd
 
 systemctl enable fail2ban
 systemctl restart fail2ban
