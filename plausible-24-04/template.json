@@ -4,7 +4,7 @@
     "image_name": "plausible-24-04-snapshot-{{timestamp}}",
     "apt_packages": "apt-transport-https ca-certificates curl wget git gnupg docker.io docker-compose-v2 ufw fail2ban",
     "application_name": "Plausible",
-    "application_version": "v3.2.1"
+    "application_version": "3.2.1"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
