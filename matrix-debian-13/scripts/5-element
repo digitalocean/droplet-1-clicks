@@ -1,0 +1,7 @@
+#!/bin/sh
+
+cd /opt
+wget "https://github.com/element-hq/element-web/releases/download/v$ELEMENT_VERSION/element-v$ELEMENT_VERSION.tar.gz"
+tar -zxvf "element-v$ELEMENT_VERSION.tar.gz"
+ln -s "element-v$ELEMENT_VERSION" element
+rm -f "/opt/element-v$ELEMENT_VERSION.tar.gz"

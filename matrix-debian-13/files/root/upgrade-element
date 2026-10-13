@@ -1,0 +1,20 @@
+#!/bin/sh -e
+#
+# upgrade element-web to desired version
+
+ELEMENT_VERSION=$1
+
+if [ -z "$1" ]; then
+    printf "Please specify the element version to download\n"
+    exit 1
+fi
+
+cd /opt
+wget "https://github.com/element-hq/element-web/releases/download/v$ELEMENT_VERSION/element-v$ELEMENT_VERSION.tar.gz"
+tar -zxvf "element-v$ELEMENT_VERSION.tar.gz"
+if [ ! -f "element-v$ELEMENT_VERSION/config.json" ]; then
+    cp element/config.json "element-v$ELEMENT_VERSION"
+fi
+rm -f /opt/element
+ln -s "element-v$ELEMENT_VERSION" element
+rm /opt/element-*.tar.gz

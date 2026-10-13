@@ -1,0 +1,12 @@
+#!/bin/sh
+#
+# create a new matrix user
+
+username="$1"
+
+if [ -z "$username" ]; then
+    printf "Please specify the desired username of the account to create\nexample: ./new-user sauron\n"
+    exit 1
+fi
+
+register_new_matrix_user -u "$username" -c /etc/matrix-synapse/homeserver.yaml http://localhost:8008

@@ -1,0 +1,11 @@
+#!/bin/sh
+
+apt -y install ufw
+
+ufw default deny
+ufw limit ssh
+ufw allow 80 # http
+ufw allow 443 # https
+ufw allow 8448 # synapse
+
+ufw --force enable

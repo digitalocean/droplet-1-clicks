@@ -1,0 +1,11 @@
+#!/bin/sh
+
+apt -qqy install postgresql postgresql-contrib
+systemctl start postgresql
+systemctl enable postgresql
+
+sudo -u postgres createuser synapse_user
+sudo -u postgres createdb --encoding=UTF8 --locale=C --template=template0 --owner=synapse_user synapse
+
+# security note:
+# synapse user password is set in the cloudinit firstboot script
