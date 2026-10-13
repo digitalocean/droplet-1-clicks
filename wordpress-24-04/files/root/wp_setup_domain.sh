@@ -69,6 +69,11 @@ https://$domain {
         path */wp-config.php
     }
     respond @blocked 403
+
+    # Block PHP execution under upload/content directories (webshells)
+    # Separate matcher: path + path_regexp in one block are AND'd, not OR'd
+    @upload_php path_regexp upload_php (?i)/(uploads|media|files|cache)/.*\.(php|php5|phtml|phar)$
+    respond @upload_php 403
 }
 EOF
 else
@@ -96,6 +101,11 @@ https://$domain {
         path */wp-config.php
     }
     respond @blocked 403
+
+    # Block PHP execution under upload/content directories (webshells)
+    # Separate matcher: path + path_regexp in one block are AND'd, not OR'd
+    @upload_php path_regexp upload_php (?i)/(uploads|media|files|cache)/.*\.(php|php5|phtml|phar)$
+    respond @upload_php 403
 }
 EOF
 fi
