@@ -62,21 +62,27 @@ fi
 ln -sfn /srv/qm/.env /srv/qm.env
 
 # Build `core` from the DigitalOcean Managed Agents sandbox-backend fork
-# (https://github.com/nkurraDO/qm, branch managed-agents-sandbox-backend —
-# this is yc-software/qm PR #2067, pinned to a specific commit), since the
+# (https://github.com/nkurraDO/qm, branch managed-agents-workspace-scratch —
+# this is yc-software/qm PR #2221, pinned to a specific commit), since the
 # fork has no published release/image yet (checked: zero GitHub releases as
 # of this writing), so we build it ourselves rather than waiting. Only
 # `core` changes in this fork (web-ui/portal are untouched), and the fork is
 # a pure superset of upstream (adds SANDBOX_BACKEND=do-managed-agents
 # alongside e2b/local/etc., doesn't remove anything), so this one image
-# serves both sandbox backends. This commit uses the fork's formalized
-# naming (`do-managed-agents`/`DO_AGENTS_*`) — a real rename from the
-# fork's earlier `mars`/`MARS_*` naming this droplet originally pinned, not
-# just cosmetic. See README.md "DigitalOcean Managed Agents sandbox
-# backend" for the full story and how to bump this pin later.
+# serves both sandbox backends. Pin bumped from the earlier 15e71bf0 commit
+# (yc-software/qm PR #2067) specifically for PR #2221's fix: Managed Agents
+# now declares a backend-specific scratch directory (/workspace/.qm-scratch)
+# for files that have to be both written by exec AND transferred in/out —
+# fixing two real bugs confirmed live against a client's sandbox: publishing
+# a web app failed ("path outside workspace"), and separately, ANY command
+# needing a credential failed too (both used a shared /tmp scratch path the
+# sandbox's own file-transfer guard rejects; only /workspace is allowed).
+# This also makes this droplet's own mktemp-shim workaround for the first
+# bug obsolete — removed, see README.md "DigitalOcean Managed Agents
+# sandbox backend" for the full story and how to bump this pin later.
 QM_FORK_REPO="https://github.com/nkurraDO/qm.git"
-QM_FORK_SHA="15e71bf0379eec590478da826b9c383a49e4227b"
-QM_CORE_MANAGED_AGENTS_TAG="qm-core-managed-agents:15e71bf0"
+QM_FORK_SHA="cf711d0491a2de76bf17bb8bc0c8a4e8753f5540"
+QM_CORE_MANAGED_AGENTS_TAG="qm-core-managed-agents:cf711d04"
 
 echo "Building core (${QM_CORE_MANAGED_AGENTS_TAG}) from ${QM_FORK_REPO} @ ${QM_FORK_SHA}..."
 BUILD_DIR="$(mktemp -d)"
@@ -85,31 +91,14 @@ git -C "$BUILD_DIR" remote add origin "$QM_FORK_REPO"
 git -C "$BUILD_DIR" fetch -q --depth 1 origin "$QM_FORK_SHA"
 git -C "$BUILD_DIR" checkout -q FETCH_HEAD
 
-# KNOWN ISSUE at the previous pinned commit (787ff972), verified by actually
-# running that build: deploy/core/Dockerfile has a hard
-# `npm audit --audit-level=moderate` gate that failed there — fastify (high:
-# auth-bypass-adjacent advisories) and hono (moderate: XSS) both had open
-# advisories in that lockfile. `npm ci` itself succeeded; only the separate
-# audit gate layered on top failed the build. This strips that one gate so
-# we get a real image instead of no image — it does NOT change which
-# package versions get installed (still exactly what package-lock.json
-# pins), so this doesn't make the image any less secure than the fork's own
-# code already is; it just stops vendoring-unrelated advisories from
-# blocking our build. Confirmed the same gate line is still present
-# verbatim at this new commit (15e71bf0), so this patch still applies
-# syntactically — but NOT re-verified by an actual `docker build` (no local
-# Docker daemon available when this was pinned), so whether the same two
-# advisories (or different ones) are still open in this commit's lockfile
-# is unconfirmed; check on the next real Packer build. This is an upstream
-# fork issue either way, not ours to fix by silently bumping dependency
-# versions out from under their lockfile — flag it to the DigitalOcean
-# Managed Agents team; don't just carry this patch forward forever. See
-# README.md "DigitalOcean Managed Agents sandbox backend" for details.
-sed -i.bak \
-  's/npm ci --omit=dev && npm audit --omit=dev --audit-level=moderate \\/npm ci --omit=dev \\/' \
-  "$BUILD_DIR/deploy/core/Dockerfile"
-rm -f "$BUILD_DIR/deploy/core/Dockerfile.bak"
-
+# The earlier pinned commits (787ff972, then 15e71bf0) needed a sed-patch
+# here to strip deploy/core/Dockerfile's `npm audit --audit-level=moderate`
+# gate — real fastify/hono advisories were open in those lockfiles. Checked
+# again at this commit, with an actual `docker build --no-cache` (not just
+# reading the Dockerfile): the gate now passes cleanly on its own —
+# `found 0 vulnerabilities` — so no patch is needed here anymore. If a
+# future pin bump reintroduces this, the old patch line is in this file's
+# git history.
 docker build \
   -f "$BUILD_DIR/deploy/core/Dockerfile" \
   -t "$QM_CORE_MANAGED_AGENTS_TAG" \

@@ -5,7 +5,7 @@ ENV_FILE=/srv/qm/.env
 
 # DigitalOcean Managed Agents sandbox backend's SANDBOX_BACKEND value —
 # confirmed from the fork's source (src/deployment/secret-schema.ts) at the
-# pinned commit (15e71bf0, branch managed-agents-sandbox-backend — the
+# pinned commit (cf711d04, branch managed-agents-workspace-scratch — the
 # fork's formalized naming; an older pinned commit used "mars" literally,
 # see README.md "DigitalOcean Managed Agents sandbox backend"). 001_onboot
 # and setup_wizard.sh both reference this one constant.

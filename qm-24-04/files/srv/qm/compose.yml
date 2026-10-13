@@ -14,8 +14,8 @@ name: qm
 #
 # core is instead built from source at Packer build time from the
 # DigitalOcean Managed Agents sandbox-backend fork (https://github.com/nkurraDO/qm,
-# branch managed-agents-sandbox-backend — yc-software/qm PR #2067, pinned
-# commit 15e71bf0), since that fork has no published image yet — see
+# branch managed-agents-workspace-scratch — yc-software/qm PR #2221, pinned
+# commit cf711d04), since that fork has no published image yet — see
 # scripts/010-qm.sh for the build and README.md "DigitalOcean Managed Agents
 # sandbox backend" for why. The fork only touches core and is a pure
 # superset of upstream (adds SANDBOX_BACKEND=do-managed-agents, doesn't
@@ -52,6 +52,34 @@ services:
       timeout: 5s
       retries: 10
 
+  core:
+    image: ${QM_CORE_IMAGE:-qm-core-managed-agents:cf711d04}
+    container_name: qm-core
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # tcp://127.0.0.1:2375, not a "dind" hostname — dind shares this
+      # container's own network namespace (network_mode: service:core
+      # below), not the regular compose bridge network, specifically so
+      # QM's app-publish feature (DEPLOY_PROVIDER=docker) can reach what it
+      # creates. See the dind service's own comment for the full story.
+      DOCKER_HOST: tcp://127.0.0.1:2375
+    depends_on:
+      postgres:
+        condition: service_healthy
+        # Not required when the "local-postgres" profile is inactive (the
+        # DBaaS path) — otherwise core would refuse to start without a
+        # service that was never meant to run.
+        required: false
+      # dind is deliberately NOT a depends_on dependency of core (even an
+      # optional one) — see dind's own comment for why that would be a
+      # circular wait. core already treats a not-yet-reachable Docker
+      # daemon as a non-fatal "publishing is unavailable" warning, not a
+      # startup failure, so this omission is safe.
+    volumes:
+      - qm-coredata:/data
+
   # A nested, isolated Docker daemon dedicated to QM's own "publish a web
   # app" feature (DEPLOY_PROVIDER=docker, QM's default) — core needs some
   # Docker daemon reachable to run a published app, and this keeps that
@@ -63,41 +91,65 @@ services:
   # droplet; an external deploy target needs a whole separate credential
   # we don't collect). privileged:true is the real cost here — needed for
   # dind to create its own nested namespaces/cgroups/mounts at all.
+  #
+  # network_mode: service:core (not the regular compose bridge network,
+  # and deliberately not host networking either) — confirmed live and by
+  # reading QM's own source: core's "publish a web app" code runs
+  # `docker run -p 127.0.0.1:<port>:8080 ...` for each published app and
+  # then reverse-proxies to that literal 127.0.0.1 address itself,
+  # assuming (undocumented, confirmed by reading QM's own reference
+  # "docker" deploy target in cli/src/backends/docker.ts, which has the
+  # exact same assumption) that whatever runs this code shares a network
+  # namespace with the Docker daemon it drives. Sharing specifically
+  # core's namespace (not the host's) means published apps' 127.0.0.1
+  # becomes core's own loopback — reachable — while core itself stays on
+  # the regular compose network (postgres/web-ui/portal reachability is
+  # completely unaffected), and dind's own control API (2375) becomes
+  # reachable only via core's loopback, not from any other container on
+  # the bridge network. Bound to 127.0.0.1 specifically (not 0.0.0.0) so
+  # it doesn't also become reachable via core's bridge-network IP.
+  #
+  # Ordering: network_mode: service:core needs core's container to exist
+  # first, so this is deliberately not a two-way depends_on with core
+  # (core doesn't wait on dind — see core's own comment) to avoid a
+  # circular wait; Compose orders dind after core automatically because
+  # of the network_mode reference itself.
+  #
+  # qm-coredata is ALSO mounted here, at the identical path (/data) core
+  # itself uses — confirmed live and by reading QM's source
+  # (src/deploy/deploy-service.ts's snapshotFiles, under config.dataDir):
+  # core writes each published app's source to its own /data/deployments/
+  # <id> before asking dind to `docker run -v /data/deployments/<id>:/app`
+  # for it. Sharing the network namespace doesn't share the filesystem —
+  # without this, dind resolves that path against its OWN (separate, empty)
+  # root filesystem, silently creating an empty directory to mount instead
+  # of finding the real files, and the published app crashes with "Cannot
+  # find module '/app/server.js'" (confirmed live). Same volume, same path,
+  # in both containers, so dind's bind-mount actually finds what core wrote.
   dind:
     image: docker:27-dind
     container_name: qm-dind
     restart: unless-stopped
     privileged: true
+    network_mode: "service:core"
     environment:
       DOCKER_TLS_CERTDIR: ""
     volumes:
       - qm-dind-data:/var/lib/docker
-    command: ["--host=unix:///var/run/docker.sock", "--host=tcp://0.0.0.0:2375"]
+      - qm-coredata:/data
+    # "dockerd" as the literal first arg matters, not just style: the
+    # image's own entrypoint auto-injects its own --host=tcp://0.0.0.0:2375
+    # (colliding with ours on the same port) whenever the first argument
+    # starts with "-" — confirmed by reading dockerd-entrypoint.sh — so a
+    # bare ["--host=...", ...] command silently triggers that and crash-
+    # loops with "address already in use". Leading with "dockerd" takes
+    # the entrypoint's other branch, which execs our args as-is.
+    command: ["dockerd", "--host=unix:///var/run/docker.sock", "--host=tcp://127.0.0.1:2375"]
     healthcheck:
       test: ["CMD", "docker", "info"]
       interval: 5s
       timeout: 5s
       retries: 10
-
-  core:
-    image: ${QM_CORE_IMAGE:-qm-core-managed-agents:15e71bf0}
-    container_name: qm-core
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      DOCKER_HOST: tcp://dind:2375
-    depends_on:
-      postgres:
-        condition: service_healthy
-        # Not required when the "local-postgres" profile is inactive (the
-        # DBaaS path) — otherwise core would refuse to start without a
-        # service that was never meant to run.
-        required: false
-      dind:
-        condition: service_healthy
-    volumes:
-      - qm-coredata:/data
 
   web-ui:
     image: ${QM_WEBUI_IMAGE:-ghcr.io/yc-software/qm/web-ui@sha256:eb4fda23cbeba3b7884efdea8fc815558ecfecb1564c8e36f5c6b1ae6f742d8e}
