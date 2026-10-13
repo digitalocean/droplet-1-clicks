@@ -1,4 +1,4 @@
-# Matrix
+# Matrix (Debian 13)
 
 Matrix is an open source, decentralized, federated chat system. These are the
 build scripts for our 1-click app! :D
@@ -28,9 +28,20 @@ provide, the better the chat quality will be. 2GB+ RAM is highly recommended.
 
 ## Building the image
 
-```
+Provisioner paths are relative to the **repository root**. Template file:
+[`template.json`](template.json).
+
+```sh
 export DIGITALOCEAN_TOKEN=your_do_token
-packer build matrix.json
+packer validate matrix-debian-13/template.json
+packer build matrix-debian-13/template.json
+```
+
+Or use the root Makefile:
+
+```sh
+make validate-matrix-debian-13
+make build-matrix-debian-13
 ```
 
 ## Supporting Matrix
