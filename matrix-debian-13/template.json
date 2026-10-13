@@ -1,16 +1,16 @@
 {
   "variables": {
     "do_token": "{{env `DIGITALOCEAN_TOKEN`}}",
-    "image_name": "matrix-debian-12-snapshot-{{timestamp}}",
+    "image_name": "matrix-debian-13-snapshot-{{timestamp}}",
     "apt_packages": "debian-keyring debian-archive-keyring lsb-release wget apt-transport-https sudo dnsutils",
-    "element_version": "1.11.86"
+    "application_version": "1.11.86"
   },
   "sensitive-variables": ["do_token"],
   "builders": [
     {
       "type": "digitalocean",
       "api_token": "{{user `do_token`}}",
-      "image": "debian-12-x64",
+      "image": "debian-13-x64",
       "region": "nyc3",
       "size": "s-1vcpu-1gb",
       "ssh_username": "root",
@@ -46,37 +46,37 @@
         "LC_ALL=C",
         "LANG=en_US.UTF-8",
         "LC_CTYPE=en_US.UTF-8",
-        "ELEMENT_VERSION={{user `element_version`}}"
+        "ELEMENT_VERSION={{user `application_version`}}"
       ],
       "scripts": [
-        "matrix-debian-12/scripts/0-postgres",
-        "matrix-debian-12/scripts/1-matrix",
-        "matrix-debian-12/scripts/2-firewall",
-        "matrix-debian-12/scripts/3-ssh",
-        "matrix-debian-12/scripts/4-caddy",
-        "matrix-debian-12/scripts/5-element",
-        "matrix-debian-12/scripts/8-cleanup",
-        "matrix-debian-12/scripts/9-check"
+        "matrix-debian-13/scripts/0-postgres",
+        "matrix-debian-13/scripts/1-matrix",
+        "matrix-debian-13/scripts/2-firewall",
+        "matrix-debian-13/scripts/3-ssh",
+        "matrix-debian-13/scripts/4-caddy",
+        "matrix-debian-13/scripts/5-element",
+        "matrix-debian-13/scripts/8-cleanup",
+        "matrix-debian-13/scripts/9-check"
       ]
     },
     {
       "type": "file",
-      "source": "matrix-debian-12/files/etc/",
+      "source": "matrix-debian-13/files/etc/",
       "destination": "/etc/"
     },
     {
       "type": "file",
-      "source": "matrix-debian-12/files/var/",
+      "source": "matrix-debian-13/files/var/",
       "destination": "/var/"
     },
     {
       "type": "file",
-      "source": "matrix-debian-12/files/root/",
+      "source": "matrix-debian-13/files/root/",
       "destination": "/root/"
     },
     {
       "type": "file",
-      "source": "matrix-debian-12/files/opt/",
+      "source": "matrix-debian-13/files/opt/",
       "destination": "/opt/"
     }
   ]
