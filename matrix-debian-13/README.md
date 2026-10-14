@@ -31,6 +31,12 @@ provide, the better the chat quality will be. 2GB+ RAM is highly recommended.
 Provisioner paths are relative to the **repository root**. Template file:
 [`template.json`](template.json).
 
+`application_version` is `latest` (apt installs current Synapse). The Packer
+build records the installed Synapse version in
+`/var/lib/digitalocean/application.info` — use that value as the Marketplace
+listing version. Element Web is resolved from the latest GitHub release at
+build time.
+
 ```sh
 export DIGITALOCEAN_TOKEN=your_do_token
 packer validate matrix-debian-13/template.json
@@ -42,6 +48,14 @@ Or use the root Makefile:
 ```sh
 make validate-matrix-debian-13
 make build-matrix-debian-13
+```
+
+After a build, read the Synapse version for Vendor Portal:
+
+```sh
+# on a Droplet created from the snapshot
+grep ^application_version= /var/lib/digitalocean/application.info
+# or: dpkg-query -W -f '${Version}\n' matrix-synapse-py3 | sed 's/[+~].*//'
 ```
 
 ## Supporting Matrix

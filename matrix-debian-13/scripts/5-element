@@ -1,7 +1,21 @@
 #!/bin/sh
+set -e
+
+# Resolve latest Element Web unless a specific version was provided.
+if [ -z "${ELEMENT_VERSION}" ] || [ "${ELEMENT_VERSION}" = "latest" ]; then
+  ELEMENT_VERSION="$(curl -fsSL https://api.github.com/repos/element-hq/element-web/releases/latest \
+    | jq -r '.tag_name' | sed 's/^v//')"
+fi
+
+if [ -z "${ELEMENT_VERSION}" ] || [ "${ELEMENT_VERSION}" = "null" ]; then
+  echo "error: could not resolve Element Web version" >&2
+  exit 1
+fi
+
+printf 'Installing Element Web %s\n' "${ELEMENT_VERSION}"
 
 cd /opt
-wget "https://github.com/element-hq/element-web/releases/download/v$ELEMENT_VERSION/element-v$ELEMENT_VERSION.tar.gz"
-tar -zxvf "element-v$ELEMENT_VERSION.tar.gz"
-ln -s "element-v$ELEMENT_VERSION" element
-rm -f "/opt/element-v$ELEMENT_VERSION.tar.gz"
+wget "https://github.com/element-hq/element-web/releases/download/v${ELEMENT_VERSION}/element-v${ELEMENT_VERSION}.tar.gz"
+tar -zxvf "element-v${ELEMENT_VERSION}.tar.gz"
+ln -s "element-v${ELEMENT_VERSION}" element
+rm -f "/opt/element-v${ELEMENT_VERSION}.tar.gz"
