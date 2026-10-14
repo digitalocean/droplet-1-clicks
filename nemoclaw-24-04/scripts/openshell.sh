@@ -18,7 +18,10 @@ sudo apt update -y
 
 sudo apt install docker-ce docker-ce-cli containerd.io -y
 
-curl -LsSf https://raw.githubusercontent.com/NVIDIA/OpenShell/main/install.sh | sh
+# OpenShell is installed after NemoClaw is checked out, pinned to the version
+# that release supports. Do not curl OpenShell main — floating releases (e.g.
+# 0.1.3) break onboard, and a missing /usr/bin package after a partial remove
+# also fails package-managed gateway adoption.
 
 # Keep current Node (nvm "node" alias) so OpenClaw / auto-update paths that
 # require Node >=24.16 or >=26.1 stay satisfied. NemoClaw itself only needs >=22.19.
@@ -48,6 +51,8 @@ esac
 NEMOCLAW_SRC="${HOME}/.nemoclaw/source"
 rm -rf "$NEMOCLAW_SRC"
 mkdir -p "$(dirname "$NEMOCLAW_SRC")"
+# NemoClaw onboard rejects a world-readable state dir (Unsafe portable authority).
+chmod 700 "${HOME}/.nemoclaw"
 
 git init --quiet "$NEMOCLAW_SRC"
 git -C "$NEMOCLAW_SRC" remote add origin https://github.com/NVIDIA/NemoClaw.git
@@ -67,4 +72,20 @@ npm run --if-present build:cli
 ( cd nemoclaw && npm ci --ignore-scripts && npm run build )
 npm link --ignore-scripts
 
+# Install the system OpenShell package at NemoClaw's pinned max (onboard adopts
+# /usr/bin/openshell-gateway from the package unit). Then let NemoClaw's script
+# verify messaging/driver requirements.
+OPENSHELL_PIN="$(sed -nE 's/^MAX_VERSION="([0-9]+\.[0-9]+\.[0-9]+)"/\1/p' \
+  "${NEMOCLAW_SRC}/scripts/install-openshell.sh" | head -1)"
+if [ -z "$OPENSHELL_PIN" ]; then
+  echo "ERROR: could not read MAX_VERSION from NemoClaw install-openshell.sh" >&2
+  exit 1
+fi
+export OPENSHELL_VERSION="v${OPENSHELL_PIN}"
+export OPENSHELL_ACK_BREAKING_UPGRADE=1
+curl -LsSf "https://raw.githubusercontent.com/NVIDIA/OpenShell/${OPENSHELL_VERSION}/install.sh" | sh
+bash "${NEMOCLAW_SRC}/scripts/install-openshell.sh"
+
 nemoclaw --version
+openshell --version
+/usr/bin/openshell-gateway --version || true
