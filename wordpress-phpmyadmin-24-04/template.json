@@ -90,9 +90,9 @@
         "LC_CTYPE=en_US.UTF-8"
       ],
       "scripts": [
-        "wordpress-24-04/scripts/010-php.sh",
+        "wordpress-phpmyadmin-24-04/scripts/010-php.sh",
         "wordpress-phpmyadmin-24-04/scripts/011-wordpress.sh",
-        "wordpress-24-04/scripts/012-caddy.sh",
+        "wordpress-phpmyadmin-24-04/scripts/012-caddy.sh",
         "wordpress-phpmyadmin-24-04/scripts/013-phpmyadmin.sh",
         "common/scripts/014-ufw-http.sh",
         "common/scripts/018-force-ssh-logout.sh",
