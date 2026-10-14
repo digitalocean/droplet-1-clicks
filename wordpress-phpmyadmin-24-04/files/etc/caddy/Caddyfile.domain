@@ -43,7 +43,7 @@ https://PLACEHOLDER_DOMAIN {
 
         # Block PHP execution under upload/content directories (webshells)
         # Separate matcher: path + path_regexp in one block are AND'd, not OR'd
-        @upload_php path_regexp upload_php (?i)/(uploads|media|files|cache)/.*\.(php|php5|phtml|phar)$
+        @upload_php path_regexp upload_php (?i)/(uploads|media|files|cache)/.*\.(php|php[0-9]+|phtml|phar|phps|pht)$
         respond @upload_php 403
     }
 }
