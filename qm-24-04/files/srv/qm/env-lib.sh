@@ -248,23 +248,34 @@ send_signed_admin_request() {
 }
 
 # Registers DigitalOcean Serverless Inference as a custom model provider, and
-# enables its model in the web UI's chat picker, via core's internal admin
-# API — so it's usable as the default model without any Anthropic/OpenAI key
-# or manual Admin-console step. Uses the same signed internal-request scheme
-# QM's own `postdeploy-smoke.ts` live-session canary uses
-# (src/auth/source-auth-sign.ts + src/auth/signed-token.ts) — a plain
-# HMAC-SHA256 request signature plus a JWS identity token, both reproduced in
-# gen-secrets.py from CORE_SIGNING_SECRET/PORTAL_IDENTITY_SECRET (already
-# generated, already in .env).
+# enables its models in the web UI's chat picker, via core's internal admin
+# API — so a curated set of DO's own open-weight models (gen-secrets.py's
+# OPEN_SOURCE_MODELS — deliberately excludes the proprietary Anthropic/
+# OpenAI-branded models the same endpoint also serves, and per explicit
+# product decision every nemotron-* and openai-gpt-oss-* model) is usable
+# without any Anthropic/OpenAI key or manual Admin-console step. The model
+# detect_do_genai_credentials found (or DO_INFERENCE_MODEL_ID's hardcoded
+# fallback) is merged into that catalog rather than replacing it — see
+# open_source_models_with_default — and becomes the actual default via
+# PI_MODEL (set in 001_onboot/setup_wizard.sh), not through either admin
+# call below: neither one has a notion of "default", only "registered" and
+# "enabled in the web UI".
+#
+# Uses the same signed internal-request scheme QM's own `postdeploy-smoke.ts`
+# live-session canary uses (src/auth/source-auth-sign.ts +
+# src/auth/signed-token.ts) — a plain HMAC-SHA256 request signature plus a
+# JWS identity token, both reproduced in gen-secrets.py from
+# CORE_SIGNING_SECRET/PORTAL_IDENTITY_SECRET (already generated, already in
+# .env).
 #
 # Two separate admin calls are required, confirmed live on a real droplet:
-# registering the provider makes the model resolvable and able to answer
+# registering the provider makes its models resolvable and able to answer
 # turns, but the web UI's per-turn model picker is gated by a SEPARATE
 # durable allowlist (src/core/turn-options.ts's validateWebTurnModelOptions,
 # src/api/app-turn.ts's getWebuiModelsDurable) that defaults to built-in
-# models only — without the second call, QM accepts the turn internally but
+# models only — without the second call, QM accepts a turn internally but
 # the web UI refuses to send it ("that model is not enabled for the web
-# UI"). Setting the allowlist to just this one model id also closes a side
+# UI"). Setting the allowlist to this same model list also closes a side
 # effect of the OPENAI_API_KEY bystander credential set in setup_wizard.sh/
 # 001_onboot: without it, fake-OpenAI-branded built-ins would otherwise show
 # up as selectable in the picker and fail if chosen.
@@ -314,13 +325,15 @@ register_do_inference_provider() {
     docker exec qm-core sh -c 'cat /tmp/qm-admin-request.out 2>/dev/null' | head -c 500
     return 1
   fi
-  echo "DigitalOcean Serverless Inference registered (default model: ${DO_INFERENCE_MODEL_ID})."
+  echo "DigitalOcean Serverless Inference registered: curated open-weight catalog plus default model ${DO_INFERENCE_MODEL_ID} (actual default is set via PI_MODEL, not this call)."
 
   local signed2
   if ! signed2="$(CORE_SIGNING_SECRET="$core_signing_secret" \
                   PORTAL_IDENTITY_SECRET="$portal_identity_secret" \
                   python3 /srv/qm/gen-secrets.py set-webui-models \
-                    "$admin_email" "$org_id" "$DO_INFERENCE_MODEL_ID")"; then
+                    "$admin_email" "$org_id" \
+                    "$DO_INFERENCE_MODEL_ID" "$DO_INFERENCE_MODEL_NAME" \
+                    "$DO_INFERENCE_CONTEXT_WINDOW" "$DO_INFERENCE_MAX_TOKENS")"; then
     echo "WARNING: failed to build the signed web-UI-enable request — ${DO_INFERENCE_MODEL_ID} may not be selectable in the chat picker yet."
     echo "         Retry later with: sudo /etc/setup_wizard.sh --force"
     return 1
@@ -329,7 +342,7 @@ register_do_inference_provider() {
   local http_status2
   http_status2="$(send_signed_admin_request "$signed2")" || true
   if [ "$http_status2" != "200" ]; then
-    echo "WARNING: enabling ${DO_INFERENCE_MODEL_ID} for the web UI chat picker failed (HTTP ${http_status2:-?})."
+    echo "WARNING: enabling the DigitalOcean Serverless Inference models (incl. ${DO_INFERENCE_MODEL_ID}) for the web UI chat picker failed (HTTP ${http_status2:-?})."
     echo "         Retry later with: sudo /etc/setup_wizard.sh --force"
     docker exec qm-core sh -c 'cat /tmp/qm-admin-request.out 2>/dev/null' | head -c 500
     return 1
