@@ -2,9 +2,7 @@
 
 # Dangerous functions commonly abused by PHP webshells after WP compromise.
 # Applied to FPM only so WP-CLI (CLI SAPI) remains usable for maintenance.
-# Intentionally NOT disabling symlink/tmpfile/putenv — used by core media
-# handling and common plugins (object-cache, SDKs, dotenv-style integrations).
-DISABLE_FUNCTIONS="getmyuid,passthru,leak,listen,diskfreespace,link,dl,system,highlight_file,source,show_source,fpassthru,virtual,posix_ctermid,posix_getcwd,posix_getegid,posix_geteuid,posix_getgid,posix_getgrgid,posix_getgrnam,posix_getgroups,posix_getlogin,posix_getpgid,posix_getpgrp,posix_getpid,posix_getppid,posix_getpwuid,posix_getrlimit,posix_getsid,posix_getuid,posix_isatty,posix_kill,posix_mkfifo,posix_setegid,posix_seteuid,posix_setgid,posix_setpgid,posix_setsid,posix_setuid,posix_times,posix_ttyname,posix_uname,proc_open,proc_close,proc_nice,proc_terminate,escapeshellcmd,ini_alter,popen,pcntl_exec,socket_accept,socket_bind,socket_clear_error,socket_close,socket_connect,socket_listen,socket_create_listen,socket_read,socket_create_pair,stream_socket_server,shell_exec,exec"
+DISABLE_FUNCTIONS="getmyuid,passthru,leak,listen,diskfreespace,tmpfile,link,dl,system,highlight_file,source,show_source,fpassthru,virtual,posix_ctermid,posix_getcwd,posix_getegid,posix_geteuid,posix_getgid,posix_getgrgid,posix_getgrnam,posix_getgroups,posix_getlogin,posix_getpgid,posix_getpgrp,posix_getpid,posix_getppid,posix_getpwuid,posix_getrlimit,posix_getsid,posix_getuid,posix_isatty,posix_kill,posix_mkfifo,posix_setegid,posix_seteuid,posix_setgid,posix_setpgid,posix_setsid,posix_setuid,posix_times,posix_ttyname,posix_uname,proc_open,proc_close,proc_nice,proc_terminate,escapeshellcmd,ini_alter,popen,pcntl_exec,socket_accept,socket_bind,socket_clear_error,socket_close,socket_connect,symlink,socket_listen,socket_create_listen,socket_read,socket_create_pair,stream_socket_server,shell_exec,exec,putenv"
 
 # Configure PHP for FPM (used with Caddy)
 sed -e "s|upload_max_filesize.*|upload_max_filesize = 16M|g" \
