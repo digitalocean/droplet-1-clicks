@@ -44,14 +44,19 @@ if [ -f "/root/.digitalocean_dbaas_credentials" ] && [ "$(sed -n "s/^db_protocol
 define( 'MYSQL_CLIENT_FLAGS', MYSQLI_CLIENT_SSL );
 EOM
 
-  # Point phpMyAdmin at the Managed Database (local MySQL will be disabled)
+  # Point phpMyAdmin at the Managed Database (local MySQL will be disabled).
+  # Encrypt with SSL but skip CA verify: DO Managed MySQL uses a cluster CA that is
+  # not in the OS trust store, and .digitalocean_dbaas_credentials does not include it.
+  # (WordPress uses MYSQLI_CLIENT_SSL the same way — encrypt without system-CA verify.)
+  # Operators who want full verification can Download CA certificate from the DB
+  # Connection Details page, install it, set ssl_ca to that path, and ssl_verify=true.
   cat >> /usr/share/phpmyadmin/config.inc.php <<EOM
 
 /* DigitalOcean Managed Database */
 \$cfg['Servers'][1]['host'] = '$host';
 \$cfg['Servers'][1]['port'] = '$port';
 \$cfg['Servers'][1]['ssl'] = true;
-\$cfg['Servers'][1]['ssl_ca'] = '/etc/ssl/certs/ca-certificates.crt';
+\$cfg['Servers'][1]['ssl_verify'] = false;
 EOM
 
   # Persist DBaaS login details for MOTD / operators (password file is the source of truth)
