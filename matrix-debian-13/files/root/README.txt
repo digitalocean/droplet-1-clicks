@@ -23,7 +23,7 @@ There several scripts in your home directory - this is what they do.
 /root/finish-setup:        finish your matrix installation
 /root/new-user:            make a new matrix user
 /root/reset-password:      reset the password of a matrix user
-/root/upgrade-element:     upgrade element to the given version
+/root/upgrade-element:     upgrade element (latest, or a specific version)
 
 
 UPGRADES
@@ -38,7 +38,10 @@ To upgrade Synapse:
     apt update
     apt upgrade
 
-to upgrade Element:
+to upgrade Element to the latest release:
+    ./upgrade-element
+
+or to a specific version:
     ./upgrade-element <version-number>
 
 

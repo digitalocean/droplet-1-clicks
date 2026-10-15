@@ -1,20 +1,32 @@
 #!/bin/sh -e
 #
-# upgrade element-web to desired version
+# upgrade element-web to the latest release, or a specific version
+#
+# Usage:
+#   ./upgrade-element           # latest
+#   ./upgrade-element latest   # latest
+#   ./upgrade-element 1.12.31  # pin a version
 
-ELEMENT_VERSION=$1
-
-if [ -z "$1" ]; then
-    printf "Please specify the element version to download\n"
-    exit 1
+if [ -z "$1" ] || [ "$1" = "latest" ]; then
+  ELEMENT_VERSION="$(curl -fsSL https://api.github.com/repos/element-hq/element-web/releases/latest \
+    | jq -r '.tag_name' | sed 's/^v//')"
+else
+  ELEMENT_VERSION="$1"
 fi
+
+if [ -z "${ELEMENT_VERSION}" ] || [ "${ELEMENT_VERSION}" = "null" ]; then
+  printf 'error: could not resolve Element Web version\n' >&2
+  exit 1
+fi
+
+printf 'Upgrading Element Web to %s\n' "${ELEMENT_VERSION}"
 
 cd /opt
-wget "https://github.com/element-hq/element-web/releases/download/v$ELEMENT_VERSION/element-v$ELEMENT_VERSION.tar.gz"
-tar -zxvf "element-v$ELEMENT_VERSION.tar.gz"
-if [ ! -f "element-v$ELEMENT_VERSION/config.json" ]; then
-    cp element/config.json "element-v$ELEMENT_VERSION"
+wget "https://github.com/element-hq/element-web/releases/download/v${ELEMENT_VERSION}/element-v${ELEMENT_VERSION}.tar.gz"
+tar -zxvf "element-v${ELEMENT_VERSION}.tar.gz"
+if [ ! -f "element-v${ELEMENT_VERSION}/config.json" ] && [ -f element/config.json ]; then
+  cp element/config.json "element-v${ELEMENT_VERSION}"
 fi
 rm -f /opt/element
-ln -s "element-v$ELEMENT_VERSION" element
-rm /opt/element-*.tar.gz
+ln -s "element-v${ELEMENT_VERSION}" element
+rm -f /opt/element-*.tar.gz

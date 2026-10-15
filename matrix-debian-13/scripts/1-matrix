@@ -1,10 +1,15 @@
 #!/bin/bash
+set -e
 
 wget -O /usr/share/keyrings/matrix-org-archive-keyring.gpg https://packages.matrix.org/debian/matrix-org-archive-keyring.gpg
 echo "deb [signed-by=/usr/share/keyrings/matrix-org-archive-keyring.gpg] https://packages.matrix.org/debian/ $(lsb_release -cs) main" |
     tee /etc/apt/sources.list.d/matrix-org.list
 apt -qqy update
 apt -qqy install matrix-synapse-py3
+
+installed="$(dpkg-query -W -f '${Version}' matrix-synapse-py3)"
+printf 'Installed matrix-synapse-py3 %s (Marketplace version: %s)\n' \
+  "${installed}" "$(printf '%s\n' "${installed}" | sed 's/[+~].*//')"
 
 # we enable it in finish-setup
 systemctl disable matrix-synapse
