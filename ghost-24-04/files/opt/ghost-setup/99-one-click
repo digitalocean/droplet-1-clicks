@@ -17,6 +17,14 @@ Please switch to the $(tput setaf 6)ghost-mgr$(tput sgr0) user to manage Ghost v
 
     $(tput setaf 3)sudo -i -u ghost-mgr$(tput sgr0)
 
+You will land in $(tput setaf 6)/var/www/ghost$(tput sgr0). Run stop/start/restart from there
+(or pass $(tput setaf 3)--dir /var/www/ghost$(tput sgr0)). $(tput setaf 3)ghost status$(tput sgr0) works from any directory.
+
+    $(tput setaf 3)ghost status$(tput sgr0)
+    $(tput setaf 3)ghost stop$(tput sgr0)
+    $(tput setaf 3)ghost start$(tput sgr0)
+    $(tput setaf 3)ghost restart$(tput sgr0)
+
 For an overview of available Ghost CLI commands, run:
 
     $(tput setaf 3)ghost help$(tput sgr0)
