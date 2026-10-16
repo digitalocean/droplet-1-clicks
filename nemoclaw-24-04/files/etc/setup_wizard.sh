@@ -2,6 +2,10 @@
 
 echo "Starting NemoClaw setup wizard"
 
+# Packer/umask may leave this 0755; onboard requires owner-private 0700.
+mkdir -p /root/.nemoclaw
+chmod 700 /root/.nemoclaw
+
 nemoclaw onboard
 
 cp /etc/skel/.bashrc /root
