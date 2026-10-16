@@ -5,10 +5,10 @@
     "image_name": "mean-24-04-snapshot-{{timestamp}}",
     "apt_packages": "apt-transport-https gnupg2 nginx wget curl unzip git python3-certbot-nginx",
     "application_name": "MEAN",
-    "mongo_version": "8.0.17",
+    "mongo_version": "8.0.32",
     "mongo_repo_version": "8.0",
     "node_version": "22.x",
-    "application_version": "8.0.17"
+    "application_version": "8.0.32"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
