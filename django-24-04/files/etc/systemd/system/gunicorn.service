@@ -1,6 +1,6 @@
 [Unit]
 Description=Gunicorn daemon for Django Project
-Before=nginx.service
+Before=nginx.service caddy.service
 After=network.target
 
 [Service]

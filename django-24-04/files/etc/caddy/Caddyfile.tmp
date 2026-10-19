@@ -1,0 +1,12 @@
+PLACEHOLDER_DOMAIN {
+	tls {
+		issuer acme {
+			dir https://acme-v02.api.letsencrypt.org/directory
+			profile shortlived
+		}
+	}
+	# Option A: Caddy terminates TLS and proxies to Nginx on loopback.
+	# Nginx continues to serve static/media and proxy to Gunicorn.
+	reverse_proxy 127.0.0.1:8080
+	header X-DO-MARKETPLACE "django"
+}

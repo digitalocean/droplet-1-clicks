@@ -3,8 +3,9 @@ upstream app_server {
 }
 
 server {
-    listen 80 default_server;
-    listen [::]:80 default_server ipv6only=on;
+    # Bound to loopback only — Caddy terminates public TLS on :80/:443.
+    listen 127.0.0.1:8080;
+    listen [::1]:8080;
 
     root /usr/share/nginx/html;
     index index.html index.htm;
@@ -25,7 +26,9 @@ server {
     }
 
     location / {
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            # Pass through client / scheme headers from Caddy (do not append loopback).
+            proxy_set_header X-Forwarded-For $http_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
             proxy_set_header Host $host;
             proxy_redirect off;
             proxy_buffering off;
