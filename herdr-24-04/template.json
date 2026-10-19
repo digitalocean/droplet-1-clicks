@@ -1,0 +1,76 @@
+{
+  "variables": {
+    "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
+    "image_name": "herdr-24-04-snapshot-{{timestamp}}",
+    "node_version": "22.x",
+    "apt_packages": "apt-transport-https ca-certificates curl software-properties-common git jq unzip zstd ufw ripgrep build-essential",
+    "application_name": "Herdr",
+    "application_version": "0.9.3",
+    "herdr_sha256": "18a8dc65f1c2fa485884344356dea1cfd911c6f06cf46fa78e193f4087f4dba7",
+    "claude_code_version": "2.1.289",
+    "codex_version": "0.160.0",
+    "codex_tarball_sha256": "306865417d4ee7a927785852910a527f41e1e159add390ac5ae3accb67d44a13",
+    "bwrap_tarball_sha256": "1844535ea16d5454a6b5ee5df541c068ea8ddf1028ad3520255b16e05de3183d",
+    "opencode_version": "1.18.34",
+    "grok_build_version": "1.0.46",
+    "kilocode_version": "7.8.3",
+    "cursor_version": "2026.10.01-e373342"
+  },
+  "sensitive-variables": ["do_api_token"],
+  "builders": [
+    {
+      "type": "digitalocean",
+      "api_token": "{{user `do_api_token`}}",
+      "image": "ubuntu-24-04-x64",
+      "region": "nyc3",
+      "size": "s-2vcpu-4gb",
+      "ssh_username": "root",
+      "snapshot_name": "{{user `image_name`}}"
+    }
+  ],
+  "provisioners": [
+    {"type": "shell", "inline": ["cloud-init status --wait"]},
+    {"type": "file", "source": "common/files/var/", "destination": "/var/"},
+    {"type": "file", "source": "herdr-24-04/files/etc/", "destination": "/etc/"},
+    {"type": "file", "source": "herdr-24-04/files/opt/", "destination": "/opt/"},
+    {"type": "file", "source": "herdr-24-04/files/var/", "destination": "/var/"},
+    {
+      "type": "shell",
+      "environment_vars": ["DEBIAN_FRONTEND=noninteractive", "LC_ALL=C", "LANG=en_US.UTF-8", "LC_CTYPE=en_US.UTF-8"],
+      "inline": [
+        "apt -qqy update",
+        "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' full-upgrade",
+        "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' install {{user `apt_packages`}}",
+        "apt-get -qqy clean"
+      ]
+    },
+    {
+      "type": "shell",
+      "environment_vars": [
+        "NODE_VERSION={{user `node_version`}}",
+        "application_name={{user `application_name`}}",
+        "application_version={{user `application_version`}}",
+        "herdr_sha256={{user `herdr_sha256`}}",
+        "claude_code_version={{user `claude_code_version`}}",
+        "codex_version={{user `codex_version`}}",
+        "codex_tarball_sha256={{user `codex_tarball_sha256`}}",
+        "bwrap_tarball_sha256={{user `bwrap_tarball_sha256`}}",
+        "opencode_version={{user `opencode_version`}}",
+        "grok_build_version={{user `grok_build_version`}}",
+        "kilocode_version={{user `kilocode_version`}}",
+        "cursor_version={{user `cursor_version`}}",
+        "DEBIAN_FRONTEND=noninteractive",
+        "LC_ALL=C",
+        "LANG=en_US.UTF-8",
+        "LC_CTYPE=en_US.UTF-8"
+      ],
+      "scripts": [
+        "common/scripts/010-nodejs.sh",
+        "herdr-24-04/scripts/010-herdr.sh",
+        "common/scripts/018-force-ssh-logout.sh",
+        "common/scripts/020-application-tag.sh",
+        "common/scripts/900-cleanup.sh"
+      ]
+    }
+  ]
+}
