@@ -72,33 +72,14 @@ EOM
 
 systemctl restart mysql
 
-# Reconfigure phpMyAdmin package with generated credentials.
-printf "%s\t%s\t%s\t%s\n" \
-    phpmyadmin phpmyadmin/db/app-user string phpmyadminapp \
-    | debconf-set-selections
-printf "%s\t%s\t%s\t%s\n" \
-    phpmyadmin phpmyadmin/mysql/admin-user string admin \
-    | debconf-set-selections
-printf "%s\t%s\t%s\t%s\n" \
-    phpmyadmin phpmyadmin/mysql/app-pass password "${app_mysql_pass}" \
-    | debconf-set-selections
-printf "%s\t%s\t%s\t%s\n" \
-    phpmyadmin phpmyadmin/mysql/admin-pass password "${admin_mysql_pass}" \
-    | debconf-set-selections
-printf "%s\t%s\t%s\t%s\n" \
-    phpmyadmin phpmyadmin/reconfigure-webserver string apache2 \
-    | debconf-set-selections
-printf "%s\t%s\t%s\t%s\n" \
-    phpmyadmin phpmyadmin/dbconfig-reinstall boolean true \
-    | debconf-set-selections
-
-dpkg-reconfigure --force phpmyadmin
-ln -sf /etc/phpmyadmin/apache.conf /etc/apache2/conf-enabled/phpmyadmin.conf
-
-echo "\$cfg['blowfish_secret'] = '${blowfish_secret}';" >> /etc/phpmyadmin/config.inc.php
-mkdir -p /usr/share/phpmyadmin/tmp
-chown www-data:www-data /usr/share/phpmyadmin/tmp
-echo "\$cfg['TempDir'] = '/usr/share/phpmyadmin/tmp';" >> /etc/phpmyadmin/config.inc.php
+# Unique phpMyAdmin blowfish_secret per Droplet (must not be baked into the snapshot)
+if grep -q "blowfish_secret" /usr/share/phpmyadmin/config.inc.php; then
+  sed -i "s|\(\$cfg\['blowfish_secret'\] = '\)[^']*';|\1${blowfish_secret}';|" \
+    /usr/share/phpmyadmin/config.inc.php
+else
+  echo "\$cfg['blowfish_secret'] = '${blowfish_secret}';" >> /usr/share/phpmyadmin/config.inc.php
+fi
+unset blowfish_secret
 
 systemctl restart apache2
 

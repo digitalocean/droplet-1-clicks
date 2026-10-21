@@ -1,29 +1,47 @@
 #!/bin/sh
+set -e
 
 # Own the bits
 chown -R www-data: /var/log/apache2
 chown -R www-data: /etc/apache2
 chown -R www-data: /var/www
 
-# Manually update phpmyadmin to latest version
-wget https://www.phpmyadmin.net/downloads/phpMyAdmin-latest-all-languages.tar.gz
-tar xvf phpMyAdmin-latest-all-languages.tar.gz
-sudo mkdir -p /usr/share/phpmyadmin
-sudo mv phpMyAdmin-*-all-languages/* /usr/share/phpmyadmin/
+# Install phpMyAdmin from upstream at a single pinned version (no Ubuntu package overlay).
+wget -q -O /tmp/phpmyadmin.tar.gz \
+  "https://files.phpmyadmin.net/phpMyAdmin/${phpmyadmin_version}/phpMyAdmin-${phpmyadmin_version}-all-languages.tar.gz"
 
-# Set up Apache/Nginx alias (Apache example)
-echo 'Include /etc/phpmyadmin/apache.conf' | sudo tee /etc/apache2/conf-enabled/phpmyadmin.conf
-sudo systemctl reload apache2
+rm -rf /usr/share/phpmyadmin
+mkdir -p /tmp/phpmyadmin-extract /usr/share/phpmyadmin
+tar xzf /tmp/phpmyadmin.tar.gz -C /tmp/phpmyadmin-extract
+cp -a /tmp/phpmyadmin-extract/phpMyAdmin-*-all-languages/. /usr/share/phpmyadmin/
+rm -rf /tmp/phpmyadmin.tar.gz /tmp/phpmyadmin-extract
 
-tar xzf /tmp/phpmyadmin.tar.gz -C /tmp
-mv /tmp/phpMyAdmin-${phpmyadmin_version}-all-languages/* /usr/share/phpmyadmin
+chmod -R 755 /usr/share/phpmyadmin
+mkdir -p /usr/share/phpmyadmin/tmp
+chown -R www-data:www-data /usr/share/phpmyadmin/tmp
+chmod 700 /usr/share/phpmyadmin/tmp
 
-# Use sample config as main config
 cp /usr/share/phpmyadmin/config.sample.inc.php /usr/share/phpmyadmin/config.inc.php
-# Substitute password placeholder with an actual generated password
-sed -i "s+\$cfg\['blowfish_secret'\] = ''; \/\* YOU MUST FILL IN THIS FOR COOKIE AUTH! \*\/+$(echo "\$cfg['blowfish_secret'] = '$(openssl rand -base64 22)';")+g" /usr/share/phpmyadmin/config.inc.php
 
-chmod -Rf 755 /usr/share/phpmyadmin
+# Non-secret defaults only — blowfish_secret is set per Droplet in 001_onboot
+cat >> /usr/share/phpmyadmin/config.inc.php <<'EOM'
+
+/* DigitalOcean phpMyAdmin 1-Click */
+$cfg['TempDir'] = '/usr/share/phpmyadmin/tmp';
+EOM
+
+cat > /etc/apache2/conf-available/phpmyadmin.conf <<'EOF'
+Alias /phpmyadmin /usr/share/phpmyadmin
+
+<Directory /usr/share/phpmyadmin>
+    Options SymLinksIfOwnerMatch
+    DirectoryIndex index.php
+    AllowOverride None
+    Require all granted
+</Directory>
+EOF
+a2enconf phpmyadmin >/dev/null
+systemctl reload apache2
 
 # Certbot from Ubuntu apt is too old for IP-address certificates.
 # Install recent Certbot in a dedicated venv for first-boot HTTPS provisioning.
