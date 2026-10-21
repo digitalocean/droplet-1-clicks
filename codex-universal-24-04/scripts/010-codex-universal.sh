@@ -45,9 +45,19 @@ chmod +x /var/lib/cloud/scripts/per-instance/001_onboot
 cp /opt/codex-universal/codex-universal.env /opt/codex-universal/.env
 chmod 600 /opt/codex-universal/.env
 
-echo "Pre-pulling ghcr.io/openai/codex-universal:latest (this may take several minutes)..."
+CODEX_UPSTREAM_DIGEST="sha256:905e512f36460e1be4cfedb30928a8a28299edb0fcd5de7998ceaa72d27fe304"
+CODEX_LOCAL_IMAGE="codex-universal-do:php-cve-2026-10-21"
+
+chmod +x /opt/codex-universal/patch-php-cve.sh
+
+echo "Building PHP-patched codex-universal image from pinned upstream digest (expect ~60–90 min for four PHP builds)..."
+docker pull "ghcr.io/openai/codex-universal@${CODEX_UPSTREAM_DIGEST}"
+docker build -t "${CODEX_LOCAL_IMAGE}" \
+    -f /opt/codex-universal/Dockerfile.php-patched \
+    --build-arg "UPSTREAM_DIGEST=${CODEX_UPSTREAM_DIGEST}" \
+    /opt/codex-universal
+
 cd /opt/codex-universal
-docker compose pull
 
 echo "Pre-warming container: running setup_universal.sh to bake language runtimes into snapshot..."
 docker compose up -d
