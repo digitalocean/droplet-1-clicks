@@ -10,7 +10,7 @@ root_mysql_pass=$(openssl rand -hex 24)
 admin_mysql_pass=$(openssl rand -hex 24)
 app_mysql_pass=$(openssl rand -hex 24)
 debian_sys_maint_mysql_pass=$(openssl rand -hex 24)
-blowfish_secret=$(openssl rand -hex 48)
+blowfish_secret=$(openssl rand -hex 16)
 
 cat > /root/.digitalocean_password <<EOM
 root_mysql_pass="${root_mysql_pass}"
@@ -18,9 +18,13 @@ admin_mysql_pass="${admin_mysql_pass}"
 app_mysql_pass="${app_mysql_pass}"
 EOM
 
-# Configure MySQL root/admin users.
-mysqladmin -u root -h localhost create phpmyadmin
-mysqladmin -u root -h localhost password "${root_mysql_pass}"
+# Configure MySQL root/admin users (Ubuntu MySQL 8.0 defaults root to auth_socket).
+mysql -u root <<EOSQL
+ALTER USER 'root'@'localhost' IDENTIFIED WITH caching_sha2_password BY '${root_mysql_pass}';
+CREATE USER IF NOT EXISTS 'root'@'127.0.0.1' IDENTIFIED WITH caching_sha2_password BY '${root_mysql_pass}';
+CREATE DATABASE IF NOT EXISTS phpmyadmin;
+FLUSH PRIVILEGES;
+EOSQL
 
 mysql -uroot -p"${root_mysql_pass}" \
       -e "CREATE USER 'admin'@'localhost' IDENTIFIED BY '${admin_mysql_pass}'"
@@ -31,11 +35,7 @@ mysql -uroot -p"${root_mysql_pass}" \
 mysql -uroot -p"${root_mysql_pass}" \
       -e "GRANT ALL PRIVILEGES ON phpmyadmin.* TO 'phpmyadminapp'@'localhost'"
 mysql -uroot -p"${root_mysql_pass}" \
-      -e "ALTER USER 'debian-sys-maint'@'localhost' IDENTIFIED BY '${debian_sys_maint_mysql_pass}'"
-
-cat >> /etc/mysql/mysql.conf.d/mysqld.cnf <<EOM
-bind-address = 0.0.0.0
-EOM
+      -e "ALTER USER 'debian-sys-maint'@'localhost' IDENTIFIED WITH caching_sha2_password BY '${debian_sys_maint_mysql_pass}'"
 
 MYSQL_ROOT_PASSWORD=${root_mysql_pass}
 expect -c "

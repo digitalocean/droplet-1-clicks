@@ -30,6 +30,10 @@ cat >> /usr/share/phpmyadmin/config.inc.php <<'EOM'
 $cfg['TempDir'] = '/usr/share/phpmyadmin/tmp';
 EOM
 
+# Getting Started documents /usr/share/phpmyadmin/config.inc.php; keep /etc/phpmyadmin in sync.
+mkdir -p /etc/phpmyadmin
+ln -sf /usr/share/phpmyadmin/config.inc.php /etc/phpmyadmin/config.inc.php
+
 cat > /etc/apache2/conf-available/phpmyadmin.conf <<'EOF'
 Alias /phpmyadmin /usr/share/phpmyadmin
 
