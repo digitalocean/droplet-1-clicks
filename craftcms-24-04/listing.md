@@ -9,7 +9,7 @@ Craft is a flexible, developer-friendly CMS for creating custom digital experien
 ## System Components
 
 - Ubuntu 24.04 LTS
-- Craft CMS 5.10.11
+- Craft CMS 5.11.5.1
 - PHP 8.3 FPM
 - MySQL
 - Caddy (short-lived Let's Encrypt certificates for IP and custom-domain HTTPS)

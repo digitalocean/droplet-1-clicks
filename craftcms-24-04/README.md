@@ -5,7 +5,7 @@ Deploy [Craft CMS](https://craftcms.com/) on DigitalOcean with Caddy, PHP 8.3, a
 ## Included software
 
 - Ubuntu 24.04 LTS
-- Craft CMS 5.10.11
+- Craft CMS 5.11.5.1
 - Caddy (short-lived Let's Encrypt for IP HTTPS)
 - PHP 8.3 FPM
 - MySQL
@@ -49,7 +49,7 @@ Override versions (`application_version` pins Marketplace tag + `craftcms/cms`; 
 
 ```bash
 packer build \
-  -var 'application_version=5.10.11' \
+  -var 'application_version=5.11.5.1' \
   -var 'craft_starter_version=5.8.0' \
   craftcms-24-04/template.json
 ```
