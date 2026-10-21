@@ -1,6 +1,6 @@
 # Supabase 1-Click
 
-Deploy self-hosted Supabase on Ubuntu 24.04 with Docker Compose and Nginx. By default Postgres runs as the local `db` container. When you select **Add a Database** at create time, Supabase is configured to use DigitalOcean Managed PostgreSQL instead.
+Deploy self-hosted Supabase on Ubuntu 24.04 with Docker Compose and Caddy (HTTPS). By default Postgres runs as the local `db` container. When you select **Add a Database** at create time, Supabase is configured to use DigitalOcean Managed PostgreSQL instead.
 
 ## Getting Started
 
@@ -9,12 +9,22 @@ Deploy self-hosted Supabase on Ubuntu 24.04 with Docker Compose and Nginx. By de
 3. Optionally select **Add a Database** to provision Managed PostgreSQL (see below)
 4. Create the Droplet and SSH in as `root`
 
-On first boot, the Supabase Docker stack starts automatically and Nginx proxies to Kong.
+On first boot, the Supabase Docker stack starts automatically and Caddy terminates TLS (Let's Encrypt shortlived IP certificate) and proxies to Kong.
 
 **Supabase Studio / API:**
 
-- **URL:** `http://your-droplet-ip`
+- **URL:** `https://your-droplet-ip`
 - **Dashboard username/password:** stored in `/root/.digitalocean_passwords`
+
+### Custom domain
+
+Point a DNS A/AAAA record at the Droplet, then run:
+
+```bash
+/var/supabase/supabase-setup.sh
+```
+
+This updates the Caddyfile and Supabase public URL env vars (`SUPABASE_PUBLIC_URL`, `API_EXTERNAL_URL`, `SITE_URL`).
 
 ## Using a DigitalOcean Managed Database (Optional)
 
@@ -83,7 +93,8 @@ Compose connection URLs are patched with `sslmode=require`. Auth/Realtime/Meta/A
 - **Supabase stack:** `/srv/supabase/supabase/docker`
 - **Passwords and keys:** `/root/.digitalocean_passwords`
 - **Managed DB credentials (when used):** `/root/.digitalocean_dbaas_credentials`
-- **SSL / domain setup:** `/var/supabase/supabase-setup.sh`
+- **Caddy config:** `/etc/caddy/Caddyfile`
+- **Custom domain / TLS helper:** `/var/supabase/supabase-setup.sh`
 - **Setup log:** `/var/log/one_click_setup.log`
 
 ## Additional Resources
