@@ -37,7 +37,7 @@ For help and more information, visit link to 1-click
 NOTE:  This image includes version 6.0.4 of MongoDB.
 To upgrade to a newer release run the following commands:
 
-sudo mv /etc/apt/sources.list.d/mongodb.list.disabled /etc/apt/sources.list.d/mongodb.list
+sudo mv /etc/apt/sources.list.d/mongodb-org-8.0.list.disabled /etc/apt/sources.list.d/mongodb-org-8.0.list
 sudo apt-get update
 sudo apt-get upgrade
 
