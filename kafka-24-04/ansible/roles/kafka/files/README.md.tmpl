@@ -1,15 +1,17 @@
 DigitalOcean One-Click for Apache Kafka Client Guide
 ====================================================
 
-The configuration for this Kafka broker can be found in
+This broker runs Apache Kafka in KRaft combined mode (no ZooKeeper).
+The configuration can be found in
 {{ .Env.kafka_dir }}/config/server.properties. Transmitting PLAINTEXT data,
 especially login credentials, over the public internet leaves your information
 vulnerable. For security purposes, this Kafka server is configured with two
-listeners:
+client listeners plus a local controller:
 
  * 127.0.0.1:9092 - PLAINTEXT and no authentication required
  * 0.0.0.0:9093   - TLS/SSL using a self-signed certificate
    and SCRAM-SHA-256 authentication
+ * 127.0.0.1:9094 - KRaft controller (local only, not for clients)
 
 PLAINTEXT connections are an easy way to get started, but they can only be
 established from inside this server.
