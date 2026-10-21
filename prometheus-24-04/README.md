@@ -4,7 +4,7 @@ Packer template for a DigitalOcean Marketplace 1-Click image that runs [Promethe
 
 ## What's Included
 
-- **Prometheus** `3.14.0` bound to `127.0.0.1:9090`
+- **Prometheus** `3.15.0` bound to `127.0.0.1:9090`
 - **Caddy** reverse proxy with Let's Encrypt short-lived IP/domain certs
 - **UFW** allowing SSH (22), HTTP (80), and HTTPS (443) only (port 9090 denied publicly)
 - **Ubuntu 24.04 LTS** base image

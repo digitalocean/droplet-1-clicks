@@ -7,7 +7,7 @@ Deploy [Prometheus](https://prometheus.io/), an open-source systems monitoring a
 | Component | Details |
 |-----------|---------|
 | Ubuntu | 24.04 LTS |
-| Prometheus | 3.14.0 |
+| Prometheus | 3.15.0 |
 | Caddy | Reverse proxy with automatic Let's Encrypt TLS |
 | UFW | Firewall (SSH 22, HTTP 80, HTTPS 443) |
 
