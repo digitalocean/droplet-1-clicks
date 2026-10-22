@@ -9,11 +9,13 @@ cat > /root/.digitalocean_password <<EOM
 root_mysql_pass="${root_mysql_pass}"
 EOM
 
-# Configure MySQL root password
-mysqladmin -u root -h localhost password ${root_mysql_pass}
-
-mysql -uroot -p${root_mysql_pass} \
-      -e "ALTER USER 'debian-sys-maint'@'localhost' IDENTIFIED BY '${debian_sys_maint_mysql_pass}'"
+# Configure MySQL passwords (MySQL 8.4 defaults root/debian-sys-maint to auth_socket)
+mysql -u root <<EOSQL
+ALTER USER 'root'@'localhost' IDENTIFIED WITH caching_sha2_password BY '${root_mysql_pass}';
+CREATE USER IF NOT EXISTS 'root'@'127.0.0.1' IDENTIFIED WITH caching_sha2_password BY '${root_mysql_pass}';
+ALTER USER 'debian-sys-maint'@'localhost' IDENTIFIED WITH caching_sha2_password BY '${debian_sys_maint_mysql_pass}';
+FLUSH PRIVILEGES;
+EOSQL
 
 # Harden MySQL (equivalent to mysql_secure_installation; non-interactive for MySQL 8.4)
 mysql -uroot -p${root_mysql_pass} <<EOSQL

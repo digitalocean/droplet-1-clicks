@@ -1,0 +1,9 @@
+# Derived from the upstream codex-universal image at a pinned digest so PHP
+# snapshot runtimes include CVE-2026-109618 / CVE-2026-109619 fixes even when
+# upstream has not published a new GHCR tag.
+
+ARG UPSTREAM_DIGEST=sha256:905e512f36460e1be4cfedb30928a8a28299edb0fcd5de7998ceaa72d27fe304
+FROM ghcr.io/openai/codex-universal@${UPSTREAM_DIGEST}
+
+COPY patch-php-cve.sh /tmp/patch-php-cve.sh
+RUN chmod +x /tmp/patch-php-cve.sh && /tmp/patch-php-cve.sh && rm -f /tmp/patch-php-cve.sh

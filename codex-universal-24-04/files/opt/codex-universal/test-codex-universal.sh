@@ -135,6 +135,31 @@ check_version "Rust (${CODEX_ENV_RUST_VERSION:-default})" "rustc --version"
 check_version "Go (${CODEX_ENV_GO_VERSION:-default})" "go version"
 check_version "Ruby (${CODEX_ENV_RUBY_VERSION:-default})" "ruby --version"
 check_version "PHP (${CODEX_ENV_PHP_VERSION:-default})" "php --version | head -1"
+
+php_min_for_major() {
+    case "$1" in
+        8.2) echo "8.2.35" ;;
+        8.3) echo "8.3.36" ;;
+        8.4) echo "8.4.27" ;;
+        8.5) echo "8.5.12" ;;
+        *) echo "" ;;
+    esac
+}
+
+version_ge() {
+    [ "$(printf "%s\n%s\n" "$1" "$2" | sort -V | head -1)" = "$2" ]
+}
+
+php_major="${CODEX_ENV_PHP_VERSION:-8.4}"
+php_min="$(php_min_for_major "${php_major}")"
+php_actual="$(php -r "echo PHP_VERSION;")"
+if [ -n "${php_min}" ] && version_ge "${php_actual}" "${php_min}"; then
+    echo "  OK: PHP ${php_actual} meets minimum ${php_min} (CVE-2026-109618 / CVE-2026-109619)"
+else
+    echo "  FAIL: PHP ${php_actual} is below minimum ${php_min} for CODEX_ENV_PHP_VERSION=${php_major}"
+    exit 1
+fi
+
 check_version "Java (${CODEX_ENV_JAVA_VERSION:-default})" "java -version 2>&1 | head -1"
 check_version "Swift (${CODEX_ENV_SWIFT_VERSION:-default})" "swift --version | head -1"
 check_version "Bun (bundled)" "bun --version"

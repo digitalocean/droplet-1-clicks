@@ -17,8 +17,10 @@ ENV NODE_ENV=${NODE_ENV}
 
 WORKDIR /opt/
 
+ARG STRAPI_VERSION=5.56.0
+
 # Create a new Strapi project
-RUN npx create-strapi-app@5.0.0 app \
+RUN npx create-strapi-app@${STRAPI_VERSION} app \
     --quickstart \
     --no-run \
     --skip-cloud
