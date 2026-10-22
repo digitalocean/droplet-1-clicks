@@ -19,7 +19,13 @@ echo "Updating Codex Universal..."
 echo "Current image: ${IMAGE_REF}"
 
 cd /opt/codex-universal
-docker compose pull
+
+# Local DO-built images are not on a registry; compose pull would fail.
+if [[ "$IMAGE_REF" == */* ]]; then
+    docker compose pull
+else
+    echo "Skipping registry pull for local image: ${IMAGE_REF}"
+fi
 
 echo "Restarting with the updated image..."
 systemctl restart codex-universal
