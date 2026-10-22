@@ -1,13 +1,14 @@
-
 {
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "campfire-24-04-snapshot-{{timestamp}}",
-    "apt_packages": "apt-transport-https ca-certificates curl software-properties-common git build-essential libsystemd-dev jq unzip docker.io docker-buildx",
+    "apt_packages": "apt-transport-https ca-certificates curl software-properties-common git build-essential libsystemd-dev jq unzip docker.io docker-buildx gnupg",
     "application_name": "Campfire",
     "application_version": "Latest"
   },
-  "sensitive-variables": ["do_api_token"],
+  "sensitive-variables": [
+    "do_api_token"
+  ],
   "builders": [
     {
       "type": "digitalocean",
@@ -42,6 +43,11 @@
       "destination": "/var/"
     },
     {
+      "type": "file",
+      "source": "campfire-24-04/files/opt/",
+      "destination": "/opt/"
+    },
+    {
       "type": "shell",
       "environment_vars": [
         "DEBIAN_FRONTEND=noninteractive",
@@ -68,6 +74,7 @@
       ],
       "scripts": [
         "campfire-24-04/scripts/campfire.sh",
+        "common/scripts/014-ufw-http.sh",
         "common/scripts/018-force-ssh-logout.sh",
         "common/scripts/020-application-tag.sh",
         "common/scripts/900-cleanup.sh"
