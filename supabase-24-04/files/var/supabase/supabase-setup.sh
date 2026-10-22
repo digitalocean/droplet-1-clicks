@@ -62,8 +62,8 @@ if [ -n "${email}" ]; then
 fi
 
 systemctl enable caddy
-systemctl restart caddy
 
+# Apply .env URL changes even if Caddy/ACME is not ready yet (e.g. DNS lag).
 COMPOSE_ARGS=(-f docker-compose.yml)
 if [ -f "${COMPOSE_DIR}/docker-compose.dbaas.yml" ]; then
   COMPOSE_ARGS+=(-f docker-compose.dbaas.yml)
@@ -72,7 +72,17 @@ fi
 cd "${COMPOSE_DIR}"
 docker compose "${COMPOSE_ARGS[@]}" up -d
 
+set +e
+systemctl restart caddy
+caddy_rc=$?
+set -e
+
 echo ""
-echo "Caddy is now proxying ${PUBLIC_URL} to Kong on localhost:8000."
 echo "Supabase .env public URLs were updated to ${PUBLIC_URL}."
-echo "Ensure DNS for ${dom} points at this Droplet and ports 80/443 are open."
+if [ "${caddy_rc}" -ne 0 ]; then
+  echo "WARNING: caddy failed to start (rc=${caddy_rc}). Check DNS for ${dom}, ports 80/443, and journalctl -u caddy." >&2
+  echo "When DNS is ready: systemctl restart caddy" >&2
+else
+  echo "Caddy is now proxying ${PUBLIC_URL} to Kong on localhost:8000."
+  echo "Ensure DNS for ${dom} points at this Droplet and ports 80/443 are open."
+fi
