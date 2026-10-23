@@ -46,14 +46,15 @@ cp /opt/codex-universal/codex-universal.env /opt/codex-universal/.env
 chmod 600 /opt/codex-universal/.env
 
 CODEX_UPSTREAM_DIGEST="sha256:905e512f36460e1be4cfedb30928a8a28299edb0fcd5de7998ceaa72d27fe304"
-CODEX_LOCAL_IMAGE="codex-universal-do:php-cve-2026-10-21"
+CODEX_LOCAL_IMAGE="codex-universal-do:cve-2026-10-22"
 
 chmod +x /opt/codex-universal/patch-php-cve.sh
+chmod +x /opt/codex-universal/patch-node-cve.sh
 
-echo "Building PHP-patched codex-universal image from pinned upstream digest (expect ~60–90 min for four PHP builds)..."
+echo "Building CVE-patched codex-universal image from pinned upstream digest (PHP rebuild ~60–90 min; Node/Bun nvm/mise upgrade after)..."
 docker pull "ghcr.io/openai/codex-universal@${CODEX_UPSTREAM_DIGEST}"
 docker build -t "${CODEX_LOCAL_IMAGE}" \
-    -f /opt/codex-universal/Dockerfile.php-patched \
+    -f /opt/codex-universal/Dockerfile.cve-patched \
     --build-arg "UPSTREAM_DIGEST=${CODEX_UPSTREAM_DIGEST}" \
     /opt/codex-universal
 
