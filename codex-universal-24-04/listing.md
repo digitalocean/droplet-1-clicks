@@ -15,7 +15,7 @@ Run [OpenAI codex-universal](https://github.com/openai/codex-universal) on Digit
 ## Key Features
 
 - Approximate the OpenAI Codex cloud dev environment on a DigitalOcean Droplet
-- Pre-configured default language versions (Python 3.12, Node 20, Rust 1.87, Go 1.23, and others)
+- Pre-configured default language versions (Python 3.12, Node 22, Rust 1.87, Go 1.23, and others)
 - Override runtimes via `/opt/codex-universal/.env` or droplet environment variables at create time
 - Helper scripts to start, stop, restart, update, and enter the environment
 - Includes bun, Bazelisk, Erlang, and Elixir in the upstream image
@@ -95,13 +95,15 @@ Supported variables (see [upstream docs](https://github.com/openai/codex-univers
 | Variable | Example |
 |----------|---------|
 | `CODEX_ENV_PYTHON_VERSION` | `3.12` |
-| `CODEX_ENV_NODE_VERSION` | `20` |
+| `CODEX_ENV_NODE_VERSION` | `22` |
 | `CODEX_ENV_RUST_VERSION` | `1.87.0` |
 | `CODEX_ENV_GO_VERSION` | `1.23.8` |
 | `CODEX_ENV_SWIFT_VERSION` | `6.2` |
 | `CODEX_ENV_RUBY_VERSION` | `3.4.4` |
 | `CODEX_ENV_PHP_VERSION` | `8.4` |
 | `CODEX_ENV_JAVA_VERSION` | `21` |
+
+**Node.js note:** This 1-Click ships only Node **22** and **24**, patched for [CVE-2026-111497](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases). Upstream also documents Node 18/20; those majors are end-of-life with no fix and are **not** installed here. Set `CODEX_ENV_NODE_VERSION` to `22` or `24` only (droplet create-time `=18`/`=20` will fail validation).
 
 You can also pass these as droplet environment variables when creating the Droplet.
 
