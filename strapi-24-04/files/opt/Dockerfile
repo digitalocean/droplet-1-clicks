@@ -13,9 +13,6 @@ RUN apk add --no-cache \
     vips-dev \
     git
 
-# Yarn is provided via Corepack on Node 22+ images
-RUN corepack enable
-
 ARG NODE_ENV=production
 ENV NODE_ENV=${NODE_ENV}
 
@@ -31,7 +28,7 @@ RUN npx create-strapi-app@${STRAPI_VERSION} app \
 
 WORKDIR /opt/app
 
-# Install PostgreSQL driver (pg@8.x is required for Node 22+)
+# Install PostgreSQL driver (Strapi recommends pg@8.x on Node 22+)
 RUN npm install pg --save --ignore-scripts
 
 # Build the admin panel
@@ -43,7 +40,7 @@ FROM node:22-alpine
 # Install runtime dependencies
 RUN apk add --no-cache vips-dev
 
-RUN corepack enable
+RUN corepack enable && corepack prepare yarn@stable --activate
 
 ENV NODE_ENV=production
 
