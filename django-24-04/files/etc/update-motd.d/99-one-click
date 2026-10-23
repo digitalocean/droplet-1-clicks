@@ -21,7 +21,10 @@ else
     Pass:     ${DJANGO_POSTGRESS_PASS}"
 fi
 
-myip=$(hostname -I | awk '{print$1}')
+# Prefer public IPv4 (matches Caddy shortlived TLS site address).
+pub=$(curl -fsS --max-time 2 \
+  http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)
+myip="${pub:-$(hostname -I | awk '{print$1}')}"
 cat <<EOF
 ********************************************************************************
 
@@ -29,8 +32,11 @@ Welcome to DigitalOcean's 1-Click Django Droplet.
 To keep this Droplet secure, the UFW firewall is enabled.
 All ports are BLOCKED except 22 (SSH), 80 (HTTP), and 443 (HTTPS).
 
+Caddy terminates HTTPS (Let's Encrypt shortlived TLS) on ports 80/443 and
+proxies to Nginx on 127.0.0.1:8080, which serves static/media and Gunicorn.
+
 Access the Django admin site
-    URL: http://${myip}/admin
+    URL: https://${myip}/admin
     User: ${DJANGO_USER}
     Pass: ${DJANGO_USER_PASSWORD}
 
@@ -43,12 +49,14 @@ ${dbaas_text}
 
 In a web browser, you can view:
  * The Django 1-Click Quickstart guide: https://do.co/3bY3b67#start
- * The new Django site: http://$myip
+ * The new Django site: https://$myip
 
 On the server:
   * The Django application is served from /home/django/django_project
   * The Django passwords and keys are saved in /root/.digitalocean_passwords
-  * Certbot is preinstalled. Run it to configure HTTPS.
+  * Caddy config: /etc/caddy/Caddyfile
+  * Nginx (loopback): /etc/nginx/sites-enabled/default
+  * Custom domain: /opt/setup-django-domain.sh
 
 For help and more information, visit https://do.co/3bY3b67
 

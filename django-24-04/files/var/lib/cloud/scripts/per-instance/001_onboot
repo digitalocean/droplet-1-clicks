@@ -104,6 +104,20 @@ sed -e "s/@DBPASSWORD@/${DJANGO_POSTGRESS_PASS}/" \
     -e "s/@DBPORT@/${DJANGO_POSTGRESS_PORT}/" \
     -i "${SETTINGS_FILE}"
 
+# Caddy terminates TLS in front of Nginx; inject proxy/CSRF settings at first boot
+# so the shipped settings.py template stays unchanged in the image build tree.
+if ! grep -q "SECURE_PROXY_SSL_HEADER" "${SETTINGS_FILE}"; then
+    cat >> "${SETTINGS_FILE}" <<'PY'
+
+# --- DigitalOcean 1-Click: Caddy reverse proxy (appended at first boot) ---
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+CSRF_TRUSTED_ORIGINS = [
+    ('https://[%s]' % h) if (':' in h and not h.startswith('[')) else ('https://%s' % h)
+    for h in ALLOWED_HOSTS
+]
+PY
+fi
+
 # Sync the database
 python3 "${PROJECT_DIR}/manage.py" migrate --noinput
 
@@ -113,10 +127,33 @@ echo "from django.contrib.auth import get_user_model; User = get_user_model(); U
 python3 "${PROJECT_DIR}/manage.py" collectstatic --noinput
 chown -R django:django "${PROJECT_DIR}"
 
-# Now start up gunicorn
+# Now start up gunicorn + nginx on loopback (Caddy fronts public :80/:443).
 systemctl enable gunicorn
 systemctl start gunicorn
+systemctl enable nginx
 systemctl restart nginx
+
+# Configure Caddy with shortlived TLS for the droplet public IP.
+meta() { curl -fsS --retry 10 --retry-connrefused --max-time 2 "$1"; }
+DROPLET_PUBLIC_IP="$(meta http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)"
+DROPLET_PRIVATE_IP="$(hostname -I | awk '{print $1}')"
+DROPLET_IP="${DROPLET_PUBLIC_IP:-$DROPLET_PRIVATE_IP}"
+
+if [ -f /etc/caddy/Caddyfile.tmp ]; then
+    cp /etc/caddy/Caddyfile.tmp /etc/caddy/Caddyfile
+fi
+
+if grep -q "PLACEHOLDER_DOMAIN" /etc/caddy/Caddyfile 2>/dev/null; then
+    echo "Configuring Caddy with droplet IP address ${DROPLET_IP}..."
+    sed -i "s/PLACEHOLDER_DOMAIN/${DROPLET_IP}/" /etc/caddy/Caddyfile
+fi
+
+chmod +x /opt/setup-django-domain.sh 2>/dev/null || true
+
+# Pick up caddy.service.d override (After/Wants nginx) before first start.
+systemctl daemon-reload
+systemctl enable caddy
+systemctl restart caddy
 
 # Remove the ssh force logout command
 sed -e '/Match User root/d' \
