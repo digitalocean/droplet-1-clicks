@@ -9,12 +9,23 @@ if [ ! -f "/var/www/ghost/config.production.json" ]; then
 
 # Run bootstrap during first login
 
+ghost_install_version="(pinned at image build)"
+if [ -f /var/lib/digitalocean/application.info ]; then
+    # shellcheck disable=SC1091
+    . /var/lib/digitalocean/application.info
+    ghost_install_version="${application_version}"
+fi
+
 echo "
 -------------------------------------------------------------------------------
 
 Configuring DigitalOcean 1-Click Ghost installation.
 
-Please wait a minute while your 1-Click is configured. 
+Please wait a minute while your 1-Click is configured.
+
+First login runs $(tput setaf 3)ghost install$(tput sgr0) for Ghost $(tput setaf 6)${ghost_install_version}$(tput sgr0)
+(the version pinned when this image was built; see /var/lib/digitalocean/application.info).
+Use $(tput setaf 3)ghost update$(tput sgr0) later if you want a newer release.
 
 Once complete, you are encouraged to run $(tput setaf 3)mysql_secure_installation$(tput sgr0) to ready
 your server for production. The root MySQL password has been saved to:

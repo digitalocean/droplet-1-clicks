@@ -20,6 +20,7 @@ while ! mysqladmin ping -h"$GHOST_HOST" -P $GHOST_PORT --silent; do sleep 1; don
 cat > /root/.digitalocean_password <<EOM
 root_mysql_pass="${GHOST_PASSWORD}"
 EOM
+chmod 600 /root/.digitalocean_password
 
 # Set up Postfix defaults
 hostname=$(hostname)
@@ -53,6 +54,7 @@ if [ "$GHOST_HOST" = "127.0.0.1" ]; then
     password = ${debian_sys_maint_mysql_pass}
     socket   = /var/run/mysqld/mysqld.sock
 EOM
+    chmod 600 /etc/mysql/debian.cnf
 else
     systemctl stop mysql 2>/dev/null
     systemctl disable mysql 2>/dev/null
