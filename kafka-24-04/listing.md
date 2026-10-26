@@ -1,6 +1,6 @@
 # Apache Kafka 1-Click Application
 
-Deploy [Apache Kafka](https://kafka.apache.org) as a single-node broker in **KRaft** combined mode (no ZooKeeper). The image installs Kafka 4.3.1 on Ubuntu 24.04 with TLS and SCRAM-SHA-256 on the public listener.
+Deploy [Apache Kafka](https://kafka.apache.org) as a single-node broker in **KRaft** combined mode (no ZooKeeper). The image installs Kafka 4.4.0 on Ubuntu 24.04 with TLS and SCRAM-SHA-256 on the public listener.
 
 ## System Components
 
@@ -8,7 +8,7 @@ Deploy [Apache Kafka](https://kafka.apache.org) as a single-node broker in **KRa
 |-----------|---------|
 | Ubuntu | 24.04 LTS |
 | OpenJDK | 17 (required by Kafka 4.x brokers) |
-| Apache Kafka | 4.3.1 (`kafka_2.13-4.3.1`), KRaft broker + controller |
+| Apache Kafka | 4.4.0 (`kafka_2.13-4.4.0`), KRaft broker + controller |
 | systemd | `kafka.service` |
 | UFW | Firewall (SSH 22, Kafka SASL_SSL 9093) |
 
@@ -25,8 +25,8 @@ Deploy [Apache Kafka](https://kafka.apache.org) as a single-node broker in **KRa
 
 1. **Create a Droplet** from this 1-Click image (use at least **4 GB RAM / 2 vCPU**).
 2. **Wait for first boot** — SSH is locked until `/var/lib/cloud/scripts/per-instance/001_onboot` finishes (TLS certs, KRaft format, SCRAM user `doadmin`, `kafka.service`). SSH is unlocked even if Kafka setup fails.
-3. **SSH in** and follow the MOTD. Local plaintext is on `localhost:9092`. Public clients use `<droplet-ip>:9093` with SASL_SSL.
-4. **Copy client credentials** from `/opt/kafka/one-click-ssl/example.librdkafka.config`, the CA cert `/opt/kafka/one-click-ssl/ca.crt`, and `/opt/kafka/one-click-ssl/.keystore_password` for Java KeyStore clients.
+3. **SSH in** and follow the MOTD (it points at credential paths; the SCRAM password is not printed in the banner). Local plaintext is on `localhost:9092`. Public clients use `<droplet-ip>:9093` with SASL_SSL.
+4. **Copy client credentials** from `/opt/kafka/one-click-ssl/example.librdkafka.config` (user `doadmin`), the CA cert `/opt/kafka/one-click-ssl/ca.crt`, and `/opt/kafka/one-click-ssl/.keystore_password` for Java KeyStore clients.
 
 **Security note:** Port 9093 is open to the internet and requires the generated `doadmin` SCRAM password. Do not send credentials over the localhost plaintext listener from off-box. `allow.everyone.if.no.acl.found` is `true`, so any additional SCRAM user you create is an admin until you set ACLs.
 
@@ -57,8 +57,8 @@ Logs: `/var/log/kafka/kafka.log` and `journalctl -u kafka`.
 
 This image is rebuilt for Marketplace Autoupdate from `application_version` in `template.json`. To change the version on a **new** image:
 
-1. Set `application_version` in `kafka-24-04/template.json` (for example `4.3.1`).
-2. Rebuild with Packer (`make build-kafka-24-04` or `packer build -var application_version=4.3.1 kafka-24-04/template.json`). The installer fetches Apache's official SHA-512 for that version.
+1. Set `application_version` in `kafka-24-04/template.json` (for example `4.4.0`).
+2. Rebuild with Packer (`make build-kafka-24-04` or `packer build -var application_version=4.4.0 kafka-24-04/template.json`). The installer fetches Apache's official SHA-512 for that version (cross-checks mirrors when both publish one).
 
 In-place upgrades of an existing Droplet are not supported by this 1-Click. Stand up a new Droplet from the updated snapshot and migrate producers/consumers.
 

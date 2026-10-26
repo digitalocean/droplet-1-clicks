@@ -19,6 +19,9 @@
 - name: Install | Download and unpack Kafka
   when: kafka_files_found.matched == 0
   block:
+    # Probe both Apache mirrors. When both publish a .sha512, digests must match so a
+    # single compromised mirror cannot supply a matching trojaned tarball+checksum pair.
+    # Autoupdate still only needs application_version (no git-pinned digest).
     - name: Install | Probe primary Kafka mirror checksum
       uri:
         url: "{{ kafka_url }}.sha512"
@@ -27,46 +30,79 @@
       register: kafka_primary_checksum
       failed_when: false
 
-    - name: Install | Fetch Apache archive checksum
-      when: kafka_primary_checksum.status | default(0) != 200
+    - name: Install | Probe Apache archive checksum
       uri:
         url: "{{ kafka_archive_url }}.sha512"
         return_content: true
         status_code: [200]
       register: kafka_archive_checksum_resp
+      failed_when: false
 
-    - name: Install | Select Kafka download URL and checksum body
-      set_fact:
-        kafka_download_url: "{{ kafka_url if kafka_primary_checksum.status | default(0) == 200 else kafka_archive_url }}"
-        kafka_checksum_content: "{{ kafka_primary_checksum.content if kafka_primary_checksum.status | default(0) == 200 else kafka_archive_checksum_resp.content }}"
+    - name: Install | Require at least one Apache checksum
+      fail:
+        msg: >-
+          Neither {{ kafka_url }}.sha512 nor {{ kafka_archive_url }}.sha512 returned HTTP 200.
+          Check application_version={{ kafka_version }}.
+      when: >-
+        (kafka_primary_checksum.status | default(0) != 200)
+        and (kafka_archive_checksum_resp.status | default(0) != 200)
 
-    - name: Install | Write Apache checksum file
+    - name: Install | Write primary checksum file
+      when: kafka_primary_checksum.status | default(0) == 200
       copy:
-        dest: /tmp/kafka.tgz.sha512
-        content: "{{ kafka_checksum_content }}"
+        dest: /tmp/kafka-primary.tgz.sha512
+        content: "{{ kafka_primary_checksum.content }}"
 
-    - name: Install | Parse Kafka SHA-512 checksum
+    - name: Install | Write archive checksum file
+      when: kafka_archive_checksum_resp.status | default(0) == 200
+      copy:
+        dest: /tmp/kafka-archive.tgz.sha512
+        content: "{{ kafka_archive_checksum_resp.content }}"
+
+    - name: Install | Parse and cross-check Kafka SHA-512 checksums
       shell: |
         python3 - <<'PY'
-        import re, pathlib
-        text = pathlib.Path("/tmp/kafka.tgz.sha512").read_text()
-        if ":" in text:
-            hexpart = text.split(":", 1)[1]
-        elif "=" in text:
-            hexpart = text.split("=", 1)[1]
-        else:
-            hexpart = text.split()[0]
-        digest = re.sub(r"[^0-9a-fA-F]", "", hexpart).lower()
-        if len(digest) != 128:
-            raise SystemExit("parsed digest length %s, expected 128" % len(digest))
-        print(digest)
+        import pathlib, re, sys
+
+        def parse(path):
+            text = pathlib.Path(path).read_text()
+            if ":" in text:
+                hexpart = text.split(":", 1)[1]
+            elif "=" in text:
+                hexpart = text.split("=", 1)[1]
+            else:
+                hexpart = text.split()[0]
+            digest = re.sub(r"[^0-9a-fA-F]", "", hexpart).lower()
+            if len(digest) != 128:
+                raise SystemExit("parsed digest length %s from %s, expected 128" % (len(digest), path))
+            return digest
+
+        primary = pathlib.Path("/tmp/kafka-primary.tgz.sha512")
+        archive = pathlib.Path("/tmp/kafka-archive.tgz.sha512")
+        digests = []
+        if primary.is_file():
+            digests.append(("primary", parse(primary)))
+        if archive.is_file():
+            digests.append(("archive", parse(archive)))
+        if not digests:
+            raise SystemExit("no checksum files to parse")
+        if len(digests) == 2 and digests[0][1] != digests[1][1]:
+            raise SystemExit(
+                "Apache mirror checksum mismatch: %s=%s %s=%s"
+                % (digests[0][0], digests[0][1], digests[1][0], digests[1][1])
+            )
+        # Prefer primary mirror URL when its checksum is present.
+        source = digests[0][0]
+        digest = digests[0][1]
+        print("%s %s" % (source, digest))
         PY
       register: kafka_sha_parse
       changed_when: false
 
-    - name: Install | Set Kafka checksum
+    - name: Install | Select Kafka download URL and checksum
       set_fact:
-        kafka_archive_checksum: "sha512:{{ kafka_sha_parse.stdout | trim }}"
+        kafka_download_url: "{{ kafka_url if (kafka_sha_parse.stdout.split()[0] == 'primary') else kafka_archive_url }}"
+        kafka_archive_checksum: "sha512:{{ kafka_sha_parse.stdout.split()[1] }}"
 
     - name: Install | Download kafka
       get_url:

@@ -35,7 +35,8 @@ controller.listener.names=CONTROLLER
 #     listeners = PLAINTEXT://your.host.name:9092
 listeners=INTERNAL_PLAINTEXT://127.0.0.1:9092,PUBLIC_SSL://:9093,CONTROLLER://127.0.0.1:9094
 
-advertised.listeners=INTERNAL_PLAINTEXT://127.0.0.1:9092,PUBLIC_SSL://{{ .Env.droplet_public_ip }}:9093,CONTROLLER://127.0.0.1:9094
+# Advertise client/broker listeners only; CONTROLLER stays on listeners + controller.*.
+advertised.listeners=INTERNAL_PLAINTEXT://127.0.0.1:9092,PUBLIC_SSL://{{ .Env.droplet_public_ip }}:9093
 
 # Maps listener names to security protocols, the default is for them to be the same. See the config documentation for more details
 listener.security.protocol.map=INTERNAL_PLAINTEXT:PLAINTEXT,PUBLIC_SSL:SASL_SSL,CONTROLLER:PLAINTEXT

@@ -11,7 +11,7 @@ client listeners plus a local controller:
  * 127.0.0.1:9092 - PLAINTEXT and no authentication required
  * 0.0.0.0:9093   - TLS/SSL using a self-signed certificate
    and SCRAM-SHA-256 authentication
- * 127.0.0.1:9094 - KRaft controller (local only, not for clients)
+ * 127.0.0.1:9094 - KRaft controller (local only, not advertised to clients)
 
 PLAINTEXT connections are an easy way to get started, but they can only be
 established from inside this server.

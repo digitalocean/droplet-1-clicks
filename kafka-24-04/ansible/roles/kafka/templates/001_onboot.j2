@@ -24,14 +24,29 @@ trap cleanup EXIT
 kafka_dir="{{ kafka_dir }}"
 data_dir="{{ data_dir }}"
 templates_dir="{{ templates_dir }}"
+ssl_dir="${kafka_dir}/one-click-ssl"
+client_config="${ssl_dir}/example.librdkafka.config"
+
+# Idempotent guard MUST run before any TLS/SCRAM regeneration. Rewriting
+# .keystore_password then exiting would desync the existing JKS / server.properties.
+if [ -f "${data_dir}/meta.properties" ]; then
+  echo "Kafka KRaft storage already initialized at ${data_dir}; skipping first-boot setup."
+  if [ ! -f "${client_config}" ]; then
+    echo "WARNING: ${client_config} is missing; SCRAM password is only in KRaft storage." >&2
+    echo "Use localhost:9092 (PLAINTEXT) or reset /var/lib/kafka and re-run first-boot." >&2
+  fi
+  if [ -f /etc/systemd/system/kafka.service ]; then
+    systemctl enable --now kafka.service || true
+  fi
+  exit 0
+fi
 
 # Common variables
 tmp_dir="$(mktemp -d)"
 public_ip=$(curl -w "\n" http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address)
 private_ip=$(curl -w "\n" http://169.254.169.254/metadata/v1/interfaces/private/0/ipv4/address)
 
-# SSL
-ssl_dir="${kafka_dir}/one-click-ssl"
+# SSL (first boot only)
 mkdir -p "$ssl_dir"
 chmod 0700 "$ssl_dir"
 keystore_password="$(openssl rand -base64 12)"
@@ -120,6 +135,9 @@ configure_kafka_properties() {
 
 format_kraft_storage() {
   # Combined-mode KRaft requires a unique cluster ID and formatted storage on first boot.
+  # Do not use --ignore-formatted here: a no-op format after regenerating SCRAM in
+  # server.properties / example config would desync credentials. The meta.properties
+  # guard at script start is the idempotency mechanism.
   declare cluster_id
   cluster_id="$("${kafka_dir}/bin/kafka-storage.sh" random-uuid)"
 
@@ -189,6 +207,8 @@ add_readme() {
 gen_cert
 configure_kafka_properties
 format_kraft_storage
-configure_kafka_service
+# Write client creds before waiting on the broker so a slow/failed wait still leaves
+# example.librdkafka.config (password matches --add-scram from format above).
 add_example_config
 add_readme
+configure_kafka_service

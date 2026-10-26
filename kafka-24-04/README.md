@@ -1,10 +1,10 @@
 # Apache Kafka 1-Click Droplet
 
-Packer template for a DigitalOcean Marketplace 1-Click image that runs [Apache Kafka](https://kafka.apache.org) 4.3.1 in **KRaft combined mode** (broker + controller, no ZooKeeper) on Ubuntu 24.04.
+Packer template for a DigitalOcean Marketplace 1-Click image that runs [Apache Kafka](https://kafka.apache.org) 4.4.0 in **KRaft combined mode** (broker + controller, no ZooKeeper) on Ubuntu 24.04.
 
 ## What's Included
 
-- **Apache Kafka** at the version in `application_version` (`template.json`), currently `4.3.1`
+- **Apache Kafka** at the version in `application_version` (`template.json`), currently `4.4.0`
 - **OpenJDK 17**
 - **systemd** unit `kafka.service` (rendered on first boot; heap capped at 50% of RAM)
 - **UFW** allowing SSH (22) and Kafka SASL_SSL (9093) only
@@ -39,16 +39,16 @@ packer validate kafka-24-04/template.json
 packer build kafka-24-04/template.json
 ```
 
-Autoupdate (and manual version bumps) only need `application_version`. Ansible fetches the matching Apache SHA-512 at build time:
+Autoupdate (and manual version bumps) only need `application_version`. Ansible fetches the matching Apache SHA-512 from downloads and archive mirrors at build time (both digests must agree when both exist):
 
 ```bash
-packer build -var 'application_version=4.3.1' kafka-24-04/template.json
+packer build -var 'application_version=4.4.0' kafka-24-04/template.json
 ```
 
 ## How It Works
 
 1. Packer waits for cloud-init, then runs `kafka-24-04/ansible/kafka.yml` as root.
-2. Ansible installs OpenJDK 17 JRE, downloads `kafka_2.13-<version>.tgz` from Apache, verifies it against the official `.sha512` file (downloads.apache.org, then the archive), and ships first-boot templates under `/opt/kafka/do-templates`.
+2. Ansible installs OpenJDK 17 JRE, downloads `kafka_2.13-<version>.tgz` from Apache, verifies it against official `.sha512` files (cross-checks downloads.apache.org and the archive when both publish one), and ships first-boot templates under `/opt/kafka/do-templates`.
 3. `application_version` is passed as `--extra-vars kafka_version=...` so Autoupdate can change the tarball without editing Ansible defaults.
 4. `018-force-ssh-logout.sh` blocks SSH until per-instance setup finishes.
 5. On first boot, `001_onboot` writes `server.properties`, formats KRaft storage (`kafka-storage.sh format --standalone`), enables `kafka.service`, and writes `/opt/kafka/one-click-ssl/`.
@@ -73,6 +73,6 @@ After creating a Droplet from the snapshot:
 - [ ] After first boot, `systemctl is-active kafka` is active
 - [ ] Topic list works: `/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list`
 - [ ] `/opt/kafka/one-click-ssl/example.librdkafka.config` contains `sasl.username=doadmin` and `sasl.password` (mode `0600`)
-- [ ] MOTD prints those credentials and the config path
+- [ ] MOTD points at that config path (password is not printed in the banner)
 - [ ] UFW allows only 22 and 9093 (`ufw status`); 9094 is not public
 - [ ] No `zookeeper.service` unit is present

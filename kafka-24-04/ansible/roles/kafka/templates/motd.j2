@@ -6,20 +6,10 @@ ssl_dir="{{ kafka_dir }}/one-click-ssl"
 client_config="${ssl_dir}/example.librdkafka.config"
 client_readme="${ssl_dir}/README.md"
 
-scram_user=""
-scram_password=""
 if [ -r "${client_config}" ]; then
-  scram_user=$(sed -n 's/^sasl.username=//p' "${client_config}")
-  scram_password=$(sed -n 's/^sasl.password=//p' "${client_config}")
-fi
-
-if [ -n "${scram_user}" ]; then
   creds_block="External client credentials (SCRAM-SHA-256 on port 9093):
-    User: ${scram_user}
-    Pass: ${scram_password}
-
-  These values are stored in:
-    ${client_config}
+    Username: doadmin
+    Password: see ${client_config} (mode 0600; not printed here)
 
   TLS material for clients:
     ${ssl_dir}/ca.crt
@@ -29,7 +19,7 @@ if [ -n "${scram_user}" ]; then
     scp root@<droplet-ip>:'${ssl_dir}/{ca.crt,example.librdkafka.config,.keystore_password}' ."
 else
   creds_block="First-boot setup is still generating TLS and SCRAM credentials.
-  After kafka.service is up, the user and password will be in:
+  After kafka.service is up, the user (doadmin) and password will be in:
     ${client_config}
   Keystore password:
     ${ssl_dir}/.keystore_password"
