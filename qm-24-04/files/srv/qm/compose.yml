@@ -12,20 +12,33 @@ name: qm
 # images.json (https://github.com/yc-software/qm/releases/tag/v0.1.13) and
 # pulled from upstream's registry (docker compose pull in scripts/010-qm.sh).
 #
-# core is instead built from source at Packer build time from the
-# DigitalOcean Managed Agents sandbox-backend fork (https://github.com/nkurraDO/qm,
-# branch managed-agents-workspace-scratch — yc-software/qm PR #2221, pinned
-# commit cf711d04), since that fork has no published image yet — see
-# scripts/010-qm.sh for the build and README.md "DigitalOcean Managed Agents
-# sandbox backend" for why. The fork only touches core and is a pure
-# superset of upstream (adds SANDBOX_BACKEND=do-managed-agents, doesn't
-# remove e2b/local/etc.), so this one image serves either sandbox backend
-# the setup wizard offers.
+# core is instead built from source at Packer build time, pinned to our own
+# droplet-pin-no-csp integration branch (v-aisac/qm) — not itself an
+# upstream PR, just this droplet's own branch cherry-picking two
+# independent, still-unmerged upstream PRs this droplet needs: #2393 (the
+# deploy-runtime image auto-matches the Managed Agents sandbox's glibc/Node
+# ABI when that's the active sandbox backend) and #2399 (DATA_DIR=/data,
+# backed by a per-deployment named volume, so a published app's own state
+# survives a redeploy). Deliberately EXCLUDES #2388 (APP_SANDBOX_CSP gains
+# allow-same-origin) — that fix is a real security tradeoff needed only on
+# a droplet with no DEPLOY_APPS_DOMAIN configured, serving every published
+# app through the same-origin `/d/<id>/` proxy; this droplet has a real
+# apps domain configured, so every app already gets its own genuinely
+# separate subdomain with no sandbox CSP applied at all, and including
+# #2388 here would just weaken isolation for no reason. See
+# scripts/010-qm.sh for the build and README.md "Docker-in-Docker for app
+# publishing" for the full story on all three PRs. Before this pin, core
+# tracked yc-software/qm main directly (and before that, a DigitalOcean-
+# team fork, prior to do-managed-agents sandbox-backend support landing
+# upstream) — this one image still serves either sandbox backend the setup
+# wizard offers (do-managed-agents alongside e2b/local/etc.) regardless of
+# pin. Switch back to tracking main directly once both PRs merge or are
+# otherwise resolved upstream.
 #
-# To move core to a newer fork commit: bump QM_FORK_SHA and
-# QM_CORE_MANAGED_AGENTS_TAG in scripts/010-qm.sh and the default below,
-# then rebuild the image. To move web-ui/portal to a newer upstream release:
-# fetch that release's images.json and replace their digests below, then run
+# To move core to a newer commit: bump QM_SHA and QM_CORE_TAG in
+# scripts/010-qm.sh and the default below, then rebuild the image. To move
+# web-ui/portal to a newer upstream release: fetch that release's
+# images.json and replace their digests below, then run
 # /srv/qm/update-qm.sh.
 
 services:
@@ -53,7 +66,7 @@ services:
       retries: 10
 
   core:
-    image: ${QM_CORE_IMAGE:-qm-core-managed-agents:cf711d04}
+    image: ${QM_CORE_IMAGE:-qm-core:4b37691d}
     container_name: qm-core
     restart: unless-stopped
     env_file:

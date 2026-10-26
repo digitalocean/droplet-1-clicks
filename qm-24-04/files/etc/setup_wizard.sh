@@ -1,9 +1,11 @@
 #!/bin/bash
-# QM first-login setup wizard — collects the admin account, a model
-# provider (DigitalOcean Serverless Inference, Anthropic, or OpenAI — or
-# auto-detected from /root/.digitalocean_genai_credentials if DigitalOcean's
-# own GenAI automation dropped one, see env-lib.sh), and a sandbox backend
-# key (DigitalOcean Managed Agents or e2b), then brings the stack up.
+# QM first-login setup wizard — collects the admin account (or auto-detected
+# from /root/.digitalocean_custom_inputs if DigitalOcean's own automation
+# dropped one), a model provider (DigitalOcean Serverless Inference,
+# Anthropic, or OpenAI — or auto-detected from
+# /root/.digitalocean_genai_credentials if DigitalOcean's own GenAI
+# automation dropped one, see env-lib.sh), and a sandbox backend key
+# (DigitalOcean Managed Agents or e2b), then brings the stack up.
 
 set -euo pipefail
 
@@ -45,25 +47,41 @@ This droplet needs three things it can't generate itself:
 Press Ctrl+C any time and re-run this wizard later: /etc/setup_wizard.sh
 EOF
 
-read -rp "Admin email: " ADMIN_EMAIL
-until [[ "$ADMIN_EMAIL" =~ ^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$ ]]; do
-  read -rp "That doesn't look like an email — try again: " ADMIN_EMAIL
-done
-
 old_histfile="${HISTFILE-}"
 unset HISTFILE
-while true; do
-  read -rsp "Admin password (min 12 characters): " ADMIN_PASSWORD
-  echo ""
-  if [ "${#ADMIN_PASSWORD}" -lt 12 ]; then
-    echo "Too short — try again."
-    continue
+
+# DigitalOcean's own automation may have dropped an admin email (and
+# optionally a password) on this droplet before first login — when
+# present, it always wins and both questions below are skipped entirely.
+GENERATED_PASSWORD=0
+if detect_do_custom_inputs; then
+  ADMIN_EMAIL="$DO_CUSTOM_EMAIL"
+  echo "Detected an admin email at ${DO_CUSTOM_INPUTS_FILE} — skipping the admin email/password questions."
+  if [ -n "$DO_CUSTOM_PASSWORD" ]; then
+    ADMIN_PASSWORD="$DO_CUSTOM_PASSWORD"
+  else
+    ADMIN_PASSWORD="$(openssl rand -base64 18 | tr -d '=+/' | cut -c1-18)"
+    GENERATED_PASSWORD=1
   fi
-  read -rsp "Confirm password: " CONFIRM
-  echo ""
-  [ "$ADMIN_PASSWORD" = "$CONFIRM" ] && break
-  echo "Passwords didn't match — try again."
-done
+else
+  read -rp "Admin email: " ADMIN_EMAIL
+  until [[ "$ADMIN_EMAIL" =~ ^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$ ]]; do
+    read -rp "That doesn't look like an email — try again: " ADMIN_EMAIL
+  done
+
+  while true; do
+    read -rsp "Admin password (min 12 characters): " ADMIN_PASSWORD
+    echo ""
+    if [ "${#ADMIN_PASSWORD}" -lt 12 ]; then
+      echo "Too short — try again."
+      continue
+    fi
+    read -rsp "Confirm password: " CONFIRM
+    echo ""
+    [ "$ADMIN_PASSWORD" = "$CONFIRM" ] && break
+    echo "Passwords didn't match — try again."
+  done
+fi
 
 echo ""
 ANTHROPIC_API_KEY=""
@@ -201,6 +219,7 @@ fi
 SANDBOX_SUMMARY="e2b"
 if [ "$SANDBOX_BACKEND" = "$MANAGED_AGENTS_SANDBOX_BACKEND_VALUE" ]; then
   SANDBOX_SUMMARY="DigitalOcean Managed Agents"
+  load_deploy_runtime_image "$SANDBOX_BACKEND" || true
 fi
 
 echo ""
@@ -209,6 +228,9 @@ echo "  Setup complete! Your QM is ready."
 echo ""
 echo "  Dashboard: https://${myip}  (Let's Encrypt short-lived IP cert — your browser may warn on first visit)"
 echo "  Sign in:   ${ADMIN_EMAIL}"
+if [ "$GENERATED_PASSWORD" = 1 ]; then
+  echo "  Password:  ${ADMIN_PASSWORD}  (no usable password was supplied — this one was generated; also in /srv/qm/.env as AUTH_PASSWORD_USERS)"
+fi
 echo "  Model:     ${MODEL_SUMMARY}"
 echo "  Sandbox:   ${SANDBOX_SUMMARY}"
 echo "========================================================================"

@@ -170,6 +170,16 @@ elif [ "$SANDBOX_BACKEND_ENV" = e2b ] && [ -n "${E2B_API_KEY:-}" ]; then
   HAS_SANDBOX_KEY=1
 fi
 
+# DigitalOcean's own automation may have dropped an admin email (and
+# optionally a password) on this droplet before first boot (see
+# env-lib.sh's detect_do_custom_inputs) — only consulted when the droplet
+# env vars above didn't already supply ADMIN_EMAIL, since an operator-set
+# env var is a more explicit signal than this file.
+if [ -z "${ADMIN_EMAIL:-}" ] && detect_do_custom_inputs; then
+  ADMIN_EMAIL="$DO_CUSTOM_EMAIL"
+  ADMIN_PASSWORD="${DO_CUSTOM_PASSWORD:-}"
+fi
+
 STACK_STARTED=0
 if [ -n "${ADMIN_EMAIL:-}" ] && [ "$HAS_MODEL_KEY" = 1 ] && [ "$HAS_SANDBOX_KEY" = 1 ]; then
   echo "Configuring QM from droplet environment variables..."
@@ -200,6 +210,7 @@ if [ -n "${ADMIN_EMAIL:-}" ] && [ "$HAS_MODEL_KEY" = 1 ] && [ "$HAS_SANDBOX_KEY"
   SANDBOX_SUMMARY_ENV="e2b"
   if [ "$SANDBOX_BACKEND_ENV" = "$MANAGED_AGENTS_SANDBOX_BACKEND_VALUE" ]; then
     SANDBOX_SUMMARY_ENV="DigitalOcean Managed Agents"
+    load_deploy_runtime_image "$SANDBOX_BACKEND_ENV" || true
   fi
   STACK_STARTED=1
 elif ! grep -q 'setup_wizard.sh' /root/.bashrc 2>/dev/null; then

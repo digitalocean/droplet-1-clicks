@@ -79,6 +79,89 @@ detect_managed_agents_token() {
   return 0
 }
 
+# Path DigitalOcean's own automation may drop a pre-provisioned admin
+# identity at, on droplets created through a flow that already knows the
+# operator's account email (and optionally a password) — a separate piece
+# of automation from the GenAI/Managed-Agents credentials file above (one
+# droplet may get either, both, or neither).
+DO_CUSTOM_INPUTS_FILE="/root/.digitalocean_custom_inputs"
+
+# Reads EMAIL/PASSWORD out of DO_CUSTOM_INPUTS_FILE — parsed line by line
+# rather than sourced, same reasoning as detect_do_genai_credentials above.
+# EMAIL must look like an email address (same pattern setup_wizard.sh's own
+# interactive prompt enforces) or this returns 1 as if the file were absent
+# — unlike the DO-authored genai/dbaas files, this one's EMAIL field has no
+# other validation upstream before it reaches here. PASSWORD is optional:
+# present but under 12 characters (QM's own minimum) is treated the same as
+# absent, leaving DO_CUSTOM_PASSWORD empty for the caller to fall back to a
+# generated password, rather than failing the whole detection over a weak
+# password when the email half is still usable. On success, sets
+# DO_CUSTOM_EMAIL (and DO_CUSTOM_PASSWORD, possibly empty) and returns 0;
+# returns 1 (leaving both unset) if the file is missing or EMAIL is absent
+# or malformed.
+detect_do_custom_inputs() {
+  unset DO_CUSTOM_EMAIL DO_CUSTOM_PASSWORD
+  [ -f "$DO_CUSTOM_INPUTS_FILE" ] || return 1
+  local email password
+  email="$(grep -E '^EMAIL=' "$DO_CUSTOM_INPUTS_FILE" | tail -n 1 | cut -d= -f2- | sed -E 's/^[[:space:]]*"?//; s/"?[[:space:]]*$//')"
+  password="$(grep -E '^PASSWORD=' "$DO_CUSTOM_INPUTS_FILE" | tail -n 1 | cut -d= -f2- | sed -E 's/^[[:space:]]*"?//; s/"?[[:space:]]*$//')"
+  [[ "$email" =~ ^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$ ]] || return 1
+  DO_CUSTOM_EMAIL="$email"
+  DO_CUSTOM_PASSWORD=""
+  if [ "${#password}" -ge 12 ]; then
+    DO_CUSTOM_PASSWORD="$password"
+  fi
+  return 0
+}
+
+# Path scripts/010-qm.sh saves the deploy-runtime image to at Packer build
+# time (built from files/srv/qm/deploy-runtime/Dockerfile) — see
+# README.md "Docker-in-Docker for app publishing".
+DEPLOY_RUNTIME_IMAGE_TARBALL="/srv/qm/deploy-runtime.tar.gz"
+
+# Loads the deploy-runtime image into dind — QM's own createDockerDeployProvider
+# falls back to this image automatically (qm-deploy-runtime:ubuntu24-node20)
+# when SANDBOX_BACKEND=do-managed-agents, but dind has its own image cache
+# entirely separate from this host's, so building the image at Packer build
+# time isn't enough on its own — it has to be loaded into dind specifically,
+# which can only happen once dind is actually running (i.e. at boot, not at
+# Packer build time). No-op for any other sandbox backend, or if the
+# tarball is missing for some reason (non-fatal either way — the deploy
+# provider just falls back to its own default image instead, the same as
+# if this were never set up at all).
+#
+# Non-fatal on failure: prints a warning and returns 1 rather than aborting
+# the caller, matching register_do_inference_provider's own treatment of a
+# non-essential, best-effort post-boot step.
+load_deploy_runtime_image() {
+  local sandbox_backend="$1"
+  [ "$sandbox_backend" = "$MANAGED_AGENTS_SANDBOX_BACKEND_VALUE" ] || return 0
+  if [ ! -f "$DEPLOY_RUNTIME_IMAGE_TARBALL" ]; then
+    echo "WARNING: ${DEPLOY_RUNTIME_IMAGE_TARBALL} not found — the Ubuntu/Node-20 deploy-runtime image was not loaded into dind; published apps with native npm dependencies may fail to run."
+    return 1
+  fi
+
+  echo "Waiting for dind to be ready before loading the deploy-runtime image..."
+  local attempt
+  for attempt in $(seq 1 20); do
+    if docker exec qm-dind docker info >/dev/null 2>&1; then
+      break
+    fi
+    if [ "$attempt" = 20 ]; then
+      echo "WARNING: dind never became ready — the deploy-runtime image was not loaded. Retry later with: gunzip -c ${DEPLOY_RUNTIME_IMAGE_TARBALL} | docker exec -i qm-dind docker load"
+      return 1
+    fi
+    sleep 3
+  done
+
+  echo "Loading the Ubuntu/Node-20 deploy-runtime image into dind (matches the Managed Agents sandbox's own glibc/Node ABI — see README.md)..."
+  if ! gunzip -c "$DEPLOY_RUNTIME_IMAGE_TARBALL" | docker exec -i qm-dind docker load; then
+    echo "WARNING: loading the deploy-runtime image into dind failed — published apps with native npm dependencies may fail to run."
+    return 1
+  fi
+  return 0
+}
+
 # Path DigitalOcean's own Managed Database automation drops pre-provisioned
 # connection credentials at, on droplets created with an attached DBaaS
 # Postgres (same mechanism django-24-04 in this repo already handles).
