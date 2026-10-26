@@ -53,10 +53,12 @@ packer validate openclaw-24-04/template.json
 make build-openclaw-24-04
 ```
 
+Packer builds on **`s-2vcpu-4gb`**. Marketplace Droplets should use **at least 4 GB / 2 vCPU** (8 GB recommended). Gateway + Docker sandboxes + Control UI + TUI commonly freeze a 2 GB Droplet under memory pressure; first boot also enables a 2 GB swap file as a safety net.
+
 ## What Gets Installed
 
 - **OpenClaw** `v2026.9.3` (pinned via `application_version` in `template.json`)
-- **Node.js 24** and **Docker** (sandbox image built at snapshot time and on first boot)
+- **Node.js 24** ≥**24.22.1** — remediates CVE-2026-111497 (Brotli RCE; trackers VULN-5695 / VULN-5716 are labels for that CVE) — and **Docker** (sandbox image built at snapshot time and on first boot)
 - **Caddy** – reverse proxy on ports 80/443 to `127.0.0.1:18789` with shortlived TLS by IP
 - **UFW** – SSH (rate-limited), HTTP, HTTPS
 - **fail2ban**
@@ -91,10 +93,25 @@ Edit `application_version` in `template.json` (OpenClaw npm version, e.g. `v2026
 ## On-droplet updates (shown in MOTD)
 
 ```bash
-sudo /opt/update-openclaw.sh              # latest from npm
-sudo /opt/update-openclaw.sh v2026.9.3    # specific version
-sudo /opt/update-openclaw.sh --rollback   # previous pin (OPENCLAW_VERSION_PREVIOUS)
+sudo /opt/update-openclaw.sh              # latest from npm only
 ```
+
+The update script upgrades Node when below the CVE floor, refreshes `openclaw.service` PATH (`/usr/bin` first), stops the gateway, installs `openclaw@latest`, runs `openclaw doctor --fix --yes --non-interactive` with `OPENCLAW_SERVICE_REPAIR_POLICY=external` (required because the 1-Click unit is root-owned/custom, not CLI-managed), plus `sync-openclaw-gateway.sh`, and restarts only if doctor succeeds. If doctor fails mid-upgrade, the gateway is left stopped on the new package for manual repair.
+
+### Live-droplet smoke (after deploying the script)
+
+```bash
+# 1) Manual doctor with external policy
+sudo systemctl stop openclaw
+sudo -u openclaw -H env HOME=/home/openclaw OPENCLAW_SERVICE_REPAIR_POLICY=external \
+  openclaw doctor --fix --yes --non-interactive
+sudo systemctl start openclaw
+
+# 2) Update to latest
+sudo /opt/update-openclaw.sh
+```
+
+Expect doctor to enter maintenance (no “ownership or shutdown could not be verified”), then the gateway to restart.
 
 ## License
 

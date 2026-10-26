@@ -12,7 +12,9 @@ WorkingDirectory=/home/openclaw
 EnvironmentFile=/opt/openclaw.env
 Environment="HOME=/home/openclaw"
 Environment="NODE_ENV=production"
-Environment="PATH=/home/openclaw/.openclaw/workspace/npm/bin:/home/openclaw/.openclaw/workspace/homebrew/bin:/usr/local/bin:/usr/bin:/bin:"
+# Prefer /usr/bin so #!/usr/bin/env node resolves NodeSource Node (>=24.22.1,
+# CVE-2026-111497) instead of a Homebrew-shadowed binary.
+Environment="PATH=/usr/bin:/bin:/home/openclaw/.openclaw/workspace/npm/bin:/home/openclaw/.openclaw/workspace/homebrew/bin:/usr/local/bin"
 
 # Start command - uses the gateway executable with allow-unconfigured for initial setup
 ExecStart=/usr/bin/openclaw gateway --port ${OPENCLAW_GATEWAY_PORT} --allow-unconfigured
