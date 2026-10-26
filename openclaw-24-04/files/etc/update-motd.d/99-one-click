@@ -52,15 +52,14 @@ on the channels you already use (WhatsApp, Telegram, Slack, Discord, and more).
    (OPENCLAW_VERSION_PREVIOUS). For any other pin, use the specific-version
    command above. Upgrades Node automatically if needed. Rollback restores
    the prior npm package only, not config migrations.)
-  If UI/CLI breaks after update or rollback, repair with doctor:
-    sudo -u openclaw openclaw doctor
-        # interactive checks; prompts YES/NO when fixes are needed
-    sudo -u openclaw openclaw doctor --fix
-        # apply recommended repairs (--repair is the same)
-    Optional flags (combine with --fix as needed):
-      --yes              accept defaults without prompting
-      --non-interactive  no prompts; safe migrations/repairs only
-    Then: sudo systemctl restart openclaw
+  If UI/CLI breaks after update or rollback (e.g. agent DB schema
+  migration / "schema version N; run doctor --fix"), stop the gateway
+  first (doctor needs exclusive DB access), then repair:
+    sudo systemctl stop openclaw
+    sudo -u openclaw -H openclaw doctor --fix --yes --non-interactive
+    sudo systemctl start openclaw
+    Optional: sudo /opt/ensure-openclaw-ready.sh
+              sudo /opt/apply-inference-from-env.sh   # if models list is empty
 
 🔒 Custom domain (HTTPS):
   HTTPS is already enabled on this droplet IP (shortlived TLS via Caddy).

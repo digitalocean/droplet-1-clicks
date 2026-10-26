@@ -1,5 +1,6 @@
 #!/bin/bash
-# Update OpenClaw from npm and restart the gateway service.
+# Update OpenClaw from npm, run post-upgrade doctor + gateway sync while the
+# service is stopped, then restart the gateway.
 #
 # Usage:
 #   /opt/update-openclaw.sh              # install latest from npm
@@ -11,10 +12,25 @@
 # success). OPENCLAW_VERSION_PREVIOUS is saved before each successful change
 # so --rollback can restore it. Rollback reinstalls the prior npm package; it
 # does not undo OpenClaw config/state migrations.
+#
+# Doctor must run with the gateway stopped (state DB ownership). Manual repair:
+#   systemctl stop openclaw
+#   sudo -u openclaw -H openclaw doctor --fix --yes --non-interactive
+#   systemctl start openclaw
+#
+# Schema jumps (e.g. agent DB v19 → current) need exclusive maintenance. Running
+# doctor while the gateway is up, or continuing after a failed doctor, leaves
+# sessions unavailable with "schema version N; run openclaw doctor --fix".
+#
+# If doctor fails after npm install, this script reinstalls the prior pin (when
+# known) and restarts so the droplet is not left on a half-upgraded package.
 
 set -euo pipefail
 
 ENV_FILE=/opt/openclaw.env
+OPENCLAW_HOME=/home/openclaw
+OPENCLAW_USER=openclaw
+OPENCLAW_UNIT=/etc/systemd/system/openclaw.service
 
 if [ "$(id -u)" -ne 0 ]; then
     echo "Run as root: sudo $0 ${*:-}" >&2
@@ -83,16 +99,33 @@ current_installed_version() {
     return 1
 }
 
-# OpenClaw engines (>=24.16.0 <25 || >=26.1.0) plus CVE-2026-111497 floor
-# for the 24.x line (>=24.22.1). 26.x patched line starts at 26.12.1.
-node_meets_openclaw_engines() {
+# CVE-2026-111497 remediation + current OpenClaw engines:
+#   Node >=24.22.1 <25  ||  >=26.12.1
+# (VULN-5695 / VULN-5716 = internal tracker labels for that CVE.)
+# Do not accept other majors (unknown patch floors / unsupported by OpenClaw).
+node_meets_cve_and_engines() {
     command -v node >/dev/null 2>&1 || return 1
-    node -e '
-      const [maj, min, pat = 0] = process.versions.node.split(".").map(Number);
+    # Prefer the NodeSource binary the gateway should use (/usr/bin/env node).
+    local node_bin
+    node_bin="$(command -v node)"
+    if [ -x /usr/bin/node ]; then
+        node_bin=/usr/bin/node
+    fi
+    "$node_bin" -e '
+      function ge(a, b) {
+        const pa = String(a).split(".").map((x) => parseInt(x, 10) || 0);
+        const pb = String(b).split(".").map((x) => parseInt(x, 10) || 0);
+        for (let i = 0; i < 3; i++) {
+          if ((pa[i] || 0) > (pb[i] || 0)) return true;
+          if ((pa[i] || 0) < (pb[i] || 0)) return false;
+        }
+        return true;
+      }
+      const v = process.versions.node;
+      const maj = parseInt(v.split(".")[0], 10);
       const ok =
-        (maj === 24 && (min > 22 || (min === 22 && pat >= 1))) ||
-        (maj === 26 && (min > 12 || (min === 12 && pat >= 1))) ||
-        maj > 26;
+        (maj === 24 && ge(v, "24.22.1")) ||
+        (maj === 26 && ge(v, "26.12.1"));
       process.exit(ok ? 0 : 1);
     ' 2>/dev/null
 }
@@ -106,29 +139,138 @@ install_nodesource_24() {
     echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_24.x nodistro main" \
         > /etc/apt/sources.list.d/nodesource.list
     apt-get update -y
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --only-upgrade nodejs \
-        || DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
+    # Plain install upgrades when a newer NodeSource build exists and installs
+    # when missing. Do not use --only-upgrade alone (no-ops if nodejs absent).
+    DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
+}
+
+# Keep gateway unit PATH aligned with the image unit so existing droplets pick
+# up the /usr/bin-first ordering without waiting for a Marketplace rebuild.
+ensure_openclaw_unit_node_path() {
+    [ -f "$OPENCLAW_UNIT" ] || return 0
+
+    if grep -qF 'PATH=/usr/bin:/bin:/home/openclaw/.openclaw/workspace/npm/bin' "$OPENCLAW_UNIT"; then
+        return 0
+    fi
+
+    echo "Updating ${OPENCLAW_UNIT} PATH so gateway uses /usr/bin/node (CVE-2026-111497)..."
+    python3 - "$OPENCLAW_UNIT" <<'PY'
+import pathlib, re, sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text()
+desired = (
+    'Environment="PATH=/usr/bin:/bin:/home/openclaw/.openclaw/workspace/npm/bin:'
+    '/home/openclaw/.openclaw/workspace/homebrew/bin:/usr/local/bin"'
+)
+new, n = re.subn(r'^Environment="PATH=.*"', desired, text, count=1, flags=re.M)
+if n == 0:
+    if re.search(r'^Environment="NODE_ENV=', text, flags=re.M):
+        new = re.sub(
+            r'^(Environment="NODE_ENV=.*")',
+            r"\1\n" + desired,
+            text,
+            count=1,
+            flags=re.M,
+        )
+    else:
+        new = re.sub(r"^\[Service\]", "[Service]\n" + desired, text, count=1, flags=re.M)
+path.write_text(new)
+print(f"Updated {path}")
+PY
+    systemctl daemon-reload
 }
 
 ensure_node_for_openclaw() {
-    if node_meets_openclaw_engines; then
-        echo "Node $(node --version) meets OpenClaw + CVE-2026-111497 requirements."
+    ensure_openclaw_unit_node_path
+
+    if node_meets_cve_and_engines; then
+        echo "Node $(/usr/bin/node --version 2>/dev/null || node --version) meets CVE-2026-111497 + OpenClaw engines."
         return 0
     fi
 
     local current
-    current="$(node --version 2>/dev/null || echo 'missing')"
-    echo "Node ${current} is below OpenClaw / CVE-2026-111497 minimum (need >=24.22.1 on 24.x, or >=26.12.1 on 26.x)."
-    echo "Upgrading Node.js to 24.x via NodeSource apt repository..."
+    current="$(/usr/bin/node --version 2>/dev/null || node --version 2>/dev/null || echo 'missing')"
+    echo "Node ${current} is below CVE-2026-111497 / OpenClaw minimum (need >=24.22.1 on 24.x, or >=26.12.1 on 26.x)."
+    echo "Upgrading Node.js to 24.x via NodeSource apt repository (tracker refs VULN-5695 / VULN-5716)..."
 
     install_nodesource_24
+    ensure_openclaw_unit_node_path
 
-    if ! node_meets_openclaw_engines; then
-        echo "❌ Error: Node still too old after upgrade ($(node --version 2>/dev/null || echo missing))" >&2
+    if ! node_meets_cve_and_engines; then
+        echo "❌ Error: Node still too old after upgrade ($(/usr/bin/node --version 2>/dev/null || node --version 2>/dev/null || echo missing))" >&2
         echo "   Expected >=24.22.1 (CVE-2026-111497). Check NodeSource node_24.x packages." >&2
         exit 1
     fi
-    echo "Node upgraded to $(node --version)."
+    echo "Node upgraded to $(/usr/bin/node --version)."
+}
+
+# Stop systemd unit and any leftover gateway writers so doctor can take the
+# agent/shared SQLite maintenance lease (required for schema migrations).
+stop_openclaw_for_maintenance() {
+    echo "Stopping OpenClaw service for maintenance..."
+    systemctl stop openclaw || true
+
+    local i
+    for i in $(seq 1 30); do
+        if ! systemctl is-active --quiet openclaw 2>/dev/null; then
+            break
+        fi
+        sleep 1
+    done
+
+    # Custom unit is not always recognized as a "managed" Gateway by doctor;
+    # kill residual writers that would still hold openclaw-agent.sqlite.
+    pkill -u "$OPENCLAW_USER" -f 'openclaw gateway' 2>/dev/null || true
+    sleep 1
+
+    if systemctl is-active --quiet openclaw 2>/dev/null; then
+        echo "❌ Error: openclaw.service is still active; cannot run doctor safely." >&2
+        echo "   Try: sudo systemctl stop openclaw && sudo systemctl status openclaw" >&2
+        exit 1
+    fi
+}
+
+run_openclaw_doctor_fix() {
+    # --fix/--yes enter repair maintenance; --non-interactive skips prompts.
+    # HOME must be the openclaw user home so doctor finds ~/.openclaw state.
+    sudo -u "$OPENCLAW_USER" -H env HOME="$OPENCLAW_HOME" \
+        openclaw doctor --fix --yes --non-interactive
+}
+
+# After a failed post-upgrade doctor, restore the prior npm pin (when known) and
+# try to bring the gateway back so the droplet is not left stopped on the new build.
+rollback_after_doctor_failure() {
+    local prior="$1"
+    local failed="$2"
+
+    echo "❌ Error: openclaw doctor --fix failed after installing openclaw@${failed}." >&2
+    echo "   Agent DB schema migrations did not finish." >&2
+
+    if [ -z "${prior}" ] || [ "${prior}" = "latest" ] || [ "${prior}" = "${failed}" ]; then
+        echo "   No prior pin to restore. Gateway left stopped. Retry:" >&2
+        echo "     sudo systemctl stop openclaw" >&2
+        echo "     sudo -u openclaw -H openclaw doctor --fix --yes --non-interactive" >&2
+        echo "     sudo systemctl start openclaw" >&2
+        return 1
+    fi
+
+    echo "Restoring previous package openclaw@${prior} and restarting..." >&2
+    if ! npm install -g "openclaw@${prior}"; then
+        echo "❌ Error: rollback install of openclaw@${prior} failed; gateway left stopped." >&2
+        echo "   Manual: sudo /opt/update-openclaw.sh --rollback" >&2
+        return 1
+    fi
+
+    set_env_kv OPENCLAW_VERSION "v${prior}"
+    if systemctl start openclaw; then
+        echo "⚠️  Rolled back to v${prior} and restarted. Fix doctor issues before updating again." >&2
+        echo "   Retry update later: sudo /opt/update-openclaw.sh" >&2
+    else
+        echo "❌ Error: rolled back package to v${prior} but failed to start openclaw." >&2
+        echo "   Check: journalctl -u openclaw -xe" >&2
+    fi
+    return 1
 }
 
 case "${1:-}" in
@@ -166,8 +308,7 @@ fi
 
 ensure_node_for_openclaw
 
-echo "Stopping OpenClaw service..."
-systemctl stop openclaw || true
+stop_openclaw_for_maintenance
 
 echo "Installing openclaw@${TARGET} from npm..."
 if npm install -g "openclaw@${TARGET}"; then
@@ -188,6 +329,28 @@ if npm install -g "openclaw@${TARGET}"; then
     fi
     set_env_kv OPENCLAW_VERSION "v${INSTALLED_VERSION}"
 
+    # Re-assert stop after npm (and before doctor): writers must be down for
+    # agent schema migrations (v19+ session-identity / creator-namespace).
+    stop_openclaw_for_maintenance
+
+    echo "Running post-upgrade doctor (gateway stopped)..."
+    if run_openclaw_doctor_fix; then
+        echo "Doctor repair completed."
+    else
+        rollback_after_doctor_failure "${BEFORE_VERSION:-}" "${INSTALLED_VERSION}"
+        exit 1
+    fi
+
+    if [ -x /opt/sync-openclaw-gateway.sh ]; then
+        echo "Syncing gateway token / trustedProxies / allowedOrigins..."
+        if /opt/sync-openclaw-gateway.sh; then
+            echo "Gateway config synced."
+        else
+            echo "⚠️  Warning: sync-openclaw-gateway.sh failed (continuing)." >&2
+            echo "   Repair with: sudo /opt/ensure-openclaw-ready.sh" >&2
+        fi
+    fi
+
     echo "Starting OpenClaw..."
     if systemctl start openclaw; then
         if [ "$MODE" = "rollback" ]; then
@@ -199,6 +362,8 @@ if npm install -g "openclaw@${TARGET}"; then
         if [ -n "${BEFORE_VERSION}" ] && [ "${BEFORE_VERSION}" != "${INSTALLED_VERSION}" ]; then
             echo "Rollback (if needed): sudo /opt/update-openclaw.sh --rollback"
         fi
+        echo "If Control UI or models misbehave: sudo /opt/ensure-openclaw-ready.sh"
+        echo "  and re-apply inference if needed: sudo /opt/apply-inference-from-env.sh"
     else
         echo "❌ Error: Failed to restart OpenClaw" >&2
         echo "Check logs with: journalctl -u openclaw -xe" >&2

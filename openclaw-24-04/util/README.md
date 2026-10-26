@@ -133,7 +133,7 @@ journalctl -u openclaw -n 100 --no-pager
 
 Common issues:
 - **Build failed:** Re-run the script; pnpm builds can fail due to transient issues
-- **Missing dependencies:** Ensure Node.js ≥24.22.1 is installed (OpenClaw engines + CVE-2026-111497)
+- **Missing dependencies:** Ensure Node.js ≥24.22.1 is installed (remediates CVE-2026-111497; VULN-5695 / VULN-5716 are tracker labels for that CVE)
 - **Docker not running:** `systemctl start docker` (required for sandbox)
 - **Sandbox image missing** (`openclaw-sandbox:bookworm-slim`): image is built at snapshot time and on first boot. On a live droplet: `sudo /opt/build-openclaw-sandbox.sh`
 - **Gateway token missing** in logs: tokens live in `openclaw.json` (`gateway.auth.token` and `gateway.remote.token`), not only `/opt/openclaw.env`. Fix: `sudo /opt/ensure-openclaw-ready.sh`

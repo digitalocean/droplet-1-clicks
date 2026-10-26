@@ -98,21 +98,19 @@ sudo /opt/update-openclaw.sh --rollback
 
 Before each successful version change, the script stores the prior pin as `OPENCLAW_VERSION_PREVIOUS` in `/opt/openclaw.env`. `--rollback` reinstalls that package only — it is not a picker for arbitrary older releases. To install any other pin, use the specific-version command above. Rollback does not undo config or workspace migrations. Prefer the SSH helper over the Control UI update button on this 1-Click image.
 
-If the Control UI or CLI misbehaves after an update or rollback, run OpenClaw doctor and choose the posture you want:
+If the Control UI or CLI misbehaves after an update (including agent DB errors like `schema version N; run openclaw doctor --fix`), stop the gateway first so doctor can take exclusive SQLite maintenance, then repair:
 
 ```bash
-# Interactive checks (prompts YES/NO when fixes are needed)
-sudo -u openclaw openclaw doctor
+sudo systemctl stop openclaw
+sudo -u openclaw -H openclaw doctor --fix --yes --non-interactive
+sudo systemctl start openclaw
 
-# Apply recommended repairs (--repair is the same)
-sudo -u openclaw openclaw doctor --fix
-
-# Optional flags (combine with --fix as needed):
-#   --yes              accept defaults without prompting
-#   --non-interactive  no prompts; safe migrations/repairs only
-
-sudo systemctl restart openclaw
+# Optional: re-sync proxy/token settings; re-apply inference if models list is empty
+sudo /opt/ensure-openclaw-ready.sh
+sudo /opt/apply-inference-from-env.sh
 ```
+
+`/opt/update-openclaw.sh` already stops the gateway, runs that doctor command, syncs gateway config, and only restarts OpenClaw if doctor succeeds. If doctor fails, it restores the previous npm pin (when `OPENCLAW_VERSION_PREVIOUS` / the prior install is known) and restarts that build so the droplet is not left stopped on a half-upgraded package.
 
 systemd: `systemctl {start|stop|restart|status} openclaw`  
 Logs: `journalctl -u openclaw -f`
@@ -142,7 +140,7 @@ sudo /opt/setup-openclaw-domain.sh
 - Keep `OPENCLAW_GATEWAY_TOKEN` private; complete Control UI pairing so token alone is not enough
 - Prefer a DigitalOcean Cloud Firewall restricting SSH (and optionally HTTP/HTTPS) to your IP
 - For production, use a custom domain with TLS via `/opt/setup-openclaw-domain.sh`
-- Images ship Node.js **≥24.22.1** (CVE-2026-111497 Brotli RCE). On an older droplet, upgrade with `sudo /opt/update-openclaw.sh` (upgrades Node when below the floor) or `sudo apt-get update && sudo apt-get install -y --only-upgrade nodejs && sudo systemctl restart openclaw`
+- **Remediation for [CVE-2026-111497](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases)** (Brotli RCE; internal trackers VULN-5695 / VULN-5716): ship / upgrade host Node.js to **≥24.22.1** (upstream also fixed 22.23.4 and 26.12.1). The VULN IDs are tracker labels only — the fix is the patched Node runtime. On an older droplet, `sudo /opt/update-openclaw.sh` upgrades Node when below the floor, refreshes the systemd unit PATH so `/usr/bin/node` wins over Homebrew, and restarts; or run `sudo apt-get update && sudo apt-get install -y nodejs && sudo systemctl restart openclaw`.
 
 ## Additional Resources
 

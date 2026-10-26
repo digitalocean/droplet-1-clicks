@@ -56,7 +56,7 @@ make build-openclaw-24-04
 ## What Gets Installed
 
 - **OpenClaw** `v2026.9.3` (pinned via `application_version` in `template.json`)
-- **Node.js 24** (≥**24.22.1**, CVE-2026-111497) and **Docker** (sandbox image built at snapshot time and on first boot)
+- **Node.js 24** ≥**24.22.1** — remediates CVE-2026-111497 (Brotli RCE; trackers VULN-5695 / VULN-5716 are labels for that CVE) — and **Docker** (sandbox image built at snapshot time and on first boot)
 - **Caddy** – reverse proxy on ports 80/443 to `127.0.0.1:18789` with shortlived TLS by IP
 - **UFW** – SSH (rate-limited), HTTP, HTTPS
 - **fail2ban**
@@ -95,6 +95,8 @@ sudo /opt/update-openclaw.sh              # latest from npm
 sudo /opt/update-openclaw.sh v2026.9.3    # specific version
 sudo /opt/update-openclaw.sh --rollback   # previous pin (OPENCLAW_VERSION_PREVIOUS)
 ```
+
+The update script upgrades Node when below the CVE floor, refreshes `openclaw.service` PATH (`/usr/bin` first), stops the gateway, installs the package, runs `openclaw doctor --fix --yes --non-interactive` plus `sync-openclaw-gateway.sh`, and restarts only if doctor succeeds. If doctor fails, it reinstalls the previous pin (when known) and restarts that build. Manual doctor repairs also require stopping the gateway first — otherwise schema migrations (e.g. agent DB v19+) cannot take the maintenance lease.
 
 ## License
 

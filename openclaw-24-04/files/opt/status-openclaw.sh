@@ -26,15 +26,13 @@ echo "  Specific version: sudo /opt/update-openclaw.sh <latest version>   # e.g.
 echo "  Rollback:         sudo /opt/update-openclaw.sh --rollback"
 echo "                    # reinstalls the version from before the last update;"
 echo "                    # for any other pin, use the specific-version command"
-echo "  If UI/CLI breaks after update or rollback, repair with doctor:"
-echo "    sudo -u openclaw openclaw doctor"
-echo "        # interactive checks; prompts YES/NO when fixes are needed"
-echo "    sudo -u openclaw openclaw doctor --fix"
-echo "        # apply recommended repairs (--repair is the same)"
-echo "    Optional flags (combine with --fix as needed):"
-echo "      --yes              accept defaults without prompting"
-echo "      --non-interactive  no prompts; safe migrations/repairs only"
-echo "    Then: sudo systemctl restart openclaw"
+echo "  If UI/CLI breaks after update (e.g. schema version / sessions unavailable),"
+echo "  stop the gateway first (doctor needs exclusive DB access), then repair:"
+echo "    sudo systemctl stop openclaw"
+echo "    sudo -u openclaw -H openclaw doctor --fix --yes --non-interactive"
+echo "    sudo systemctl start openclaw"
+echo "    Optional: sudo /opt/ensure-openclaw-ready.sh"
+echo "              sudo /opt/apply-inference-from-env.sh   # if models list empty"
 if [ -f /opt/openclaw.env ]; then
     prev=$(grep -E '^OPENCLAW_VERSION_PREVIOUS=' /opt/openclaw.env 2>/dev/null | tail -n 1 | cut -d'=' -f2- || true)
     cur=$(grep -E '^OPENCLAW_VERSION=' /opt/openclaw.env 2>/dev/null | tail -n 1 | cut -d'=' -f2- || true)
