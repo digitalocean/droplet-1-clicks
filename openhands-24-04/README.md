@@ -56,7 +56,7 @@ make build-openhands-24-04
 
 - **OpenHands Agent Canvas** (`@openhands/agent-canvas@1.18.0`, from `application_version` in `template.json`)
 - **Chromium** (`chromium-browser`) for agent browser tooling
-- **Node.js 24** (NodeSource, signed apt repo) and **uv** (agent-server / automation via uvx)
+- **Node.js >= 24.22.1** (NodeSource, signed apt repo; prefers the `node_version` pin) and **uv** (agent-server / automation via uvx)
 - **Caddy** – reverse proxy on ports 80/443 to Agent Canvas on port 8000 with shortlived TLS by IP
 - **UFW deny on 8000** – Agent Canvas has no bind-to-loopback option, so the ingress port is denied explicitly and reachable only via Caddy or an SSH tunnel
 - **UFW** – SSH (rate-limited), HTTP, HTTPS
@@ -88,7 +88,7 @@ make build-openhands-24-04
 
 ## Version Pinning
 
-Edit `application_version` in `template.json` (Agent Canvas npm version), then rebuild.
+Edit `application_version` (Agent Canvas npm version) and `node_version` (minimum Node.js, currently `24.22.1`) in `template.json`, then rebuild. The build writes `NODE_MIN_VERSION` into `/opt/openhands.env` for `/opt/update-openhands.sh`.
 
 ## On-droplet updates (shown in MOTD)
 

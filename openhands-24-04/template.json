@@ -4,7 +4,8 @@
     "image_name": "openhands-24-04-snapshot-{{timestamp}}",
     "apt_packages": "procps file apt-transport-https ca-certificates curl software-properties-common git build-essential jq unzip gnupg fail2ban ufw chromium-browser",
     "application_name": "OpenHands",
-    "application_version": "1.18.0"
+    "application_version": "1.33.0",
+    "node_version": "24.22.1"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
@@ -65,6 +66,7 @@
       "environment_vars": [
         "application_name={{user `application_name`}}",
         "application_version={{user `application_version`}}",
+        "node_version={{user `node_version`}}",
         "DEBIAN_FRONTEND=noninteractive",
         "LC_ALL=C",
         "LANG=en_US.UTF-8",

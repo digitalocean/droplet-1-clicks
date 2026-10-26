@@ -8,9 +8,9 @@
 #   /opt/update-openhands.sh --list       # print recent versions and exit
 #   /opt/update-openhands.sh --rollback   # reinstall OPENHANDS_VERSION_PREVIOUS
 #
-# Agent Canvas 1.17+ requires Node >=24. Current images ship Node 24, but earlier
-# ones shipped Node 22, where installing "latest" fails without a Node upgrade.
-# The helper upgrades Node via the NodeSource 24.x apt repo when needed.
+# Agent Canvas 1.17+ requires Node >=24. Current images ship Node 24.22.1+, but
+# earlier ones shipped Node 22. The helper upgrades Node via the NodeSource 24.x
+# apt repo when engines.node or NODE_MIN_VERSION require it.
 
 set -euo pipefail
 
@@ -18,6 +18,11 @@ ENV_FILE=/opt/openhands.env
 NPM_PKG="@openhands/agent-canvas"
 NPM_REGISTRY="https://registry.npmjs.org/@openhands%2fagent-canvas"
 LIST_COUNT=10
+# Fallback for images that predate NODE_MIN_VERSION in the env file.
+# New builds set it from template.json node_version via 010-openhands.sh.
+NODE_MIN_VERSION_DEFAULT="24.22.1"
+NODE_MIN_VERSION=""
+NODE_DEB_MIN_VERSION=""
 
 PACKUMENT=""
 
@@ -35,8 +40,9 @@ Usage: /opt/update-openhands.sh [version|--list|--rollback]
   --list               Print current, latest, and recent versions, then exit
   --rollback           Reinstall OPENHANDS_VERSION_PREVIOUS from /opt/openhands.env
 
-Agent Canvas 1.17+ needs Node >=24. If this droplet was built from an older
-image with Node 22, the helper upgrades Node to 24.x before installing.
+Agent Canvas 1.17+ needs Node >=24. If this droplet still has Node 22, or a
+Node build older than NODE_MIN_VERSION in /opt/openhands.env, the helper
+upgrades Node via NodeSource 24.x before installing.
 EOF
 }
 
@@ -150,9 +156,39 @@ node_meets_engines() {
   ' "$req"
 }
 
+# Read NODE_MIN_VERSION from /opt/openhands.env (set at image build from Packer
+# node_version) so this script stays aligned with template.json.
+load_node_min_version() {
+  local from_env
+  from_env="$(read_env_kv NODE_MIN_VERSION || true)"
+  # Compat: earlier local builds used NODE_CVE_FLOOR as the env key name.
+  if [ -z "$from_env" ]; then
+    from_env="$(read_env_kv NODE_CVE_FLOOR || true)"
+  fi
+  NODE_MIN_VERSION="${from_env:-$NODE_MIN_VERSION_DEFAULT}"
+  NODE_DEB_MIN_VERSION="${NODE_MIN_VERSION}-1nodesource1"
+}
+
+# Require installed Node >= NODE_MIN_VERSION.
+node_meets_min_version() {
+  load_node_min_version
+  command -v node >/dev/null 2>&1 || return 1
+  node -e '
+    const need = process.argv[1].split(".").map(Number);
+    const have = process.versions.node.split(".").map(Number);
+    for (let i = 0; i < 3; i++) {
+      if ((have[i] || 0) > need[i]) process.exit(0);
+      if ((have[i] || 0) < need[i]) process.exit(1);
+    }
+    process.exit(0);
+  ' "$NODE_MIN_VERSION"
+}
+
 install_node_24() {
-  local tmp_key backup_dir f rc=0
-  echo "Installing Node.js 24.x from NodeSource (signed apt repo)..."
+  local tmp_key backup_dir f rc=0 package_installed=0
+  local prefs_path=/etc/apt/preferences.d/nodesource-nodejs
+  load_node_min_version
+  echo "Installing Node.js ${NODE_MIN_VERSION}+ from NodeSource (signed apt repo)..."
   mkdir -p /etc/apt/keyrings
 
   tmp_key="$(mktemp)"
@@ -182,8 +218,18 @@ install_node_24() {
       cp -a "/etc/apt/sources.list.d/$f" "${backup_dir}/$f"
     fi
   done
+  if [ -e "$prefs_path" ]; then
+    cp -a "$prefs_path" "${backup_dir}/nodesource-nodejs.pref"
+  fi
   rm -f /etc/apt/sources.list.d/nodesource.list \
         /etc/apt/sources.list.d/nodesource.sources
+
+  # Prefer NodeSource's nodejs over any Ubuntu package of the same name.
+  cat > "$prefs_path" <<EOF
+Package: nodejs
+Pin: origin deb.nodesource.com
+Pin-Priority: 1001
+EOF
 
   # Every step is checked: callers use `if ! install_node_24`, which disables
   # errexit inside this function.
@@ -194,21 +240,41 @@ install_node_24() {
     rc=1
   elif ! apt-get update -y; then
     rc=1
-  elif ! DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs; then
-    rc=1
+  else
+    # Prefer the minimum-version pin; fall back to newest 24.x if that exact
+    # deb is no longer in the NodeSource index.
+    if DEBIAN_FRONTEND=noninteractive apt-get install -y "nodejs=${NODE_DEB_MIN_VERSION}" \
+      || DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs; then
+      package_installed=1
+      if ! node_meets_min_version; then
+        echo "Error: Node $(node --version 2>/dev/null || echo missing) is below minimum ${NODE_MIN_VERSION}" >&2
+        rc=1
+      fi
+    else
+      rc=1
+    fi
   fi
 
-  if [ "$rc" -ne 0 ]; then
+  # Only roll back apt sources/preferences when the package install itself
+  # failed. If nodejs was installed but is still below the minimum, keep the
+  # new NodeSource entries so apt state matches the on-disk package.
+  if [ "$rc" -ne 0 ] && [ "$package_installed" -eq 0 ]; then
     echo "Error: Node.js 24 install failed; restoring the previous apt sources" >&2
     rm -f /etc/apt/sources.list.d/nodesource.list \
-          /etc/apt/sources.list.d/nodesource.sources
+          /etc/apt/sources.list.d/nodesource.sources \
+          "$prefs_path"
     for f in nodesource.list nodesource.sources; do
       if [ -e "${backup_dir}/$f" ]; then
         cp -a "${backup_dir}/$f" "/etc/apt/sources.list.d/$f"
       fi
     done
+    if [ -e "${backup_dir}/nodesource-nodejs.pref" ]; then
+      cp -a "${backup_dir}/nodesource-nodejs.pref" "$prefs_path"
+    fi
     # Refresh lists so apt stops serving metadata for the entry just removed.
     apt-get update -y >/dev/null 2>&1 || true
+  elif [ "$rc" -ne 0 ]; then
+    echo "Error: Node.js was installed but is below minimum ${NODE_MIN_VERSION}; apt sources left on NodeSource 24.x" >&2
   fi
   rm -rf "$backup_dir"
   return "$rc"
@@ -217,22 +283,33 @@ install_node_24() {
 ensure_node_for_version() {
   local ver="$1"
   local req current
+  load_node_min_version
   req="$(version_node_engine "$ver")"
-  if node_meets_engines "$req"; then
-    echo "Node $(node --version) meets Agent Canvas ${ver} requirements${req:+ ($req)}."
+  if node_meets_engines "$req" && node_meets_min_version; then
+    echo "Node $(node --version) meets Agent Canvas ${ver} requirements${req:+ ($req)} and minimum ${NODE_MIN_VERSION}."
     return 0
   fi
 
   current="$(node --version 2>/dev/null || echo missing)"
-  echo "Agent Canvas ${ver} requires Node ${req:-unknown} (found ${current})."
-  # Runs before the service is stopped, so OpenHands keeps serving on failure.
+  if ! node_meets_min_version; then
+    echo "Node ${current} is below minimum ${NODE_MIN_VERSION}; upgrading."
+  else
+    echo "Agent Canvas ${ver} requires Node ${req:-unknown} (found ${current})."
+  fi
+  # Runs before the service is stopped, so Agent Canvas keeps serving on failure.
+  # Node may still change if apt installed a package that then failed the
+  # minimum-version check — only the Agent Canvas npm package is untouched.
   if ! install_node_24; then
-    echo "Error: could not upgrade Node; OpenHands is untouched." >&2
+    echo "Error: could not bring Node to >= ${NODE_MIN_VERSION}; Agent Canvas was not updated." >&2
     exit 1
   fi
 
   if ! node_meets_engines "$req"; then
     echo "Error: Node still too old after upgrade ($(node --version 2>/dev/null || echo missing))" >&2
+    exit 1
+  fi
+  if ! node_meets_min_version; then
+    echo "Error: Node still below minimum ${NODE_MIN_VERSION} ($(node --version 2>/dev/null || echo missing))" >&2
     exit 1
   fi
   echo "Node upgraded to $(node --version)."
