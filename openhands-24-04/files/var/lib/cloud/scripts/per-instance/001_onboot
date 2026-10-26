@@ -119,10 +119,7 @@ MANAGEMENT:
   Domain TLS:/opt/setup-openhands-domain.sh
 
 UPDATE:
-  Latest release:     sudo /opt/update-openhands.sh
-  Specific version:   sudo /opt/update-openhands.sh <version>   # e.g. 1.16.0
-  List versions:      sudo /opt/update-openhands.sh --list
-  Rollback previous:  sudo /opt/update-openhands.sh --rollback
+  Latest release:  sudo /opt/update-openhands.sh
 
 WORKSPACE:
   Projects:  /home/openhands/projects
