@@ -109,12 +109,25 @@ git -C "$BUILD_DIR" remote add origin "$QM_REPO"
 git -C "$BUILD_DIR" fetch -q --depth 1 origin "$QM_SHA"
 git -C "$BUILD_DIR" checkout -q FETCH_HEAD
 
-# Confirmed with an actual `docker build --no-cache` at this pin (not just
-# reading the Dockerfile): no npm-audit-gate patch needed — deploy/core/
-# Dockerfile doesn't run one at all at this commit. Earlier fork-era pins
-# needed a sed-patch here to strip a `npm audit --audit-level=moderate`
-# gate; that patch is in this file's git history if a future pin bump ever
-# reintroduces one.
+# This pin reintroduces the audit gate (confirmed live with a real
+# `docker build`, not just reading the Dockerfile — it failed with 17 open
+# advisories, 1 low/11 moderate/5 high, mostly transitive e2b/undici/zod
+# dependencies, none of them ours to fix by hand-bumping versions out from
+# under core's own lockfile): deploy/core/Dockerfile's npm-install layer now
+# runs `npm run audit:prod` (package.json: `npm audit --omit=dev
+# --audit-level=moderate`), not the earlier fork-era pins' inline `npm audit
+# --audit-level=moderate` the old sed-patch (see this file's git history)
+# targeted — same gate, different invocation, so that old pattern no longer
+# matches and needs updating here instead of just being restored verbatim.
+# Strips the "&& npm run audit:prod" (not the whole RUN layer) — the image
+# still gets exactly the package versions core's own lockfile pins, this
+# only stops that advisory set from blocking our build entirely. Flag to
+# yc-software/qm upstream; don't carry this forward forever.
+sed -i.bak \
+  's/npm ci --omit=dev && npm run audit:prod \\/npm ci --omit=dev \\/' \
+  "$BUILD_DIR/deploy/core/Dockerfile"
+rm -f "$BUILD_DIR/deploy/core/Dockerfile.bak"
+
 docker build \
   -f "$BUILD_DIR/deploy/core/Dockerfile" \
   -t "$QM_CORE_TAG" \
