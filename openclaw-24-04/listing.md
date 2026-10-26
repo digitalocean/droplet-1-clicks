@@ -33,7 +33,7 @@ OpenClaw runs the gateway on the host and uses Docker for sandboxes. Prefer at l
 
 - **Ubuntu 24.04 LTS**
 - **OpenClaw** `v2026.9.3` (version pinned in the image build)
-- **Node.js 24** and **Docker**
+- **Node.js 24** (≥**24.22.1**, remediates CVE-2026-111497) and **Docker**
 - **Caddy** reverse proxy (ports 80/443 → gateway on localhost:18789)
 - **UFW** and **fail2ban**
 - Dedicated **`openclaw`** system user
@@ -142,6 +142,7 @@ sudo /opt/setup-openclaw-domain.sh
 - Keep `OPENCLAW_GATEWAY_TOKEN` private; complete Control UI pairing so token alone is not enough
 - Prefer a DigitalOcean Cloud Firewall restricting SSH (and optionally HTTP/HTTPS) to your IP
 - For production, use a custom domain with TLS via `/opt/setup-openclaw-domain.sh`
+- Images ship Node.js **≥24.22.1** (CVE-2026-111497 Brotli RCE). On an older droplet, upgrade with `sudo /opt/update-openclaw.sh` (upgrades Node when below the floor) or `sudo apt-get update && sudo apt-get install -y --only-upgrade nodejs && sudo systemctl restart openclaw`
 
 ## Additional Resources
 

@@ -8,7 +8,8 @@ ufw allow 443
 ufw limit ssh/tcp
 ufw --force enable
 
-# Install Node.js 24 (OpenClaw requires >=24.16.0 <25 || >=26.1.0)
+# Install Node.js 24 (OpenClaw requires >=24.16.0 <25 || >=26.1.0).
+# Marketplace images must also meet CVE-2026-111497 (Brotli RCE): Node >=24.22.1.
 # Use a signed apt keyring instead of curling a remote setup script into bash.
 mkdir -p /etc/apt/keyrings
 curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
@@ -18,6 +19,20 @@ echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.co
     > /etc/apt/sources.list.d/nodesource.list
 apt-get update -y
 DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
+
+# Fail the Packer build if NodeSource has not yet published a patched 24.x.
+node -e '
+  const [maj, min, pat = 0] = process.versions.node.split(".").map(Number);
+  const ok = maj === 24 && (min > 22 || (min === 22 && pat >= 1));
+  if (!ok) {
+    console.error(
+      "ERROR: Node " + process.versions.node +
+      " is below CVE-2026-111497 minimum 24.22.1 (NodeSource node_24.x)"
+    );
+    process.exit(1);
+  }
+  console.log("Node v" + process.versions.node + " meets CVE-2026-111497 floor (>=24.22.1)");
+'
 
 # Install Caddy (reverse proxy with automatic TLS)
 curl -1sLf "https://dl.cloudsmith.io/public/caddy/stable/gpg.key" | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg

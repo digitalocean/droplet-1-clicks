@@ -83,30 +83,21 @@ current_installed_version() {
     return 1
 }
 
-# Current OpenClaw engines: >=24.16.0 <25 || >=26.1.0
+# OpenClaw engines (>=24.16.0 <25 || >=26.1.0) plus CVE-2026-111497 floor
+# for the 24.x line (>=24.22.1). 26.x patched line starts at 26.12.1.
 node_meets_openclaw_engines() {
     command -v node >/dev/null 2>&1 || return 1
     node -e '
-      const [maj, min] = process.versions.node.split(".").map(Number);
+      const [maj, min, pat = 0] = process.versions.node.split(".").map(Number);
       const ok =
-        (maj === 24 && min >= 16) ||
-        (maj === 26 && min >= 1) ||
+        (maj === 24 && (min > 22 || (min === 22 && pat >= 1))) ||
+        (maj === 26 && (min > 12 || (min === 12 && pat >= 1))) ||
         maj > 26;
       process.exit(ok ? 0 : 1);
     ' 2>/dev/null
 }
 
-ensure_node_for_openclaw() {
-    if node_meets_openclaw_engines; then
-        echo "Node $(node --version) meets OpenClaw requirements."
-        return 0
-    fi
-
-    local current
-    current="$(node --version 2>/dev/null || echo 'missing')"
-    echo "OpenClaw requires Node >=24.16.0 <25 or >=26.1.0 (found ${current})."
-    echo "Upgrading Node.js to 24.x via NodeSource apt repository..."
-
+install_nodesource_24() {
     # Configure the apt repo with a signed keyring (do not curl|bash remote setup scripts).
     mkdir -p /etc/apt/keyrings
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
@@ -115,10 +106,26 @@ ensure_node_for_openclaw() {
     echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_24.x nodistro main" \
         > /etc/apt/sources.list.d/nodesource.list
     apt-get update -y
-    DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --only-upgrade nodejs \
+        || DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
+}
+
+ensure_node_for_openclaw() {
+    if node_meets_openclaw_engines; then
+        echo "Node $(node --version) meets OpenClaw + CVE-2026-111497 requirements."
+        return 0
+    fi
+
+    local current
+    current="$(node --version 2>/dev/null || echo 'missing')"
+    echo "Node ${current} is below OpenClaw / CVE-2026-111497 minimum (need >=24.22.1 on 24.x, or >=26.12.1 on 26.x)."
+    echo "Upgrading Node.js to 24.x via NodeSource apt repository..."
+
+    install_nodesource_24
 
     if ! node_meets_openclaw_engines; then
         echo "❌ Error: Node still too old after upgrade ($(node --version 2>/dev/null || echo missing))" >&2
+        echo "   Expected >=24.22.1 (CVE-2026-111497). Check NodeSource node_24.x packages." >&2
         exit 1
     fi
     echo "Node upgraded to $(node --version)."

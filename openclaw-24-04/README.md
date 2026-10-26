@@ -56,7 +56,7 @@ make build-openclaw-24-04
 ## What Gets Installed
 
 - **OpenClaw** `v2026.9.3` (pinned via `application_version` in `template.json`)
-- **Node.js 24** and **Docker** (sandbox image built at snapshot time and on first boot)
+- **Node.js 24** (≥**24.22.1**, CVE-2026-111497) and **Docker** (sandbox image built at snapshot time and on first boot)
 - **Caddy** – reverse proxy on ports 80/443 to `127.0.0.1:18789` with shortlived TLS by IP
 - **UFW** – SSH (rate-limited), HTTP, HTTPS
 - **fail2ban**
