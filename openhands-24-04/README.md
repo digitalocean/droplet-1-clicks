@@ -54,7 +54,7 @@ make build-openhands-24-04
 
 ## What Gets Installed
 
-- **OpenHands Agent Canvas** (`@openhands/agent-canvas@1.18.0`, from `application_version` in `template.json`)
+- **OpenHands Agent Canvas** (`@openhands/agent-canvas@1.33.0`, from `application_version` in `template.json`)
 - **Chromium** (`chromium-browser`) for agent browser tooling
 - **Node.js >= 24.22.1** (NodeSource, signed apt repo; prefers the `node_version` pin) and **uv** (agent-server / automation via uvx)
 - **Caddy** – reverse proxy on ports 80/443 to Agent Canvas on port 8000 with shortlived TLS by IP
@@ -93,11 +93,10 @@ Edit `application_version` (Agent Canvas npm version) and `node_version` (minimu
 ## On-droplet updates (shown in MOTD)
 
 ```bash
-sudo /opt/update-openhands.sh              # latest from npm
-sudo /opt/update-openhands.sh --list       # print recent versions
-sudo /opt/update-openhands.sh 1.16.0       # specific version
-sudo /opt/update-openhands.sh --rollback   # previous pin (OPENHANDS_VERSION_PREVIOUS)
+sudo /opt/update-openhands.sh   # latest @openhands/agent-canvas from npm
 ```
+
+Latest only (no version pin / list / rollback), matching ZeroClaw and OpenCode.
 
 ## License
 

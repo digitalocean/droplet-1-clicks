@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-APP_VERSION="${application_version:-1.18.0}"
+APP_VERSION="${application_version:-1.33.0}"
 OPENHANDS_USER=openhands
 OPENHANDS_HOME=/home/openhands
 
@@ -22,7 +22,13 @@ ufw --force enable
 # Agent Canvas 1.17+ needs Node >=24. Install at least node_version from
 # template.json (default 24.22.1): prefer that exact NodeSource package, otherwise
 # the newest 24.x. Use a signed apt keyring instead of curling a setup script.
-NODE_VERSION="${node_version:-24.22.1}"
+# Accept Packer/docs forms like 24.22.1 or 24.22.1+; persist plain X.Y.Z.
+NODE_VERSION_RAW="${node_version:-24.22.1}"
+NODE_VERSION="$(printf '%s' "$NODE_VERSION_RAW" | sed -E -n 's/^v?([0-9]+\.[0-9]+\.[0-9]+).*/\1/p')"
+if [ -z "$NODE_VERSION" ]; then
+  echo "Build failed: invalid node_version '${NODE_VERSION_RAW}' (want X.Y.Z or X.Y.Z+)" >&2
+  exit 1
+fi
 NODE_DEB_VERSION="${NODE_VERSION}-1nodesource1"
 
 mkdir -p /etc/apt/keyrings
@@ -48,12 +54,18 @@ fi
 # Fail the build if the installed Node is older than the required minimum.
 installed_node="$(node -v 2>/dev/null | sed 's/^v//')"
 if ! node -e '
-  const need = process.argv[1].split(".").map(Number);
-  const have = process.argv[2].split(".").map(Number);
+  const parse = (s) => {
+    const m = String(s).trim().match(/^v?(\d+)\.(\d+)\.(\d+)/);
+    if (!m) process.exit(1);
+    return [Number(m[1]), Number(m[2]), Number(m[3])];
+  };
+  const need = parse(process.argv[1]);
+  const have = parse(process.argv[2]);
   for (let i = 0; i < 3; i++) {
-    if ((have[i] || 0) > need[i]) process.exit(0);
-    if ((have[i] || 0) < need[i]) process.exit(1);
+    if (have[i] > need[i]) process.exit(0);
+    if (have[i] < need[i]) process.exit(1);
   }
+  process.exit(0);
 ' "$NODE_VERSION" "${installed_node:-0}"; then
   echo "Build sanity check failed: need Node.js >= ${NODE_VERSION}, got ${installed_node:-missing}" >&2
   exit 1
