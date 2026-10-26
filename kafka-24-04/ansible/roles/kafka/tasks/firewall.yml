@@ -1,5 +1,5 @@
 ---
-- name: Firewall | Rate limit ssh coneections
+- name: Firewall | Rate limit ssh connections
   community.general.ufw:
     rule: limit
     name: OpenSSH
