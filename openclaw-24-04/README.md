@@ -93,11 +93,10 @@ Edit `application_version` in `template.json` (OpenClaw npm version, e.g. `v2026
 ## On-droplet updates (shown in MOTD)
 
 ```bash
-sudo /opt/update-openclaw.sh              # latest from npm
-sudo /opt/update-openclaw.sh v2026.9.3    # specific version
+sudo /opt/update-openclaw.sh              # latest from npm only
 ```
 
-The update script upgrades Node when below the CVE floor, refreshes `openclaw.service` PATH (`/usr/bin` first), stops the gateway, installs the package, runs `openclaw doctor --fix --yes --non-interactive` with `OPENCLAW_SERVICE_REPAIR_POLICY=external` (required because the 1-Click unit is root-owned/custom, not CLI-managed), plus `sync-openclaw-gateway.sh`, and restarts only if doctor succeeds. OpenClaw DB schemas are forward-only — prefer upgrading forward. If doctor fails mid-upgrade, the gateway is left stopped on the new package for manual repair.
+The update script upgrades Node when below the CVE floor, refreshes `openclaw.service` PATH (`/usr/bin` first), stops the gateway, installs `openclaw@latest`, runs `openclaw doctor --fix --yes --non-interactive` with `OPENCLAW_SERVICE_REPAIR_POLICY=external` (required because the 1-Click unit is root-owned/custom, not CLI-managed), plus `sync-openclaw-gateway.sh`, and restarts only if doctor succeeds. If doctor fails mid-upgrade, the gateway is left stopped on the new package for manual repair.
 
 ### Live-droplet smoke (after deploying the script)
 
@@ -108,11 +107,8 @@ sudo -u openclaw -H env HOME=/home/openclaw OPENCLAW_SERVICE_REPAIR_POLICY=exter
   openclaw doctor --fix --yes --non-interactive
 sudo systemctl start openclaw
 
-# 2) Same-pin repair / specific version
-sudo /opt/update-openclaw.sh 2026.9.3
-
-# 3) Upgrade to latest
-sudo /opt/update-openclaw.sh latest
+# 2) Update to latest
+sudo /opt/update-openclaw.sh
 ```
 
 Expect doctor to enter maintenance (no “ownership or shutdown could not be verified”), then the gateway to restart.

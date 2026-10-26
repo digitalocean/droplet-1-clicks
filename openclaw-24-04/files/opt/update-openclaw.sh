@@ -1,15 +1,11 @@
 #!/bin/bash
-# Update OpenClaw from npm, run post-upgrade doctor + gateway sync while the
-# service is stopped, then restart the gateway.
+# Update OpenClaw to the latest npm release, run post-upgrade doctor + gateway
+# sync while the service is stopped, then restart the gateway.
 #
 # Usage:
-#   /opt/update-openclaw.sh              # install latest from npm
-#   /opt/update-openclaw.sh v2026.9.3    # install a specific version
-#   /opt/update-openclaw.sh latest       # same as no args
+#   /opt/update-openclaw.sh
 #
-# OPENCLAW_VERSION in /opt/openclaw.env is the installed pin (updated after
-# success). OpenClaw SQLite schemas migrate forward-only; installing an older
-# package after a newer release has migrated state can fail doctor / startup.
+# OPENCLAW_VERSION in /opt/openclaw.env is updated after a successful install.
 #
 # Doctor must run with the gateway stopped (state DB ownership). The 1-Click
 # unit is root-owned/custom (not CLI-managed), so doctor needs:
@@ -31,21 +27,17 @@ OPENCLAW_USER=openclaw
 OPENCLAW_UNIT=/etc/systemd/system/openclaw.service
 
 if [ "$(id -u)" -ne 0 ]; then
-    echo "Run as root: sudo $0 ${*:-}" >&2
+    echo "Run as root: sudo $0" >&2
     exit 1
 fi
 
 usage() {
     cat <<'EOF'
-Usage: /opt/update-openclaw.sh [version]
+Usage: /opt/update-openclaw.sh
 
-  (no args) / latest   Install the latest OpenClaw release from npm
-  v2026.9.3 / 2026.9.3 Install that exact version
-
-Stops the gateway, installs the package, runs doctor --fix with
-OPENCLAW_SERVICE_REPAIR_POLICY=external, syncs gateway config, and restarts.
-Schemas are forward-only — prefer upgrading forward; pin an older release
-only if you understand the risk.
+Installs the latest OpenClaw release from npm. Stops the gateway, runs
+doctor --fix with OPENCLAW_SERVICE_REPAIR_POLICY=external, syncs gateway
+config, and restarts.
 EOF
 }
 
@@ -57,14 +49,6 @@ set_env_kv() {
     else
         echo "${key}=${value}" >>"$ENV_FILE"
     fi
-}
-
-normalize_version() {
-    local v="${1#v}"
-    case "$v" in
-        ''|Latest|LATEST|latest) printf '%s' "latest" ;;
-        *) printf '%s' "$v" ;;
-    esac
 }
 
 # CVE-2026-111497 remediation + current OpenClaw engines:
@@ -238,33 +222,27 @@ run_openclaw_doctor_fix() {
         openclaw doctor --fix --yes --non-interactive
 }
 
-install_openclaw_package() {
-    local ver="$1"
-    echo "Installing openclaw@${ver} from npm..."
-    npm install -g "openclaw@${ver}"
-}
-
 case "${1:-}" in
+    '' )
+        ;;
     -h|--help)
         usage
         exit 0
         ;;
-    -*)
-        echo "❌ Error: unknown option: ${1}" >&2
+    *)
+        echo "❌ Error: this script installs latest only (no arguments)." >&2
         usage >&2
         exit 1
         ;;
-    *)
-        TARGET="$(normalize_version "${1:-latest}")"
-        ;;
 esac
 
-echo "Updating OpenClaw (target version: ${TARGET})..."
+echo "Updating OpenClaw to latest from npm..."
 
 ensure_node_for_openclaw
 stop_openclaw_for_maintenance
 
-if install_openclaw_package "$TARGET"; then
+echo "Installing openclaw@latest from npm..."
+if npm install -g openclaw@latest; then
     echo "OpenClaw package install succeeded."
 
     INSTALLED_VERSION="$(npm list -g openclaw --depth=0 2>/dev/null | grep openclaw@ | sed 's/.*openclaw@//' | sed 's/ .*//' || true)"
@@ -317,7 +295,7 @@ if install_openclaw_package "$TARGET"; then
         exit 1
     fi
 else
-    echo "❌ Error: Failed to install openclaw@${TARGET}" >&2
+    echo "❌ Error: Failed to install openclaw@latest" >&2
     systemctl start openclaw || true
     exit 1
 fi

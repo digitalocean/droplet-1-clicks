@@ -77,7 +77,6 @@ If Serverless Inference was not passed at create time, the first-login wizard ca
 | Restart | `/opt/restart-openclaw.sh` |
 | Status | `/opt/status-openclaw.sh` |
 | Update (latest) | `sudo /opt/update-openclaw.sh` |
-| Update (specific version) | `sudo /opt/update-openclaw.sh 2026.9.3` |
 | Domain TLS | `/opt/setup-openclaw-domain.sh` |
 | Re-run setup | `/etc/setup_wizard.sh` |
 | Control UI pairing | `/opt/openclaw-control-ui-pairing.sh` |
@@ -85,14 +84,11 @@ If Serverless Inference was not passed at create time, the first-login wizard ca
 ### Updating OpenClaw
 
 ```bash
-# Install the latest release from npm (default)
+# Install the latest release from npm
 sudo /opt/update-openclaw.sh
-
-# Install a specific version
-sudo /opt/update-openclaw.sh 2026.9.3
 ```
 
-The script updates `OPENCLAW_VERSION` in `/opt/openclaw.env` after a successful install. OpenClaw SQLite schemas are forward-only — prefer upgrading forward; pinning an older release after a newer one has migrated state can fail doctor/startup. Prefer the SSH helper over the Control UI update button on this 1-Click image.
+The script installs `openclaw@latest` and updates `OPENCLAW_VERSION` in `/opt/openclaw.env` after a successful install. Prefer the SSH helper over the Control UI update button on this 1-Click image.
 
 If the Control UI or CLI misbehaves after an update (including agent DB errors like `schema version N; run openclaw doctor --fix`), stop the gateway first so doctor can take exclusive SQLite maintenance, then repair. The 1-Click uses a root-owned custom `openclaw.service`, so doctor must use `OPENCLAW_SERVICE_REPAIR_POLICY=external`:
 

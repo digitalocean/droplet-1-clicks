@@ -51,7 +51,6 @@ on the channels you already use (WhatsApp, Telegram, Slack, Discord, and more).
 
 ⬆️ Update OpenClaw:
   Latest release:     sudo /opt/update-openclaw.sh
-  Specific version:   sudo /opt/update-openclaw.sh <version>   # e.g. 2026.9.3
   If UI/CLI breaks after update (e.g. agent DB schema / doctor --fix),
   stop the gateway first, then repair with external service policy
   (1-Click openclaw.service is not CLI-managed):
