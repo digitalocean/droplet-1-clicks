@@ -78,7 +78,6 @@ If Serverless Inference was not passed at create time, the first-login wizard ca
 | Status | `/opt/status-openclaw.sh` |
 | Update (latest) | `sudo /opt/update-openclaw.sh` |
 | Update (specific version) | `sudo /opt/update-openclaw.sh 2026.9.3` |
-| Rollback | `sudo /opt/update-openclaw.sh --rollback` (version before last update only) |
 | Domain TLS | `/opt/setup-openclaw-domain.sh` |
 | Re-run setup | `/etc/setup_wizard.sh` |
 | Control UI pairing | `/opt/openclaw-control-ui-pairing.sh` |
@@ -91,12 +90,9 @@ sudo /opt/update-openclaw.sh
 
 # Install a specific version
 sudo /opt/update-openclaw.sh 2026.9.3
-
-# Roll back to the version from before the last update (OPENCLAW_VERSION_PREVIOUS)
-sudo /opt/update-openclaw.sh --rollback
 ```
 
-Before each upgrade, the script stores the prior pin as `OPENCLAW_VERSION_PREVIOUS` in `/opt/openclaw.env` and snapshots schema-critical state (`openclaw.json`, `state/`, `agents/`, credentials) under `/var/lib/openclaw/update-backups/v<version>/`. `--rollback` restores that package **and** snapshot together — OpenClaw SQLite schemas are forward-only, so reinstalling an older npm package alone fails with doctor / “newer schema” errors. Post-upgrade data is discarded on rollback. It is not a picker for arbitrary older releases without a matching snapshot; to install any other pin, use the specific-version command above. Prefer the SSH helper over the Control UI update button on this 1-Click image.
+The script updates `OPENCLAW_VERSION` in `/opt/openclaw.env` after a successful install. OpenClaw SQLite schemas are forward-only — prefer upgrading forward; pinning an older release after a newer one has migrated state can fail doctor/startup. Prefer the SSH helper over the Control UI update button on this 1-Click image.
 
 If the Control UI or CLI misbehaves after an update (including agent DB errors like `schema version N; run openclaw doctor --fix`), stop the gateway first so doctor can take exclusive SQLite maintenance, then repair. The 1-Click uses a root-owned custom `openclaw.service`, so doctor must use `OPENCLAW_SERVICE_REPAIR_POLICY=external`:
 
@@ -111,7 +107,7 @@ sudo /opt/ensure-openclaw-ready.sh
 sudo /opt/apply-inference-from-env.sh
 ```
 
-`/opt/update-openclaw.sh` already stops the gateway, runs that doctor command (with `OPENCLAW_SERVICE_REPAIR_POLICY=external`), syncs gateway config, and only restarts OpenClaw if doctor succeeds. If doctor fails mid-upgrade, it restores the previous npm pin and the pre-update state snapshot (when available) so the droplet is not left on a half-upgraded schema.
+`/opt/update-openclaw.sh` already stops the gateway, runs that doctor command (with `OPENCLAW_SERVICE_REPAIR_POLICY=external`), syncs gateway config, and only restarts OpenClaw if doctor succeeds. If doctor fails mid-upgrade, the gateway is left stopped on the newly installed package for manual repair.
 
 systemd: `systemctl {start|stop|restart|status} openclaw`  
 Logs: `journalctl -u openclaw -f`
@@ -151,8 +147,6 @@ This usually means the Droplet is undersized (common on **2 GB / 1 vCPU**). Gate
    sudo /opt/ensure-openclaw-swap.sh
    ```
    First boot also creates a 2 GB swap file automatically. Swap reduces hard freezes but is not a substitute for enough RAM.
-
-Rollback moves prior live state aside under `/home/openclaw/.openclaw.aside-<timestamp>` and keeps the two newest asides (older ones are pruned). After you confirm the rollback, you can remove aside dirs you no longer need.
 
 ## Security notes
 

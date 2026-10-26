@@ -95,10 +95,9 @@ Edit `application_version` in `template.json` (OpenClaw npm version, e.g. `v2026
 ```bash
 sudo /opt/update-openclaw.sh              # latest from npm
 sudo /opt/update-openclaw.sh v2026.9.3    # specific version
-sudo /opt/update-openclaw.sh --rollback   # previous pin (OPENCLAW_VERSION_PREVIOUS)
 ```
 
-The update script upgrades Node when below the CVE floor, refreshes `openclaw.service` PATH (`/usr/bin` first), stops the gateway, snapshots schema-critical state under `/var/lib/openclaw/update-backups/` (refuses empty snapshots), installs the package, runs `openclaw doctor --fix --yes --non-interactive` with `OPENCLAW_SERVICE_REPAIR_POLICY=external` (required because the 1-Click unit is root-owned/custom, not CLI-managed), plus `sync-openclaw-gateway.sh`, and restarts only if doctor succeeds. OpenClaw DB schemas are forward-only: `--rollback` / downgrade restores the matching pre-update snapshot with the older package (and refuses if no snapshot exists). If doctor fails mid-upgrade, both the previous pin and snapshot must restore successfully — package-only rollback is refused so a newer schema is never paired with an older binary. Live state displaced by restore is kept under `/home/openclaw/.openclaw.aside-*` (two newest retained).
+The update script upgrades Node when below the CVE floor, refreshes `openclaw.service` PATH (`/usr/bin` first), stops the gateway, installs the package, runs `openclaw doctor --fix --yes --non-interactive` with `OPENCLAW_SERVICE_REPAIR_POLICY=external` (required because the 1-Click unit is root-owned/custom, not CLI-managed), plus `sync-openclaw-gateway.sh`, and restarts only if doctor succeeds. OpenClaw DB schemas are forward-only — prefer upgrading forward. If doctor fails mid-upgrade, the gateway is left stopped on the new package for manual repair.
 
 ### Live-droplet smoke (after deploying the script)
 
@@ -112,9 +111,8 @@ sudo systemctl start openclaw
 # 2) Same-pin repair / specific version
 sudo /opt/update-openclaw.sh 2026.9.3
 
-# 3) Upgrade then rollback (needs a pre-update snapshot from step 2→latest)
+# 3) Upgrade to latest
 sudo /opt/update-openclaw.sh latest
-sudo /opt/update-openclaw.sh --rollback
 ```
 
 Expect doctor to enter maintenance (no “ownership or shutdown could not be verified”), then the gateway to restart.

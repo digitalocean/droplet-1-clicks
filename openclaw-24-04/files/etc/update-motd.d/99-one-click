@@ -51,14 +51,7 @@ on the channels you already use (WhatsApp, Telegram, Slack, Discord, and more).
 
 ⬆️ Update OpenClaw:
   Latest release:     sudo /opt/update-openclaw.sh
-  Specific version:   sudo /opt/update-openclaw.sh <latest version>   # e.g. 2026.9.3
-  Rollback previous:  sudo /opt/update-openclaw.sh --rollback
-  (Rollback restores OPENCLAW_VERSION_PREVIOUS plus the pre-update
-   state snapshot under /var/lib/openclaw/update-backups/. Schemas are
-   forward-only — refused without that snapshot (no package-only
-   downgrade). Post-upgrade data is discarded; prior live state is
-   kept briefly under ~/.openclaw.aside-* (2 newest). For any other
-   pin, use the specific-version command. Upgrades Node if needed.)
+  Specific version:   sudo /opt/update-openclaw.sh <version>   # e.g. 2026.9.3
   If UI/CLI breaks after update (e.g. agent DB schema / doctor --fix),
   stop the gateway first, then repair with external service policy
   (1-Click openclaw.service is not CLI-managed):

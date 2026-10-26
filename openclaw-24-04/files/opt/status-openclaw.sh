@@ -22,10 +22,7 @@ echo "  Direct loopback URL (SSH tunnel only): http://127.0.0.1:18789"
 echo ""
 echo "=== Update OpenClaw ==="
 echo "  Latest:           sudo /opt/update-openclaw.sh"
-echo "  Specific version: sudo /opt/update-openclaw.sh <latest version>   # e.g. 2026.9.3"
-echo "  Rollback:         sudo /opt/update-openclaw.sh --rollback"
-echo "                    # restores prior package + pre-update state snapshot"
-echo "                    # (schemas are forward-only; needs /var/lib/openclaw/update-backups)"
+echo "  Specific version: sudo /opt/update-openclaw.sh <version>   # e.g. 2026.9.3"
 echo "  If UI/CLI breaks after update (e.g. schema version / sessions unavailable),"
 echo "  stop the gateway first, then repair with external service policy"
 echo "  (1-Click openclaw.service is not CLI-managed):"
@@ -36,8 +33,6 @@ echo "    sudo systemctl start openclaw"
 echo "    Optional: sudo /opt/ensure-openclaw-ready.sh"
 echo "              sudo /opt/apply-inference-from-env.sh   # if models list empty"
 if [ -f /opt/openclaw.env ]; then
-    prev=$(grep -E '^OPENCLAW_VERSION_PREVIOUS=' /opt/openclaw.env 2>/dev/null | tail -n 1 | cut -d'=' -f2- || true)
     cur=$(grep -E '^OPENCLAW_VERSION=' /opt/openclaw.env 2>/dev/null | tail -n 1 | cut -d'=' -f2- || true)
     [ -n "$cur" ] && echo "  Current pin:      ${cur}"
-    [ -n "$prev" ] && echo "  Previous pin:     ${prev}"
 fi
