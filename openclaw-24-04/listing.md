@@ -22,12 +22,12 @@ OpenClaw is a self-hosted personal AI assistant and gateway. The Control UI and 
 
 ## System Requirements
 
-OpenClaw runs the gateway on the host and uses Docker for sandboxes. Prefer at least 2 GB RAM.
+OpenClaw runs the gateway on the host and uses Docker for sandboxes. The Control UI (HTTPS by IP) and SSH TUI load the same Node gateway; **2 GB Droplets often freeze or thrash** under that load (worse after newer OpenClaw releases). Use **4 GB / 2 vCPU** or larger.
 
 | Use Case | RAM | CPU | Storage |
 |----------|-----|-----|---------|
-| Minimum | 2 GB | 1 vCPU | 50 GB |
-| Recommended | 4 GB | 2 vCPU | 100 GB |
+| Minimum | 4 GB | 2 vCPU | 50 GB |
+| Recommended | 8 GB | 4 vCPU | 100 GB |
 
 ## Included System Components
 
@@ -43,7 +43,7 @@ OpenClaw runs the gateway on the host and uses Docker for sandboxes. Prefer at l
 ### 1. Deploy the Droplet
 
 1. Select this 1-Click App from the DigitalOcean Marketplace
-2. Choose a Droplet size (2 GB RAM minimum)
+2. Choose a Droplet size (**4 GB / 2 vCPU minimum**; 8 GB recommended for TUI + Control UI + sandboxes)
 3. Add your SSH key
 4. Optionally set droplet environment variables `MODEL_ACCESS_KEY` and `INFERENCE_MODEL`
 5. Create the Droplet
@@ -96,13 +96,14 @@ sudo /opt/update-openclaw.sh 2026.9.3
 sudo /opt/update-openclaw.sh --rollback
 ```
 
-Before each successful version change, the script stores the prior pin as `OPENCLAW_VERSION_PREVIOUS` in `/opt/openclaw.env`. `--rollback` reinstalls that package only — it is not a picker for arbitrary older releases. To install any other pin, use the specific-version command above. Rollback does not undo config or workspace migrations. Prefer the SSH helper over the Control UI update button on this 1-Click image.
+Before each upgrade, the script stores the prior pin as `OPENCLAW_VERSION_PREVIOUS` in `/opt/openclaw.env` and snapshots schema-critical state (`openclaw.json`, `state/`, `agents/`, credentials) under `/var/lib/openclaw/update-backups/v<version>/`. `--rollback` restores that package **and** snapshot together — OpenClaw SQLite schemas are forward-only, so reinstalling an older npm package alone fails with doctor / “newer schema” errors. Post-upgrade data is discarded on rollback. It is not a picker for arbitrary older releases without a matching snapshot; to install any other pin, use the specific-version command above. Prefer the SSH helper over the Control UI update button on this 1-Click image.
 
-If the Control UI or CLI misbehaves after an update (including agent DB errors like `schema version N; run openclaw doctor --fix`), stop the gateway first so doctor can take exclusive SQLite maintenance, then repair:
+If the Control UI or CLI misbehaves after an update (including agent DB errors like `schema version N; run openclaw doctor --fix`), stop the gateway first so doctor can take exclusive SQLite maintenance, then repair. The 1-Click uses a root-owned custom `openclaw.service`, so doctor must use `OPENCLAW_SERVICE_REPAIR_POLICY=external`:
 
 ```bash
 sudo systemctl stop openclaw
-sudo -u openclaw -H openclaw doctor --fix --yes --non-interactive
+sudo -u openclaw -H env HOME=/home/openclaw OPENCLAW_SERVICE_REPAIR_POLICY=external \
+  openclaw doctor --fix --yes --non-interactive
 sudo systemctl start openclaw
 
 # Optional: re-sync proxy/token settings; re-apply inference if models list is empty
@@ -110,7 +111,7 @@ sudo /opt/ensure-openclaw-ready.sh
 sudo /opt/apply-inference-from-env.sh
 ```
 
-`/opt/update-openclaw.sh` already stops the gateway, runs that doctor command, syncs gateway config, and only restarts OpenClaw if doctor succeeds. If doctor fails, it restores the previous npm pin (when `OPENCLAW_VERSION_PREVIOUS` / the prior install is known) and restarts that build so the droplet is not left stopped on a half-upgraded package.
+`/opt/update-openclaw.sh` already stops the gateway, runs that doctor command (with `OPENCLAW_SERVICE_REPAIR_POLICY=external`), syncs gateway config, and only restarts OpenClaw if doctor succeeds. If doctor fails mid-upgrade, it restores the previous npm pin and the pre-update state snapshot (when available) so the droplet is not left on a half-upgraded schema.
 
 systemd: `systemctl {start|stop|restart|status} openclaw`  
 Logs: `journalctl -u openclaw -f`
@@ -133,6 +134,25 @@ The droplet already serves HTTPS on the public IP via shortlived certificates. F
 ```bash
 sudo /opt/setup-openclaw-domain.sh
 ```
+
+## Troubleshooting
+
+### Doctor: “Gateway service ownership or shutdown could not be verified”
+
+The 1-Click gateway is a custom systemd unit (`openclaw.service`), not the CLI-managed installer unit. Always stop via `systemctl` and run doctor with `OPENCLAW_SERVICE_REPAIR_POLICY=external` (see commands above). `/opt/update-openclaw.sh` sets this automatically.
+
+### Control UI or TUI freezes the Droplet
+
+This usually means the Droplet is undersized (common on **2 GB / 1 vCPU**). Gateway + Docker + browser Control UI + SSH TUI need more RAM, especially on newer OpenClaw releases.
+
+1. **Resize** to at least **4 GB / 2 vCPU** (8 GB recommended) in the DigitalOcean control panel, then reboot.
+2. On a live Droplet, add swap immediately if it is missing:
+   ```bash
+   sudo /opt/ensure-openclaw-swap.sh
+   ```
+   First boot also creates a 2 GB swap file automatically. Swap reduces hard freezes but is not a substitute for enough RAM.
+
+Rollback moves prior live state aside under `/home/openclaw/.openclaw.aside-<timestamp>` and keeps the two newest asides (older ones are pruned). After you confirm the rollback, you can remove aside dirs you no longer need.
 
 ## Security notes
 

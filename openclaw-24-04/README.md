@@ -53,6 +53,8 @@ packer validate openclaw-24-04/template.json
 make build-openclaw-24-04
 ```
 
+Packer builds on **`s-2vcpu-4gb`**. Marketplace Droplets should use **at least 4 GB / 2 vCPU** (8 GB recommended). Gateway + Docker sandboxes + Control UI + TUI commonly freeze a 2 GB Droplet under memory pressure; first boot also enables a 2 GB swap file as a safety net.
+
 ## What Gets Installed
 
 - **OpenClaw** `v2026.9.3` (pinned via `application_version` in `template.json`)
@@ -96,7 +98,26 @@ sudo /opt/update-openclaw.sh v2026.9.3    # specific version
 sudo /opt/update-openclaw.sh --rollback   # previous pin (OPENCLAW_VERSION_PREVIOUS)
 ```
 
-The update script upgrades Node when below the CVE floor, refreshes `openclaw.service` PATH (`/usr/bin` first), stops the gateway, installs the package, runs `openclaw doctor --fix --yes --non-interactive` plus `sync-openclaw-gateway.sh`, and restarts only if doctor succeeds. If doctor fails, it reinstalls the previous pin (when known) and restarts that build. Manual doctor repairs also require stopping the gateway first — otherwise schema migrations (e.g. agent DB v19+) cannot take the maintenance lease.
+The update script upgrades Node when below the CVE floor, refreshes `openclaw.service` PATH (`/usr/bin` first), stops the gateway, snapshots schema-critical state under `/var/lib/openclaw/update-backups/` (refuses empty snapshots), installs the package, runs `openclaw doctor --fix --yes --non-interactive` with `OPENCLAW_SERVICE_REPAIR_POLICY=external` (required because the 1-Click unit is root-owned/custom, not CLI-managed), plus `sync-openclaw-gateway.sh`, and restarts only if doctor succeeds. OpenClaw DB schemas are forward-only: `--rollback` / downgrade restores the matching pre-update snapshot with the older package (and refuses if no snapshot exists). If doctor fails mid-upgrade, both the previous pin and snapshot must restore successfully — package-only rollback is refused so a newer schema is never paired with an older binary. Live state displaced by restore is kept under `/home/openclaw/.openclaw.aside-*` (two newest retained).
+
+### Live-droplet smoke (after deploying the script)
+
+```bash
+# 1) Manual doctor with external policy
+sudo systemctl stop openclaw
+sudo -u openclaw -H env HOME=/home/openclaw OPENCLAW_SERVICE_REPAIR_POLICY=external \
+  openclaw doctor --fix --yes --non-interactive
+sudo systemctl start openclaw
+
+# 2) Same-pin repair / specific version
+sudo /opt/update-openclaw.sh 2026.9.3
+
+# 3) Upgrade then rollback (needs a pre-update snapshot from step 2→latest)
+sudo /opt/update-openclaw.sh latest
+sudo /opt/update-openclaw.sh --rollback
+```
+
+Expect doctor to enter maintenance (no “ownership or shutdown could not be verified”), then the gateway to restart.
 
 ## License
 

@@ -24,6 +24,11 @@ on the channels you already use (WhatsApp, Telegram, Slack, Discord, and more).
   First login: Control UI pairing runs automatically (or: sudo /opt/openclaw-control-ui-pairing.sh)
   Stuck on "pairing required"? sudo /opt/openclaw-approve-ui-pairing.sh
 
+💾 Droplet size: use at least 4 GB RAM / 2 vCPU (8 GB recommended).
+  If the Control UI or TUI freezes the console, resize the Droplet in the
+  DigitalOcean control panel, then reboot. A 2 GB swap file is enabled on
+  first boot as a safety net, but it is not a substitute for enough RAM.
+
 📝 Configuration:
   Edit settings: /opt/openclaw.env
   User config: /home/openclaw/.openclaw/openclaw.json
@@ -48,15 +53,18 @@ on the channels you already use (WhatsApp, Telegram, Slack, Discord, and more).
   Latest release:     sudo /opt/update-openclaw.sh
   Specific version:   sudo /opt/update-openclaw.sh <latest version>   # e.g. 2026.9.3
   Rollback previous:  sudo /opt/update-openclaw.sh --rollback
-  (Rollback reinstalls the version from before the last update
-   (OPENCLAW_VERSION_PREVIOUS). For any other pin, use the specific-version
-   command above. Upgrades Node automatically if needed. Rollback restores
-   the prior npm package only, not config migrations.)
-  If UI/CLI breaks after update or rollback (e.g. agent DB schema
-  migration / "schema version N; run doctor --fix"), stop the gateway
-  first (doctor needs exclusive DB access), then repair:
+  (Rollback restores OPENCLAW_VERSION_PREVIOUS plus the pre-update
+   state snapshot under /var/lib/openclaw/update-backups/. Schemas are
+   forward-only — refused without that snapshot (no package-only
+   downgrade). Post-upgrade data is discarded; prior live state is
+   kept briefly under ~/.openclaw.aside-* (2 newest). For any other
+   pin, use the specific-version command. Upgrades Node if needed.)
+  If UI/CLI breaks after update (e.g. agent DB schema / doctor --fix),
+  stop the gateway first, then repair with external service policy
+  (1-Click openclaw.service is not CLI-managed):
     sudo systemctl stop openclaw
-    sudo -u openclaw -H openclaw doctor --fix --yes --non-interactive
+    sudo -u openclaw -H env HOME=/home/openclaw OPENCLAW_SERVICE_REPAIR_POLICY=external \
+      openclaw doctor --fix --yes --non-interactive
     sudo systemctl start openclaw
     Optional: sudo /opt/ensure-openclaw-ready.sh
               sudo /opt/apply-inference-from-env.sh   # if models list is empty

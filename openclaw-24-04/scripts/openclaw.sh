@@ -104,6 +104,12 @@ chmod +x /opt/openclaw-control-ui-pairing.sh
 chmod +x /opt/install-openclaw-pairing-hook.sh
 chmod +x /opt/build-openclaw-sandbox.sh
 chmod +x /opt/ensure-openclaw-ready.sh
+# Required for first-boot memory headroom (Control UI / TUI on small Droplets).
+if [ ! -f /opt/ensure-openclaw-swap.sh ]; then
+    echo "ERROR: /opt/ensure-openclaw-swap.sh missing from image files" >&2
+    exit 1
+fi
+chmod +x /opt/ensure-openclaw-swap.sh
 chmod +x /etc/update-motd.d/99-one-click
 chmod +x /var/lib/cloud/scripts/per-instance/001_onboot
 
