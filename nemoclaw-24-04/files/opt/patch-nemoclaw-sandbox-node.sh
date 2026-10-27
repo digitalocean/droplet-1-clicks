@@ -5,10 +5,12 @@
 # ships Node 24.18.1 on lkg. Editing Dockerfile.base does not fix that path.
 #
 # After onboard, replace *only* /usr/local/bin/node in the running sandbox
-# (CVE is in the Node binary), then restart the container so long-lived Node
-# processes reload the patched binary. Do NOT overlay all of /usr/local — that
-# wipes OpenClaw and other sandbox packages and puts the sandbox into Error.
-# Stage via the host because docker cp cannot go container→container.
+# (CVE is in the Node binary), then recycle in-container Node processes so they
+# reload the patched binary. Do NOT `docker restart` the OpenShell sandbox —
+# on OpenShell 0.0.116 that leaves Phase: Error (start cannot recover it) and
+# breaks host.openshell.internal inference. Do NOT overlay all of /usr/local —
+# that wipes OpenClaw and other sandbox packages and also puts the sandbox into
+# Error. Stage via the host because docker cp cannot go container→container.
 #
 # Only OpenShell sandbox containers (name matching ^openshell) are targeted.
 #
@@ -263,38 +265,12 @@ cleanup_node_inject() {
   fi
 }
 
-# Wait until a restarted sandbox answers node -v again.
-wait_for_container_node() {
+# List PIDs of in-container node processes whose mapped exe != on-disk
+# /usr/local/bin/node (hot-patch leaves stale inodes until those PIDs exit).
+list_stale_node_pids() {
   local cid="$1"
-  local label="$2"
-  local deadline now ver
 
-  deadline=$((SECONDS + SANDBOX_RESTART_WAIT_SECS))
-  while true; do
-    ver="$(container_node_version "$cid")"
-    case "$ver" in
-      v*)
-        printf '%s\n' "$ver"
-        return 0
-        ;;
-    esac
-    now=$SECONDS
-    if [ "$now" -ge "$deadline" ]; then
-      echo "ERROR: sandbox '${label}' did not expose node -v within ${SANDBOX_RESTART_WAIT_SECS}s after restart" >&2
-      exit 1
-    fi
-    sleep "$SANDBOX_NODE_POLL_SECS"
-  done
-}
-
-# Fail if any running node process still maps a different binary than
-# /usr/local/bin/node (hot-patch without restart leaves stale inodes).
-assert_running_node_matches_ondisk() {
-  local cid="$1"
-  local label="$2"
-  local stale
-
-  stale="$(docker exec -u 0 "$cid" sh -c '
+  docker exec -u 0 "$cid" sh -c '
     node_bin=/usr/local/bin/node
     if [ ! -x "$node_bin" ]; then
       echo "missing-node-bin"
@@ -315,7 +291,17 @@ assert_running_node_matches_ondisk() {
         echo "$pid"
       fi
     done
-  ' 2>/dev/null || true)"
+  ' 2>/dev/null || true
+}
+
+# Fail if any running node process still maps a different binary than
+# /usr/local/bin/node.
+assert_running_node_matches_ondisk() {
+  local cid="$1"
+  local label="$2"
+  local stale
+
+  stale="$(list_stale_node_pids "$cid")"
 
   case "$stale" in
     missing-node-bin)
@@ -327,13 +313,97 @@ assert_running_node_matches_ondisk() {
       ;;
   esac
   echo "ERROR: sandbox '${label}': running node PID(s) still map the pre-patch binary: ${stale}" >&2
-  echo "ERROR: restart the OpenShell sandbox so workloads load the remediated node" >&2
+  echo "ERROR: recycle in-container node processes (do not docker restart OpenShell sandboxes)" >&2
   exit 1
 }
 
+# SIGTERM node PIDs still mapping the pre-patch binary, then wait until none
+# remain. Preserves OpenShell lifecycle (no docker restart).
+recycle_stale_node_processes() {
+  local cid="$1"
+  local label="$2"
+  local deadline now stale pids
+
+  stale="$(list_stale_node_pids "$cid")"
+  case "$stale" in
+    missing-node-bin)
+      echo "ERROR: sandbox '${label}': /usr/local/bin/node missing before process recycle" >&2
+      exit 1
+      ;;
+    "")
+      echo "  No stale node processes in '${label}' (already on patched binary)"
+      return 0
+      ;;
+  esac
+
+  # Collapse newlines to spaces for kill.
+  pids="$(printf '%s\n' "$stale" | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
+  echo "  Recycling stale node PID(s) in '${label}': ${pids}"
+  # shellcheck disable=SC2086
+  docker exec -u 0 "$cid" sh -c "kill -TERM ${pids} 2>/dev/null || true"
+
+  deadline=$((SECONDS + SANDBOX_RESTART_WAIT_SECS))
+  while true; do
+    stale="$(list_stale_node_pids "$cid")"
+    case "$stale" in
+      missing-node-bin)
+        echo "ERROR: sandbox '${label}': /usr/local/bin/node missing during process recycle" >&2
+        exit 1
+        ;;
+      "")
+        return 0
+        ;;
+    esac
+    now=$SECONDS
+    if [ "$now" -ge "$deadline" ]; then
+      echo "ERROR: sandbox '${label}' still has stale node PID(s) after ${SANDBOX_RESTART_WAIT_SECS}s: ${stale}" >&2
+      exit 1
+    fi
+    # Re-signal stragglers once mid-wait.
+    if [ $((now % 15)) -eq 0 ]; then
+      pids="$(printf '%s\n' "$stale" | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
+      # shellcheck disable=SC2086
+      docker exec -u 0 "$cid" sh -c "kill -TERM ${pids} 2>/dev/null || true"
+    fi
+    sleep "$SANDBOX_NODE_POLL_SECS"
+  done
+}
+
+# Best-effort NemoClaw agent recovery after in-container node recycle.
+# Never docker-restarts the provider container (breaks OpenShell 0.0.116).
+maybe_recover_sandbox_agent() {
+  local container_name="$1"
+  local sandbox_name=""
+
+  case "$container_name" in
+    openshell*--*)
+      # openshell-<ns>--<sandbox>-<suffix> → <sandbox>
+      sandbox_name="${container_name#*--}"
+      sandbox_name="${sandbox_name%-*}"
+      ;;
+    *)
+      return 0
+      ;;
+  esac
+  [ -n "$sandbox_name" ] || return 0
+  command -v nemoclaw >/dev/null 2>&1 || return 0
+
+  echo "  Requesting NemoClaw agent recovery for '${sandbox_name}' (gateway restart)..."
+  if nemoclaw "$sandbox_name" gateway restart >/dev/null 2>&1; then
+    echo "  OK: nemoclaw ${sandbox_name} gateway restart"
+    return 0
+  fi
+  echo "  WARN: nemoclaw ${sandbox_name} gateway restart failed; trying recover..."
+  if nemoclaw "$sandbox_name" recover >/dev/null 2>&1; then
+    echo "  OK: nemoclaw ${sandbox_name} recover"
+    return 0
+  fi
+  echo "  WARN: nemoclaw recovery helpers failed; node binary is patched — run 'nemoclaw ${sandbox_name} recover' if connect still fails"
+}
+
 # Replace only /usr/local/bin/node in the sandbox (preserves OpenClaw under
-# /usr/local/lib/node_modules and OpenShell identity/network), then restart so
-# long-lived Node processes reload the patched binary.
+# /usr/local/lib/node_modules and OpenShell identity/network). Recycle Node
+# processes in-place — do not docker restart (OpenShell 0.0.116 → Phase: Error).
 inject_node_into_container() {
   local cid="$1"
   local host_node="$2"
@@ -345,17 +415,17 @@ inject_node_into_container() {
   docker cp "${host_node}" "${cid}:/usr/local/bin/node"
   docker exec -u 0 "$cid" chmod 755 /usr/local/bin/node
 
-  echo "  Restarting sandbox '${name}' so running Node processes load the patched binary..."
-  docker restart "$cid" >/dev/null
-
-  ver="$(wait_for_container_node "$cid" "$name")"
+  ver="$(container_node_version "$cid")"
   if ! node_meets_cve_floor "$ver"; then
-    echo "ERROR: sandbox '${name}' still has Node ${ver:-missing} after inject+restart" >&2
+    echo "ERROR: sandbox '${name}' still has Node ${ver:-missing} after node-binary inject" >&2
     exit 1
   fi
-  assert_running_node_matches_ondisk "$cid" "$name"
 
-  echo "  OK: sandbox '${name}' now ${ver} (node binary only; restarted; OpenClaw tree left intact)"
+  recycle_stale_node_processes "$cid" "$name"
+  assert_running_node_matches_ondisk "$cid" "$name"
+  maybe_recover_sandbox_agent "$name"
+
+  echo "  OK: sandbox '${name}' now ${ver} (node binary only; processes recycled; OpenClaw tree left intact)"
 }
 
 remediate_sandbox_node() {
