@@ -1,6 +1,6 @@
 #!/bin/bash
 # QM first-login setup wizard — collects the admin account (or auto-detected
-# from /root/.digitalocean_custom_inputs if DigitalOcean's own automation
+# from /root/.digitalocean_custom_input if DigitalOcean's own automation
 # dropped one), a model provider (DigitalOcean Serverless Inference,
 # Anthropic, or OpenAI — or auto-detected from
 # /root/.digitalocean_genai_credentials if DigitalOcean's own GenAI

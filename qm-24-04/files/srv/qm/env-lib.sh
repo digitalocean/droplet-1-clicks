@@ -84,7 +84,7 @@ detect_managed_agents_token() {
 # operator's account email (and optionally a password) — a separate piece
 # of automation from the GenAI/Managed-Agents credentials file above (one
 # droplet may get either, both, or neither).
-DO_CUSTOM_INPUTS_FILE="/root/.digitalocean_custom_inputs"
+DO_CUSTOM_INPUTS_FILE="/root/.digitalocean_custom_input"
 
 # Reads EMAIL/PASSWORD out of DO_CUSTOM_INPUTS_FILE — parsed line by line
 # rather than sourced, same reasoning as detect_do_genai_credentials above.
