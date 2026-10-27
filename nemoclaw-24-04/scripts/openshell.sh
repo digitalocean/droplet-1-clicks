@@ -66,8 +66,14 @@ node -e '
   }
   const v = process.versions.node;
   const maj = parseInt(v.split(".")[0], 10);
-  const ok = maj === 24 && ge(v, min);
-  if (!ok) {
+  if (maj !== 24) {
+    console.error(
+      "ERROR: Node " + v +
+      " is major " + maj + " (need Node 24.x >= " + min + ")"
+    );
+    process.exit(1);
+  }
+  if (!ge(v, min)) {
     console.error(
       "ERROR: Node " + v +
       " is below CVE floor " + min + " (need Node 24.x >= " + min + ")"
