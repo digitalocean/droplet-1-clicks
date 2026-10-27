@@ -20,7 +20,7 @@ fi
 
 nemoclaw onboard
 
-# Overlay Node 24.22.1 into the running sandbox (no container recreate).
+# Inject patched node binary into OpenShell sandbox only (waits for container).
 if [ -x /opt/patch-nemoclaw-sandbox-node.sh ]; then
   /opt/patch-nemoclaw-sandbox-node.sh remediate-sandbox
 fi

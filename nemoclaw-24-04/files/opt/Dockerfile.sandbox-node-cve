@@ -1,8 +1,11 @@
-# Optional derived-image recipe for CVE-2026-111497 (Brotli RCE).
+# OPTIONAL / MANUAL ONLY — not used by Packer or setup_wizard.sh.
 #
-# Primary Marketplace remediations uses in-place `docker cp` into the running
-# OpenShell sandbox (see /opt/patch-nemoclaw-sandbox-node.sh) so container
-# identity/network stay intact. Keep this Dockerfile for manual rebuilds:
+# Marketplace remediations is: /opt/patch-nemoclaw-sandbox-node.sh
+#   (injects only /usr/local/bin/node into the running OpenShell sandbox).
+#
+# Use this Dockerfile only if you intentionally rebuild a derived sandbox image
+# offline. Do not COPY all of /usr/local (that wipes OpenClaw under
+# /usr/local/lib/node_modules).
 #
 #   docker tag <local-sandbox-image-id> nemoclaw-do-cve-src:local
 #   docker build -t nemoclaw-do-cve-node:24.22.1 \
@@ -16,7 +19,6 @@ FROM node:24.22.1-trixie-slim@sha256:43b9ba1142b8dcf33fa8f922ca1be85714adc444e05
 
 FROM ${BASE_IMAGE}
 USER root
-# Only replace the Node binary — copying all of /usr/local wipes OpenClaw.
 COPY --from=node /usr/local/bin/node /usr/local/bin/node
 RUN node -v \
   && node -e 'if (process.versions.node !== "24.22.1") process.exit(1)'

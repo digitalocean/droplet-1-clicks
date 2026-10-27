@@ -107,6 +107,7 @@ git -C "$NEMOCLAW_SRC" fetch --depth=1 origin 'refs/tags/v*:refs/tags/v*' 2>/dev
 # CVE-2026-111497: patch local Dockerfiles (defense-in-depth). Runtime sandbox
 # Node is fixed after onboard via in-place inject in setup_wizard.sh.
 chmod +x /opt/patch-nemoclaw-sandbox-node.sh
+/opt/patch-nemoclaw-sandbox-node.sh self-test
 /opt/patch-nemoclaw-sandbox-node.sh patch "$NEMOCLAW_SRC"
 
 export NEMOCLAW_INSTALLING=1
