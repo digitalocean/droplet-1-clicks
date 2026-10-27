@@ -21,8 +21,15 @@ validate_codex_env_value() {
             esac
             ;;
         CODEX_ENV_NODE_VERSION)
+            # 18/20 are EOL with no CVE-2026-111497 fix; only patched 22/24 ship.
             case "$value" in
-                18|20|22) return 0 ;;
+                22|24) return 0 ;;
+                18|20)
+                    echo "ERROR: ${var}=${value} is not available on this image." >&2
+                    echo "Node.js 18/20 are EOL with no CVE-2026-111497 fix; use 22 or 24." >&2
+                    echo "Upstream documents 18/20, but this 1-Click does not install them." >&2
+                    return 1
+                    ;;
             esac
             ;;
         CODEX_ENV_RUST_VERSION)
