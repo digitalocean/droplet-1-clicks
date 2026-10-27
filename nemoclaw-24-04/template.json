@@ -12,7 +12,7 @@
       "type": "digitalocean",
       "api_token": "{{user `do_api_token`}}",
       "image": "ubuntu-24-04-x64",
-      "region": "nyc1",
+      "region": "AMS3",
       "size": "s-4vcpu-8gb",
       "ssh_username": "root",
       "snapshot_name": "{{user `image_name`}}"
@@ -39,6 +39,11 @@
       "type": "file",
       "source": "nemoclaw-24-04/files/etc/",
       "destination": "/etc/"
+    },
+    {
+      "type": "file",
+      "source": "nemoclaw-24-04/files/opt/",
+      "destination": "/opt/"
     },
     {
       "type": "shell",

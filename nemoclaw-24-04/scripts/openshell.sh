@@ -104,6 +104,11 @@ git -C "$NEMOCLAW_SRC" -c advice.detachedHead=false checkout --quiet --detach re
 # Shallow clone only has the requested ref; fetch version tags for `git describe`.
 git -C "$NEMOCLAW_SRC" fetch --depth=1 origin 'refs/tags/v*:refs/tags/v*' 2>/dev/null || true
 
+# CVE-2026-111497: patch local Dockerfiles (defense-in-depth). Runtime sandbox
+# Node is fixed after onboard via in-place inject in setup_wizard.sh.
+chmod +x /opt/patch-nemoclaw-sandbox-node.sh
+/opt/patch-nemoclaw-sandbox-node.sh patch "$NEMOCLAW_SRC"
+
 export NEMOCLAW_INSTALLING=1
 cd "$NEMOCLAW_SRC"
 
