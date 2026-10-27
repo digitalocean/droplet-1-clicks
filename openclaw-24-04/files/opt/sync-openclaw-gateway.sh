@@ -53,14 +53,21 @@ jq --arg token "$GATEWAY_TOKEN" \
      # Strip it so upgraded droplets keep a valid config for CLI pairing.
      | del(.session.agentToAgent)
      | if (.session | type) == "object" and (.session | length) == 0 then del(.session) else . end
+     # Ensure droplet IP origins exist for the default Control UI URL, but merge
+     # (do not replace) so custom domains from setup-openclaw-domain.sh survive
+     # updates / ensure-ready / onboot sync.
+     | .gateway.controlUi = (if (.gateway.controlUi | type) == "object" then .gateway.controlUi else {} end)
      | .gateway.controlUi.allowedOrigins = (
-         if ($pub != "" and $pub != $prv) then
-           ["https://" + $pub, "http://" + $pub, "https://" + $prv, "http://" + $prv]
-         elif ($pub != "") then
-           ["https://" + $pub, "http://" + $pub]
-         else
-           ["https://" + $prv, "http://" + $prv]
-         end
+         (
+           (if ($pub != "" and $pub != $prv) then
+             ["https://" + $pub, "http://" + $pub, "https://" + $prv, "http://" + $prv]
+           elif ($pub != "") then
+             ["https://" + $pub, "http://" + $pub]
+           else
+             ["https://" + $prv, "http://" + $prv]
+           end)
+           + (.gateway.controlUi.allowedOrigins // [])
+         ) | unique
        )' \
     "$OPENCLAW_JSON" >"${OPENCLAW_JSON}.tmp"
 mv "${OPENCLAW_JSON}.tmp" "$OPENCLAW_JSON"
