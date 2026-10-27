@@ -5,8 +5,9 @@
 # ships Node 24.18.1 on lkg. Editing Dockerfile.base does not fix that path.
 #
 # After onboard, replace *only* /usr/local/bin/node in the running sandbox
-# (CVE is in the Node binary). Do NOT overlay all of /usr/local — that wipes
-# OpenClaw and other sandbox packages and puts the sandbox into Error.
+# (CVE is in the Node binary), then restart the container so long-lived Node
+# processes reload the patched binary. Do NOT overlay all of /usr/local — that
+# wipes OpenClaw and other sandbox packages and puts the sandbox into Error.
 # Stage via the host because docker cp cannot go container→container.
 #
 # Only OpenShell sandbox containers (name matching ^openshell) are targeted.
@@ -24,9 +25,17 @@ set -euo pipefail
 NODE_CVE_MIN="${NODE_CVE_MIN:-24.22.1}"
 SANDBOX_NODE_FROM="node:24.22.1-trixie-slim@sha256:43b9ba1142b8dcf33fa8f922ca1be85714adc444e0586c7cf7726daaeabc1bea"
 VULN_NODE_FROM="node:24.18.1-trixie-slim@sha256:ac39e4b5fcb2b1b34b20364fd58b2e898f3bb80731ee6f62a7536f9df3d6aadc"
+# Hermes overlays Node from nodejs.org tarballs (not the OpenClaw FROM pin).
+HERMES_NODE_VERSION="24.22.1"
+HERMES_NPM_VERSION="11.19.1"
+HERMES_NODE_SHA_AMD64="eb6728e77c576a35162c122c45ccadf224d89ff00abc8dae46cc2897c6002d7c"
+HERMES_NODE_SHA_ARM64="33c37be234ba8bee041961047b19160f4d7d0f164e8e246f78bdd10feff148b3"
+VULN_HERMES_NODE_SHA_AMD64="9f5eb6ac21845a66c493c91a253b1da32fd684e89e9b7202d4936982336be4ca"
+VULN_HERMES_NODE_SHA_ARM64="df224555a083b918e46260cc969838501b9f9a87140c1195e5b9597b56d5dae2"
 # Wait for onboard's OpenShell container to expose node (seconds).
 SANDBOX_NODE_WAIT_SECS="${SANDBOX_NODE_WAIT_SECS:-180}"
 SANDBOX_NODE_POLL_SECS="${SANDBOX_NODE_POLL_SECS:-3}"
+SANDBOX_RESTART_WAIT_SECS="${SANDBOX_RESTART_WAIT_SECS:-120}"
 
 version_ge() {
   [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -1)" = "$2" ]
@@ -108,10 +117,88 @@ EOF
   done
 }
 
+# Hermes installs Node via nodejs.org tarball + arch checksums, not OpenClaw's
+# digest-pinned FROM line.
+is_hermes_tarball_node_dockerfile() {
+  grep -q 'ARG NODE_VERSION=' "$1" \
+    && grep -q 'nodejs.org/dist' "$1"
+}
+
+hermes_dockerfile_already_patched() {
+  local f="$1"
+  grep -Fq "ARG NODE_VERSION=${HERMES_NODE_VERSION}" "$f" \
+    && grep -Fq "$HERMES_NODE_SHA_AMD64" "$f" \
+    && grep -Fq "$HERMES_NODE_SHA_ARM64" "$f" \
+    && ! grep -Fq '24.18.1' "$f" \
+    && ! grep -Fq "$VULN_HERMES_NODE_SHA_AMD64" "$f" \
+    && ! grep -Fq "$VULN_HERMES_NODE_SHA_ARM64" "$f"
+}
+
+patch_openclaw_dockerfile() {
+  local f="$1"
+  local tmp
+
+  if grep -Fq "$SANDBOX_NODE_FROM" "$f" \
+    && ! grep -Fq '24.18.1' "$f"
+  then
+    echo "Already patched for CVE-2026-111497: ${f}"
+    return 1
+  fi
+
+  echo "Patching OpenClaw sandbox Node pin in ${f} (defense-in-depth for --from builds)..."
+  tmp="${f}.cve-patch.tmp"
+  sed "s|${VULN_NODE_FROM}|${SANDBOX_NODE_FROM}|g; s/24\\.18\\.1/24.22.1/g" "$f" >"$tmp"
+  mv "$tmp" "$f"
+
+  if ! grep -Fq "$SANDBOX_NODE_FROM" "$f" || grep -Fq '24.18.1' "$f"; then
+    echo "ERROR: failed to apply sandbox Node CVE pin in ${f}" >&2
+    exit 1
+  fi
+  echo "  OK: ${f}"
+  return 0
+}
+
+patch_hermes_dockerfile() {
+  local f="$1"
+  local tmp
+
+  if hermes_dockerfile_already_patched "$f"; then
+    echo "Already patched for CVE-2026-111497: ${f}"
+    return 1
+  fi
+
+  if ! grep -Fq 'ARG NODE_VERSION=24.18.1' "$f" \
+    && ! grep -Fq "$VULN_HERMES_NODE_SHA_AMD64" "$f" \
+    && ! grep -Fq '24.18.1' "$f"
+  then
+    echo "Skipping ${f}: no vulnerable Hermes Node 24.18.1 tarball pin (ok)."
+    return 1
+  fi
+
+  echo "Patching Hermes sandbox Node tarball pin in ${f} (defense-in-depth for --from builds)..."
+  tmp="${f}.cve-patch.tmp"
+  sed \
+    -e "s/ARG NODE_VERSION=24\\.18\\.1/ARG NODE_VERSION=${HERMES_NODE_VERSION}/g" \
+    -e "s/24\\.18\\.1/${HERMES_NODE_VERSION}/g" \
+    -e "s/test \"\$(npm --version)\" = \"11\\.16\\.0\"/test \"\$(npm --version)\" = \"${HERMES_NPM_VERSION}\"/g" \
+    -e "s/npm 11\\.16\\.0/npm ${HERMES_NPM_VERSION}/g" \
+    -e "s|node_sha256=\"${VULN_HERMES_NODE_SHA_AMD64}\"|node_sha256=\"${HERMES_NODE_SHA_AMD64}\"|g" \
+    -e "s|node_sha256=\"${VULN_HERMES_NODE_SHA_ARM64}\"|node_sha256=\"${HERMES_NODE_SHA_ARM64}\"|g" \
+    "$f" >"$tmp"
+  mv "$tmp" "$f"
+
+  if ! hermes_dockerfile_already_patched "$f"; then
+    echo "ERROR: failed to apply Hermes Node CVE tarball pin in ${f}" >&2
+    exit 1
+  fi
+  echo "  OK: ${f}"
+  return 0
+}
+
 patch_dockerfiles() {
   local src="${1:-${HOME}/.nemoclaw/source}"
   local patched=0
-  local f tmp
+  local f
 
   if [ ! -d "$src" ]; then
     echo "ERROR: NemoClaw source not found at ${src}" >&2
@@ -124,24 +211,15 @@ patch_dockerfiles() {
   do
     [ -f "$f" ] || continue
 
-    if grep -Fq "$SANDBOX_NODE_FROM" "$f" \
-      && ! grep -Fq '24.18.1' "$f"
-    then
-      echo "Already patched for CVE-2026-111497: ${f}"
-      continue
+    if is_hermes_tarball_node_dockerfile "$f"; then
+      if patch_hermes_dockerfile "$f"; then
+        patched=$((patched + 1))
+      fi
+    else
+      if patch_openclaw_dockerfile "$f"; then
+        patched=$((patched + 1))
+      fi
     fi
-
-    echo "Patching sandbox Node pin in ${f} (defense-in-depth for --from builds)..."
-    tmp="${f}.cve-patch.tmp"
-    sed "s|${VULN_NODE_FROM}|${SANDBOX_NODE_FROM}|g; s/24\\.18\\.1/24.22.1/g" "$f" >"$tmp"
-    mv "$tmp" "$f"
-
-    if ! grep -Fq "$SANDBOX_NODE_FROM" "$f" || grep -Fq '24.18.1' "$f"; then
-      echo "ERROR: failed to apply sandbox Node CVE pin in ${f}" >&2
-      exit 1
-    fi
-    patched=$((patched + 1))
-    echo "  OK: ${f}"
   done
 
   if [ "$patched" -eq 0 ]; then
@@ -185,8 +263,77 @@ cleanup_node_inject() {
   fi
 }
 
+# Wait until a restarted sandbox answers node -v again.
+wait_for_container_node() {
+  local cid="$1"
+  local label="$2"
+  local deadline now ver
+
+  deadline=$((SECONDS + SANDBOX_RESTART_WAIT_SECS))
+  while true; do
+    ver="$(container_node_version "$cid")"
+    case "$ver" in
+      v*)
+        printf '%s\n' "$ver"
+        return 0
+        ;;
+    esac
+    now=$SECONDS
+    if [ "$now" -ge "$deadline" ]; then
+      echo "ERROR: sandbox '${label}' did not expose node -v within ${SANDBOX_RESTART_WAIT_SECS}s after restart" >&2
+      exit 1
+    fi
+    sleep "$SANDBOX_NODE_POLL_SECS"
+  done
+}
+
+# Fail if any running node process still maps a different binary than
+# /usr/local/bin/node (hot-patch without restart leaves stale inodes).
+assert_running_node_matches_ondisk() {
+  local cid="$1"
+  local label="$2"
+  local stale
+
+  stale="$(docker exec -u 0 "$cid" sh -c '
+    node_bin=/usr/local/bin/node
+    if [ ! -x "$node_bin" ]; then
+      echo "missing-node-bin"
+      exit 0
+    fi
+    bin_sum=$(sha256sum "$node_bin" | awk "{print \$1}")
+    for exe in /proc/[0-9]*/exe; do
+      [ -L "$exe" ] || continue
+      target=$(readlink -f "$exe" 2>/dev/null || true)
+      case "$target" in
+        */bin/node|*/bin/nodejs) ;;
+        *) continue ;;
+      esac
+      proc_sum=$(sha256sum "$exe" 2>/dev/null | awk "{print \$1}" || true)
+      if [ -z "$proc_sum" ] || [ "$proc_sum" != "$bin_sum" ]; then
+        pid=${exe#/proc/}
+        pid=${pid%/exe}
+        echo "$pid"
+      fi
+    done
+  ' 2>/dev/null || true)"
+
+  case "$stale" in
+    missing-node-bin)
+      echo "ERROR: sandbox '${label}': /usr/local/bin/node missing during running-process check" >&2
+      exit 1
+      ;;
+    "")
+      return 0
+      ;;
+  esac
+  echo "ERROR: sandbox '${label}': running node PID(s) still map the pre-patch binary: ${stale}" >&2
+  echo "ERROR: restart the OpenShell sandbox so workloads load the remediated node" >&2
+  exit 1
+}
+
 # Replace only /usr/local/bin/node in the sandbox (preserves OpenClaw under
-# /usr/local/lib/node_modules and OpenShell identity/network).
+# /usr/local/lib/node_modules and OpenShell identity/network), then restart so
+# long-lived Node processes reload the patched binary.
 inject_node_into_container() {
   local cid="$1"
   local host_node="$2"
@@ -198,13 +345,17 @@ inject_node_into_container() {
   docker cp "${host_node}" "${cid}:/usr/local/bin/node"
   docker exec -u 0 "$cid" chmod 755 /usr/local/bin/node
 
-  ver="$(docker exec -u 0 "$cid" env PATH="/usr/local/bin:/usr/bin:/bin" node -v 2>/dev/null || true)"
+  echo "  Restarting sandbox '${name}' so running Node processes load the patched binary..."
+  docker restart "$cid" >/dev/null
+
+  ver="$(wait_for_container_node "$cid" "$name")"
   if ! node_meets_cve_floor "$ver"; then
-    echo "ERROR: sandbox '${name}' still has Node ${ver:-missing} after inject" >&2
+    echo "ERROR: sandbox '${name}' still has Node ${ver:-missing} after inject+restart" >&2
     exit 1
   fi
+  assert_running_node_matches_ondisk "$cid" "$name"
 
-  echo "  OK: sandbox '${name}' now ${ver} (node binary only; OpenClaw tree left intact)"
+  echo "  OK: sandbox '${name}' now ${ver} (node binary only; restarted; OpenClaw tree left intact)"
 }
 
 remediate_sandbox_node() {
@@ -288,6 +439,7 @@ verify_sandbox_node() {
     case "$ver" in
       v*)
         assert_node_meets_cve_floor "sandbox ${cid}" "$ver"
+        assert_running_node_matches_ondisk "$cid" "$cid"
         checked=$((checked + 1))
         ;;
     esac
@@ -299,12 +451,13 @@ EOF
     echo "ERROR: no OpenShell sandbox exposed node -v; cannot confirm CVE fix" >&2
     exit 1
   fi
-  echo "Sandbox Node CVE-2026-111497 check passed (${checked} OpenShell container(s))."
+  echo "Sandbox Node CVE-2026-111497 check passed (${checked} OpenShell container(s); on-disk + running process)."
 }
 
 self_test() {
   local failures=0
   local saved_min
+  local hermes_tmp openclaw_tmp
 
   pass() { echo "  OK: $*"; }
   fail() { echo "  FAIL: $*"; failures=$((failures + 1)); }
@@ -336,6 +489,62 @@ self_test() {
     # Actually is_openshell_sandbox_name uses openshell* which is prefix. "my-openshell-helper" should reject.
     fail "mid-string openshell reject"
   fi
+
+  hermes_tmp="$(mktemp)"
+  openclaw_tmp="$(mktemp)"
+  cat >"$hermes_tmp" <<EOF
+ARG NODE_VERSION=24.18.1
+RUN curl -fsSL "https://nodejs.org/dist/v\${NODE_VERSION}/node-v\${NODE_VERSION}-linux-x64.tar.gz"
+ amd64) node_asset_arch="x64"; node_sha256="${VULN_HERMES_NODE_SHA_AMD64}" ;;
+ arm64) node_asset_arch="arm64"; node_sha256="${VULN_HERMES_NODE_SHA_ARM64}" ;;
+ && test "\$(npm --version)" = "11.16.0"
+EOF
+  cat >"$openclaw_tmp" <<EOF
+FROM ${VULN_NODE_FROM}
+# node 24.18.1
+EOF
+
+  if is_hermes_tarball_node_dockerfile "$hermes_tmp"; then
+    pass "hermes tarball dockerfile detect"
+  else
+    fail "hermes tarball dockerfile detect"
+  fi
+  if ! is_hermes_tarball_node_dockerfile "$openclaw_tmp"; then
+    pass "openclaw dockerfile not hermes"
+  else
+    fail "openclaw dockerfile not hermes"
+  fi
+
+  if patch_hermes_dockerfile "$hermes_tmp"; then
+    if hermes_dockerfile_already_patched "$hermes_tmp"; then
+      pass "hermes dockerfile patch"
+    else
+      fail "hermes dockerfile patch validation"
+    fi
+  else
+    fail "hermes dockerfile patch apply"
+  fi
+  if patch_openclaw_dockerfile "$openclaw_tmp"; then
+    if grep -Fq "$SANDBOX_NODE_FROM" "$openclaw_tmp" && ! grep -Fq '24.18.1' "$openclaw_tmp"; then
+      pass "openclaw dockerfile patch"
+    else
+      fail "openclaw dockerfile patch validation"
+    fi
+  else
+    fail "openclaw dockerfile patch apply"
+  fi
+  # Second pass should be no-op (return 1 / already patched).
+  if ! patch_hermes_dockerfile "$hermes_tmp"; then
+    pass "hermes already-patched short-circuit"
+  else
+    fail "hermes already-patched short-circuit"
+  fi
+  if ! patch_openclaw_dockerfile "$openclaw_tmp"; then
+    pass "openclaw already-patched short-circuit"
+  else
+    fail "openclaw already-patched short-circuit"
+  fi
+  rm -f "$hermes_tmp" "$openclaw_tmp"
 
   NODE_CVE_MIN="$saved_min"
 
