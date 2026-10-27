@@ -32,7 +32,7 @@ OpenClaw runs the gateway on the host and uses Docker for sandboxes. The Control
 ## Included System Components
 
 - **Ubuntu 24.04 LTS**
-- **OpenClaw** `v2026.9.3` (version pinned in the image build)
+- **OpenClaw** `v2026.10.7` (version pinned in the image build)
 - **Node.js 24** (≥**24.22.1**, remediates CVE-2026-111497) and **Docker**
 - **Caddy** reverse proxy (ports 80/443 → gateway on localhost:18789)
 - **UFW** and **fail2ban**

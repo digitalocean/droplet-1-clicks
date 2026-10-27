@@ -57,7 +57,7 @@ Packer builds on **`s-2vcpu-4gb`**. Marketplace Droplets should use **at least 4
 
 ## What Gets Installed
 
-- **OpenClaw** `v2026.9.3` (pinned via `application_version` in `template.json`)
+- **OpenClaw** `v2026.10.7` (pinned via `application_version` in `template.json`)
 - **Node.js 24** ≥**24.22.1** — remediates CVE-2026-111497 (Brotli RCE; trackers VULN-5695 / VULN-5716 are labels for that CVE) — and **Docker** (sandbox image built at snapshot time and on first boot)
 - **Caddy** – reverse proxy on ports 80/443 to `127.0.0.1:18789` with shortlived TLS by IP
 - **UFW** – SSH (rate-limited), HTTP, HTTPS
@@ -88,7 +88,7 @@ Packer builds on **`s-2vcpu-4gb`**. Marketplace Droplets should use **at least 4
 
 ## Version Pinning
 
-Edit `application_version` in `template.json` (OpenClaw npm version, e.g. `v2026.9.3`), then rebuild.
+Edit `application_version` in `template.json` (OpenClaw npm version, e.g. `v2026.10.7`), then rebuild.
 
 ## On-droplet updates (shown in MOTD)
 
