@@ -37,10 +37,11 @@ your server for production. The root MySQL password has been saved to:
 "
 
 # Perform the actual execution
-bash --norc /opt/ghost-setup/boot_strap.sh
-cp /etc/skel/.bashrc /root/.bashrc
+if bash --norc /opt/ghost-setup/boot_strap.sh \
+    && [ -f /var/www/ghost/config.production.json ]; then
+    cp /etc/skel/.bashrc /root/.bashrc
 
-echo "
+    echo "
 ------------------------------------------------------------------------------
 
 For any further commands, please switch to the $(tput setaf 6)ghost-mgr$(tput sgr0) user to manage Ghost.
@@ -50,6 +51,18 @@ For any further commands, please switch to the $(tput setaf 6)ghost-mgr$(tput sg
 ------------------------------------------------------------------------------
 
 "
+else
+    echo "
+------------------------------------------------------------------------------
+
+$(tput setaf 1)Ghost setup did not finish.$(tput sgr0) SSH in again as root to retry, or run:
+
+    $(tput setaf 3)bash /opt/ghost-setup/boot_strap.sh$(tput sgr0)
+
+------------------------------------------------------------------------------
+
+"
+fi
 
 fi
 
