@@ -85,23 +85,125 @@ EOM
     systemctl disable mysql 2>/dev/null
 fi
 
-# This is where the magic starts
+# Ghost CLI's own "blog URL" prompt rejects a bare domain, and its error
+# example is http://. If the user then enters http:// for a real domain, CLI
+# keeps that URL after Let's Encrypt, and Ghost admin login fails with
+# "incorrect origin" (expected http, received https). Ask here instead, and
+# pass a normalized URL through --url so CLI does not prompt.
+
+# Sets GHOST_URL and GHOST_USE_SSL. Domain (with or without a scheme) becomes
+# https://. An IPv4 address becomes http:// and skips SSL.
+normalize_ghost_site() {
+    local input="$1"
+    local host path octet
+
+    input=$(printf '%s' "$input" | tr '[:upper:]' '[:lower:]')
+    input="${input#"${input%%[![:space:]]*}"}"
+    input="${input%"${input##*[![:space:]]}"}"
+
+    while [[ "$input" == */ ]]; do
+        input="${input%/}"
+    done
+
+    case "$input" in
+        https://*) input="${input#https://}" ;;
+        http://*)  input="${input#http://}" ;;
+        //*)       input="${input#//}" ;;
+    esac
+
+    host="${input%%/*}"
+    path="${input#"$host"}"
+    if [ -n "$path" ]; then
+        return 1
+    fi
+    if [[ "$host" == *@* || "$host" == *:* ]]; then
+        return 1
+    fi
+
+    host="${host%.}"
+    if [ -z "$host" ]; then
+        return 1
+    fi
+
+    if [[ "$host" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+        local o1 o2 o3 o4
+        IFS='.' read -r o1 o2 o3 o4 <<< "$host"
+        for octet in "$o1" "$o2" "$o3" "$o4"; do
+            if [ "$((10#$octet))" -gt 255 ]; then
+                return 1
+            fi
+        done
+        GHOST_URL="http://${host}"
+        GHOST_USE_SSL=0
+        return 0
+    fi
+
+    if [[ "$host" =~ ^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$ ]]; then
+        GHOST_URL="https://${host}"
+        GHOST_USE_SSL=1
+        return 0
+    fi
+
+    return 1
+}
 
 echo "
-Ghost will prompt you for two details:
+Point an A record at this Droplet before continuing: $(tput setaf 6)${myip}$(tput sgr0)
+DNS must already resolve, or the SSL certificate step will fail.
 
-1. Your domain
- - Add an A Record -> $(tput setaf 6)${myip}$(tput sgr0) & ensure the DNS has fully propagated
- - Or alternatively enter $(tput setaf 6)http://${myip}$(tput sgr0)
-2. Your email address (only used for SSL)
+Enter your site address. Any of these is fine:
+  example.com
+  https://example.com
+  http://example.com
 
-$(tput setaf 2)Press enter when you're ready to get started!$(tput sgr0)
+A domain is stored as $(tput setaf 6)https://$(tput sgr0). If you do not have a domain yet, enter
+$(tput setaf 6)${myip}$(tput sgr0) or $(tput setaf 6)http://${myip}$(tput sgr0). That skips SSL.
 "
 
-# Make sure the user is ready to install Ghost
-read wait
+while true; do
+    read -r -p "Site address: " site_input
+    if normalize_ghost_site "$site_input"; then
+        break
+    fi
+    echo "Enter a domain or IPv4 address, with or without http:// or https://."
+    echo "Do not include a path or port. Examples: example.com, https://example.com, ${myip}"
+done
+
+ssl_email=""
+if [ "$GHOST_USE_SSL" -eq 1 ]; then
+    echo "Using ${GHOST_URL}. An SSL certificate will be requested for this address."
+    while true; do
+        read -r -p "Email for Let's Encrypt certificate notices: " ssl_email
+        if [[ "$ssl_email" =~ ^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$ ]]; then
+            break
+        fi
+        echo "Enter an email address. It is used only for certificate expiry notices."
+    done
+else
+    echo "Using ${GHOST_URL}. SSL is skipped for an IP address."
+fi
 
 source /var/lib/digitalocean/application.info
+
+# A failed first run (DNS not ready yet) still writes the nginx site and the
+# systemd unit. Ghost CLI then skips nginx on retry because that file exists,
+# and it skips SSL whenever nginx was skipped. Remove this host's leftovers
+# before installing again. The Ghost directory wipe below does not touch them.
+ghost_host="${GHOST_URL#https://}"
+ghost_host="${ghost_host#http://}"
+ghost_host="${ghost_host%%/*}"
+ghost_instance="ghost_${ghost_host//./-}"
+
+systemctl stop "$ghost_instance" 2>/dev/null || true
+systemctl disable "$ghost_instance" 2>/dev/null || true
+rm -f "/lib/systemd/system/${ghost_instance}.service" \
+    "/etc/systemd/system/${ghost_instance}.service"
+systemctl daemon-reload 2>/dev/null || true
+rm -f \
+    "/etc/nginx/sites-available/${ghost_host}.conf" \
+    "/etc/nginx/sites-enabled/${ghost_host}.conf" \
+    "/etc/nginx/sites-available/${ghost_host}-ssl.conf" \
+    "/etc/nginx/sites-enabled/${ghost_host}-ssl.conf"
 
 # Ghost-CLI requires an empty install dir. The fail2ban placeholder under
 # content/logs exists only so fail2ban can start on the image before setup.
@@ -110,16 +212,25 @@ find /var/www/ghost -mindepth 1 -delete
 chown ghost-mgr: /var/www/ghost
 chmod 775 /var/www/ghost
 
-# Install Ghost
-if ! sudo -iu ghost-mgr ghost install "$application_version" --auto \
-  --db=mysql \
-  --dbhost="$GHOST_HOST" \
-  --dbport="$GHOST_PORT" \
-  --dbname="$GHOST_DATABASE" \
-  --dbuser="$GHOST_USERNAME" \
-  --dbpass="$GHOST_PASSWORD" \
-  --dir=/var/www/ghost \
-  --start; then
+# Install Ghost. --url / --sslemail skip Ghost CLI's URL and email prompts.
+ghost_install_args=(
+    "$application_version"
+    --auto
+    --url "$GHOST_URL"
+    --db=mysql
+    --dbhost="$GHOST_HOST"
+    --dbport="$GHOST_PORT"
+    --dbname="$GHOST_DATABASE"
+    --dbuser="$GHOST_USERNAME"
+    --dbpass="$GHOST_PASSWORD"
+    --dir=/var/www/ghost
+    --start
+)
+if [ "$GHOST_USE_SSL" -eq 1 ]; then
+    ghost_install_args+=(--sslemail "$ssl_email")
+fi
+
+if ! sudo -iu ghost-mgr ghost install "${ghost_install_args[@]}"; then
     # Restore a log file so fail2ban can start again before the next retry.
     mkdir -p /var/www/ghost/content/logs
     chown -R ghost-mgr: /var/www/ghost
