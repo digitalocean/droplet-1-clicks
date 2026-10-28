@@ -34,7 +34,7 @@ install_herdr() {
 
 install_claude() {
     echo "Installing Claude Code ${claude_code_version}..."
-    run_remote_installer https://claude.ai/install.sh bash -- "${claude_code_version}"
+    run_remote_installer https://claude.ai/install.sh bash "${claude_code_version}"
     if [ ! -x /root/.local/bin/claude ]; then
         echo "Error: Claude Code binary not found at /root/.local/bin/claude" >&2
         exit 1
@@ -59,7 +59,7 @@ install_codex() {
 
 install_opencode() {
     echo "Installing OpenCode ${opencode_version}..."
-    run_remote_installer https://opencode.ai/install bash -- --version "${opencode_version}" --no-modify-path
+    run_remote_installer https://opencode.ai/install bash --version "${opencode_version}" --no-modify-path
     if [ ! -x /root/.opencode/bin/opencode ]; then
         echo "Error: OpenCode binary not found at /root/.opencode/bin/opencode" >&2
         exit 1
@@ -72,7 +72,7 @@ install_grok() {
     echo "Installing Grok Build ${grok_build_version}..."
     export GROK_BIN_DIR="/opt/grok/bin"
     mkdir -p "$GROK_BIN_DIR"
-    run_remote_installer https://x.ai/cli/install.sh bash -- "${grok_build_version}"
+    run_remote_installer https://x.ai/cli/install.sh bash "${grok_build_version}"
     if [ ! -x "${GROK_BIN_DIR}/grok" ]; then
         echo "Error: Grok Build binary not found at ${GROK_BIN_DIR}/grok" >&2
         exit 1

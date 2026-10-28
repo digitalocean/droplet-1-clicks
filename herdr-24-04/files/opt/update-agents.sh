@@ -12,7 +12,7 @@ export GROK_BIN_DIR="${GROK_BIN_DIR:-/opt/grok/bin}"
 source /opt/run-remote-installer.sh
 
 echo "Updating Claude Code..."
-run_remote_installer https://claude.ai/install.sh bash -- latest
+run_remote_installer https://claude.ai/install.sh bash latest
 ln -sfn /root/.local/bin/claude /usr/local/bin/claude
 
 echo "Updating Codex CLI..."
@@ -25,7 +25,7 @@ rm -rf "$tmpdir"
 install -m 0755 /opt/codex-bin-wrapper.sh /usr/local/bin/codex
 
 echo "Updating OpenCode..."
-run_remote_installer https://opencode.ai/install bash -- --no-modify-path
+run_remote_installer https://opencode.ai/install bash --no-modify-path
 ln -sfn /root/.opencode/bin/opencode /usr/local/bin/opencode
 
 echo "Updating Grok Build..."
