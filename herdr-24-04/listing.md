@@ -41,7 +41,7 @@ The agents do most of their work at the model provider. The Droplet needs enough
 - **Ubuntu 24.04 LTS** — Base operating system
 - **Herdr 0.9.3** — Terminal runtime for coding agents (`herdr.service`)
 - **Claude Code 2.1.289** — Anthropic coding agent
-- **Codex CLI 0.160.0** — OpenAI coding agent
+- **Codex CLI 0.165.0** — OpenAI coding agent
 - **OpenCode 1.18.34** — Open-source coding agent
 - **Grok Build 1.0.46** — xAI coding agent
 - **Kilo Code CLI 7.8.3** — Kilo coding agent
@@ -164,7 +164,7 @@ Stopping the server ends live panes. Herdr restores the saved layout on the next
 
 - **Herdr binary**: `/usr/local/bin/herdr`
 - **systemd unit**: `/etc/systemd/system/herdr.service`
-- **Agent binaries**: `/usr/local/bin/claude`, `codex`, `opencode`, `grok`, `kilo`, `cursor-agent`
+- **Agent binaries**: `/usr/local/bin/claude`, `codex`, `opencode`, `grok`, `cursor-agent` (Kilo Code CLI: `/usr/bin/kilo`)
 - **Getting started guide**: `cat /root/herdr_info.txt`
 - **Workspace directory**: `/root/workspace`
 
@@ -188,7 +188,7 @@ Open a new login shell, or run the binary directly:
 /usr/local/bin/codex --version
 /usr/local/bin/opencode --version
 /usr/local/bin/grok --version
-/usr/local/bin/kilo --version
+/usr/bin/kilo --version
 /usr/local/bin/cursor-agent --version
 ```
 
