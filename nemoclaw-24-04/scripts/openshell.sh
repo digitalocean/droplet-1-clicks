@@ -23,8 +23,14 @@ sudo apt install docker-ce docker-ce-cli containerd.io -y
 # 0.1.3) break onboard, and a missing /usr/bin package after a partial remove
 # also fails package-managed gateway adoption.
 
-# Keep current Node (nvm "node" alias) so OpenClaw / auto-update paths that
-# require Node >=24.16 or >=26.1 stay satisfied. NemoClaw itself only needs >=22.19.
+# Install latest Node 24.x via nvm (not floating Current "node").
+# CVE-2026-111497 (Brotli RCE; trackers VULN-5695 / VULN-5716): require maj 24
+# at or above NODE_CVE_MIN. Raise NODE_CVE_MIN for future Node CVEs; never
+# remove the fail-closed check. Do not switch back to "nvm install node".
+# (Also fixed upstream in 22.23.4 / 26.12.1; this image stays on 24.x.)
+# OpenClaw / auto-update need >=24.16; NemoClaw itself only needs >=22.19.
+export NODE_CVE_MIN=24.22.1
+
 curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
 
 export NVM_DIR="$HOME/.nvm"
@@ -36,9 +42,46 @@ export NVM_DIR="$HOME/.nvm"
   echo '[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"'
 } >> ~/.bashrc
 
-nvm install node
-nvm use node
-nvm alias default node
+nvm install 24
+nvm use 24
+nvm alias default 24
+
+# Fail the Packer build if nvm did not land a patched 24.x.
+node -e '
+  function ge(a, b) {
+    const pa = String(a).split(".").map((x) => parseInt(x, 10) || 0);
+    const pb = String(b).split(".").map((x) => parseInt(x, 10) || 0);
+    for (let i = 0; i < 3; i++) {
+      if ((pa[i] || 0) > (pb[i] || 0)) return true;
+      if ((pa[i] || 0) < (pb[i] || 0)) return false;
+    }
+    return true;
+  }
+  const min = process.env.NODE_CVE_MIN;
+  if (!min || !/^\d+\.\d+\.\d+$/.test(min)) {
+    console.error(
+      "ERROR: NODE_CVE_MIN is missing or invalid: " + JSON.stringify(min)
+    );
+    process.exit(1);
+  }
+  const v = process.versions.node;
+  const maj = parseInt(v.split(".")[0], 10);
+  if (maj !== 24) {
+    console.error(
+      "ERROR: Node " + v +
+      " is major " + maj + " (need Node 24.x >= " + min + ")"
+    );
+    process.exit(1);
+  }
+  if (!ge(v, min)) {
+    console.error(
+      "ERROR: Node " + v +
+      " is below CVE floor " + min + " (need Node 24.x >= " + min + ")"
+    );
+    process.exit(1);
+  }
+  console.log("Node v" + v + " meets CVE floor (>= " + min + " on 24.x)");
+'
 
 # Install NemoClaw the way NVIDIA's installer does — not `npm install -g git+...`.
 # Global git installs run package prepare, which calls npm-link-or-shim while npm is
@@ -60,6 +103,12 @@ git -C "$NEMOCLAW_SRC" fetch --quiet --depth 1 origin "+${APP_VERSION}:refs/nemo
 git -C "$NEMOCLAW_SRC" -c advice.detachedHead=false checkout --quiet --detach refs/nemoclaw-install/target
 # Shallow clone only has the requested ref; fetch version tags for `git describe`.
 git -C "$NEMOCLAW_SRC" fetch --depth=1 origin 'refs/tags/v*:refs/tags/v*' 2>/dev/null || true
+
+# CVE-2026-111497: patch local Dockerfiles (defense-in-depth). Runtime sandbox
+# Node is fixed after onboard via in-place inject in setup_wizard.sh.
+chmod +x /opt/patch-nemoclaw-sandbox-node.sh
+/opt/patch-nemoclaw-sandbox-node.sh self-test
+/opt/patch-nemoclaw-sandbox-node.sh patch "$NEMOCLAW_SRC"
 
 export NEMOCLAW_INSTALLING=1
 cd "$NEMOCLAW_SRC"

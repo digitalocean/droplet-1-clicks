@@ -1,0 +1,24 @@
+# OPTIONAL / MANUAL ONLY — not used by Packer or setup_wizard.sh.
+#
+# Marketplace remediations is: /opt/patch-nemoclaw-sandbox-node.sh
+#   (injects only /usr/local/bin/node into the running OpenShell sandbox).
+#
+# Use this Dockerfile only if you intentionally rebuild a derived sandbox image
+# offline. Do not COPY all of /usr/local (that wipes OpenClaw under
+# /usr/local/lib/node_modules).
+#
+#   docker tag <local-sandbox-image-id> nemoclaw-do-cve-src:local
+#   docker build -t nemoclaw-do-cve-node:24.22.1 \
+#     --build-arg BASE_IMAGE=nemoclaw-do-cve-src:local \
+#     -f /opt/Dockerfile.sandbox-node-cve /opt
+#
+# BASE_IMAGE must be a local name:tag (not a raw sha256: id).
+
+ARG BASE_IMAGE=nemoclaw-do-cve-src:local
+FROM node:24.22.1-trixie-slim@sha256:43b9ba1142b8dcf33fa8f922ca1be85714adc444e0586c7cf7726daaeabc1bea AS node
+
+FROM ${BASE_IMAGE}
+USER root
+COPY --from=node /usr/local/bin/node /usr/local/bin/node
+RUN node -v \
+  && node -e 'if (process.versions.node !== "24.22.1") process.exit(1)'

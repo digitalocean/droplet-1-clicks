@@ -41,6 +41,11 @@
       "destination": "/etc/"
     },
     {
+      "type": "file",
+      "source": "nemoclaw-24-04/files/opt/",
+      "destination": "/opt/"
+    },
+    {
       "type": "shell",
       "environment_vars": [
         "DEBIAN_FRONTEND=noninteractive",
