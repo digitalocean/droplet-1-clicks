@@ -1,0 +1,32 @@
+# Settings for hypr-rdp, sourced by /usr/local/bin/omarchy-rdp-server.
+# Apply changes with:  systemctl --user restart hypr-rdp
+
+# Where the server listens. Set this to 127.0.0.1:3389 to take the desktop off
+# the public internet and reach it through an SSH tunnel instead; also drop the
+# firewall rule with `sudo ufw delete limit 3389/tcp`. It is a variable of its
+# own because hypr-rdp rejects a repeated --bind outright, so putting one in
+# OPTIONS below cannot override the default.
+#BIND="0.0.0.0:3389"
+
+# Extra flags, passed through verbatim. Empty by default on purpose: the client
+# then negotiates its own resolution, so the desktop is captured at the size
+# your screen actually is. Pinning --resolution below the client's size makes
+# the session arrive upscaled and soft.
+#
+# Useful knobs (see `hypr-rdp --help` for the full list):
+#
+#   --fps 30                Cap the capture rate. Lower is cheaper on CPU.
+#   --bitrate 8000000       H.264 target bitrate in bits per second.
+#   --quality 24            H.264 quantizer, 0-51. Lower looks better, costs more.
+#   --max-frames-in-flight 4
+#                           Unacknowledged frames allowed on the wire. Raising it
+#                           helps on a high-latency link (a distant region) at the
+#                           cost of input feeling less immediate.
+#   --audio-mode off        Disable audio forwarding.
+#   --capture-mode ext      Use ext-image-copy-capture-v1 instead of the default
+#                           wlr-screencopy-v1.
+#
+# Graphics on a standard droplet are CPU-rendered, so encoder settings compete
+# with the desktop itself for the same cores.
+
+OPTIONS=""
