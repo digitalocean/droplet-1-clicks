@@ -1,4 +1,5 @@
-#!/bin/sh
+#!/bin/bash
+set -euo pipefail
 
 # Generate unique SECRET_KEY_BASE for this droplet
 if grep -q "PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT" /opt/campfire.env 2>/dev/null; then
@@ -7,6 +8,28 @@ if grep -q "PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT" /opt/campfire.env 2>/dev
     sed -i "s/SECRET_KEY_BASE=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT/SECRET_KEY_BASE=$NEW_SECRET_KEY_BASE/" /opt/campfire.env
     echo "SECRET_KEY_BASE generated successfully."
 fi
+
+# Configure Caddy with this droplet's public IP for shortlived HTTPS
+meta() { curl -fsS --retry 10 --retry-connrefused --max-time 2 "$1"; }
+DROPLET_PUBLIC_IP="$(meta http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)"
+DROPLET_PRIVATE_IP="$(hostname -I | awk '{print $1}')"
+DROPLET_IP="${DROPLET_PUBLIC_IP:-$DROPLET_PRIVATE_IP}"
+
+if [ -z "${DROPLET_IP}" ]; then
+    echo "ERROR: Unable to determine droplet IP; cannot configure Caddy." >&2
+    exit 1
+fi
+
+if [ ! -f /etc/caddy/Caddyfile.tmp ]; then
+    echo "ERROR: Missing /etc/caddy/Caddyfile.tmp; cannot configure Caddy." >&2
+    exit 1
+fi
+
+sed "s/PLACEHOLDER_DOMAIN/${DROPLET_IP}/" /etc/caddy/Caddyfile.tmp > /etc/caddy/Caddyfile
+
+# Pick up caddy.service.d override (After/Wants docker) before first start.
+systemctl daemon-reload
+systemctl enable caddy
 
 # Remove the ssh force logout command
 sed -e '/Match User root/d' \
@@ -26,7 +49,7 @@ start_campfire_fallback() {
     docker run \
         --detach \
         --name campfire \
-        --publish 80:80 --publish 443:443 \
+        --publish 127.0.0.1:8080:80 \
         --restart unless-stopped \
         --volume campfire:/rails/storage \
         --env-file /opt/campfire.env \
@@ -90,3 +113,23 @@ if [ -x "/opt/restart-campfire.sh" ]; then
 else
     echo "Restart script not found. Skipping Campfire restart."
 fi
+
+echo "Waiting for Campfire to accept connections on 127.0.0.1:8080..."
+campfire_ready=false
+k=0
+while [ "$k" -lt 30 ]; do
+    if curl -fsS --max-time 2 "http://127.0.0.1:8080/" >/dev/null 2>&1; then
+        campfire_ready=true
+        break
+    fi
+    k=$((k + 1))
+    sleep 2
+done
+
+if [ "${campfire_ready}" != true ]; then
+    echo "WARNING: Campfire did not respond on 127.0.0.1:8080 within 60s; starting Caddy anyway (clients may see 502 until the app is up)." >&2
+fi
+
+echo "Starting Caddy (HTTPS reverse proxy to Campfire on 127.0.0.1:8080)..."
+systemctl daemon-reload
+systemctl restart caddy

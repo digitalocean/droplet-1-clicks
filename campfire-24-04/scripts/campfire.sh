@@ -1,18 +1,36 @@
-#!/bin/sh
+#!/bin/bash
+set -euo pipefail
 
-# open port for clients
-ufw allow 80
-ufw allow 443
-ufw limit ssh/tcp
-ufw --force enable
+# Defense in depth: Campfire binds to 127.0.0.1:8080, but deny the port publicly
+# in case a later misconfiguration publishes it on all interfaces.
+ufw deny 8080/tcp comment 'Campfire app: reach via Caddy on 443' || true
+
+echo "==> Enabling Docker..."
+systemctl enable docker
+systemctl start docker
+
+echo "==> Installing Caddy..."
+curl -1sLf "https://dl.cloudsmith.io/public/caddy/stable/gpg.key" \
+  | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+echo "deb [signed-by=/usr/share/keyrings/caddy-stable-archive-keyring.gpg] https://dl.cloudsmith.io/public/caddy/stable/deb/debian any-version main" \
+  > /etc/apt/sources.list.d/caddy-stable.list
+apt-get update -y
+apt-get install -y caddy
+
+mkdir -p /var/log/caddy
+chown -R caddy:caddy /var/log/caddy
+# Caddyfile.tmp is swapped for the real Caddyfile on first boot (droplet IP).
+systemctl disable --now caddy || true
 
 # git clone the repo
 cd /opt && git clone https://github.com/basecamp/once-campfire.git
 
-# Create environment file (SECRET_KEY_BASE will be generated on first boot)
-cat > /opt/campfire.env << EOF
+# Create environment file (SECRET_KEY_BASE will be generated on first boot).
+# TLS is terminated by host Caddy (shortlived IP certs / custom domain); keep SSL
+# disabled inside the container and publish only to loopback.
+cat > /opt/campfire.env << 'ENVEOF'
 # Campfire Environment Configuration
-# 
+#
 # After making changes to this file, restart Campfire with:
 #   /opt/restart-campfire.sh
 
@@ -20,7 +38,7 @@ cat > /opt/campfire.env << EOF
 # This will be automatically generated on first boot for security
 SECRET_KEY_BASE=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT
 
-# Disable SSL/TLS termination in the container (useful when using a reverse proxy)
+# Disable SSL/TLS termination in the container (Caddy on the host terminates TLS)
 DISABLE_SSL=true
 
 # Web Push notification public key (uncomment and set for push notifications)
@@ -28,10 +46,7 @@ DISABLE_SSL=true
 
 # Web Push notification private key (uncomment and set for push notifications)
 # VAPID_PRIVATE_KEY=$YOUR_PRIVATE_KEY
-
-# Domain name for automatic SSL certificate generation (uncomment and set your domain)
-# TLS_DOMAIN=chat.example.com
-EOF
+ENVEOF
 
 # BuildKit + buildx required for COPY --chmod in once-campfire Dockerfile
 # (Ubuntu docker.io does not ship a working buildx by default).
@@ -42,136 +57,21 @@ if ! docker buildx version >/dev/null 2>&1; then
 fi
 cd /opt/once-campfire && DOCKER_BUILDKIT=1 docker build -t campfire .
 
-# Get the latest version of campfire
+# Warm the image: loopback-only publish; public HTTPS is via Caddy after onboot.
 cd /opt/once-campfire && docker run \
   --detach \
   --name campfire \
-  --publish 80:80 --publish 443:443 \
+  --publish 127.0.0.1:8080:80 \
   --restart unless-stopped \
   --volume campfire:/rails/storage \
   --env-file /opt/campfire.env \
   campfire
 
-# Create a helper script to restart Campfire with updated environment
-cat > /opt/restart-campfire.sh << 'EOF'
-#!/bin/bash
-set -euo pipefail
-
-echo "Stopping and removing existing Campfire container..."
-docker stop campfire 2>/dev/null || true
-docker rm campfire 2>/dev/null || true
-
-echo "Starting Campfire with updated environment..."
-# ! binds only to the next pipeline; wrap so both cd and docker run are negated.
-if ! (cd /opt/once-campfire && docker run \
-  --detach \
-  --name campfire \
-  --publish 80:80 --publish 443:443 \
-  --restart unless-stopped \
-  --volume campfire:/rails/storage \
-  --env-file /opt/campfire.env \
-  campfire); then
-  echo "❌ Error: Failed to start Campfire container" >&2
-  exit 1
-fi
-
-# docker run -d can succeed even if the process exits immediately
-for _ in $(seq 1 15); do
-  if [ "$(docker inspect -f '{{.State.Running}}' campfire 2>/dev/null)" = "true" ]; then
-    echo "Campfire restarted successfully!"
-    exit 0
-  fi
-  sleep 1
-done
-
-echo "❌ Error: Campfire container is not running after start" >&2
-exit 1
-EOF
-
-# Create an update script to update Campfire to latest version
-cat > /opt/update-campfire.sh << 'EOF'
-#!/bin/bash
-
-# Campfire Update Script
-# Pulls latest once-campfire, rebuilds the image, then cuts over.
-# Keeps the existing container running until the new image build succeeds
-# so a failed/slow rebuild does not leave the droplet with no Campfire.
-
-echo "Updating Campfire to latest version..."
-
-if [ ! -d "/opt/once-campfire" ]; then
-    echo "Error: Campfire installation directory not found at /opt/once-campfire"
-    exit 1
-fi
-
-cd /opt/once-campfire
-
-echo "Pulling latest code from GitHub..."
-if ! git pull origin main; then
-    echo "ℹ️  git pull failed; leaving running container as-is."
-    exit 1
-fi
-
-echo "Rebuilding Campfire image (existing container kept until build succeeds)..."
-# BuildKit + buildx required for COPY --chmod in once-campfire Dockerfile
-ensure_docker_buildx() {
-  if docker buildx version >/dev/null 2>&1; then
-    return 0
-  fi
-  echo "Installing docker-buildx (required for Campfire image builds)..."
-  export DEBIAN_FRONTEND=noninteractive
-  apt-get update -qq
-  apt-get install -y -qq docker-buildx
-  docker buildx version >/dev/null 2>&1
-}
-
-if ! ensure_docker_buildx; then
-  echo "❌ Error: docker-buildx is missing/broken; cannot rebuild Campfire image." >&2
-  echo "   Install with: apt-get install -y docker-buildx" >&2
-  exit 1
-fi
-
-if ! DOCKER_BUILDKIT=1 docker build -t campfire .; then
-    echo "❌ Error: Failed to rebuild Campfire image; leaving running container as-is."
-    exit 1
-fi
-
-echo "Starting Campfire with updated image..."
-if [ -x "/opt/restart-campfire.sh" ] && /opt/restart-campfire.sh; then
-    echo "✅ Campfire updated and restarted successfully!"
-    exit 0
-fi
-
-if [ -x "/opt/restart-campfire.sh" ]; then
-    echo "⚠️  /opt/restart-campfire.sh failed; attempting fallback docker run..." >&2
-fi
-
-docker stop campfire 2>/dev/null || true
-docker rm campfire 2>/dev/null || true
-if ! docker run \
-  --detach \
-  --name campfire \
-  --publish 80:80 --publish 443:443 \
-  --restart unless-stopped \
-  --volume campfire:/rails/storage \
-  --env-file /opt/campfire.env \
-  campfire; then
-  echo "❌ Error: Failed to start Campfire" >&2
-  exit 1
-fi
-
-# docker run -d can succeed even if the process exits immediately
-for _ in $(seq 1 15); do
-  if [ "$(docker inspect -f '{{.State.Running}}' campfire 2>/dev/null)" = "true" ]; then
-    echo "✅ Campfire updated and restarted successfully!"
-    exit 0
-  fi
-  sleep 1
-done
-
-echo "❌ Error: Campfire container is not running after fallback start" >&2
-exit 1
-EOF
-
+echo "==> Setting script permissions..."
 chmod +x /opt/restart-campfire.sh
 chmod +x /opt/update-campfire.sh
+chmod +x /opt/setup-campfire-domain.sh
+chmod +x /etc/update-motd.d/99-one-click
+chmod +x /var/lib/cloud/scripts/per-instance/001_onboot
+
+echo "==> Campfire setup complete."

@@ -1,0 +1,12 @@
+PLACEHOLDER_DOMAIN {
+    tls {
+        issuer acme {
+            dir https://acme-v02.api.letsencrypt.org/directory
+            profile shortlived
+        }
+    }
+    # Campfire (ActionCable / WebSockets / SSE) — Caddy reverse_proxy handles Upgrade by default.
+    # Pin 127.0.0.1 so the upstream is IPv4 loopback (app is bound to 127.0.0.1:8080).
+    reverse_proxy 127.0.0.1:8080
+    header X-DO-MARKETPLACE "campfire"
+}
