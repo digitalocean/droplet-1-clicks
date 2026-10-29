@@ -1,6 +1,8 @@
 # Django 1-Click
 
-Deploy Django on Ubuntu 24.04 with PostgreSQL, Gunicorn, and Nginx. By default, PostgreSQL runs locally. You can optionally attach a DigitalOcean Managed PostgreSQL database during deployment.
+Deploy Django on Ubuntu 24.04 with PostgreSQL, Gunicorn, Nginx, and Caddy. By default, PostgreSQL runs locally. You can optionally attach a DigitalOcean Managed PostgreSQL database during deployment.
+
+**Stack (Option A):** Caddy terminates HTTPS on ports 80/443 (Let's Encrypt shortlived TLS for the Droplet IP) and reverse-proxies to Nginx on `127.0.0.1:8080`. Nginx continues to serve static/media and proxy application requests to Gunicorn.
 
 ## Getting Started
 
@@ -9,11 +11,11 @@ Deploy Django on Ubuntu 24.04 with PostgreSQL, Gunicorn, and Nginx. By default, 
 3. Optionally select **Add a Database** to provision a Managed PostgreSQL database (see below)
 4. Create the Droplet and SSH in as `root`
 
-On first boot, a sample Django project is created and started automatically.
+On first boot, a sample Django project is created and started automatically. Caddy is configured for HTTPS using the Droplet's public IP.
 
 **Django admin:**
 
-- **URL:** `http://your-droplet-ip/admin`
+- **URL:** `https://your-droplet-ip/admin`
 - **Username:** `django` (see `/root/.digitalocean_passwords`)
 - **Password:** stored in `/root/.digitalocean_passwords`
 
@@ -57,12 +59,24 @@ Your Droplet is not automatically added to the Managed Database's trusted source
 - **Django project:** `/home/django/django_project`
 - **Passwords and keys:** `/root/.digitalocean_passwords`
 - **Setup log:** `/var/log/one_click_setup.log`
+- **Caddy config:** `/etc/caddy/Caddyfile`
+- **Nginx (loopback) config:** `/etc/nginx/sites-enabled/default`
+
+## HTTPS and custom domains
+
+Caddy manages TLS automatically (shortlived Let's Encrypt certificates work with the Droplet IP). After pointing a DNS A/AAAA record at the Droplet, run:
+
+```shell
+/opt/setup-django-domain.sh
+```
+
+That updates the Caddyfile and appends the domain to `ALLOWED_HOSTS` / `CSRF_TRUSTED_ORIGINS` in the live `/home/django/django_project/django_project/settings.py`.
 
 # Get your code on here
 
 Clone your Django code onto the droplet, anywhere you like. Note: If you're not using a source control, you can directly upload the files to your droplet using SFTP.
 
-You can try to reuse this project, located in `/home/django/django_project`, or start fresh in a new location and edit Gunicorn's configuration to point to it at `/etc/systemd/system/gunicorn.service`. You can also change how nginx is routing traffic by editing `/etc/nginx/sites-enabled/default`
+You can try to reuse this project, located in `/home/django/django_project`, or start fresh in a new location and edit Gunicorn's configuration to point to it at `/etc/systemd/system/gunicorn.service`. You can also change how Nginx is routing traffic by editing `/etc/nginx/sites-enabled/default`, or TLS/proxy settings in `/etc/caddy/Caddyfile`.
 
 Cd into the directory where your Django code lives, and install any dependencies. (For example, if you have a `requirements.txt` file, run `pip install -r requirements.txt`.)
 
