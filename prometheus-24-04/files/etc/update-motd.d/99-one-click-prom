@@ -8,12 +8,24 @@ cat <<EOF
 
 Welcome to the Prometheus Droplet!
 
-In the browser, you can visit Prometheus at http://$myip:9090/
+In the browser, you can visit Prometheus at https://$myip/
+
+Prometheus listens on 127.0.0.1:9090 and is exposed publicly over HTTPS via Caddy
+on ports 80/443 (Let's Encrypt short-lived IP certificates).
+
+Configuration: /etc/prometheus/prometheus.yml
+Caddy config:  /etc/caddy/Caddyfile
+
+Management:
+  systemctl status prometheus caddy
+  systemctl restart prometheus
+  systemctl restart caddy
+
+Custom domain TLS:
+  sudo /opt/setup-prometheus-domain.sh
 
 For documentation visit: https://prometheus.io/docs/introduction/overview/
 For help and more info visit: https://prometheus.io/community/
-
-The configuration file for prometheus is located at /etc/prometheus/prometheus.yml
 
 ********************************************************************************
 To delete this message of the day: rm -rf $(readlink -f ${0})
