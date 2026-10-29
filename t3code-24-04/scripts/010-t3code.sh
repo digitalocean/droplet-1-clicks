@@ -32,6 +32,25 @@ run_as_t3() {
     PATH="$T3_PATH" bash -lc "cd '$T3_HOME' && $*"
 }
 
+install_script_as_t3() {
+  # Fetches a vendor install script to disk and runs it as $T3_USER, instead
+  # of piping curl straight into a shell interpreter (curl | bash). This way
+  # a truncated or failed download can't partially execute, and the script
+  # that actually runs is sitting on disk the whole time, so it can be
+  # inspected or hashed if that's ever needed.
+  #
+  # Usage: install_script_as_t3 <url> <interpreter> [args for the script...]
+  # <interpreter> may include a leading env assignment, e.g. "FOO=bar sh".
+  local url="$1" interpreter="$2"
+  shift 2
+  local script
+  script="$(mktemp)"
+  curl -fsSL "$url" -o "$script"
+  chmod 644 "$script"
+  run_as_t3 "$interpreter '$script' $*"
+  rm -f "$script"
+}
+
 link_bin() {
   local name="$1"
   shift
@@ -121,6 +140,32 @@ for group in range_text.split("||"):
         raise SystemExit(0)
 raise SystemExit(1)
 ' "$1" "$2"
+}
+
+read_resolved_values() {
+  local resolved="$1" line key value
+
+  while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+
+    if [[ "$line" != *=* ]]; then
+      echo "Invalid resolved entry" >&2
+      return 1
+    fi
+
+    key="${line%%=*}"
+    value="${line#*=}"
+
+    case "$key" in
+      application_version|claude_version|codex_version|cursor_version|cursor_version_range|grok_version|grok_version_range|opencode_version|pi_version|fx_version|antigravity_version|antigravity_sha256_amd64|antigravity_sha256_arm64|node_version)
+        printf -v "$key" '%s' "$value"
+        ;;
+      *)
+        echo "Unexpected resolved key: $key" >&2
+        return 1
+        ;;
+    esac
+  done <<< "$resolved"
 }
 
 echo "Resolving T3 Code and provider versions..."
@@ -331,8 +376,7 @@ for key, value in out.items():
     print(f"{key}={value}")
 PY
 )"
-# shellcheck disable=SC1090
-eval "$resolved"
+read_resolved_values "$resolved" || exit 1
 install -d /var/lib/digitalocean
 printf '%s\n' "$resolved" > /var/lib/digitalocean/t3code-resolved.env
 chmod 644 /var/lib/digitalocean/t3code-resolved.env
@@ -401,17 +445,17 @@ chown -R "${T3_USER}:${T3_USER}" "$T3_HOME"
 echo "Installing T3 Code v${application_version}..."
 # install.sh prepends "v" itself. T3CODE_VERSION=v0.1.3 requests vv0.1.3 and 404s.
 t3_version="${application_version#v}"
-run_as_t3 "curl -fsSL https://t3.codes/install.sh | T3CODE_VERSION=${t3_version} sh"
+install_script_as_t3 "https://t3.codes/install.sh" "T3CODE_VERSION=${t3_version} sh"
 link_bin t3 "${T3_HOME}/.local/bin/t3"
 require_version /usr/local/bin/t3 "$application_version"
 
 echo "Installing Claude Code ${claude_version}..."
-run_as_t3 "curl -fsSL https://claude.ai/install.sh | bash -s ${claude_version}"
+install_script_as_t3 "https://claude.ai/install.sh" bash "${claude_version}"
 link_bin claude "${T3_HOME}/.local/bin/claude"
 require_version /usr/local/bin/claude "$claude_version"
 
 echo "Installing Codex ${codex_version}..."
-run_as_t3 "curl -fsSL https://github.com/openai/codex/raw/main/scripts/install/install.sh | bash -s -- --release ${codex_version}"
+install_script_as_t3 "https://github.com/openai/codex/raw/main/scripts/install/install.sh" bash --release "${codex_version}"
 link_bin codex \
   "${T3_HOME}/.local/bin/codex" \
   "${T3_HOME}/.codex/bin/codex"
@@ -419,9 +463,9 @@ require_version /usr/local/bin/codex "$codex_version"
 
 echo "Installing Grok Build ${grok_version}..."
 if want_latest "$grok_version"; then
-  run_as_t3 "curl -fsSL https://x.ai/cli/install.sh | bash"
+  install_script_as_t3 "https://x.ai/cli/install.sh" bash
 else
-  run_as_t3 "curl -fsSL https://x.ai/cli/install.sh | bash -s -- ${grok_version}"
+  install_script_as_t3 "https://x.ai/cli/install.sh" bash "${grok_version}"
 fi
 link_bin grok "${T3_HOME}/.grok/bin/grok"
 if want_latest "$grok_version"; then
@@ -442,7 +486,7 @@ case "$cursor_arch" in
   *) echo "Unsupported architecture for Cursor Agent: $(uname -m)" >&2; exit 1 ;;
 esac
 if want_latest "$cursor_version"; then
-  run_as_t3 "curl -fsSL https://cursor.com/install | bash"
+  install_script_as_t3 "https://cursor.com/install" bash
   link_bin cursor-agent \
     "${T3_HOME}/.local/bin/cursor-agent" \
     "${T3_HOME}/.local/bin/agent"
@@ -481,7 +525,7 @@ opencode_major="${opencode_major%%.*}"
 if [ "${opencode_major:-0}" -ge 2 ] 2>/dev/null; then
   opencode_install_url="https://opencode.ai/v2/install"
 fi
-run_as_t3 "curl -fsSL ${opencode_install_url} | bash -s -- --version ${opencode_version} --no-modify-path"
+install_script_as_t3 "$opencode_install_url" bash --version "${opencode_version}" --no-modify-path
 link_bin opencode \
   "${T3_HOME}/.opencode/bin/opencode" \
   "${T3_HOME}/.local/bin/opencode"
@@ -493,7 +537,7 @@ link_bin pi /usr/local/bin/pi /usr/bin/pi "$(npm prefix -g)/bin/pi"
 require_version /usr/local/bin/pi "$pi_version"
 
 echo "Installing Muse Code (stable channel; the installer has no version pin)..."
-run_as_t3 "curl -fsSL https://dev.meta.ai/install.sh | bash"
+install_script_as_t3 "https://dev.meta.ai/install.sh" bash
 link_bin muse \
   "${T3_HOME}/.local/bin/muse" \
   "${T3_HOME}/.muse/bin/muse"
@@ -506,7 +550,7 @@ case "$fx_release" in
   v*) ;;
   *) fx_release="v${fx_release}" ;;
 esac
-run_as_t3 "curl -fsSL https://fx.sh/setup.sh | FX_INSTALL_DIR=${T3_HOME}/.local/bin bash -s -- ${fx_release}"
+install_script_as_t3 "https://fx.sh/setup.sh" "FX_INSTALL_DIR=${T3_HOME}/.local/bin bash" "${fx_release}"
 link_bin fx "${T3_HOME}/.local/bin/fx"
 require_version /usr/local/bin/fx "${fx_version#v}"
 
