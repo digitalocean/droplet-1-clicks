@@ -1,0 +1,33 @@
+[Unit]
+Description=Paperclip AI Agent Orchestration
+Documentation=https://github.com/paperclipai/paperclip
+After=network-online.target postgresql.service
+Wants=network-online.target postgresql.service
+
+[Service]
+Type=simple
+User=paperclip
+Group=paperclip
+WorkingDirectory=/home/paperclip
+Environment=HOME=/home/paperclip
+Environment=PAPERCLIP_HOME=/home/paperclip/.paperclip
+Environment=PAPERCLIP_INSTANCE_ID=default
+Environment=PAPERCLIP_NO_BROWSER=1
+Environment=PAPERCLIP_OPEN_ON_LISTEN=false
+Environment=TRUST_PROXY=1
+Environment=PATH=/home/paperclip/.local/bin:/usr/local/bin:/usr/bin:/bin
+EnvironmentFile=-/opt/paperclip.env
+EnvironmentFile=-/home/paperclip/.paperclip/instances/default/.env
+# --force allows the system unit to run even if a user-service manager check fires
+ExecStart=/home/paperclip/.local/bin/paperclipai run --force
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+LimitNOFILE=65536
+# Local Postgres migrations can take a while on first boot
+TimeoutStartSec=300
+TimeoutStopSec=60
+
+[Install]
+WantedBy=multi-user.target

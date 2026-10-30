@@ -1,0 +1,49 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+pub=$(curl -fsS --retry 3 --retry-connrefused --max-time 3 \
+  http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)
+myip="${pub:-$(hostname -I | awk '{print$1}')}"
+email=$(grep "^ADMIN_EMAIL=" /opt/paperclip.env 2>/dev/null | cut -d= -f2-)
+password=$(grep "^INITIAL_PASSWORD=" /opt/paperclip.env 2>/dev/null | cut -d= -f2-)
+
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's One-Click Paperclip Droplet.
+
+Paperclip is open-source orchestration for teams of AI agents. This image
+prefers DigitalOcean Serverless Inference when you supply a model access key.
+
+🌐 Access:
+  Dashboard: https://$myip
+  Email:     ${email:-admin@paperclip.local}
+  Password:  $password
+
+  Sign in with the email and password above.
+  Credentials file: /opt/paperclip.env (ADMIN_EMAIL / INITIAL_PASSWORD)
+
+📝 First steps:
+  1. Open the Dashboard and sign in
+  2. Complete the SSH setup wizard for DigitalOcean Serverless Inference
+     (optional: Intelligent Inference Router), or set MODEL_ACCESS_KEY
+  3. Create a company, hire agents, and set a goal in the UI
+
+🔧 Management:
+  Restart:  /opt/restart-paperclip.sh
+  Status:   /opt/status-paperclip.sh
+  Update:   /opt/update-paperclip.sh
+  Domain:   /opt/setup-paperclip-domain.sh
+  Setup:    /etc/setup_wizard.sh
+  Logs:     journalctl -u paperclip -f
+
+  systemctl {start|stop|restart|status} paperclip
+  journalctl -u paperclip -f
+
+📚 Docs: https://github.com/paperclipai/paperclip
+🔗 Site: https://paperclip.ing
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF

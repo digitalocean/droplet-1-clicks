@@ -1,0 +1,403 @@
+#!/bin/bash
+set -euo pipefail
+
+set -a
+# shellcheck source=/dev/null
+source /etc/environment 2>/dev/null || true
+set +a
+
+ENV_FILE=/opt/paperclip.env
+INFO_FILE=/root/paperclip_info.txt
+INVITE_FILE=/root/paperclip_bootstrap_invite.txt
+
+write_env_kv() {
+  local key="$1" val="$2" tmp
+  touch "$ENV_FILE"
+  tmp="$(mktemp)"
+  # Avoid sed replacements: values may contain & \ | etc.
+  while IFS= read -r line || [ -n "$line" ]; do
+    case "$line" in
+      "${key}="*) ;;
+      *) printf '%s\n' "$line" ;;
+    esac
+  done <"$ENV_FILE" >"$tmp"
+  printf '%s=%s\n' "$key" "$val" >>"$tmp"
+  mv "$tmp" "$ENV_FILE"
+  chmod 600 "$ENV_FILE"
+}
+
+meta() { curl -fsS --retry 10 --retry-connrefused --max-time 2 "$1"; }
+DROPLET_PUBLIC_IP="$(meta http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)"
+DROPLET_PRIVATE_IP="$(hostname -I | awk '{print $1}')"
+DROPLET_IP="${DROPLET_PUBLIC_IP:-$DROPLET_PRIVATE_IP}"
+PUBLIC_URL="https://${DROPLET_IP}"
+
+# Generate per-droplet secrets early (OmniRoute-style) so MOTD/wizard always show Password
+if grep -qE '^INITIAL_PASSWORD=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT$' "$ENV_FILE" 2>/dev/null \
+  || ! grep -qE '^INITIAL_PASSWORD=.' "$ENV_FILE" 2>/dev/null; then
+  echo "Generating Paperclip INITIAL_PASSWORD..."
+  write_env_kv ADMIN_EMAIL "admin@paperclip.local"
+  write_env_kv INITIAL_PASSWORD "$(openssl rand -base64 24 | tr -d '=+/' | cut -c1-24)"
+fi
+if grep -qE '^BETTER_AUTH_SECRET=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT$' "$ENV_FILE" 2>/dev/null \
+  || grep -qE '^PAPERCLIP_TOOL_ACTION_SIGNING_SECRET=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT$' "$ENV_FILE" 2>/dev/null; then
+  echo "Generating Paperclip auth secrets..."
+  write_env_kv BETTER_AUTH_SECRET "$(openssl rand -hex 32)"
+  write_env_kv PAPERCLIP_TOOL_ACTION_SIGNING_SECRET "$(openssl rand -hex 32)"
+fi
+
+# Local Postgres password + DATABASE_URL (required for authenticated/public)
+echo "Configuring local PostgreSQL for Paperclip..."
+if ! command -v psql >/dev/null 2>&1; then
+  export DEBIAN_FRONTEND=noninteractive
+  apt-get update -y
+  apt-get install -y postgresql
+fi
+systemctl enable postgresql
+systemctl start postgresql
+for _ in $(seq 1 60); do
+  if sudo -u postgres pg_isready -q; then
+    break
+  fi
+  sleep 1
+done
+if ! sudo -u postgres pg_isready -q; then
+  echo "ERROR: PostgreSQL did not become ready on first boot" >&2
+  systemctl status postgresql --no-pager -l >&2 || true
+  exit 1
+fi
+# Ensure role/db exist (image bake creates them; tolerate older snapshots)
+if ! sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='paperclip'" | grep -q 1; then
+  sudo -u postgres createuser paperclip
+fi
+if ! sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='paperclip'" | grep -q 1; then
+  sudo -u postgres createdb -O paperclip paperclip
+fi
+# Hex-only password so the connection URL needs no encoding
+if grep -qE '^DATABASE_URL=.*PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT' "$ENV_FILE" 2>/dev/null \
+  || ! grep -qE '^DATABASE_URL=postgres(ql)?://' "$ENV_FILE" 2>/dev/null; then
+  PG_PASS="$(openssl rand -hex 24)"
+  sudo -u postgres psql -v ON_ERROR_STOP=1 -c "ALTER USER paperclip WITH PASSWORD '${PG_PASS}';" >/dev/null
+  write_env_kv DATABASE_URL "postgres://paperclip:${PG_PASS}@127.0.0.1:5432/paperclip"
+fi
+DATABASE_URL="$(grep -E '^DATABASE_URL=' "$ENV_FILE" | tail -n 1 | cut -d= -f2-)"
+if [ -z "$DATABASE_URL" ] || [[ "$DATABASE_URL" == *PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT* ]]; then
+  echo "ERROR: DATABASE_URL was not set to a real postgres:// URL" >&2
+  exit 1
+fi
+
+# Point public URL / allowed hostnames at this droplet IP
+if grep -q "PLACEHOLDER_DOMAIN" "$ENV_FILE" 2>/dev/null; then
+  echo "Configuring Paperclip public URL for ${DROPLET_IP}..."
+  sed -i "s|PLACEHOLDER_DOMAIN|${DROPLET_IP}|g" "$ENV_FILE"
+fi
+write_env_kv PAPERCLIP_PUBLIC_URL "$PUBLIC_URL"
+write_env_kv PAPERCLIP_ALLOWED_HOSTNAMES "$DROPLET_IP"
+write_env_kv PAPERCLIP_AUTH_PUBLIC_BASE_URL "$PUBLIC_URL"
+# Env overrides config.json — keep signup enabled so bootstrap invite Create Account works
+write_env_kv PAPERCLIP_AUTH_DISABLE_SIGN_UP false
+write_env_kv PAPERCLIP_DEPLOYMENT_MODE authenticated
+write_env_kv PAPERCLIP_DEPLOYMENT_EXPOSURE public
+write_env_kv PAPERCLIP_BIND loopback
+write_env_kv HOST 127.0.0.1
+write_env_kv PORT 3100
+write_env_kv TRUST_PROXY 1
+
+# Optional LLM keys from droplet user-data / environment
+for key in OPENAI_API_KEY ANTHROPIC_API_KEY OPENROUTER_API_KEY MODEL_ACCESS_KEY INFERENCE_MODEL DO_INFERENCE_ROUTER; do
+  val="$(printenv "$key" 2>/dev/null || true)"
+  if [ -n "$val" ]; then
+    write_env_kv "$key" "$val"
+  fi
+done
+
+# /etc/environment is world-readable — remove staged secrets after copying to /opt/paperclip.env
+redact_llm_secrets_from_system_environment() {
+  local env_file=/etc/environment tmp
+  [ -f "$env_file" ] || return 0
+  tmp="$(mktemp)"
+  grep -Ev '^(MODEL_ACCESS_KEY|OPENAI_API_KEY|ANTHROPIC_API_KEY|OPENROUTER_API_KEY)=' \
+    "$env_file" >"$tmp" 2>/dev/null || : >"$tmp"
+  mv "$tmp" "$env_file"
+  chmod 644 "$env_file"
+}
+redact_llm_secrets_from_system_environment
+
+# Install Caddyfile and substitute droplet IP for shortlived TLS
+if [ -f /etc/caddy/Caddyfile.tmp ]; then
+  mv /etc/caddy/Caddyfile.tmp /etc/caddy/Caddyfile
+fi
+if grep -q "PLACEHOLDER_DOMAIN" /etc/caddy/Caddyfile 2>/dev/null; then
+  echo "Configuring Caddy with droplet IP address..."
+  sed -i "s/PLACEHOLDER_DOMAIN/${DROPLET_IP}/" /etc/caddy/Caddyfile
+fi
+
+# Write authenticated/public/loopback instance config + secrets key / agent JWT
+chmod +x /opt/write-paperclip-config.sh
+/opt/write-paperclip-config.sh "$PUBLIC_URL" "$DROPLET_IP" "$DATABASE_URL"
+
+verify_postgres_config() {
+  python3 - <<'PY'
+import json, sys
+path = "/home/paperclip/.paperclip/instances/default/config.json"
+cfg = json.load(open(path, encoding="utf-8"))
+db = cfg.get("database") or {}
+mode = db.get("mode")
+conn = db.get("connectionString") or ""
+if mode != "postgres" or not conn.startswith("postgres"):
+    print(f"ERROR: expected database.mode=postgres with connectionString; got mode={mode!r}", file=sys.stderr)
+    sys.exit(1)
+print(f"Verified config database.mode=postgres (connectionString set)")
+PY
+}
+
+# Hard-fail if config still points at embedded Postgres (authenticated/public refuses it)
+verify_postgres_config
+
+# Validate instance before starting systemd unit (no --repair: it can rewrite DB mode)
+echo "Running paperclipai doctor..."
+if ! su - paperclip -c "paperclipai doctor" >/root/paperclip_doctor.txt 2>&1; then
+  echo "Warning: paperclipai doctor reported issues; see /root/paperclip_doctor.txt" >&2
+fi
+chmod 600 /root/paperclip_doctor.txt 2>/dev/null || true
+
+# Re-assert postgres contract after doctor (guards against accidental config drift)
+verify_postgres_config
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl daemon-reload
+systemctl enable caddy
+systemctl enable paperclip
+systemctl enable postgresql
+systemctl restart caddy
+systemctl restart paperclip
+
+# Wait for Postgres + API health before bootstrap invite
+echo "Waiting for Paperclip to become healthy..."
+HEALTH_OK=0
+for i in $(seq 1 90); do
+  if curl -fsS --max-time 3 "http://127.0.0.1:3100/api/health" >/dev/null 2>&1; then
+    HEALTH_OK=1
+    break
+  fi
+  # Surface crash-loop reasons early in first-boot logs
+  if [ "$((i % 15))" -eq 0 ]; then
+    echo "Still waiting for health... recent paperclip logs:" >&2
+    journalctl -u paperclip -n 20 --no-pager >&2 || true
+  fi
+  sleep 2
+done
+
+INVITE_URL=""
+ADMIN_CLAIMED=0
+# Reuse password generated at top of first boot (already in /opt/paperclip.env for MOTD)
+ADMIN_EMAIL="$(grep -E '^ADMIN_EMAIL=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d= -f2-)"
+ADMIN_EMAIL="${ADMIN_EMAIL:-admin@paperclip.local}"
+INITIAL_PASSWORD="$(grep -E '^INITIAL_PASSWORD=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d= -f2-)"
+if [ -z "$INITIAL_PASSWORD" ] || [ "$INITIAL_PASSWORD" = "PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT" ]; then
+  INITIAL_PASSWORD="$(openssl rand -base64 24 | tr -d '=+/' | cut -c1-24)"
+  write_env_kv ADMIN_EMAIL "$ADMIN_EMAIL"
+  write_env_kv INITIAL_PASSWORD "$INITIAL_PASSWORD"
+fi
+
+if [ "$HEALTH_OK" = "1" ]; then
+  echo "Waiting for public HTTPS via Caddy..."
+  for _ in $(seq 1 60); do
+    if curl -fsS --max-time 3 "${PUBLIC_URL}/api/health" >/dev/null 2>&1 \
+      || curl -fsSk --max-time 3 "${PUBLIC_URL}/api/health" >/dev/null 2>&1; then
+      break
+    fi
+    sleep 2
+  done
+
+  chmod +x /opt/claim-paperclip-admin.sh
+  echo "Claiming first admin (sign-up + bootstrap invite + accept)..."
+  CLAIM_OUT=""
+  if CLAIM_OUT="$(/opt/claim-paperclip-admin.sh "$PUBLIC_URL" "$ADMIN_EMAIL" "$INITIAL_PASSWORD" "Admin" 2>&1)"; then
+    ADMIN_CLAIMED=1
+    INVITE_URL="$(printf '%s\n' "$CLAIM_OUT" | sed -n 's/^INVITE_URL=//p' | head -n 1)"
+    if [ -n "$INVITE_URL" ]; then
+      printf '%s\n' "$INVITE_URL" > "$INVITE_FILE"
+      chmod 600 "$INVITE_FILE"
+    fi
+    # Lock open signup after first admin exists (sign-in still works)
+    write_env_kv PAPERCLIP_AUTH_DISABLE_SIGN_UP true
+    if [ -f /home/paperclip/.paperclip/instances/default/config.json ]; then
+      python3 - <<'PY'
+import json
+path = "/home/paperclip/.paperclip/instances/default/config.json"
+with open(path, encoding="utf-8") as f:
+    cfg = json.load(f)
+cfg.setdefault("auth", {})["disableSignUp"] = True
+with open(path, "w", encoding="utf-8") as f:
+    json.dump(cfg, f, indent=2)
+    f.write("\n")
+PY
+      chown paperclip:paperclip /home/paperclip/.paperclip/instances/default/config.json
+    fi
+    INSTANCE_ENV=/home/paperclip/.paperclip/instances/default/.env
+    if [ -f "$INSTANCE_ENV" ]; then
+      tmp="$(mktemp)"
+      grep -Ev '^(ADMIN_EMAIL|INITIAL_PASSWORD|PAPERCLIP_AUTH_DISABLE_SIGN_UP)=' "$INSTANCE_ENV" >"$tmp" 2>/dev/null || : >"$tmp"
+      printf 'ADMIN_EMAIL=%s\nINITIAL_PASSWORD=%s\nPAPERCLIP_AUTH_DISABLE_SIGN_UP=true\n' \
+        "$ADMIN_EMAIL" "$INITIAL_PASSWORD" >>"$tmp"
+      mv "$tmp" "$INSTANCE_ENV"
+      chown paperclip:paperclip "$INSTANCE_ENV"
+      chmod 600 "$INSTANCE_ENV"
+    fi
+    systemctl restart paperclip || true
+    for _ in $(seq 1 30); do
+      curl -fsS --max-time 2 "http://127.0.0.1:3100/api/health" >/dev/null 2>&1 && break
+      sleep 1
+    done
+    echo "Admin credentials ready (ADMIN_EMAIL / INITIAL_PASSWORD in /opt/paperclip.env)."
+  else
+    echo "Warning: auto-claim failed; falling back to bootstrap invite only." >&2
+    printf '%s\n' "$CLAIM_OUT" > /root/paperclip_claim_failed.txt
+    chmod 600 /root/paperclip_claim_failed.txt
+    # Keep ADMIN_EMAIL / INITIAL_PASSWORD in /opt/paperclip.env for console display
+    BOOTSTRAP_OUT="$(su - paperclip -c "paperclipai auth bootstrap-ceo --force --base-url ${PUBLIC_URL}" 2>&1 || true)"
+    BOOTSTRAP_CLEAN="$(printf '%s\n' "$BOOTSTRAP_OUT" | sed $'s/\033\\[[0-9;]*[[:alpha:]]//g')"
+    INVITE_URL="$(printf '%s\n' "$BOOTSTRAP_CLEAN" | grep -oE 'https://[^[:space:]]+/invite/[^[:space:]]+' | head -n 1 || true)"
+    if [ -n "$INVITE_URL" ]; then
+      printf '%s\n' "$INVITE_URL" > "$INVITE_FILE"
+      chmod 600 "$INVITE_FILE"
+    else
+      printf '%s\n' "$BOOTSTRAP_OUT" > /root/paperclip_bootstrap_raw.txt
+      chmod 600 /root/paperclip_bootstrap_raw.txt
+    fi
+  fi
+else
+  echo "ERROR: Paperclip health check did not succeed in time; bootstrap invite skipped." >&2
+  journalctl -u paperclip -n 50 --no-pager >&2 || true
+  printf 'health_failed\n' > /root/paperclip_firstboot_failed
+  chmod 600 /root/paperclip_firstboot_failed
+fi
+
+# DigitalOcean Serverless Inference: apply from droplet env, else first-login wizard
+chmod +x /opt/apply-inference-from-env.sh
+chmod +x /opt/retry-apply-inference-after-cloud-init.sh
+chmod +x /etc/setup_wizard.sh
+
+INFERENCE_APPLIED=0
+if /opt/apply-inference-from-env.sh; then
+  INFERENCE_APPLIED=1
+  echo "Serverless Inference key staged from MODEL_ACCESS_KEY."
+else
+  touch /root/.bashrc
+  if ! grep -q '/etc/setup_wizard.sh' /root/.bashrc 2>/dev/null; then
+    cat >> /root/.bashrc <<'EOM'
+
+chmod +x /etc/setup_wizard.sh
+/etc/setup_wizard.sh
+EOM
+  fi
+
+  # Startup scripts may write MODEL_ACCESS_KEY after this script; retry after cloud-init.
+  systemctl daemon-reload
+  systemctl enable paperclip-apply-inference.service
+  systemctl start paperclip-apply-inference.service || true
+fi
+
+# Always re-read from env (same pattern as OmniRoute MOTD / info file)
+ADMIN_EMAIL="$(grep -E '^ADMIN_EMAIL=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d= -f2-)"
+ADMIN_EMAIL="${ADMIN_EMAIL:-admin@paperclip.local}"
+PASSWORD="$(grep -E '^INITIAL_PASSWORD=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d= -f2-)"
+
+cat > "$INFO_FILE" << EOF
+================================================================================
+Paperclip 1-Click Droplet - Getting Started
+================================================================================
+
+Paperclip orchestrates teams of AI agents behind Caddy with shortlived TLS.
+
+ACCESS:
+  Dashboard:  ${PUBLIC_URL}
+  Email:      ${ADMIN_EMAIL}
+  Password:   ${PASSWORD}
+
+  Sign in with the email and password above (also in /opt/paperclip.env as
+  ADMIN_EMAIL / INITIAL_PASSWORD). Then complete onboarding in the UI.
+EOF
+
+if [ "$ADMIN_CLAIMED" != "1" ]; then
+  cat >> "$INFO_FILE" << EOF
+  Invite:     ${INVITE_URL:-run: su - paperclip -c \"paperclipai auth bootstrap-ceo --base-url ${PUBLIC_URL}\"}
+
+  Open the invite URL if email/password sign-in is not ready yet (also in
+  /root/paperclip_bootstrap_invite.txt).
+EOF
+fi
+
+cat >> "$INFO_FILE" << EOF
+
+LLM / SERVERLESS INFERENCE:
+EOF
+
+if [ "$INFERENCE_APPLIED" = "1" ]; then
+  cat >> "$INFO_FILE" << 'EOF'
+  DigitalOcean Serverless Inference was staged from MODEL_ACCESS_KEY.
+  Default model / router: see INFERENCE_MODEL and DO_INFERENCE_ROUTER in /opt/paperclip.env.
+  Cached model list (MOTD): /opt/paperclip/available-models.txt
+  Connect providers in the Paperclip UI after bootstrap.
+EOF
+else
+  cat >> "$INFO_FILE" << 'EOF'
+  On first SSH login, the setup wizard can configure DigitalOcean Serverless Inference:
+  enter a model access key, pick from the live model list, or choose R for the
+  Intelligent Inference Router. Or set MODEL_ACCESS_KEY / INFERENCE_MODEL /
+  DO_INFERENCE_ROUTER as droplet env vars, or run: sudo /etc/setup_wizard.sh
+  Or add any provider in the Paperclip UI.
+EOF
+fi
+
+cat >> "$INFO_FILE" << EOF
+
+MANAGEMENT:
+  Start:     /opt/start-paperclip.sh
+  Stop:      /opt/stop-paperclip.sh
+  Restart:   /opt/restart-paperclip.sh
+  Status:    /opt/status-paperclip.sh
+  Update:    /opt/update-paperclip.sh
+  Domain:    /opt/setup-paperclip-domain.sh
+  Re-apply:  /opt/apply-inference-from-env.sh
+  Setup:     /etc/setup_wizard.sh --force
+  Doctor:    su - paperclip -c \"paperclipai doctor\"
+  Logs:      journalctl -u paperclip -f
+
+PATHS:
+  Env:       /opt/paperclip.env
+  Home:      /home/paperclip/.paperclip
+  Invite:    /root/paperclip_bootstrap_invite.txt
+  Info:      /root/paperclip_info.txt
+
+SECURITY:
+  Port 3100 is bound to localhost; only HTTPS (80/443 via Caddy) is public.
+  Keep BETTER_AUTH_SECRET, DATABASE_URL, ADMIN_EMAIL, INITIAL_PASSWORD, MODEL_ACCESS_KEY private.
+  Prefer a DigitalOcean Cloud Firewall restricting SSH to your IP.
+
+DOCS:
+  https://github.com/paperclipai/paperclip
+  https://paperclip.ing
+
+================================================================================
+EOF
+chmod 600 "$INFO_FILE"
+
+systemctl restart ssh
+
+if [ "$HEALTH_OK" != "1" ]; then
+  # Do not exit non-zero: cloud-init would mark the droplet init as failed even though
+  # SSH force-logout is already cleared and the instance is reachable for repair.
+  echo "WARNING: Paperclip did not become healthy on first boot." >&2
+  echo "Marker: /root/paperclip_firstboot_failed — see /root/paperclip_info.txt and journalctl -u paperclip" >&2
+  echo "Paperclip first-boot finished with errors; repair before using the dashboard." >&2
+  exit 0
+fi
+
+echo "Paperclip first-boot initialization complete!"
+echo "Access info saved to ${INFO_FILE}"
