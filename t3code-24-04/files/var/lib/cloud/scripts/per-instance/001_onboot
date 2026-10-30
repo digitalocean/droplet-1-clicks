@@ -28,6 +28,13 @@ sed -e '/Match User root/d' \
     -e '/.*ForceCommand.*droplet.*/d' \
     -i /etc/ssh/sshd_config
 
+# set -e exits before the final ssh restart if t3code or caddy fail to start.
+# sshd would keep the marketplace wait command. Restart ssh on that path too.
+release_marketplace_ssh() {
+  systemctl restart ssh || true
+}
+trap release_marketplace_ssh EXIT
+
 chmod +x /opt/apply-inference-from-env.sh
 chmod +x /opt/patch-t3code-digitalocean-icon.sh
 chmod +x /opt/retry-apply-inference-after-cloud-init.sh
@@ -116,6 +123,7 @@ WORKSPACE:
 EOF
 chmod 600 "$INFO_FILE"
 
+trap - EXIT
 systemctl restart ssh
 
 echo "T3 Code first-boot initialization complete."

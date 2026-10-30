@@ -1,19 +1,35 @@
 #!/bin/bash
-# Download a remote installer before executing it; never execute a curl stream.
+# Download a remote installer, verify its SHA-256, then execute it.
+# A missing or mismatched digest is a failure. The bytes are never executed
+# from a curl stream.
 set -euo pipefail
 
-if [ "$#" -lt 2 ]; then
-  echo "Usage: run-remote-installer <url> <interpreter> [installer arguments...]" >&2
+if [ "${1:-}" != "--sha256" ] || [ "$#" -lt 4 ]; then
+  echo "Usage: run-remote-installer --sha256 <hex> <url> <interpreter> [installer arguments...]" >&2
   exit 64
 fi
 
-url="$1"
-interpreter="$2"
-shift 2
+expected="$2"
+url="$3"
+interpreter="$4"
+shift 4
+
+if ! printf '%s' "$expected" | grep -Eq '^[a-f0-9]{64}$'; then
+  echo "run-remote-installer: SHA-256 must be 64 lowercase hex characters" >&2
+  exit 64
+fi
 
 tmp="$(mktemp)"
 trap 'rm -f "$tmp"' EXIT
 
 curl -fsSL "$url" -o "$tmp"
+actual="$(sha256sum "$tmp" | awk '{print $1}')"
+if [ "$actual" != "$expected" ]; then
+  echo "run-remote-installer: SHA-256 mismatch for ${url}" >&2
+  echo "  expected: ${expected}" >&2
+  echo "  actual:   ${actual}" >&2
+  exit 1
+fi
+
 chmod 700 "$tmp"
 "$interpreter" "$tmp" "$@"

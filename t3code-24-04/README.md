@@ -16,7 +16,12 @@ t3code-24-04/
 ├── README.md
 ├── listing.md
 ├── scripts/
-│   └── 010-t3code.sh
+│   ├── 010-t3code.sh
+│   └── 021-record-resolved-version.sh
+├── tests/
+│   ├── test-digitalocean-icon.sh
+│   ├── test-inference-settings.sh
+│   └── test-resolved-values.sh
 └── files/
     ├── etc/
     │   ├── caddy/Caddyfile.tmp
@@ -28,9 +33,11 @@ t3code-24-04/
     │   ├── t3code.env
     │   ├── t3code-inference.env
     │   ├── t3code-settings.json
+    │   ├── t3code-digitalocean-icon.js
     │   ├── apply-inference-from-env.sh
     │   ├── create-t3code-pairing.sh
     │   ├── ensure-t3code-swap.sh
+    │   ├── patch-t3code-digitalocean-icon.sh
     │   ├── retry-apply-inference-after-cloud-init.sh
     │   ├── setup-t3code-domain.sh
     │   ├── start-t3code.sh
@@ -38,6 +45,7 @@ t3code-24-04/
     │   ├── restart-t3code.sh
     │   ├── status-t3code.sh
     │   └── update-t3code.sh
+    ├── usr/local/bin/run-remote-installer
     └── var/lib/cloud/scripts/per-instance/001_onboot
 ```
 
