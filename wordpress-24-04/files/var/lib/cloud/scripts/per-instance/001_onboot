@@ -17,6 +17,7 @@ cat > /root/.digitalocean_password <<EOM
 root_mysql_pass="${root_mysql_pass}"
 wordpress_mysql_pass="${wordpress_mysql_pass}"
 EOM
+chmod 600 /root/.digitalocean_password
 
 # there are no available memory for WP on tiny droplets sometimes. Simple fix: turn off mysql 
 # perfomance schema for these droplets
