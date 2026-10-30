@@ -32,25 +32,6 @@ run_as_t3() {
     PATH="$T3_PATH" bash -lc "cd '$T3_HOME' && $*"
 }
 
-install_script_as_t3() {
-  # Fetches a vendor install script to disk and runs it as $T3_USER, instead
-  # of piping curl straight into a shell interpreter (curl | bash). This way
-  # a truncated or failed download can't partially execute, and the script
-  # that actually runs is sitting on disk the whole time, so it can be
-  # inspected or hashed if that's ever needed.
-  #
-  # Usage: install_script_as_t3 <url> <interpreter> [args for the script...]
-  # <interpreter> may include a leading env assignment, e.g. "FOO=bar sh".
-  local url="$1" interpreter="$2"
-  shift 2
-  local script
-  script="$(mktemp)"
-  curl -fsSL "$url" -o "$script"
-  chmod 644 "$script"
-  run_as_t3 "$interpreter '$script' $*"
-  rm -f "$script"
-}
-
 link_bin() {
   local name="$1"
   shift
@@ -441,21 +422,22 @@ mkdir -p \
   "${T3_HOME}/.claude" \
   "${T3_HOME}/.claude-digitalocean"
 chown -R "${T3_USER}:${T3_USER}" "$T3_HOME"
+chmod 755 /usr/local/bin/run-remote-installer
 
 echo "Installing T3 Code v${application_version}..."
 # install.sh prepends "v" itself. T3CODE_VERSION=v0.1.3 requests vv0.1.3 and 404s.
 t3_version="${application_version#v}"
-install_script_as_t3 "https://t3.codes/install.sh" "T3CODE_VERSION=${t3_version} sh"
+run_as_t3 "T3CODE_VERSION=${t3_version} run-remote-installer https://t3.codes/install.sh sh"
 link_bin t3 "${T3_HOME}/.local/bin/t3"
 require_version /usr/local/bin/t3 "$application_version"
 
 echo "Installing Claude Code ${claude_version}..."
-install_script_as_t3 "https://claude.ai/install.sh" bash "${claude_version}"
+run_as_t3 "run-remote-installer https://claude.ai/install.sh bash ${claude_version}"
 link_bin claude "${T3_HOME}/.local/bin/claude"
 require_version /usr/local/bin/claude "$claude_version"
 
 echo "Installing Codex ${codex_version}..."
-install_script_as_t3 "https://github.com/openai/codex/raw/main/scripts/install/install.sh" bash --release "${codex_version}"
+run_as_t3 "run-remote-installer https://github.com/openai/codex/raw/main/scripts/install/install.sh bash --release ${codex_version}"
 link_bin codex \
   "${T3_HOME}/.local/bin/codex" \
   "${T3_HOME}/.codex/bin/codex"
@@ -463,9 +445,9 @@ require_version /usr/local/bin/codex "$codex_version"
 
 echo "Installing Grok Build ${grok_version}..."
 if want_latest "$grok_version"; then
-  install_script_as_t3 "https://x.ai/cli/install.sh" bash
+  run_as_t3 "run-remote-installer https://x.ai/cli/install.sh bash"
 else
-  install_script_as_t3 "https://x.ai/cli/install.sh" bash "${grok_version}"
+  run_as_t3 "run-remote-installer https://x.ai/cli/install.sh bash ${grok_version}"
 fi
 link_bin grok "${T3_HOME}/.grok/bin/grok"
 if want_latest "$grok_version"; then
@@ -486,7 +468,7 @@ case "$cursor_arch" in
   *) echo "Unsupported architecture for Cursor Agent: $(uname -m)" >&2; exit 1 ;;
 esac
 if want_latest "$cursor_version"; then
-  install_script_as_t3 "https://cursor.com/install" bash
+  run_as_t3 "run-remote-installer https://cursor.com/install bash"
   link_bin cursor-agent \
     "${T3_HOME}/.local/bin/cursor-agent" \
     "${T3_HOME}/.local/bin/agent"
@@ -525,7 +507,7 @@ opencode_major="${opencode_major%%.*}"
 if [ "${opencode_major:-0}" -ge 2 ] 2>/dev/null; then
   opencode_install_url="https://opencode.ai/v2/install"
 fi
-install_script_as_t3 "$opencode_install_url" bash --version "${opencode_version}" --no-modify-path
+run_as_t3 "run-remote-installer ${opencode_install_url} bash --version ${opencode_version} --no-modify-path"
 link_bin opencode \
   "${T3_HOME}/.opencode/bin/opencode" \
   "${T3_HOME}/.local/bin/opencode"
@@ -537,7 +519,7 @@ link_bin pi /usr/local/bin/pi /usr/bin/pi "$(npm prefix -g)/bin/pi"
 require_version /usr/local/bin/pi "$pi_version"
 
 echo "Installing Muse Code (stable channel; the installer has no version pin)..."
-install_script_as_t3 "https://dev.meta.ai/install.sh" bash
+run_as_t3 "run-remote-installer https://dev.meta.ai/install.sh bash"
 link_bin muse \
   "${T3_HOME}/.local/bin/muse" \
   "${T3_HOME}/.muse/bin/muse"
@@ -550,7 +532,7 @@ case "$fx_release" in
   v*) ;;
   *) fx_release="v${fx_release}" ;;
 esac
-install_script_as_t3 "https://fx.sh/setup.sh" "FX_INSTALL_DIR=${T3_HOME}/.local/bin bash" "${fx_release}"
+run_as_t3 "FX_INSTALL_DIR=${T3_HOME}/.local/bin run-remote-installer https://fx.sh/setup.sh bash ${fx_release}"
 link_bin fx "${T3_HOME}/.local/bin/fx"
 require_version /usr/local/bin/fx "${fx_version#v}"
 

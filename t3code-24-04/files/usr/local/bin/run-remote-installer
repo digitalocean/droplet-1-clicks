@@ -1,0 +1,19 @@
+#!/bin/bash
+# Download a remote installer before executing it; never execute a curl stream.
+set -euo pipefail
+
+if [ "$#" -lt 2 ]; then
+  echo "Usage: run-remote-installer <url> <interpreter> [installer arguments...]" >&2
+  exit 64
+fi
+
+url="$1"
+interpreter="$2"
+shift 2
+
+tmp="$(mktemp)"
+trap 'rm -f "$tmp"' EXIT
+
+curl -fsSL "$url" -o "$tmp"
+chmod 700 "$tmp"
+"$interpreter" "$tmp" "$@"
