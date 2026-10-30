@@ -1,0 +1,11 @@
+[Unit]
+Description=Apply T3 Code Serverless Inference config after cloud-init user-data
+After=cloud-init.service
+ConditionPathExists=!/home/t3/.t3/inference-configured
+
+[Service]
+Type=oneshot
+ExecStart=/opt/retry-apply-inference-after-cloud-init.sh
+
+[Install]
+WantedBy=multi-user.target

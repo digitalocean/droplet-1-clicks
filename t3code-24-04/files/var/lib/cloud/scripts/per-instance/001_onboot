@@ -1,0 +1,130 @@
+#!/bin/bash
+set -euo pipefail
+
+set -a
+# shellcheck source=/dev/null
+source /etc/environment 2>/dev/null || true
+set +a
+
+if [ -x /opt/ensure-t3code-swap.sh ]; then
+  /opt/ensure-t3code-swap.sh || echo "Warning: swap setup failed (continuing)." >&2
+fi
+
+meta() { curl -fsS --retry 10 --retry-connrefused --max-time 2 "$1"; }
+DROPLET_PUBLIC_IP="$(meta http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)"
+DROPLET_PRIVATE_IP="$(hostname -I | awk '{print $1}')"
+DROPLET_IP="${DROPLET_PUBLIC_IP:-$DROPLET_PRIVATE_IP}"
+
+if [ -f /etc/caddy/Caddyfile.tmp ]; then
+  mv /etc/caddy/Caddyfile.tmp /etc/caddy/Caddyfile
+fi
+if grep -q "PLACEHOLDER_DOMAIN" /etc/caddy/Caddyfile 2>/dev/null; then
+  echo "Configuring Caddy with droplet IP address..."
+  sed -i "s/PLACEHOLDER_DOMAIN/${DROPLET_IP}/" /etc/caddy/Caddyfile
+  systemctl enable caddy
+fi
+
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+# set -e exits before the final ssh restart if t3code or caddy fail to start.
+# sshd would keep the marketplace wait command. Restart ssh on that path too.
+release_marketplace_ssh() {
+  systemctl restart ssh || true
+}
+trap release_marketplace_ssh EXIT
+
+chmod +x /opt/apply-inference-from-env.sh
+chmod +x /opt/patch-t3code-digitalocean-icon.sh
+chmod +x /opt/retry-apply-inference-after-cloud-init.sh
+chmod +x /opt/create-t3code-pairing.sh
+chmod +x /var/lib/digitalocean/inference-models.sh
+
+INFERENCE_APPLIED=0
+if /opt/apply-inference-from-env.sh; then
+  INFERENCE_APPLIED=1
+  echo "Serverless Inference pre-configured from droplet environment."
+elif ! grep -q 'setup_wizard.sh' /root/.bashrc 2>/dev/null; then
+  cat >> /root/.bashrc <<'EOM'
+
+chmod +x /etc/setup_wizard.sh
+/etc/setup_wizard.sh
+EOM
+  systemctl daemon-reload
+  systemctl enable t3code-apply-inference.service
+  systemctl start t3code-apply-inference.service || true
+fi
+
+mkdir -p /home/t3/workspace /home/t3/.t3/userdata
+if [ ! -f /home/t3/.t3/userdata/settings.json ] && [ -f /opt/t3code-settings.json ]; then
+  cp /opt/t3code-settings.json /home/t3/.t3/userdata/settings.json
+fi
+chown -R t3:t3 /home/t3
+chmod 700 /home/t3/.t3 /home/t3/.claude-digitalocean 2>/dev/null || true
+
+if [ -x /opt/patch-t3code-digitalocean-icon.sh ]; then
+  /opt/patch-t3code-digitalocean-icon.sh || echo "Warning: DigitalOcean icon was not applied." >&2
+fi
+
+systemctl enable t3code
+systemctl restart t3code
+systemctl restart caddy
+
+if [ -x /opt/create-t3code-pairing.sh ]; then
+  /opt/create-t3code-pairing.sh "https://${DROPLET_IP}" \
+    || echo "Warning: pairing link was not created. Run /opt/create-t3code-pairing.sh" >&2
+fi
+
+INFO_FILE=/root/t3code_info.txt
+umask 077
+cat > "$INFO_FILE" << EOF
+================================================================================
+T3 Code 1-Click Droplet - Getting Started
+================================================================================
+
+ACCESS:
+  Web UI:  https://${DROPLET_IP}
+  Pairing: /root/.t3code-pairing.txt
+  Refresh: /opt/create-t3code-pairing.sh
+
+Providers are installed for user t3. Sign in with runuser -u t3, not as root.
+Antigravity sign-in is in the web UI under Settings, then Providers.
+
+SERVERLESS INFERENCE:
+EOF
+
+if [ "$INFERENCE_APPLIED" = "1" ]; then
+  cat >> "$INFO_FILE" << 'EOF'
+  DigitalOcean Serverless Inference was configured from MODEL_ACCESS_KEY.
+  Select the DigitalOcean Inference provider in T3 Code.
+EOF
+else
+  cat >> "$INFO_FILE" << 'EOF'
+  First SSH login can configure a model access key via /etc/setup_wizard.sh
+  Create a key at https://cloud.digitalocean.com/model-studio/manage-keys
+EOF
+fi
+
+cat >> "$INFO_FILE" << 'EOF'
+
+MANAGEMENT:
+  Start:    /opt/start-t3code.sh
+  Stop:     /opt/stop-t3code.sh
+  Restart:  /opt/restart-t3code.sh
+  Status:   /opt/status-t3code.sh
+  Domain:   /opt/setup-t3code-domain.sh
+  Update:   /opt/update-t3code.sh
+
+WORKSPACE:
+  /home/t3/workspace
+
+================================================================================
+EOF
+chmod 600 "$INFO_FILE"
+
+trap - EXIT
+systemctl restart ssh
+
+echo "T3 Code first-boot initialization complete."
+echo "Access info saved to ${INFO_FILE}"

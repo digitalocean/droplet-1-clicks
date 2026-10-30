@@ -1,0 +1,53 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+pub=$(curl -fsS --retry 3 --retry-connrefused --max-time 3 \
+  http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)
+myip="${pub:-$(hostname -I | awk '{print $1}')}"
+
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's One-Click T3 Code Droplet.
+
+T3 Code is an open-source control plane for coding agents. This droplet runs
+the server behind Caddy and includes the native provider CLIs.
+
+Access:
+  Web UI:  https://$myip
+  Pairing: /root/.t3code-pairing.txt
+           New link: /opt/create-t3code-pairing.sh
+
+  Open the pairing link in a browser, the desktop app, or the mobile app.
+  Links last 24 hours.
+
+Providers (sign in as user t3, not root):
+  Claude:      runuser -u t3 -- bash -lc 'claude auth login'
+  Codex:       runuser -u t3 -- bash -lc 'codex login'
+  Cursor:      runuser -u t3 -- bash -lc 'agent login'
+  Grok Build:  runuser -u t3 -- bash -lc 'grok login'
+  OpenCode:    runuser -u t3 -- bash -lc 'opencode auth login'
+  Muse Code:   runuser -u t3 -- bash -lc 'muse login'
+  fx:          runuser -u t3 -- bash -lc 'fx login'
+  Pi:          runuser -u t3 -- bash -lc 'pi'
+  Antigravity: Settings, then Providers, in the web UI
+
+DigitalOcean Serverless Inference:
+  Optional DigitalOcean Inference provider at https://inference.do-ai.run
+  First SSH login can run /etc/setup_wizard.sh
+  Keys: https://cloud.digitalocean.com/model-studio/manage-keys
+
+Management:
+  Start:    /opt/start-t3code.sh
+  Stop:     /opt/stop-t3code.sh
+  Restart:  /opt/restart-t3code.sh
+  Status:   /opt/status-t3code.sh
+  Domain:   /opt/setup-t3code-domain.sh
+  Update:   /opt/update-t3code.sh
+
+  Workspace: /home/t3/workspace
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
