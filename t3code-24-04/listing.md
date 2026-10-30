@@ -115,7 +115,7 @@ When configured, the DigitalOcean Inference provider uses:
 
 - Base URL: `https://inference.do-ai.run` (Claude calls `/v1/messages`)
 - Credential: your model access key, read by Claude Code's `apiKeyHelper` (`printenv MODEL_ACCESS_KEY`). The key is set only on this provider instance. `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN` are left unset.
-- Model: the catalog id chosen at setup (Claude-family ids are preferred), or `router:<name>` when `DO_INFERENCE_ROUTER` is set
+- Models: the chat models on the key. Claude's own catalog is hidden on this provider. A model or router chosen at setup is what new threads open with. If neither is set, new threads stay on the default provider.
 
 ### Custom domain
 

@@ -595,6 +595,7 @@ chmod +x /opt/update-t3code.sh
 chmod +x /opt/setup-t3code-domain.sh
 chmod +x /opt/ensure-t3code-swap.sh
 chmod +x /opt/apply-inference-from-env.sh
+chmod +x /opt/patch-t3code-digitalocean-icon.sh
 chmod +x /opt/retry-apply-inference-after-cloud-init.sh
 chmod +x /opt/create-t3code-pairing.sh
 chmod +x /etc/setup_wizard.sh
@@ -613,6 +614,10 @@ if [ -f /var/lib/digitalocean/t3code-resolved.env ]; then
     -e "s|^grok_version=.*|grok_version=${grok_version}|" \
     -e "s|^cursor_version=.*|cursor_version=${cursor_version}|" \
     /var/lib/digitalocean/t3code-resolved.env
+fi
+
+if [ -x /opt/patch-t3code-digitalocean-icon.sh ]; then
+  /opt/patch-t3code-digitalocean-icon.sh
 fi
 
 echo "T3 Code ${application_version} and native providers installed."

@@ -185,7 +185,9 @@ cat <<EOF
   Pair:   /root/.t3code-pairing.txt
   Model:  see INFERENCE_MODEL in /opt/t3code-inference.env
 
-  In T3 Code, select the DigitalOcean Inference provider and its custom model.
+  In T3 Code, DigitalOcean Inference lists the models on this key.
+  A model chosen above is the one new threads open with.
+  If you left the model blank, new threads stay on the default provider.
   Workspace: /home/t3/workspace
 ========================================================================
 

@@ -102,9 +102,114 @@ choose_default_model() {
   printf '%s\n' "$ids" | pick_default_inference_model
 }
 
+# T3 draws Claude's own catalog for every claudeAgent instance. Hide those slugs
+# on this instance so the picker lists the inference catalog instead.
+claude_builtin_model_slugs() {
+  local root="${T3_RUNTIME_ROOT:-/home/t3/.t3/runtime/versions}"
+  {
+    cat <<'EOF'
+claude-opus-5-5
+claude-sonnet-5-5
+claude-fable-5-1
+claude-fable-5
+claude-opus-5
+claude-opus-4-8
+claude-opus-4-7
+claude-opus-4-6
+claude-opus-4-5
+claude-sonnet-5
+claude-sonnet-4-6
+claude-haiku-5-5
+claude-haiku-4-5
+EOF
+    if [ -d "$root" ]; then
+      find "$root" -path '*/client/*.js' -exec grep -hEo 'claude-(opus|sonnet|haiku|fable)-[0-9][0-9a-z.-]*' {} + 2>/dev/null || true
+    fi
+  } | sed -E 's/[.]+$//' | awk 'NF && !seen[$0]++'
+}
+
+# Primary model first, then the rest of the chat catalog, without duplicates.
+ordered_inference_model_ids() {
+  local primary="$1"
+  local ids="$2"
+  printf '%s\n%s\n' "$primary" "$ids" | awk 'NF && !seen[$0]++'
+}
+
+# Claude catalog slugs, except any id that is itself an inference model.
+hidden_claude_slugs() {
+  local model_ids="$1"
+  {
+    printf '%s\n' "$model_ids" | sed 's/^/OFFER /'
+    claude_builtin_model_slugs | sed 's/^/HIDE /'
+  } | awk '
+    $1 == "OFFER" { offered[$2] = 1; next }
+    $1 == "HIDE" && $2 != "" && !offered[$2] && !seen[$2]++ { print $2 }
+  '
+}
+
+# Writes provider settings. explicit=1 makes new threads open on this model.
+# explicit=0 leaves another provider's default alone, and clears a previous
+# inference default so an unset choice returns to the default provider.
+merge_inference_settings() {
+  local settings_file="$1"
+  local models_json="$2"
+  local hidden_json="$3"
+  local primary="$4"
+  local explicit="$5"
+  local key="$6"
+  local base="$7"
+  local home="$8"
+  jq \
+    --arg model "$primary" \
+    --arg key "$key" \
+    --arg base "$base" \
+    --arg home "$home" \
+    --argjson models "$models_json" \
+    --argjson hidden "$hidden_json" \
+    --argjson explicit "$explicit" \
+    '
+    .providerInstances["digitalocean-inference"] = {
+      driver: "claudeAgent",
+      displayName: "DigitalOcean Inference",
+      accentColor: "#0080FF",
+      enabled: true,
+      environment: [
+        {name: "ANTHROPIC_BASE_URL", value: $base, sensitive: false},
+        {name: "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS", value: "1", sensitive: false},
+        {name: "MODEL_ACCESS_KEY", value: $key, sensitive: true}
+      ],
+      config: {
+        binaryPath: "/usr/local/bin/claude",
+        homePath: $home,
+        customModels: $models,
+        enabled: true,
+        launchArgs: ""
+      }
+    }
+    | .providerModelPreferences = (if .providerModelPreferences == null then {} else .providerModelPreferences end)
+    | .providerModelPreferences["digitalocean-inference"] = {
+        hiddenModels: $hidden,
+        modelOrder: $models
+      }
+    | if $explicit == 1 then
+        .defaultModelSelection = {instanceId: "digitalocean-inference", model: $model}
+      elif .defaultModelSelection.instanceId == "digitalocean-inference" then
+        .defaultModelSelection = null
+      else
+        .
+      end
+    ' "$settings_file"
+}
+
 MODEL_ACCESS_KEY=$(read_config_value MODEL_ACCESS_KEY || true)
 INFERENCE_MODEL=$(read_config_value INFERENCE_MODEL || true)
 DO_INFERENCE_ROUTER=$(read_config_value DO_INFERENCE_ROUTER || true)
+# A model or router passed at create time or in the wizard is an explicit choice.
+# A key alone is not: new threads stay on the default provider.
+EXPLICIT_SELECTION=0
+if env_value_usable "$INFERENCE_MODEL" || env_value_usable "$DO_INFERENCE_ROUTER"; then
+  EXPLICIT_SELECTION=1
+fi
 
 if ! env_value_usable "$MODEL_ACCESS_KEY"; then
   exit 1
@@ -154,6 +259,10 @@ write_env_file_kv INFERENCE_MODEL "${INFERENCE_MODEL#openai/}"
 write_env_file_kv DO_INFERENCE_ROUTER "$ROUTER_NAME"
 redact_inference_secrets_from_system_environment
 
+MODEL_IDS="$(ordered_inference_model_ids "$PRIMARY_MODEL" "$CHAT_IDS")"
+MODELS_JSON="$(printf '%s\n' "$MODEL_IDS" | jq -R . | jq -s .)"
+HIDDEN_JSON="$(hidden_claude_slugs "$MODEL_IDS" | jq -R . | jq -s .)"
+
 mkdir -p "$CLAUDE_DIR" "${T3_HOME}/userdata"
 if [ ! -f "$SETTINGS_FILE" ] && [ -f "$SETTINGS_TEMPLATE" ]; then
   cp "$SETTINGS_TEMPLATE" "$SETTINGS_FILE"
@@ -165,6 +274,7 @@ fi
 jq -n \
   --arg base "$INFERENCE_BASE_URL" \
   --arg model "$PRIMARY_MODEL" \
+  --argjson models "$MODELS_JSON" \
   '{
     "$schema": "https://json.schemastore.org/claude-code-settings.json",
     apiKeyHelper: "printenv MODEL_ACCESS_KEY",
@@ -173,34 +283,20 @@ jq -n \
       CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS: "1"
     },
     model: $model,
-    availableModels: [$model],
+    availableModels: $models,
     forceLoginMethod: "console"
   }' > "${CLAUDE_DIR}/settings.json"
 
-jq \
-  --arg model "$PRIMARY_MODEL" \
-  --arg key "$MODEL_ACCESS_KEY" \
-  --arg base "$INFERENCE_BASE_URL" \
-  --arg home "$CLAUDE_DIR" \
-  '
-  .providerInstances["digitalocean-inference"] = {
-    driver: "claudeAgent",
-    displayName: "DigitalOcean Inference",
-    enabled: true,
-    environment: [
-      {name: "ANTHROPIC_BASE_URL", value: $base, sensitive: false},
-      {name: "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS", value: "1", sensitive: false},
-      {name: "MODEL_ACCESS_KEY", value: $key, sensitive: true}
-    ],
-    config: {
-      binaryPath: "/usr/local/bin/claude",
-      homePath: $home,
-      customModels: [$model],
-      enabled: true,
-      launchArgs: ""
-    }
-  }
-  ' "$SETTINGS_FILE" > "${SETTINGS_FILE}.tmp"
+merge_inference_settings \
+  "$SETTINGS_FILE" \
+  "$MODELS_JSON" \
+  "$HIDDEN_JSON" \
+  "$PRIMARY_MODEL" \
+  "$EXPLICIT_SELECTION" \
+  "$MODEL_ACCESS_KEY" \
+  "$INFERENCE_BASE_URL" \
+  "$CLAUDE_DIR" \
+  > "${SETTINGS_FILE}.tmp"
 mv "${SETTINGS_FILE}.tmp" "$SETTINGS_FILE"
 
 touch "$MARKER"

@@ -29,6 +29,7 @@ sed -e '/Match User root/d' \
     -i /etc/ssh/sshd_config
 
 chmod +x /opt/apply-inference-from-env.sh
+chmod +x /opt/patch-t3code-digitalocean-icon.sh
 chmod +x /opt/retry-apply-inference-after-cloud-init.sh
 chmod +x /opt/create-t3code-pairing.sh
 chmod +x /var/lib/digitalocean/inference-models.sh
@@ -54,6 +55,10 @@ if [ ! -f /home/t3/.t3/userdata/settings.json ] && [ -f /opt/t3code-settings.jso
 fi
 chown -R t3:t3 /home/t3
 chmod 700 /home/t3/.t3 /home/t3/.claude-digitalocean 2>/dev/null || true
+
+if [ -x /opt/patch-t3code-digitalocean-icon.sh ]; then
+  /opt/patch-t3code-digitalocean-icon.sh || echo "Warning: DigitalOcean icon was not applied." >&2
+fi
 
 systemctl enable t3code
 systemctl restart t3code

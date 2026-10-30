@@ -11,6 +11,9 @@ fi
 echo "Updating T3 Code..."
 runuser -u t3 -- env HOME=/home/t3 T3CODE_HOME=/home/t3/.t3 \
   bash -lc 't3 update --yes'
+if [ -x /opt/patch-t3code-digitalocean-icon.sh ]; then
+  /opt/patch-t3code-digitalocean-icon.sh
+fi
 systemctl restart t3code
 echo "T3 Code updated and restarted."
 echo "Provider CLIs are unchanged. Reinstall a provider with its official installer if you want a newer build."
