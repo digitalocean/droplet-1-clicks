@@ -1,0 +1,58 @@
+#!/bin/bash
+# Runs before Elasticsearch setup.
+# The web console SSHes in as root through droplet-agent. Image cleanup removes
+# that agent, and a root ForceCommand makes the session exit immediately, so the
+# console stays on "Connected" with a blank screen. Restore both before the
+# long Elasticsearch install.
+
+LOG=/var/log/elasticsearch-oneclick-setup.log
+touch "$LOG"
+chmod 600 "$LOG"
+
+log() {
+  printf '%s %s\n' "$(date -Is)" "$*" >>"$LOG"
+}
+
+log "Opening SSH and the Droplet web console"
+
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+# Reload keeps an open console session. Restart drops it and the browser
+# stays blank on "Connected".
+if ! systemctl reload ssh >>"$LOG" 2>&1; then
+  systemctl restart ssh >>"$LOG" 2>&1 || log "Could not reload ssh"
+fi
+
+if systemctl is-active --quiet droplet-agent; then
+  log "droplet-agent is already running"
+  exit 0
+fi
+
+log "Installing droplet-agent"
+tmp=$(mktemp)
+downloaded=0
+if command -v curl >/dev/null 2>&1; then
+  curl -fsSL --max-time 60 https://repos-droplet.digitalocean.com/install.sh -o "$tmp" >>"$LOG" 2>&1 \
+    || curl -fsSL --max-time 60 https://repos.insights.digitalocean.com/install.sh -o "$tmp" >>"$LOG" 2>&1
+else
+  wget -qO "$tmp" -T 60 https://repos-droplet.digitalocean.com/install.sh >>"$LOG" 2>&1 \
+    || wget -qO "$tmp" -T 60 https://repos.insights.digitalocean.com/install.sh >>"$LOG" 2>&1
+fi
+if [ -s "$tmp" ]; then
+  downloaded=1
+fi
+
+if [ "$downloaded" -eq 1 ]; then
+  # Do not wrap this in a short timeout. Killing it mid-dpkg leaves the
+  # package database broken for the Elasticsearch install that runs next.
+  export DEBIAN_FRONTEND=noninteractive
+  bash "$tmp" >>"$LOG" 2>&1 || log "droplet-agent install failed"
+else
+  log "Could not download the droplet-agent installer"
+fi
+rm -f "$tmp"
+
+systemctl enable --now droplet-agent >>"$LOG" 2>&1 || log "droplet-agent did not start"
+systemctl is-active droplet-agent >>"$LOG" 2>&1 || true

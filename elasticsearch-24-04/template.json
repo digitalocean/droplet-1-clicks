@@ -51,8 +51,7 @@
       "scripts": [
         "elasticsearch-24-04/scripts/012-elastic.sh",
         "common/scripts/020-application-tag.sh",
-        "common/scripts/900-cleanup.sh",
-        "common/scripts/018-force-ssh-logout.sh"
+        "common/scripts/900-cleanup.sh"
       ]
     }
   ]
