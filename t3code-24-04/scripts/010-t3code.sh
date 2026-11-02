@@ -23,9 +23,9 @@ set -euo pipefail
 # SHA-256 is the pin: a changed script fails the build instead of running.
 # Codex is a full commit, not main, because --release only selects the archive.
 # Refresh a pin by hashing that exact URL and reviewing the script diff.
-# Checked 2026-10-30.
+# Checked 2026-11-02.
 T3_INSTALL_URL=https://t3.codes/install.sh
-T3_INSTALL_SHA256=b908ec70813ae5d4908f68900f3343702b07f3ca08420f83a7f703294b6262d8
+T3_INSTALL_SHA256=c6c2f271736561002e70807514a06613b018bc50952b12b4d59277eb76fe053a
 CLAUDE_INSTALL_URL=https://claude.ai/install.sh
 CLAUDE_INSTALL_SHA256=3a68d3406cf674e17bed1733a4dcf37805e2e47d87417700007d7e1aa766a944
 CODEX_INSTALL_COMMIT=b91f2515f5719446dad5402036ac59f43a4c407a
@@ -795,7 +795,7 @@ if [ -f /var/lib/digitalocean/t3code-resolved.env ]; then
 fi
 
 if [ -x /opt/patch-t3code-digitalocean-icon.sh ]; then
-  /opt/patch-t3code-digitalocean-icon.sh
+  runuser -u "$T3_USER" -- /opt/patch-t3code-digitalocean-icon.sh
 fi
 
 echo "T3 Code ${application_version} and native providers installed."

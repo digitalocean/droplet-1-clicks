@@ -97,5 +97,5 @@ Packer validation and the snapshot build were not run for this change. After a b
 - `systemctl status t3code` and `systemctl status caddy` are active
 - `https://<droplet-ip>` reaches the pairing screen
 - `/root/.t3code-pairing.txt` is mode `600` and differs per droplet
-- A droplet created with `MODEL_ACCESS_KEY` skips the wizard and writes `/home/t3/.t3/inference-configured`
+- A droplet created with `MODEL_ACCESS_KEY` skips the wizard and writes `/var/lib/digitalocean/t3code-inference-configured`
 - `claude`, `codex`, `cursor-agent`, `grok`, `opencode`, `pi`, `muse`, `fx`, and `/opt/antigravity-acp/current/agy_acp_server.par` exist

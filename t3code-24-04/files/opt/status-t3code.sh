@@ -26,7 +26,9 @@ echo ""
 echo "=== Provider binaries ==="
 for cmd in t3 claude codex cursor-agent grok opencode pi muse fx; do
   if [ -x "/usr/local/bin/${cmd}" ]; then
-    echo "  ${cmd}: $(/usr/local/bin/${cmd} --version 2>/dev/null | head -n 1 || echo present)"
+    echo "  ${cmd}: $(runuser -u t3 -- env -i \
+      HOME=/home/t3 USER=t3 LOGNAME=t3 PATH=/usr/local/bin:/usr/bin:/bin \
+      "/usr/local/bin/${cmd}" --version 2>/dev/null | head -n 1 || echo present)"
   else
     echo "  ${cmd}: missing"
   fi
@@ -37,7 +39,7 @@ fi
 
 echo ""
 echo "=== Inference ==="
-if [ -f /home/t3/.t3/inference-configured ]; then
+if [ -f /var/lib/digitalocean/t3code-inference-configured ]; then
   echo "  DigitalOcean Serverless Inference is configured."
   if [ -f /opt/t3code-inference.env ]; then
     grep -E '^(INFERENCE_MODEL|DO_INFERENCE_ROUTER)=' /opt/t3code-inference.env || true

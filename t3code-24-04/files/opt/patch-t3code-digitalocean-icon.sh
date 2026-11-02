@@ -7,6 +7,15 @@ SCRIPT_SRC="${T3_DO_ICON_SCRIPT:-/opt/t3code-digitalocean-icon.js}"
 RUNTIME_ROOT="${T3_RUNTIME_ROOT:-/home/t3/.t3/runtime/versions}"
 MARKER='id="t3code-digitalocean-icon"'
 
+# The runtime directory is writable by t3. Patch it only with t3's privileges
+# so a symlink in that tree cannot turn this into a root file write.
+if [ "$(id -u)" -eq 0 ]; then
+  exec runuser -u t3 -- env \
+    T3_DO_ICON_SCRIPT="$SCRIPT_SRC" \
+    T3_RUNTIME_ROOT="$RUNTIME_ROOT" \
+    "$0"
+fi
+
 if [ ! -f "$SCRIPT_SRC" ]; then
   echo "DigitalOcean icon script missing: $SCRIPT_SRC" >&2
   exit 1

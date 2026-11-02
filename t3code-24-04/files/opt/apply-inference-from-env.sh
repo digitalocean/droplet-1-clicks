@@ -14,10 +14,33 @@ T3_HOME=/home/t3/.t3
 SETTINGS_FILE="${T3_HOME}/userdata/settings.json"
 SETTINGS_TEMPLATE=/opt/t3code-settings.json
 CLAUDE_DIR=/home/t3/.claude-digitalocean
-MARKER="${T3_HOME}/inference-configured"
+MARKER=/var/lib/digitalocean/t3code-inference-configured
 INFERENCE_MODELS_LIB=/var/lib/digitalocean/inference-models.sh
 INFERENCE_BASE_URL=https://inference.do-ai.run
 DEFAULT_MODEL=anthropic-claude-4.6-sonnet
+
+run_as_t3() {
+  runuser -u t3 -- "$@"
+}
+
+# Write files in t3's home directory as t3. The temporary file is created in
+# the destination directory so mv is atomic, but any symlink traversal has
+# only t3's privileges.
+write_t3_file() {
+  local destination="$1"
+  local mode="$2"
+  run_as_t3 bash -c '
+    set -euo pipefail
+    destination="$1"
+    mode="$2"
+    directory="$(dirname -- "$destination")"
+    temporary="$(mktemp "${directory}/.t3code.XXXXXX")"
+    trap "rm -f -- \"$temporary\"" EXIT
+    cat >"$temporary"
+    chmod "$mode" "$temporary"
+    mv -f -- "$temporary" "$destination"
+  ' bash "$destination" "$mode"
+}
 
 remove_setup_wizard_bashrc_hook() {
   [ -f /root/.bashrc ] || return 0
@@ -123,7 +146,7 @@ claude-haiku-5-5
 claude-haiku-4-5
 EOF
     if [ -d "$root" ]; then
-      find "$root" -path '*/client/*.js' -exec grep -hEo 'claude-(opus|sonnet|haiku|fable)-[0-9][0-9a-z.-]*' {} + 2>/dev/null || true
+      run_as_t3 find "$root" -path '*/client/*.js' -exec grep -hEo 'claude-(opus|sonnet|haiku|fable)-[0-9][0-9a-z.-]*' {} + 2>/dev/null || true
     fi
   } | sed -E 's/[.]+$//' | awk 'NF && !seen[$0]++'
 }
@@ -263,13 +286,18 @@ MODEL_IDS="$(ordered_inference_model_ids "$PRIMARY_MODEL" "$CHAT_IDS")"
 MODELS_JSON="$(printf '%s\n' "$MODEL_IDS" | jq -R . | jq -s .)"
 HIDDEN_JSON="$(hidden_claude_slugs "$MODEL_IDS" | jq -R . | jq -s .)"
 
-mkdir -p "$CLAUDE_DIR" "${T3_HOME}/userdata"
-if [ ! -f "$SETTINGS_FILE" ] && [ -f "$SETTINGS_TEMPLATE" ]; then
-  cp "$SETTINGS_TEMPLATE" "$SETTINGS_FILE"
+run_as_t3 mkdir -p "$CLAUDE_DIR" "${T3_HOME}/userdata"
+run_as_t3 chmod 700 "$T3_HOME" "$CLAUDE_DIR" "${T3_HOME}/userdata"
+if ! run_as_t3 test -f "$SETTINGS_FILE"; then
+  if [ -f "$SETTINGS_TEMPLATE" ]; then
+    write_t3_file "$SETTINGS_FILE" 600 <"$SETTINGS_TEMPLATE"
+  else
+    printf '%s\n' '{"providerInstances":{}}' | write_t3_file "$SETTINGS_FILE" 600
+  fi
 fi
-if [ ! -f "$SETTINGS_FILE" ]; then
-  printf '%s\n' '{"providerInstances":{}}' > "$SETTINGS_FILE"
-fi
+
+TEMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$TEMP_DIR"' EXIT
 
 jq -n \
   --arg base "$INFERENCE_BASE_URL" \
@@ -285,10 +313,13 @@ jq -n \
     model: $model,
     availableModels: $models,
     forceLoginMethod: "console"
-  }' > "${CLAUDE_DIR}/settings.json"
+  }' >"${TEMP_DIR}/claude-settings.json"
+write_t3_file "${CLAUDE_DIR}/settings.json" 600 <"${TEMP_DIR}/claude-settings.json"
 
+# Read the user-owned file as t3 before giving jq a root-owned temporary copy.
+run_as_t3 cat -- "$SETTINGS_FILE" >"${TEMP_DIR}/settings.json"
 merge_inference_settings \
-  "$SETTINGS_FILE" \
+  "${TEMP_DIR}/settings.json" \
   "$MODELS_JSON" \
   "$HIDDEN_JSON" \
   "$PRIMARY_MODEL" \
@@ -296,13 +327,11 @@ merge_inference_settings \
   "$MODEL_ACCESS_KEY" \
   "$INFERENCE_BASE_URL" \
   "$CLAUDE_DIR" \
-  > "${SETTINGS_FILE}.tmp"
-mv "${SETTINGS_FILE}.tmp" "$SETTINGS_FILE"
+  >"${TEMP_DIR}/settings.json.new"
+write_t3_file "$SETTINGS_FILE" 600 <"${TEMP_DIR}/settings.json.new"
 
-touch "$MARKER"
-chown -R t3:t3 "$T3_HOME" "$CLAUDE_DIR"
-chmod 700 "$T3_HOME" "$CLAUDE_DIR" "${T3_HOME}/userdata"
-chmod 600 "$SETTINGS_FILE" "${CLAUDE_DIR}/settings.json" "$MARKER"
+install -d -m 755 -o root -g root "$(dirname "$MARKER")"
+install -m 600 -o root -g root /dev/null "$MARKER"
 
 remove_setup_wizard_bashrc_hook
 

@@ -1,11 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-set -a
-# shellcheck source=/dev/null
-source /etc/environment 2>/dev/null || true
-set +a
-
 if [ -x /opt/ensure-t3code-swap.sh ]; then
   /opt/ensure-t3code-swap.sh || echo "Warning: swap setup failed (continuing)." >&2
 fi
@@ -64,7 +59,8 @@ chown -R t3:t3 /home/t3
 chmod 700 /home/t3/.t3 /home/t3/.claude-digitalocean 2>/dev/null || true
 
 if [ -x /opt/patch-t3code-digitalocean-icon.sh ]; then
-  /opt/patch-t3code-digitalocean-icon.sh || echo "Warning: DigitalOcean icon was not applied." >&2
+  runuser -u t3 -- /opt/patch-t3code-digitalocean-icon.sh \
+    || echo "Warning: DigitalOcean icon was not applied." >&2
 fi
 
 systemctl enable t3code

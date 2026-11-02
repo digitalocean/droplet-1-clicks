@@ -4,7 +4,7 @@
 set -euo pipefail
 
 ENV_FILE=/opt/t3code-inference.env
-MARKER=/home/t3/.t3/inference-configured
+MARKER=/var/lib/digitalocean/t3code-inference-configured
 INFERENCE_MODELS_LIB=/var/lib/digitalocean/inference-models.sh
 
 remove_first_login_hook() {

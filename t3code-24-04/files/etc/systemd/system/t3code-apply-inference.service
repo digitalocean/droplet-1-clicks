@@ -1,7 +1,7 @@
 [Unit]
 Description=Apply T3 Code Serverless Inference config after cloud-init user-data
 After=cloud-init.service
-ConditionPathExists=!/home/t3/.t3/inference-configured
+ConditionPathExists=!/var/lib/digitalocean/t3code-inference-configured
 
 [Service]
 Type=oneshot
