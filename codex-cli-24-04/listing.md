@@ -33,7 +33,7 @@ Codex CLI is lightweight; most compute happens at the inference provider.
 ## Included System Components
 
 - **Ubuntu 24.04 LTS** – Base operating system
-- **Codex CLI** – OpenAI terminal coding agent (version 0.133.0)
+- **Codex CLI** – OpenAI terminal coding agent (version 0.166.0)
 - **DigitalOcean Serverless Inference** – Pre-configured inference provider
 - **Git** – Version control
 - **UFW Firewall** – SSH only (rate-limited)

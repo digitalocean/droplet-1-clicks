@@ -4,7 +4,7 @@
     "image_name": "codex-cli-24-04-snapshot-{{timestamp}}",
     "apt_packages": "apt-transport-https ca-certificates curl software-properties-common git jq unzip ufw",
     "application_name": "Codex CLI",
-    "application_version": "0.154.0"
+    "application_version": "0.166.0"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
