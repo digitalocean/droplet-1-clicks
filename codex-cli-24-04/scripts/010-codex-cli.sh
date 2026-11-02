@@ -16,9 +16,11 @@ trap 'rm -rf "$tmpdir"' EXIT
 # shellcheck source=/dev/null
 source /opt/codex-cli-download.sh
 
+# SHA256 is the GitHub asset digest for rust-v${application_version}.
+# Autoupdate only changes application_version. A replaced release asset is
+# accepted when that digest matches the downloaded bytes.
 echo "Installing Codex CLI ${CODEX_VERSION} from GitHub release..."
-install_codex_binaries "$CODEX_RELEASE" "$tmpdir" \
-  "${codex_tarball_sha256:-}" "${bwrap_tarball_sha256:-}"
+install_codex_binaries "$CODEX_RELEASE" "$tmpdir"
 
 cat > /usr/local/bin/codex << 'EOF'
 #!/bin/bash

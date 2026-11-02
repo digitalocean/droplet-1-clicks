@@ -2,19 +2,20 @@
 
 # Codex CLI First-Login Setup Wizard
 # Prompts for a DigitalOcean model access key and configures Codex.
+#
+# The .bashrc hook invokes this with --autostart on login. In that mode, skip
+# silently if setup is already complete or a key is already configured.
+# A manual run always (re-)runs the wizard, so `/opt/setup-codex-cli.sh`
+# reconfigures any time. `--force` is accepted as an alias for a manual run.
 
 SETUP_MARKER="/root/.codex_setup_complete"
 ENV_FILE="/opt/codex-cli.env"
 
-if [ -f "$SETUP_MARKER" ] && [ "$1" != "--force" ]; then
-  if ! grep -q '/opt/setup-codex-cli.sh' /root/.bashrc 2>/dev/null; then
+if [ "${1:-}" = "--autostart" ]; then
+  if [ -f "$SETUP_MARKER" ]; then
     exit 0
   fi
-  rm -f "$SETUP_MARKER"
-fi
-
-if [ "$1" != "--force" ] && [ -x /opt/apply-inference-from-env.sh ]; then
-  if /opt/apply-inference-from-env.sh; then
+  if [ -x /opt/apply-inference-from-env.sh ] && /opt/apply-inference-from-env.sh; then
     exit 0
   fi
 fi

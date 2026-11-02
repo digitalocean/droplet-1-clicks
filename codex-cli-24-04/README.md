@@ -107,9 +107,9 @@ Alternatively, users can run `codex login` for ChatGPT subscription OAuth instea
 
 ## Version Pinning
 
-The `application_version` variable in `template.json` pins the Codex CLI version. To bump:
+`application_version` in `template.json` pins the Codex CLI version. The image build loads the SHA256 from that tag's GitHub release digest. To bump:
 
-1. Edit `application_version` in `template.json` (e.g., `"0.134.0"`)
+1. Edit `application_version` in `template.json` (e.g., `"0.166.0"`)
 2. Rebuild the image
 
 ## License

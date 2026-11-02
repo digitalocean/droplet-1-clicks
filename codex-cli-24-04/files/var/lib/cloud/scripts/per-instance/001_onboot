@@ -26,7 +26,7 @@ else
     # Hook setup wizard to run on first SSH login
     if ! grep -q '/opt/setup-codex-cli.sh' /root/.bashrc 2>/dev/null; then
         cat >> /root/.bashrc <<EOM
-/opt/setup-codex-cli.sh
+/opt/setup-codex-cli.sh --autostart
 EOM
     fi
 fi

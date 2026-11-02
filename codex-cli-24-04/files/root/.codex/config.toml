@@ -12,9 +12,12 @@ web_search = "disabled"
 
 # Serverless Inference only accepts function tools over the Responses API (not tool_search
 # or namespace-wrapped tools such as multi_agent).
+# This image ships the standalone Codex binary. Codex 0.157+ otherwise auto-starts a
+# background server that requires the full package, which makes plain `codex` fail.
 [features]
 tool_search = false
 multi_agent = false
+daemon_auto_start = false
 
 [model_providers.openai_custom]
 name = "DigitalOcean Serverless Inference"
