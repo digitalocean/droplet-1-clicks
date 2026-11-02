@@ -21,7 +21,7 @@ A DigitalOcean 1-Click Droplet running **Ghost** (publishing platform) on **Ubun
 
 1. Create a Droplet from this image (2 GB RAM or larger is recommended).  
 2. Optionally point a domain’s **A record** at the Droplet’s public IPv4 address and wait for DNS to propagate.  
-3. SSH in as **root** once. The bootstrap script runs **Ghost install** and will ask for your site URL and SSL details.  
+3. SSH in as **root** once. The bootstrap script asks for a site address. A domain (`example.com`), `https://example.com`, or `http://example.com` are all accepted and stored as `https://`. An IP address is stored as `http://` and skips SSL. It then runs **`ghost install`** for the Ghost version **pinned at image build** (`/var/lib/digitalocean/application.info`). Use **`ghost update`** later for a newer release.  
 4. After setup, manage Ghost as **`ghost-mgr`**: `sudo -i -u ghost-mgr`  
 5. Read `/root/.digitalocean_password` for the MySQL password set at first boot, and consider running `mysql_secure_installation` before production use.
 

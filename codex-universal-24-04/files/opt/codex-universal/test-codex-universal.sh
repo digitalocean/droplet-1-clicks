@@ -135,9 +135,84 @@ check_version "Rust (${CODEX_ENV_RUST_VERSION:-default})" "rustc --version"
 check_version "Go (${CODEX_ENV_GO_VERSION:-default})" "go version"
 check_version "Ruby (${CODEX_ENV_RUBY_VERSION:-default})" "ruby --version"
 check_version "PHP (${CODEX_ENV_PHP_VERSION:-default})" "php --version | head -1"
+
+php_min_for_major() {
+    case "$1" in
+        8.2) echo "8.2.35" ;;
+        8.3) echo "8.3.36" ;;
+        8.4) echo "8.4.27" ;;
+        8.5) echo "8.5.12" ;;
+        *) echo "" ;;
+    esac
+}
+
+node_min_for_major() {
+    case "$1" in
+        22) echo "22.23.4" ;;
+        24) echo "24.22.1" ;;
+        *) echo "" ;;
+    esac
+}
+
+version_ge() {
+    [ "$(printf "%s\n%s\n" "$1" "$2" | sort -V | head -1)" = "$2" ]
+}
+
+php_major="${CODEX_ENV_PHP_VERSION:-8.4}"
+php_min="$(php_min_for_major "${php_major}")"
+php_actual="$(php -r "echo PHP_VERSION;")"
+if [ -n "${php_min}" ] && version_ge "${php_actual}" "${php_min}"; then
+    echo "  OK: PHP ${php_actual} meets minimum ${php_min} (CVE-2026-109618 / CVE-2026-109619)"
+else
+    echo "  FAIL: PHP ${php_actual} is below minimum ${php_min} for CODEX_ENV_PHP_VERSION=${php_major}"
+    exit 1
+fi
+
+node_major="${CODEX_ENV_NODE_VERSION:-22}"
+node_min="$(node_min_for_major "${node_major}")"
+node_actual="$(node -v | sed 's/^v//')"
+node_actual_major="${node_actual%%.*}"
+if [ -n "${node_min}" ] \
+    && [ "${node_actual_major}" = "${node_major}" ] \
+    && version_ge "${node_actual}" "${node_min}"; then
+    echo "  OK: Node.js ${node_actual} meets minimum ${node_min} (CVE-2026-111497)"
+else
+    echo "  FAIL: Node.js ${node_actual} does not satisfy CODEX_ENV_NODE_VERSION=${node_major} (>= ${node_min:-unsupported})"
+    exit 1
+fi
+
+# Confirm every shipped patched major is present (not only the active default).
+export NVM_DIR="${NVM_DIR:-/root/.nvm}"
+set +u
+# shellcheck source=/dev/null
+. "${NVM_DIR}/nvm.sh"
+for major in 22 24; do
+    min="$(node_min_for_major "${major}")"
+    nvm use "${major}" >/dev/null
+    actual="$(node -v | sed 's/^v//')"
+    actual_major="${actual%%.*}"
+    if [ "${actual_major}" = "${major}" ] && version_ge "${actual}" "${min}"; then
+        echo "  OK: shipped Node ${major} → ${actual} (>= ${min}, CVE-2026-111497)"
+    else
+        echo "  FAIL: shipped Node ${major} is ${actual} (need >= ${min})"
+        exit 1
+    fi
+done
+nvm use "${node_major}" >/dev/null
+set -u
+
 check_version "Java (${CODEX_ENV_JAVA_VERSION:-default})" "java -version 2>&1 | head -1"
 check_version "Swift (${CODEX_ENV_SWIFT_VERSION:-default})" "swift --version | head -1"
 check_version "Bun (bundled)" "bun --version"
+
+bun_min="1.4.4"
+bun_actual="$(bun --version)"
+if version_ge "${bun_actual}" "${bun_min}"; then
+    echo "  OK: Bun ${bun_actual} meets minimum ${bun_min} (CVE-2026-111497)"
+else
+    echo "  FAIL: Bun ${bun_actual} is below minimum ${bun_min}"
+    exit 1
+fi
 ' || FAILURES=$((FAILURES + 1))
 fi
 

@@ -10,7 +10,7 @@ root_mysql_pass=$(openssl rand -hex 24)
 admin_mysql_pass=$(openssl rand -hex 24)
 app_mysql_pass=$(openssl rand -hex 24)
 debian_sys_maint_mysql_pass=$(openssl rand -hex 24)
-blowfish_secret=$(openssl rand -hex 48)
+blowfish_secret=$(openssl rand -hex 16)
 
 cat > /root/.digitalocean_password <<EOM
 root_mysql_pass="${root_mysql_pass}"
@@ -18,9 +18,13 @@ admin_mysql_pass="${admin_mysql_pass}"
 app_mysql_pass="${app_mysql_pass}"
 EOM
 
-# Configure MySQL root/admin users.
-mysqladmin -u root -h localhost create phpmyadmin
-mysqladmin -u root -h localhost password "${root_mysql_pass}"
+# Configure MySQL root/admin users (Ubuntu MySQL 8.0 defaults root to auth_socket).
+mysql -u root <<EOSQL
+ALTER USER 'root'@'localhost' IDENTIFIED WITH caching_sha2_password BY '${root_mysql_pass}';
+CREATE USER IF NOT EXISTS 'root'@'127.0.0.1' IDENTIFIED WITH caching_sha2_password BY '${root_mysql_pass}';
+CREATE DATABASE IF NOT EXISTS phpmyadmin;
+FLUSH PRIVILEGES;
+EOSQL
 
 mysql -uroot -p"${root_mysql_pass}" \
       -e "CREATE USER 'admin'@'localhost' IDENTIFIED BY '${admin_mysql_pass}'"
@@ -31,11 +35,7 @@ mysql -uroot -p"${root_mysql_pass}" \
 mysql -uroot -p"${root_mysql_pass}" \
       -e "GRANT ALL PRIVILEGES ON phpmyadmin.* TO 'phpmyadminapp'@'localhost'"
 mysql -uroot -p"${root_mysql_pass}" \
-      -e "ALTER USER 'debian-sys-maint'@'localhost' IDENTIFIED BY '${debian_sys_maint_mysql_pass}'"
-
-cat >> /etc/mysql/mysql.conf.d/mysqld.cnf <<EOM
-bind-address = 0.0.0.0
-EOM
+      -e "ALTER USER 'debian-sys-maint'@'localhost' IDENTIFIED WITH caching_sha2_password BY '${debian_sys_maint_mysql_pass}'"
 
 MYSQL_ROOT_PASSWORD=${root_mysql_pass}
 expect -c "
@@ -72,33 +72,14 @@ EOM
 
 systemctl restart mysql
 
-# Reconfigure phpMyAdmin package with generated credentials.
-printf "%s\t%s\t%s\t%s\n" \
-    phpmyadmin phpmyadmin/db/app-user string phpmyadminapp \
-    | debconf-set-selections
-printf "%s\t%s\t%s\t%s\n" \
-    phpmyadmin phpmyadmin/mysql/admin-user string admin \
-    | debconf-set-selections
-printf "%s\t%s\t%s\t%s\n" \
-    phpmyadmin phpmyadmin/mysql/app-pass password "${app_mysql_pass}" \
-    | debconf-set-selections
-printf "%s\t%s\t%s\t%s\n" \
-    phpmyadmin phpmyadmin/mysql/admin-pass password "${admin_mysql_pass}" \
-    | debconf-set-selections
-printf "%s\t%s\t%s\t%s\n" \
-    phpmyadmin phpmyadmin/reconfigure-webserver string apache2 \
-    | debconf-set-selections
-printf "%s\t%s\t%s\t%s\n" \
-    phpmyadmin phpmyadmin/dbconfig-reinstall boolean true \
-    | debconf-set-selections
-
-dpkg-reconfigure --force phpmyadmin
-ln -sf /etc/phpmyadmin/apache.conf /etc/apache2/conf-enabled/phpmyadmin.conf
-
-echo "\$cfg['blowfish_secret'] = '${blowfish_secret}';" >> /etc/phpmyadmin/config.inc.php
-mkdir -p /usr/share/phpmyadmin/tmp
-chown www-data:www-data /usr/share/phpmyadmin/tmp
-echo "\$cfg['TempDir'] = '/usr/share/phpmyadmin/tmp';" >> /etc/phpmyadmin/config.inc.php
+# Unique phpMyAdmin blowfish_secret per Droplet (must not be baked into the snapshot)
+if grep -q "blowfish_secret" /usr/share/phpmyadmin/config.inc.php; then
+  sed -i "s|\(\$cfg\['blowfish_secret'\] = '\)[^']*';|\1${blowfish_secret}';|" \
+    /usr/share/phpmyadmin/config.inc.php
+else
+  echo "\$cfg['blowfish_secret'] = '${blowfish_secret}';" >> /usr/share/phpmyadmin/config.inc.php
+fi
+unset blowfish_secret
 
 systemctl restart apache2
 

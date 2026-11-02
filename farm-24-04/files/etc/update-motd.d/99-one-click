@@ -6,12 +6,16 @@
 . /root/.digitalocean_passwords
 
 myip=$(hostname -I | awk '{print$1}')
+# Installed package version (avoids stale hardcodes in this MOTD)
+mongodb_version=$(mongod --version 2>/dev/null | sed -n 's/^db version v\{0,1\}//p' | head -1)
+[ -n "$mongodb_version" ] || mongodb_version="unknown"
+
 cat <<EOF
 ********************************************************************************
 
 Welcome to DigitalOcean's 1-Click FARM Droplet.
 To keep this Droplet secure, the UFW firewall is enabled.
-All ports are BLOCKED except 22 (SSH), 80 (HTTP), and 443 (HTTPS).
+All ports are BLOCKED except 22 (SSH), 80 (HTTP), 443 (HTTPS), and 8000 (API / Swagger).
 
 FARM is configured with local MongoDB database. Use the following
 credentials to manage the database:
@@ -35,7 +39,7 @@ On the server:
 For help and more information, visit link to 1-click
 
 ********************************************************************************
-NOTE:  This image includes version 6.0.4 of MongoDB.
+NOTE:  This image includes version ${mongodb_version} of MongoDB.
 To upgrade to a newer release run the following commands:
 
 sudo mv /etc/apt/sources.list.d/mongodb.list.disabled /etc/apt/sources.list.d/mongodb.list

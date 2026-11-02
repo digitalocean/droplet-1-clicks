@@ -12,6 +12,10 @@ Welcome to DigitalOcean's One-Click Ghost Droplet.
 To keep this Droplet secure, the UFW firewall is enabled. 
 All ports are BLOCKED except 22 (SSH), 80 (HTTP), and 443 (HTTPS).
 
+SSH in as root once to finish setup. The installer runs ghost install using the
+Ghost version pinned when this image was built (see /var/lib/digitalocean/application.info),
+not necessarily the newest npm release.
+
 For help and more information, visit https://marketplace.digitalocean.com/apps/ghost
 
 ********************************************************************************

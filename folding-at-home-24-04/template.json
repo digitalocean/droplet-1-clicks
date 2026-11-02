@@ -2,7 +2,9 @@
   "variables": {
     "token": "{{env `DIGITALOCEAN_TOKEN`}}",
     "image_name": "folding-at-home-{{timestamp}}",
-    "apt_packages": ""
+    "apt_packages": "",
+    "application_name": "Folding@home",
+    "application_version": "8.5.5"
   },
   "builders": [
     {
@@ -53,14 +55,18 @@
         "echo \"fahclient fahclient/team string $TEAM\" | sudo debconf-set-selections",
         "echo \"fahclient fahclient/passkey string $PASSKEY\" | sudo debconf-set-selections",
         "echo \"fahclient fahclient/user string $USER\" | sudo debconf-set-selections",
-        "wget https://download.foldingathome.org/releases/public/fah-client/debian-10-64bit/release/fah-client_8.5.5_amd64.deb",
-        "dpkg -i --force-depends fah-client_8.5.5_amd64.deb",
-        "rm fah-client_8.5.5_amd64.deb"
+        "wget https://download.foldingathome.org/releases/public/fah-client/debian-10-64bit/release/fah-client_{{user `application_version`}}_amd64.deb",
+        "dpkg -i --force-depends fah-client_{{user `application_version`}}_amd64.deb",
+        "rm fah-client_{{user `application_version`}}_amd64.deb"
       ]
     },
     {
       "type": "shell",
-      "scripts": [        
+      "environment_vars": [
+        "application_name={{user `application_name`}}",
+        "application_version={{user `application_version`}}"
+      ],
+      "scripts": [
         "common/scripts/018-force-ssh-logout.sh",
         "common/scripts/020-application-tag.sh",
         "common/scripts/900-cleanup.sh"

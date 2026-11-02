@@ -93,11 +93,12 @@ chmod +x /opt/coolify-status.sh
 
 echo "Helper scripts made executable."
 
-# Enable the systemd service (service file was copied by Packer)
+# Install unit file but do not enable yet — 001_onboot performs first start and
+# writes /root/coolify_info.txt; enabling here races cloud-init on first boot.
 systemctl daemon-reload
-systemctl enable coolify.service
+systemctl disable coolify.service 2>/dev/null || true
 
-echo "Coolify systemd service enabled."
+echo "Coolify systemd service installed (enabled after first-boot setup)."
 
 echo "Coolify installation preparation complete."
 echo "Coolify will be started on first boot via the onboot script."

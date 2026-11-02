@@ -5,7 +5,7 @@
     "image_name": "rabbitmq-24-04-snapshot-{{timestamp}}",
     "apt_packages": "curl wget gnupg apt-transport-https",
     "application_name": "RabbitMQ",
-    "application_version": "3.12.2"
+    "application_version": "4.3.6"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [

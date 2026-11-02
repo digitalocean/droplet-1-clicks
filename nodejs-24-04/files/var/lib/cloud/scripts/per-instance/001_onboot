@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 exec > >(tee /var/log/one_click_setup.log) 2>&1
 
 # Generate some passwords
@@ -6,6 +6,7 @@ cat > /root/.digitalocean_passwords <<EOM
 NODE_USER=nodejs
 NODE_USER_PASSWORD=$(openssl rand -hex 16)
 EOM
+chmod 600 /root/.digitalocean_passwords
 
 source /root/.digitalocean_passwords
 
@@ -18,3 +19,5 @@ sed -e '/Match User root/d' \
     -i /etc/ssh/sshd_config
 
 systemctl restart ssh
+
+chmod 600 /var/log/one_click_setup.log

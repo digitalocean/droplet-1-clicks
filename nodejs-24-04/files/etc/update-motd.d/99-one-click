@@ -22,10 +22,11 @@ Welcome to DigitalOcean's 1-Click Node.js Droplet.
 To keep this Droplet secure, the UFW firewall is enabled.
 All ports are BLOCKED except 22 (SSH), 80 (HTTP), and 443 (HTTPS).
 
-Use these SFTP credentials to upload files with FileZilla/WinSCP/rsync:
-    Host: ${myip}
-    User: ${NODE_USER}
-    Pass: ${NODE_USER_PASSWORD}
+Upload files with SFTP (FileZilla/WinSCP/rsync) on port 22:
+  * Droplets created with an SSH key: connect as root@${myip} using your SSH key
+    (DigitalOcean disables password authentication on key-based Droplets)
+  * Droplets created with a root password: user ${NODE_USER}, password in
+    /root/.digitalocean_passwords (NODE_USER_PASSWORD)
 
 In a web browser, you can view the Node site at: http://$myip
 

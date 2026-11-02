@@ -1,6 +1,6 @@
-# Rails {{rails_version}} on DigitalOcean
+# Rails {{application_version}} on DigitalOcean
 
-This droplet comes pre-configured with Ruby on Rails {{rails_version}} running in Docker containers with PostgreSQL database and Nginx reverse proxy.
+This droplet comes pre-configured with Ruby on Rails {{application_version}} running in Docker containers with PostgreSQL database and Nginx reverse proxy.
 
 ## Quick Start
 
@@ -48,7 +48,7 @@ All management scripts are located in `/opt/rails-app/`:
 
 The application runs three Docker containers:
 
-1. **web**: Rails {{rails_version}} application server (Puma)
+1. **web**: Rails {{application_version}} application server (Puma)
 2. **db**: PostgreSQL 15 database
 3. **nginx**: Nginx reverse proxy
 
@@ -191,7 +191,7 @@ Important data to backup:
 
 ---
 
-**Rails Version**: {{rails_version}}  
+**Rails Version**: {{application_version}}  
 **Ruby Version**: {{ruby_version}}  
 **Database**: PostgreSQL 15  
 **Web Server**: Puma + Nginx

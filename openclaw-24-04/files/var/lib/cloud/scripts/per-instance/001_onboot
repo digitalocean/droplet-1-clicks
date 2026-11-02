@@ -4,6 +4,15 @@ set -a
 source /etc/environment 2>/dev/null || true
 set +a
 
+# Gateway + Docker + Control UI + TUI need headroom. Prefer 4 GB / 2 vCPU+;
+# swap is created as a safety net (see /opt/ensure-openclaw-swap.sh).
+if [ -x /opt/ensure-openclaw-swap.sh ] || [ -f /opt/ensure-openclaw-swap.sh ]; then
+    chmod +x /opt/ensure-openclaw-swap.sh
+    /opt/ensure-openclaw-swap.sh || echo "Warning: swap setup failed (continuing)." >&2
+else
+    echo "Warning: /opt/ensure-openclaw-swap.sh missing; skip swap setup. Resize to 4 GB+ if UI/TUI freezes." >&2
+fi
+
 # Generate unique gateway token for this droplet
 if grep -q "PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT" /opt/openclaw.env 2>/dev/null; then
     echo "Generating unique gateway token for this droplet..."

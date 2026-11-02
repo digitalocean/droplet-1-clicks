@@ -20,5 +20,13 @@ pub=$(curl -fsS --retry 3 --retry-connrefused --max-time 3 \
   http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)
 priv=$(hostname -I | awk '{print $1}')
 host="${pub:-$priv}"
-echo "  https://${host}/   (Caddy -> Agent Canvas on 127.0.0.1:8000)"
+echo "  https://${host}/   (Caddy -> Agent Canvas on :8000; UFW denies 8000)"
 echo "  Loopback (SSH tunnel): http://127.0.0.1:8000"
+
+echo ""
+echo "=== Update OpenHands ==="
+echo "  Latest:      sudo /opt/update-openhands.sh"
+if [ -f /opt/openhands.env ]; then
+  cur=$(grep -E '^OPENHANDS_VERSION=' /opt/openhands.env 2>/dev/null | tail -n 1 | cut -d= -f2- || true)
+  [ -n "$cur" ] && echo "  Current pin: ${cur}"
+fi

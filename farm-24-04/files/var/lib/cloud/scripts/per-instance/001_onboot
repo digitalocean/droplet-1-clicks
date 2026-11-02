@@ -13,6 +13,7 @@ admin_mongodb_pass=$(openssl rand -hex 24)
 cat > /root/.digitalocean_passwords << EOM
 admin_mongodb_password="${admin_mongodb_pass}"
 EOM
+chmod 600 /root/.digitalocean_passwords
 
 source /root/.digitalocean_passwords
 

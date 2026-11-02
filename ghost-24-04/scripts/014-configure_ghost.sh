@@ -33,9 +33,10 @@ ghost-mgr ALL=(ALL) NOPASSWD:ALL
 EOM
 
 chmod 755 /var/www
-mkdir -p /var/www/ghost
+mkdir -p /var/www/ghost/content/logs
 chown -R ghost-mgr: /var/www/ghost
 chmod 775 /var/www/ghost
+install -o ghost-mgr -g ghost-mgr -m 0640 /dev/null /var/www/ghost/content/logs/fail2ban-placeholder.log
 
 # Install Ghost-CLI
 su ghost-mgr -c "bash -x <<EOM

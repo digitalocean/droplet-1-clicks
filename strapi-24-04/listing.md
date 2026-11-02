@@ -31,7 +31,7 @@ Strapi is a flexible, open-source headless CMS that gives developers the freedom
 
 This 1-Click includes:
 
-- **Strapi v5.0.0** - Latest version of the headless CMS
+- **Strapi v5.56.0** - Latest version of the headless CMS
 - **Node.js 22** - JavaScript runtime (Alpine Linux-based)
 - **PostgreSQL 16** - Production-ready relational database
 - **Docker & Docker Compose** - Container orchestration

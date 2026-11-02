@@ -59,7 +59,7 @@ cd /data/coolify/source
 docker compose --env-file /data/coolify/source/.env \
   -f /data/coolify/source/docker-compose.yml \
   -f /data/coolify/source/docker-compose.prod.yml \
-  up -d --pull always --remove-orphans --force-recreate
+  up -d --pull always --remove-orphans
 
 # Wait for Coolify to be ready
 echo "Waiting for Coolify to initialize..."
@@ -125,6 +125,8 @@ For more information, visit: https://coolify.io/docs
 EOF
 
 chmod 600 /root/coolify_info.txt
+
+systemctl enable coolify.service
 
 echo "Coolify first-boot initialization complete!"
 echo "Access information saved to /root/coolify_info.txt"

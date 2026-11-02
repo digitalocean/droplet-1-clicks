@@ -71,8 +71,8 @@ cat <<'EOF'
 ------------------------------------------------------------------------
 
 Configure Serverless Inference so OpenHands can call models via a single model access key.
-Create a key at: https://cloud.digitalocean.com/gen-ai
-  (API Keys > Model Access Keys)
+Create a key at: https://cloud.digitalocean.com/model-studio/manage-keys
+  (Inference > Manage > Create Model Access Key)
 
 Examples: minimax-m2.5 (default), kimi-k3, glm-5.3, llama3.3-70b-instruct
 
@@ -80,7 +80,11 @@ You can also skip and set any provider later in Settings > LLM.
 
 EOF
 
-read -r -p "Enter your DigitalOcean model access key (or press Enter to skip): " MODEL_KEY
+old_histfile="${HISTFILE-}"
+unset HISTFILE
+read -rsp "Enter your DigitalOcean model access key (or press Enter to skip): " MODEL_KEY
+echo ""
+[ -n "${old_histfile:-}" ] && export HISTFILE="$old_histfile"
 
 if [ -z "$MODEL_KEY" ]; then
   echo ""

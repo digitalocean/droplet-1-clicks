@@ -33,8 +33,14 @@ DISABLE_SSL=true
 # TLS_DOMAIN=chat.example.com
 EOF
 
-# Build container
-cd /opt/once-campfire && docker build -t campfire .
+# BuildKit + buildx required for COPY --chmod in once-campfire Dockerfile
+# (Ubuntu docker.io does not ship a working buildx by default).
+if ! docker buildx version >/dev/null 2>&1; then
+  export DEBIAN_FRONTEND=noninteractive
+  apt-get update -qq
+  apt-get install -y -qq docker-buildx
+fi
+cd /opt/once-campfire && DOCKER_BUILDKIT=1 docker build -t campfire .
 
 # Get the latest version of campfire
 cd /opt/once-campfire && docker run \
@@ -49,21 +55,37 @@ cd /opt/once-campfire && docker run \
 # Create a helper script to restart Campfire with updated environment
 cat > /opt/restart-campfire.sh << 'EOF'
 #!/bin/bash
+set -euo pipefail
+
 echo "Stopping and removing existing Campfire container..."
 docker stop campfire 2>/dev/null || true
 docker rm campfire 2>/dev/null || true
 
 echo "Starting Campfire with updated environment..."
-cd /opt/once-campfire && docker run \
+# ! binds only to the next pipeline; wrap so both cd and docker run are negated.
+if ! (cd /opt/once-campfire && docker run \
   --detach \
   --name campfire \
   --publish 80:80 --publish 443:443 \
   --restart unless-stopped \
   --volume campfire:/rails/storage \
   --env-file /opt/campfire.env \
-  campfire
+  campfire); then
+  echo "❌ Error: Failed to start Campfire container" >&2
+  exit 1
+fi
 
-echo "Campfire restarted successfully!"
+# docker run -d can succeed even if the process exits immediately
+for _ in $(seq 1 15); do
+  if [ "$(docker inspect -f '{{.State.Running}}' campfire 2>/dev/null)" = "true" ]; then
+    echo "Campfire restarted successfully!"
+    exit 0
+  fi
+  sleep 1
+done
+
+echo "❌ Error: Campfire container is not running after start" >&2
+exit 1
 EOF
 
 # Create an update script to update Campfire to latest version
@@ -71,69 +93,84 @@ cat > /opt/update-campfire.sh << 'EOF'
 #!/bin/bash
 
 # Campfire Update Script
-# This script pulls the latest Campfire code from GitHub and restarts the service
+# Pulls latest once-campfire, rebuilds the image, then cuts over.
+# Keeps the existing container running until the new image build succeeds
+# so a failed/slow rebuild does not leave the droplet with no Campfire.
 
 echo "Updating Campfire to latest version..."
 
-# Check if Campfire installation exists
 if [ ! -d "/opt/once-campfire" ]; then
     echo "Error: Campfire installation directory not found at /opt/once-campfire"
     exit 1
 fi
 
-# Navigate to Campfire directory
 cd /opt/once-campfire
 
-# Pull latest code from GitHub
 echo "Pulling latest code from GitHub..."
-git pull origin main
-
-# Check if there were any updates
-if [ $? -eq 0 ]; then
-    echo "Code updated successfully. Rebuilding and restarting Campfire..."
-    
-    # Stop existing container
-    echo "Stopping existing Campfire container..."
-    docker stop campfire 2>/dev/null || true
-    docker rm campfire 2>/dev/null || true
-    
-    # Rebuild the image with latest code
-    echo "Rebuilding Campfire image..."
-    docker build -t campfire .
-    
-    # Check if build was successful
-    if [ $? -eq 0 ]; then
-        # Restart Campfire with updated code
-        echo "Starting Campfire with updated code..."
-        if [ -x "/opt/restart-campfire.sh" ]; then
-            /opt/restart-campfire.sh
-        else
-            # Fallback if restart script doesn't exist
-            docker run \
-              --detach \
-              --name campfire \
-              --publish 80:80 --publish 443:443 \
-              --restart unless-stopped \
-              --volume campfire:/rails/storage \
-              --env-file /opt/campfire.env \
-              campfire
-        fi
-        
-        if [ $? -eq 0 ]; then
-            echo "✅ Campfire updated and restarted successfully!"
-        else
-            echo "❌ Error: Failed to restart Campfire"
-            exit 1
-        fi
-    else
-        echo "❌ Error: Failed to rebuild Campfire image"
-        exit 1
-    fi
-else
-    echo "ℹ️  No updates available or update failed."
+if ! git pull origin main; then
+    echo "ℹ️  git pull failed; leaving running container as-is."
+    exit 1
 fi
 
-echo "Update process completed."
+echo "Rebuilding Campfire image (existing container kept until build succeeds)..."
+# BuildKit + buildx required for COPY --chmod in once-campfire Dockerfile
+ensure_docker_buildx() {
+  if docker buildx version >/dev/null 2>&1; then
+    return 0
+  fi
+  echo "Installing docker-buildx (required for Campfire image builds)..."
+  export DEBIAN_FRONTEND=noninteractive
+  apt-get update -qq
+  apt-get install -y -qq docker-buildx
+  docker buildx version >/dev/null 2>&1
+}
+
+if ! ensure_docker_buildx; then
+  echo "❌ Error: docker-buildx is missing/broken; cannot rebuild Campfire image." >&2
+  echo "   Install with: apt-get install -y docker-buildx" >&2
+  exit 1
+fi
+
+if ! DOCKER_BUILDKIT=1 docker build -t campfire .; then
+    echo "❌ Error: Failed to rebuild Campfire image; leaving running container as-is."
+    exit 1
+fi
+
+echo "Starting Campfire with updated image..."
+if [ -x "/opt/restart-campfire.sh" ] && /opt/restart-campfire.sh; then
+    echo "✅ Campfire updated and restarted successfully!"
+    exit 0
+fi
+
+if [ -x "/opt/restart-campfire.sh" ]; then
+    echo "⚠️  /opt/restart-campfire.sh failed; attempting fallback docker run..." >&2
+fi
+
+docker stop campfire 2>/dev/null || true
+docker rm campfire 2>/dev/null || true
+if ! docker run \
+  --detach \
+  --name campfire \
+  --publish 80:80 --publish 443:443 \
+  --restart unless-stopped \
+  --volume campfire:/rails/storage \
+  --env-file /opt/campfire.env \
+  campfire; then
+  echo "❌ Error: Failed to start Campfire" >&2
+  exit 1
+fi
+
+# docker run -d can succeed even if the process exits immediately
+for _ in $(seq 1 15); do
+  if [ "$(docker inspect -f '{{.State.Running}}' campfire 2>/dev/null)" = "true" ]; then
+    echo "✅ Campfire updated and restarted successfully!"
+    exit 0
+  fi
+  sleep 1
+done
+
+echo "❌ Error: Campfire container is not running after fallback start" >&2
+exit 1
 EOF
 
 chmod +x /opt/restart-campfire.sh

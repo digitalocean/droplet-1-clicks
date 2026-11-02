@@ -1,22 +1,76 @@
 #!/bin/bash
 set -euo pipefail
 
-APP_VERSION="${application_version:-1.16.0}"
+APP_VERSION="${application_version:-1.33.0}"
 OPENHANDS_USER=openhands
 OPENHANDS_HOME=/home/openhands
 
-# HTTP/HTTPS via Caddy; Agent Canvas ingress stays on loopback :8000
 ufw allow 80/tcp comment 'HTTP'
 ufw allow 443/tcp comment 'HTTPS'
 ufw limit ssh/tcp
+
+# Agent Canvas serves ingress on :8000 across all interfaces and upstream has no
+# bind-to-loopback option (its agent-server and automation backends do pass
+# --host 127.0.0.1). Deny :8000 explicitly rather than relying on the default
+# incoming policy: UFW matches rules in order, so this keeps the ingress private
+# even if someone later relaxes the default or appends an allow rule. Loopback is
+# accepted in before.rules, so Caddy and SSH tunnels are unaffected.
+ufw deny 8000/tcp comment 'Agent Canvas ingress: reach via Caddy on 443'
+
 ufw --force enable
 
-# Chromium (browser tooling for agents); also in template apt_packages
-apt-get install -y chromium-browser
+# Agent Canvas 1.17+ needs Node >=24. Install at least node_version from
+# template.json (default 24.22.1): prefer that exact NodeSource package, otherwise
+# the newest 24.x. Use a signed apt keyring instead of curling a setup script.
+# Accept Packer/docs forms like 24.22.1 or 24.22.1+; persist plain X.Y.Z.
+NODE_VERSION_RAW="${node_version:-24.22.1}"
+NODE_VERSION="$(printf '%s' "$NODE_VERSION_RAW" | sed -E -n 's/^v?([0-9]+\.[0-9]+\.[0-9]+).*/\1/p')"
+if [ -z "$NODE_VERSION" ]; then
+  echo "Build failed: invalid node_version '${NODE_VERSION_RAW}' (want X.Y.Z or X.Y.Z+)" >&2
+  exit 1
+fi
+NODE_DEB_VERSION="${NODE_VERSION}-1nodesource1"
 
-# Node.js 22 (required by Agent Canvas)
-curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
-apt-get install -y nodejs
+mkdir -p /etc/apt/keyrings
+curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+  | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+chmod a+r /etc/apt/keyrings/nodesource.gpg
+echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_24.x nodistro main" \
+  > /etc/apt/sources.list.d/nodesource.list
+
+# Prefer NodeSource's nodejs over any Ubuntu package of the same name.
+cat > /etc/apt/preferences.d/nodesource-nodejs <<EOF
+Package: nodejs
+Pin: origin deb.nodesource.com
+Pin-Priority: 1001
+EOF
+
+apt-get update -y
+if ! DEBIAN_FRONTEND=noninteractive apt-get install -y "nodejs=${NODE_DEB_VERSION}"; then
+  echo "Pinned nodejs=${NODE_DEB_VERSION} unavailable; installing newest NodeSource 24.x..."
+  DEBIAN_FRONTEND=noninteractive apt-get install -y nodejs
+fi
+
+# Fail the build if the installed Node is older than the required minimum.
+installed_node="$(node -v 2>/dev/null | sed 's/^v//')"
+if ! node -e '
+  const parse = (s) => {
+    const m = String(s).trim().match(/^v?(\d+)\.(\d+)\.(\d+)/);
+    if (!m) process.exit(1);
+    return [Number(m[1]), Number(m[2]), Number(m[3])];
+  };
+  const need = parse(process.argv[1]);
+  const have = parse(process.argv[2]);
+  for (let i = 0; i < 3; i++) {
+    if (have[i] > need[i]) process.exit(0);
+    if (have[i] < need[i]) process.exit(1);
+  }
+  process.exit(0);
+' "$NODE_VERSION" "${installed_node:-0}"; then
+  echo "Build sanity check failed: need Node.js >= ${NODE_VERSION}, got ${installed_node:-missing}" >&2
+  exit 1
+fi
+echo "Node.js ${installed_node} installed (minimum ${NODE_VERSION})."
 
 # Caddy reverse proxy
 curl -1sLf "https://dl.cloudsmith.io/public/caddy/stable/gpg.key" \
@@ -45,19 +99,20 @@ fi
 # Install Agent Canvas (OpenHands product UI)
 npm install -g "@openhands/agent-canvas@${APP_VERSION}"
 
-if ! command -v agent-canvas >/dev/null 2>&1; then
-  echo "ERROR: agent-canvas not found on PATH after npm install." >&2
+# systemd ExecStart is /usr/local/bin/agent-canvas. Link the package file, not
+# `command -v` (PATH prefers /usr/local/bin and ln -sfn onto itself is circular).
+CANVAS_MJS="$(npm prefix -g)/lib/node_modules/@openhands/agent-canvas/bin/agent-canvas.mjs"
+if [ ! -e "$CANVAS_MJS" ]; then
+  echo "ERROR: ${CANVAS_MJS} not found after npm install." >&2
   exit 1
 fi
+ln -sfn "$CANVAS_MJS" /usr/local/bin/agent-canvas
+/usr/local/bin/agent-canvas --version || true
 
-# Stable absolute path for systemd ExecStart
-CANVAS_BIN="$(command -v agent-canvas)"
-ln -sfn "$CANVAS_BIN" /usr/local/bin/agent-canvas
-agent-canvas --version || true
-
-# Persist version into env template
+# Persist Agent Canvas version and Node minimum into the env template
 if [ -f /opt/openhands.env ]; then
   sed -i "s|\${APP_VERSION}|${APP_VERSION}|g" /opt/openhands.env
+  sed -i "s|\${NODE_MIN_VERSION}|${NODE_VERSION}|g" /opt/openhands.env
   chmod 600 /opt/openhands.env
 fi
 

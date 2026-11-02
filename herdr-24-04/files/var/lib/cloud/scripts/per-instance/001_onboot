@@ -1,0 +1,111 @@
+#!/bin/bash
+
+set -euo pipefail
+
+set -a
+# shellcheck source=/dev/null
+source /etc/environment 2>/dev/null || true
+set +a
+
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
+
+mkdir -p /root/workspace
+chmod +x /opt/install-herdr-integrations.sh
+chmod +x /opt/start-herdr.sh
+chmod +x /opt/stop-herdr.sh
+chmod +x /opt/restart-herdr.sh
+chmod +x /opt/status-herdr.sh
+chmod +x /opt/update-herdr.sh
+chmod +x /opt/update-agents.sh
+
+systemctl daemon-reload
+systemctl enable herdr.service
+systemctl start herdr.service
+
+cat > /root/herdr_info.txt << 'EOF'
+================================================================================
+Herdr 1-Click Droplet - Getting Started
+================================================================================
+
+Herdr keeps coding-agent terminals running after you disconnect. This image
+already includes the agent CLIs, so you do not install them yourself.
+
+PREINSTALLED:
+  herdr     Herdr server (systemd unit: herdr.service)
+  claude        Claude Code
+  codex         OpenAI Codex CLI
+  opencode      OpenCode
+  grok          Grok Build
+  kilo          Kilo Code CLI
+  cursor-agent  Cursor Agent CLI
+
+NEXT STEPS:
+
+1. Attach to Herdr:
+     herdr
+
+2. Start an agent inside a pane:
+     cd /root/workspace
+     claude
+     codex
+     opencode
+     grok
+     kilo
+     cursor-agent
+
+3. Detach with Ctrl-b then q. Come back later and run herdr again.
+
+CONNECT FROM YOUR LAPTOP:
+
+  Install Herdr on the laptop, then add ~/.ssh/config:
+
+    Host herdr-droplet
+      HostName your-droplet-ip
+      User root
+      IdentityFile ~/.ssh/id_ed25519
+
+  From the laptop, confirm SSH, exit, then attach:
+    ssh herdr-droplet
+    exit
+    herdr --remote herdr-droplet
+
+  Without a config entry:
+    herdr --remote ssh://root@your-droplet-ip
+
+  The laptop draws the UI. This Droplet keeps the panes. Detach with
+  Ctrl-b then q, then run the same herdr --remote command to come back.
+  Docs: https://herdr.dev/docs/how-to-work/
+
+SIGN IN ONCE PER AGENT:
+  Claude Code:   claude
+  Codex:         codex login
+  OpenCode:      opencode auth login
+  Grok Build:    grok login --device-auth
+                 or export XAI_API_KEY / a model API key the CLI accepts
+  Kilo Code:     kilo auth
+  Cursor:        cursor-agent login
+
+SERVICE:
+  Start:    /opt/start-herdr.sh      (systemctl start herdr)
+  Stop:     /opt/stop-herdr.sh       (systemctl stop herdr)
+  Restart:  /opt/restart-herdr.sh    (systemctl restart herdr)
+  Status:   /opt/status-herdr.sh
+  Update Herdr:   /opt/update-herdr.sh
+  Update agents:  /opt/update-agents.sh
+
+Stopping the server ends the live panes. Herdr restores the saved layout and,
+with the preinstalled integrations, can resume agent sessions the next time
+the server starts.
+
+Documentation: https://herdr.dev/docs/
+================================================================================
+EOF
+
+chmod 600 /root/herdr_info.txt
+
+echo "Herdr first-boot initialization complete."
+echo "Getting started info saved to /root/herdr_info.txt"

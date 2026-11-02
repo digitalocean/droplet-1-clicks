@@ -15,10 +15,78 @@ sed -e '/Match User root/d' \
 
 systemctl restart ssh
 
-# Update Campfire to latest version on first boot
-if [ -x "/opt/update-campfire.sh" ]; then
-    echo "Running Campfire update on first boot..."
-    /opt/update-campfire.sh
+campfire_running() {
+    [ "$(docker inspect -f '{{.State.Running}}' campfire 2>/dev/null)" = "true" ]
+}
+
+start_campfire_fallback() {
+    echo "Attempting fallback Campfire start..."
+    docker stop campfire 2>/dev/null || true
+    docker rm campfire 2>/dev/null || true
+    docker run \
+        --detach \
+        --name campfire \
+        --publish 80:80 --publish 443:443 \
+        --restart unless-stopped \
+        --volume campfire:/rails/storage \
+        --env-file /opt/campfire.env \
+        campfire
+}
+
+wait_for_campfire() {
+    j=0
+    while [ "$j" -lt 30 ]; do
+        if campfire_running; then
+            return 0
+        fi
+        j=$((j + 1))
+        sleep 2
+    done
+    return 1
+}
+
+# Apply the new env and ensure the container is running.
+# Do NOT run /opt/update-campfire.sh on first boot: it stop/rm + rebuilds from
+# GitHub and races Marketplace autoupdate QA (container missing → test4 fail).
+# Users can still update later via /opt/update-campfire.sh (see MOTD).
+if [ -x "/opt/restart-campfire.sh" ]; then
+    # Docker may still be starting after boot.
+    i=0
+    while [ "$i" -lt 30 ]; do
+        if docker info >/dev/null 2>&1; then
+            break
+        fi
+        i=$((i + 1))
+        sleep 2
+    done
+
+    if ! docker info >/dev/null 2>&1; then
+        echo "ERROR: Docker did not become ready within 60s; skipping Campfire restart." >&2
+        exit 1
+    fi
+
+    echo "Restarting Campfire with droplet-specific environment..."
+    if ! /opt/restart-campfire.sh; then
+        echo "WARNING: /opt/restart-campfire.sh failed; trying fallback start." >&2
+        if ! start_campfire_fallback; then
+            echo "ERROR: Fallback Campfire start failed." >&2
+            exit 1
+        fi
+    fi
+
+    echo "Waiting for Campfire container to be running..."
+    if ! wait_for_campfire; then
+        echo "WARNING: Campfire not running after restart; trying fallback start." >&2
+        if ! start_campfire_fallback; then
+            echo "ERROR: Could not start Campfire container." >&2
+            exit 1
+        fi
+        if ! wait_for_campfire; then
+            echo "ERROR: Campfire container still not running after fallback." >&2
+            exit 1
+        fi
+    fi
+    echo "Campfire container is running."
 else
-    echo "Update script not found. Skipping Campfire update."
+    echo "Restart script not found. Skipping Campfire restart."
 fi

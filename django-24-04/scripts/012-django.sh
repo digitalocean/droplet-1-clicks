@@ -11,8 +11,8 @@ useradd --home-dir /home/django \
 chown -R django: /home/django
 chmod 755 /home/django
 
-# Replace with the version of Django you want to install: 4.1.1, etc...
-VERSION=${DJANGO_VERSION}
+# application_version / DJANGO_VERSION come from template.json
+VERSION="${DJANGO_VERSION:-$application_version}"
 
 # Install Django using --break-system-packages for Ubuntu 24.04
 python3 -m pip install --break-system-packages Django=="$VERSION"

@@ -60,7 +60,6 @@
       "environment_vars": [
         "NODE_VERSION={{user `node_version`}}",
         "application_name={{user `application_name`}}",
-        "application_version=$(node --version)",
         "DEBIAN_FRONTEND=noninteractive",
         "LC_ALL=C",
         "LANG=en_US.UTF-8",
@@ -71,7 +70,7 @@
         "nodejs-24-04/scripts/011-pm2.sh",
         "common/scripts/014-ufw-nginx.sh",
         "common/scripts/018-force-ssh-logout.sh",
-        "common/scripts/020-application-tag.sh",
+        "nodejs-24-04/scripts/019-application-tag.sh",
         "common/scripts/900-cleanup.sh"
       ]
     }

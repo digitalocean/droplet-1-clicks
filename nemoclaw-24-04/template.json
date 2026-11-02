@@ -4,7 +4,7 @@
     "image_name": "nemoclaw-snap-{{timestamp}}",
     "apt_packages": "procps file apt-transport-https ca-certificates curl software-properties-common git build-essential jq unzip gnupg fail2ban iproute2",
     "application_name": "NemoClaw",
-    "application_version": "latest"
+    "application_version": "lkg"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
@@ -41,6 +41,11 @@
       "destination": "/etc/"
     },
     {
+      "type": "file",
+      "source": "nemoclaw-24-04/files/opt/",
+      "destination": "/opt/"
+    },
+    {
       "type": "shell",
       "environment_vars": [
         "DEBIAN_FRONTEND=noninteractive",
@@ -68,7 +73,8 @@
       "scripts": [
         "nemoclaw-24-04/scripts/openshell.sh",
         "common/scripts/018-force-ssh-logout.sh",
-        "common/scripts/020-application-tag.sh"
+        "common/scripts/020-application-tag.sh",
+        "common/scripts/900-cleanup.sh"
       ]
     }
   ]

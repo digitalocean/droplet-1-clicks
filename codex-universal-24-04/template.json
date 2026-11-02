@@ -13,7 +13,8 @@
       "api_token": "{{user `do_api_token`}}",
       "image": "ubuntu-24-04-x64",
       "region": "nyc3",
-      "size": "s-2vcpu-4gb",
+      "size": "s-4vcpu-8gb",
+      "snapshot_timeout": "4h",
       "ssh_username": "root",
       "snapshot_name": "{{user `image_name`}}"
     }

@@ -1,0 +1,19 @@
+[Unit]
+Description=Apache Superset
+Documentation=https://superset.apache.org/admin-docs/installation/docker-builds/
+After=docker.service postgresql.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/opt/start-superset.sh --foreground
+ExecStop=/usr/bin/docker stop -t 60 superset
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=120
+TimeoutStopSec=90
+KillMode=mixed
+
+[Install]
+WantedBy=multi-user.target

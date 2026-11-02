@@ -1,5 +1,6 @@
 # Multi-stage build for Strapi
-FROM node:20-alpine AS build
+# Strapi 5.48.1+ requires Node >= 22 (recommended 24); use Node 22 LTS Alpine.
+FROM node:22-alpine AS build
 
 # Install dependencies for building
 RUN apk add --no-cache \
@@ -17,25 +18,29 @@ ENV NODE_ENV=${NODE_ENV}
 
 WORKDIR /opt/
 
+ARG STRAPI_VERSION=5.56.0
+
 # Create a new Strapi project
-RUN npx create-strapi-app@5.0.0 app \
+RUN npx create-strapi-app@${STRAPI_VERSION} app \
     --quickstart \
     --no-run \
     --skip-cloud
 
 WORKDIR /opt/app
 
-# Install PostgreSQL driver
+# Install PostgreSQL driver (Strapi recommends pg@8.x on Node 22+)
 RUN npm install pg --save --ignore-scripts
 
 # Build the admin panel
 RUN npm run build
 
 # Production stage
-FROM node:20-alpine
+FROM node:22-alpine
 
 # Install runtime dependencies
 RUN apk add --no-cache vips-dev
+
+RUN corepack enable && corepack prepare yarn@stable --activate
 
 ENV NODE_ENV=production
 

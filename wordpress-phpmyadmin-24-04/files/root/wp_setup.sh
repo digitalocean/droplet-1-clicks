@@ -44,14 +44,19 @@ if [ -f "/root/.digitalocean_dbaas_credentials" ] && [ "$(sed -n "s/^db_protocol
 define( 'MYSQL_CLIENT_FLAGS', MYSQLI_CLIENT_SSL );
 EOM
 
-  # Point phpMyAdmin at the Managed Database (local MySQL will be disabled)
+  # Point phpMyAdmin at the Managed Database (local MySQL will be disabled).
+  # Encrypt with SSL but skip CA verify: DO Managed MySQL uses a cluster CA that is
+  # not in the OS trust store, and .digitalocean_dbaas_credentials does not include it.
+  # (WordPress uses MYSQLI_CLIENT_SSL the same way — encrypt without system-CA verify.)
+  # Operators who want full verification can Download CA certificate from the DB
+  # Connection Details page, install it, set ssl_ca to that path, and ssl_verify=true.
   cat >> /usr/share/phpmyadmin/config.inc.php <<EOM
 
 /* DigitalOcean Managed Database */
 \$cfg['Servers'][1]['host'] = '$host';
 \$cfg['Servers'][1]['port'] = '$port';
 \$cfg['Servers'][1]['ssl'] = true;
-\$cfg['Servers'][1]['ssl_ca'] = '/etc/ssl/certs/ca-certificates.crt';
+\$cfg['Servers'][1]['ssl_verify'] = false;
 EOM
 
   # Persist DBaaS login details for MOTD / operators (password file is the source of truth)
@@ -99,6 +104,59 @@ echo ""
 echo "Step 2: WordPress Admin Account Setup"
 echo "----------------------------------------"
 
+# Show WordPress password requirements before the user types a password:
+# https://wordpress.org/documentation/article/password-best-practices/
+function show_password_requirements(){
+  echo ""
+  echo "Admin password requirements (WordPress best practices):"
+  echo "  - Minimum length: 20 characters"
+  echo "  - Must include uppercase letters (A-Z)"
+  echo "  - Must include lowercase letters (a-z)"
+  echo "  - Must include at least one digit (0-9)"
+  echo "  - Must include at least one special character (e.g. ! \" # \$ % & ' ( ) * + , - . / : ; < = > ? @ [ ] ^ _ { } | ~)"
+  echo "  - Backslash (\\) is NOT allowed"
+  echo "Reference: https://wordpress.org/documentation/article/password-best-practices/"
+  echo ""
+}
+
+# Validate against WordPress password best practices:
+# https://wordpress.org/documentation/article/password-best-practices/
+function validate_wordpress_password(){
+  local password="$1"
+  local errors=()
+  local without_backslash="${password//\\/}"
+
+  if [ "${#password}" -lt 20 ]; then
+    errors+=("at least 20 characters")
+  fi
+  if ! [[ "$password" =~ [a-z] ]]; then
+    errors+=("a lowercase letter")
+  fi
+  if ! [[ "$password" =~ [A-Z] ]]; then
+    errors+=("an uppercase letter")
+  fi
+  if ! [[ "$password" =~ [0-9] ]]; then
+    errors+=("a number")
+  fi
+  # Require punctuation/special characters; WordPress disallows backslash
+  if [[ "$password" == *\\* ]]; then
+    errors+=("no backslash (\\)")
+  fi
+  if ! [[ "$without_backslash" =~ [[:punct:]] ]]; then
+    errors+=("a special character (e.g. !\"#\$%&'()*+,-./:;<=>?@[]^_{}|~)")
+  fi
+
+  if [ "${#errors[@]}" -gt 0 ]; then
+    echo "Password does not meet WordPress best practices. It must include:"
+    local err
+    for err in "${errors[@]}"; do
+      echo "  - $err"
+    done
+    return 1
+  fi
+  return 0
+}
+
 function wordpress_admin_account(){
 
   while [ -z "$email" ]
@@ -111,10 +169,28 @@ function wordpress_admin_account(){
     read -p "Admin Username: " username
   done
 
-  while [ -z "$pass" ]
+  while true
   do
+    pass=""
+    confirm_pass=""
+    show_password_requirements
     read -s -p "Admin Password: " pass
     echo ""
+    if [ -z "$pass" ]; then
+      echo "Password cannot be empty. Please follow the requirements above."
+      continue
+    fi
+    if ! validate_wordpress_password "$pass"; then
+      echo "Please try again using the requirements above."
+      continue
+    fi
+    read -s -p "Confirm Admin Password: " confirm_pass
+    echo ""
+    if [ "$pass" != "$confirm_pass" ]; then
+      echo "Passwords do not match. Please try again."
+      continue
+    fi
+    break
   done
 
   while [ -z "$title" ]
@@ -134,7 +210,7 @@ do
     then
       break
     else
-      unset email username pass title confirmation
+      unset email username pass confirm_pass title confirmation
       echo ""
       wordpress_admin_account
       echo ""

@@ -17,10 +17,10 @@ To SSH into the Droplet, you will be prompted for a password. If you created you
 ssh root@your-droplet-ip
 ```
 
-**SFTP access** (for uploading files):
+**SFTP access** (for uploading files on port 22):
 
-- **User:** `nodejs`
-- **Password:** stored in `/root/.digitalocean_passwords` (`NODE_USER_PASSWORD`)
+- **Droplets created with an SSH key:** connect as `root@your-droplet-ip` using your SSH key. DigitalOcean disables password authentication on key-based Droplets, so the `nodejs` account password cannot be used for SFTP.
+- **Droplets created with a root password:** use user `nodejs` and the password in `/root/.digitalocean_passwords` (`NODE_USER_PASSWORD`).
 
 ## Using MongoDB Database-as-a-Service
 
@@ -104,7 +104,7 @@ sudo -u nodejs pm2 restart hello
 
 ### Step 3: Get your code onto the Droplet
 
-Clone your Node.js code onto the Droplet anywhere you like. If you're not using source control, you can [upload files directly using SFTP](https://www.digitalocean.com/community/tutorials/how-to-use-sftp-to-securely-transfer-files-with-a-remote-server).
+Clone your Node.js code onto the Droplet anywhere you like. If you're not using source control, upload files with SFTP as `root` (SSH key Droplets) or as `nodejs` with the password from `/root/.digitalocean_passwords` (password Droplets). See **SFTP access** above.
 
 ```bash
 cd /path/to/your/app
@@ -147,10 +147,10 @@ Popular steps before going to production:
 
 - UFW firewall allows SSH (port 22, rate limited), HTTP (port 80), and HTTPS (port 443)
 - Sample app: `/var/www/html/hello.js` on port 3000, proxied by Nginx on port 80
-- Application user: `nodejs` (password in `/root/.digitalocean_passwords`)
+- Application user: `nodejs` (password in `/root/.digitalocean_passwords`; SFTP password login only on password-created Droplets)
 - Managed MongoDB credentials: `/root/.digitalocean_dbaas_credentials` and `DATABASE_URL` (when **Add a Database** was selected)
 - Nginx config: `/etc/nginx/sites-available/default`
-- Setup log: `/var/log/one_click_setup.log`
+- Setup log: `/var/log/one_click_setup.log` (root-readable only)
 
 ## Additional Resources
 

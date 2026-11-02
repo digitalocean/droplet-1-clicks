@@ -37,7 +37,7 @@ rm -rf /var/www/craft
 export COMPOSER_ALLOW_SUPERUSER=1
 export COMPOSER_HOME=/root/.composer
 
-# Starter package versions ≠ CMS versions (e.g. craftcms/craft has no 5.10.11).
+# Starter package versions ≠ CMS versions (e.g. craftcms/craft has no 5.11.5.1).
 # Pin both: exact craftcms/craft scaffold, then craftcms/cms to application_version.
 composer create-project "craftcms/craft:${CRAFT_STARTER_VERSION}" /var/www/craft \
   --no-interaction \
