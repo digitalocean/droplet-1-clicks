@@ -105,40 +105,83 @@ write_env_file_kv "$ENV_FILE" MODEL_ACCESS_KEY "$MODEL_ACCESS_KEY"
 write_env_file_kv "$ENV_FILE" INFERENCE_MODEL "$INFERENCE_MODEL"
 write_env_file_kv "$HERMES_ENV" MODEL_ACCESS_KEY "$MODEL_ACCESS_KEY"
 
-HERMES_MODELS_JSON="$MODELS_JSON" python3 - "$HERMES_CONFIG" "$INFERENCE_MODEL" <<'PY'
+HERMES_EXAMPLE="${HERMES_HOME}/hermes-agent/cli-config.yaml.example"
+HERMES_MODELS_JSON="$MODELS_JSON" python3 - "$HERMES_CONFIG" "$INFERENCE_MODEL" "$HERMES_EXAMPLE" <<'PY'
 import json
 import os
+import re
 import sys
 
-path, model = sys.argv[1], sys.argv[2]
+path, model, example = sys.argv[1], sys.argv[2], sys.argv[3]
 models = json.loads(os.environ.get("HERMES_MODELS_JSON") or "[]")
 if model not in models:
     models = [model] + models
+
+def config_version(candidate):
+    """Read _config_version from JSON or the YAML example. Return None if absent."""
+    try:
+        text = open(candidate, encoding="utf-8").read()
+    except OSError:
+        return None
+    try:
+        doc = json.loads(text)
+    except json.JSONDecodeError:
+        doc = None
+    if isinstance(doc, dict) and "_config_version" in doc:
+        try:
+            version = int(doc["_config_version"])
+        except (TypeError, ValueError):
+            version = 0
+        if version > 0:
+            return version
+    match = re.search(r"(?m)^_config_version:\s*([0-9]+)\s*$", text)
+    if match:
+        version = int(match.group(1))
+        if version > 0:
+            return version
+    return None
+
+# A file with no stamp reads as v0, and `hermes doctor` then suggests
+# `doctor --fix`, which can install Chromium. Keep the stamp the installer
+# already wrote, or the one shipped in this release's example.
+stamp = config_version(path)
+if stamp is None:
+    stamp = config_version(example)
+
+# Current Hermes reads providers.<key>.api. The retired custom_providers list is
+# migrated once at config v12 and doctor will not move an entry written after that.
 config = {
     "model": {
-        "provider": "custom",
+        "provider": "digitalocean-inference",
         "default": model,
-        "base_url": "https://inference.do-ai.run/v1",
-        "api_key": "${MODEL_ACCESS_KEY}",
     },
-    "custom_providers": [
-        {
+    "providers": {
+        "digitalocean-inference": {
             "name": "digitalocean-inference",
-            "base_url": "https://inference.do-ai.run/v1",
+            "api": "https://inference.do-ai.run/v1",
             "key_env": "MODEL_ACCESS_KEY",
-            "api_mode": "chat_completions",
-            "models": models,
+            "default_model": model,
+            "transport": "chat_completions",
+            "models": {mid: {} for mid in models},
         }
-    ],
+    },
 }
+if stamp is not None:
+    config = {"_config_version": stamp, **config}
 with open(path, "w", encoding="utf-8") as f:
     json.dump(config, f, indent=2)
     f.write("\n")
 PY
 
-printf '%s\n' "DigitalOcean Serverless Inference" > "$SETUP_DONE_MARKER"
 chown -R hermes:hermes "$HERMES_HOME"
-chmod 600 "$HERMES_ENV" "$HERMES_CONFIG" "$SETUP_DONE_MARKER"
+chmod 600 "$HERMES_ENV" "$HERMES_CONFIG"
+
+# This file is written in Hermes's current providers schema. Do not run
+# `hermes doctor --fix` here: it can install optional Chromium and can fail on
+# unrelated checks, preventing a valid preconfigured image from finishing setup.
+printf '%s\n' "DigitalOcean Serverless Inference" > "$SETUP_DONE_MARKER"
+chown hermes:hermes "$SETUP_DONE_MARKER"
+chmod 600 "$SETUP_DONE_MARKER"
 
 echo "Hermes configured for DigitalOcean Serverless Inference: ${INFERENCE_MODEL}"
 exit 0
