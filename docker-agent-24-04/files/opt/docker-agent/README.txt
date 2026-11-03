@@ -21,12 +21,13 @@ Where to get keys:
   Google       https://aistudio.google.com/apikey
   DO Inference     https://cloud.digitalocean.com/model-studio/manage-keys
 
-Example:
+Enter a key without displaying it (nothing is echoed), then export it:
 
-  export OPENAI_API_KEY=your_api_key_here
-  export ANTHROPIC_API_KEY=your_api_key_here
-  export GOOGLE_API_KEY=your_api_key_here
-  export DO_MODEL_ACCESS_API_KEY=your_do_model_key_here
+  read -rsp "DO_MODEL_ACCESS_API_KEY: " DO_MODEL_ACCESS_API_KEY; echo
+  export DO_MODEL_ACCESS_API_KEY
+
+Same form for OPENAI_API_KEY, ANTHROPIC_API_KEY, and GOOGLE_API_KEY.
+Do not paste the key into the command line; it would stay on screen and in shell history.
 
 First SSH: optional prompts save keys to /root/.bashrc (same order as above:
 OpenAI, then Anthropic, then Google, then DO Inference). Then:
@@ -71,12 +72,11 @@ More samples (check each file for provider / token_key)
     docker-agent run /opt/docker-agent/examples/pythonist.yaml
     docker-agent run /opt/docker-agent/examples/todo.yaml
 
-One line per provider (same order as keys)
-------------------------------------------
-  OPENAI_API_KEY=k docker-agent run /opt/docker-agent/examples/basic_agent.yaml
-  ANTHROPIC_API_KEY=k docker-agent run ./my-agent.yaml
-  GOOGLE_API_KEY=k docker-agent run ./my-agent.yaml
-  DO_MODEL_ACCESS_API_KEY=k docker-agent run /opt/docker-agent/examples/do_model_agent.yaml
+Run after the key is exported. Do not put the key on the command line
+------------------------------------------------------------------
+  docker-agent run /opt/docker-agent/examples/basic_agent.yaml
+  docker-agent run ./my-agent.yaml
+  docker-agent run /opt/docker-agent/examples/do_model_agent.yaml
 
 CLI help:
 

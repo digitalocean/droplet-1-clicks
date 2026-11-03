@@ -63,23 +63,15 @@ Each provider maps to one environment variable. Export the variables that match 
 | 3 | `GOOGLE_API_KEY` | Google Gemini | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
 | 4 | `DO_MODEL_ACCESS_API_KEY` | DigitalOcean Inference | [cloud.digitalocean.com/model-studio/manage-keys](https://cloud.digitalocean.com/model-studio/manage-keys) |
 
-**Typical `export` block:**
+**Enter a key without displaying it.** `read -s` hides what you type, then `export` makes it available to `docker-agent`. Do not paste the key onto the command line; it would stay on screen and in shell history.
 
 ```bash
-export OPENAI_API_KEY=your_openai_key_here
-export ANTHROPIC_API_KEY=your_anthropic_key_here
-export GOOGLE_API_KEY=your_google_key_here
-export DO_MODEL_ACCESS_API_KEY=your_do_inference_key_here
+read -rsp "DO_MODEL_ACCESS_API_KEY: " DO_MODEL_ACCESS_API_KEY; echo
+export DO_MODEL_ACCESS_API_KEY
+docker-agent run /opt/docker-agent/examples/do_model_agent.yaml
 ```
 
-**One command per provider (no prior `export`):**
-
-```bash
-OPENAI_API_KEY=your_key docker-agent run /opt/docker-agent/examples/basic_agent.yaml
-ANTHROPIC_API_KEY=your_key docker-agent run ./your-agent.yaml
-GOOGLE_API_KEY=your_key docker-agent run ./your-agent.yaml
-DO_MODEL_ACCESS_API_KEY=your_key docker-agent run /opt/docker-agent/examples/do_model_agent.yaml
-```
+Use the same `read -rsp` form for `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, and `GOOGLE_API_KEY`, then run the matching agent file.
 
 Notes:
 

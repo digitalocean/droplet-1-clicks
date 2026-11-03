@@ -32,7 +32,8 @@ echo ""
 read -p "Set OPENAI_API_KEY now? (y/n) [n]: " yn
 yn=${yn:-n}
 if [[ "${yn,,}" == "y" || "${yn,,}" == "yes" ]]; then
-    read -p "Enter your OPENAI_API_KEY: " key
+    read -rsp "Enter your OPENAI_API_KEY (input hidden): " key
+    echo
     key=$(strip_quotes "$key")
     if [ -n "$key" ]; then
         if grep -q 'OPENAI_API_KEY' "$BASHRC" 2>/dev/null; then
@@ -47,7 +48,8 @@ fi
 read -p "Set ANTHROPIC_API_KEY now? (y/n) [n]: " yn
 yn=${yn:-n}
 if [[ "${yn,,}" == "y" || "${yn,,}" == "yes" ]]; then
-    read -p "Enter your ANTHROPIC_API_KEY: " key
+    read -rsp "Enter your ANTHROPIC_API_KEY (input hidden): " key
+    echo
     key=$(strip_quotes "$key")
     if [ -n "$key" ]; then
         if grep -q 'ANTHROPIC_API_KEY' "$BASHRC" 2>/dev/null; then
@@ -62,7 +64,8 @@ fi
 read -p "Set GOOGLE_API_KEY now? (y/n) [n]: " yn
 yn=${yn:-n}
 if [[ "${yn,,}" == "y" || "${yn,,}" == "yes" ]]; then
-    read -p "Enter your GOOGLE_API_KEY: " key
+    read -rsp "Enter your GOOGLE_API_KEY (input hidden): " key
+    echo
     key=$(strip_quotes "$key")
     if [ -n "$key" ]; then
         if grep -q 'GOOGLE_API_KEY' "$BASHRC" 2>/dev/null; then
@@ -77,7 +80,8 @@ fi
 read -p "Set DigitalOcean Inference key now? (y/n) [n]: " yn
 yn=${yn:-n}
 if [[ "${yn,,}" == "y" || "${yn,,}" == "yes" ]]; then
-    read -p "Enter your DigitalOcean Inference model access key: " key
+    read -rsp "Enter your DigitalOcean Inference model access key (input hidden): " key
+    echo
     key=$(strip_quotes "$key")
     if [ -n "$key" ]; then
         if grep -q 'DO_MODEL_ACCESS_API_KEY' "$BASHRC" 2>/dev/null; then
