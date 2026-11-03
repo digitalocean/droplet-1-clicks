@@ -36,7 +36,7 @@ OpenCode is lightweight; most compute happens at the LLM provider.
 ## Included System Components
 
 - **Ubuntu 24.04 LTS** – Base operating system
-- **OpenCode** – AI coding agent (version 1.2.6)
+- **OpenCode** – AI coding agent (version 1.19.5)
 - **DigitalOcean Serverless Inference** – Pre-configured inference provider
 - **Git** – Version control
 - **UFW Firewall** – SSH only (rate-limited)
@@ -62,7 +62,7 @@ If you passed `MODEL_ACCESS_KEY` as a droplet environment variable, OpenCode is 
 
 Otherwise, on first login the setup wizard will prompt for your DigitalOcean Serverless Inference model access key. To create one:
 
-1. Go to https://cloud.digitalocean.com/gen-ai/model-access-keys
+1. Go to https://cloud.digitalocean.com/model-studio/manage-keys
 2. Click **Create Model Access Key**
 3. Copy the new key
 4. Paste the key when prompted — the wizard then lists **current** chat models from the Serverless Inference API (or `R` for the Intelligent Inference Router)
@@ -152,7 +152,7 @@ Re-run the setup wizard to reconfigure your DigitalOcean model access key:
 /opt/setup-opencode.sh
 ```
 
-Or manually edit `/root/.local/share/opencode/auth.json` — set `digitalocean` to `{"type": "api", "key": "<your key>"}`. Create keys at https://cloud.digitalocean.com/gen-ai/model-access-keys.
+Or manually edit `/root/.local/share/opencode/auth.json` — set `digitalocean` to `{"type": "api", "key": "<your key>"}`. Create keys at https://cloud.digitalocean.com/model-studio/manage-keys.
 
 ## Additional Resources
 

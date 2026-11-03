@@ -21,8 +21,8 @@ GETTING STARTED:
      Inference is configured automatically. Otherwise, on first login the setup wizard
      will prompt for your DigitalOcean model access key and let you pick a
      default model (or the Intelligent Inference Router). Create a key at:
-     https://cloud.digitalocean.com/gen-ai
-     (API Keys > Model Access Keys)
+     https://cloud.digitalocean.com/model-studio/manage-keys
+     (Inference > Manage > Create Model Access Key)
 
   2. Run OpenCode:
      cd /path/to/your/project

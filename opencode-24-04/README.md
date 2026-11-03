@@ -112,7 +112,7 @@ If the user chooses option 2 in the setup wizard, the custom Serverless Inferenc
 
 The `application_version` variable in `template.json` pins the OpenCode version. To bump:
 
-1. Edit `application_version` in `template.json` (e.g., `"1.2.6"`)
+1. Edit `application_version` in `template.json` (e.g., `"1.19.5"`)
 2. Rebuild the image
 
 ## License

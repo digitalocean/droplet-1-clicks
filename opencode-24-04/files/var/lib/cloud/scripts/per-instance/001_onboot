@@ -84,8 +84,8 @@ NEXT STEPS:
 1. If Serverless Inference was not auto-configured, the setup wizard runs on first login
    to configure your DigitalOcean model access key and pick a default model
    (or the Intelligent Inference Router). To create a key:
-     https://cloud.digitalocean.com/gen-ai
-     Navigate to API Keys > Model Access Keys
+     https://cloud.digitalocean.com/model-studio/manage-keys
+     (Inference > Manage > Create Model Access Key)
 
 2. Run OpenCode:
    cd /path/to/your/project
