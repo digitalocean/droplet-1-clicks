@@ -3,7 +3,7 @@
 #
 # Usage:
 #   /opt/hermes/update-hermes.sh              # install latest GitHub release
-#   /opt/hermes/update-hermes.sh v2026.9.14   # install a specific release tag
+#   /opt/hermes/update-hermes.sh v0.22.6      # install a specific release tag
 #   /opt/hermes/update-hermes.sh latest       # same as no args
 #
 # HERMES_VERSION in /opt/hermes/hermes.env is the installed pin (updated after
@@ -33,7 +33,7 @@ usage() {
 Usage: /opt/hermes/update-hermes.sh [version]
 
   (no args) / latest   Install the latest Hermes Agent GitHub release
-  v2026.9.14 / 2026.9.14
+  v0.22.6 / 0.22.6
                        Install that exact release tag
 EOF
 }
@@ -68,13 +68,28 @@ normalize_version() {
     case "$v" in
         ''|Latest|LATEST|latest) printf '%s' "latest" ;;
         *)
-            # Hermes release tags are vYYYY.M.D[.N]
+            # Hermes release tags are vX.Y.Z (older images used vYYYY.M.D).
             case "$v" in
                 v*) printf '%s' "$v" ;;
                 *) printf '%s' "v${v}" ;;
             esac
             ;;
     esac
+}
+
+# Peeled commit for a release tag. Tags are not branches; the installer
+# fetches refs/heads/<name> when --branch is set.
+resolve_tag_commit() {
+    local ref="$1" sha
+    sha="$(git ls-remote https://github.com/NousResearch/hermes-agent.git "refs/tags/${ref}^{}" | awk 'NR==1 { print $1 }')"
+    if [ -z "$sha" ]; then
+        sha="$(git ls-remote https://github.com/NousResearch/hermes-agent.git "refs/tags/${ref}" | awk 'NR==1 { print $1 }')"
+    fi
+    if [ -z "$sha" ]; then
+        echo "❌ Error: ${ref} is not a Hermes release tag." >&2
+        exit 1
+    fi
+    printf '%s' "$sha"
 }
 
 resolve_latest_release_tag() {
@@ -96,10 +111,16 @@ current_installed_version() {
     fi
 
     if [ -x "$HERMES_BIN" ]; then
-        # e.g. "Hermes Agent v0.21.3 (2026.9.14)" → v2026.9.14
+        # Prefer the semver release ("Hermes Agent v0.22.6 (2026.9.14)" → v0.22.6).
+        # Older builds printed a vYYYY.M.D tag, or only that date in parentheses.
         from_cli="$(su - "$HERMES_USER" -c "$(printf '%q' "$HERMES_BIN") --version" 2>/dev/null | head -n 1 || true)"
-        if [[ "$from_cli" =~ \(([0-9]{4}\.[0-9]+\.[0-9]+(\.[0-9]+)?)\) ]]; then
-            normalize_version "${BASH_REMATCH[1]}"
+        if [[ "$from_cli" =~ v(0|[1-9][0-9]{0,2})\.([0-9]+)\.([0-9]+) ]]; then
+            normalize_version "v${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.${BASH_REMATCH[3]}"
+            return 0
+        fi
+        if [[ "$from_cli" =~ v([0-9]{4}\.[0-9]+\.[0-9]+(\.[0-9]+)?) ]] || \
+           [[ "$from_cli" =~ \(([0-9]{4}\.[0-9]+\.[0-9]+(\.[0-9]+)?)\) ]]; then
+            normalize_version "v${BASH_REMATCH[1]}"
             return 0
         fi
     fi
@@ -149,13 +170,54 @@ install_hermes_ref() {
     if ! curl -fsSL "${INSTALLER_BASE}/${ref}/scripts/install.sh" -o "$installer"; then
         rm -f "$installer"
         echo "❌ Error: could not download installer for ${ref}." >&2
-        echo "Check that the release tag exists, e.g. v2026.9.14" >&2
+        echo "Check that the release tag exists, e.g. v0.22.6" >&2
         exit 1
     fi
     chmod 0755 "$installer"
 
     echo "Installing Hermes Agent at ${ref}..."
-    if ! su - "$HERMES_USER" -c "HERMES_HOME=$(printf '%q' "$HERMES_HOME") bash $(printf '%q' "$installer") --skip-setup --skip-browser --branch $(printf '%q' "$ref")"; then
+    # --branch expects refs/heads/<name>. v0.22.6 is a tag, so pin its commit.
+    # Do not pass --channel main: that saves the main update channel, and a
+    # later `hermes update` follows main's tip instead of this release.
+    # The upstream installer otherwise rejects a tag cut from a release branch
+    # because it is not an ancestor of main. If a future installer drops that
+    # check, leave it unchanged and continue.
+    local commit patched
+    commit="$(resolve_tag_commit "$ref")"
+    patched="${installer}.patched"
+    awk -v tag="$ref" '
+        function emit_fetch(dir,    indent) {
+            indent = (dir == "$staged/tree") ? "            " : "        "
+            print indent "git -C \"" dir "\" cat-file -e \"${INSTALL_COMMIT}^{commit}\" 2>/dev/null \\"
+            print indent "    || git -C \"" dir "\" fetch --no-tags origin \"+refs/tags/" tag ":refs/tags/" tag "\" \\"
+            if (dir == "$staged/tree") {
+                print indent "    || { rm -rf \"$staged\"; fail \"could not fetch release tag\" commit_not_on_branch; }"
+            } else {
+                print indent "    || fail \"could not fetch release tag\" commit_not_on_branch"
+            }
+        }
+        {
+            if (have) {
+                if (prev ~ /git -C "\$staged\/tree" merge-base --is-ancestor "\$INSTALL_COMMIT"/ && /not on branch \$BRANCH/) {
+                    emit_fetch("$staged/tree")
+                    have = 0
+                    next
+                }
+                if (prev ~ /git -C "\$INSTALL_DIR" merge-base --is-ancestor "\$INSTALL_COMMIT"/ && /not on branch \$BRANCH/) {
+                    emit_fetch("$INSTALL_DIR")
+                    have = 0
+                    next
+                }
+                print prev
+            }
+            prev = $0
+            have = 1
+        }
+        END { if (have) print prev }
+    ' "$installer" >"$patched"
+    mv "$patched" "$installer"
+    chmod 0755 "$installer"
+    if ! su - "$HERMES_USER" -c "HERMES_HOME=$(printf '%q' "$HERMES_HOME") bash $(printf '%q' "$installer") --skip-setup --skip-browser --commit $(printf '%q' "$commit")"; then
         rm -f "$installer"
         echo "❌ Error: failed to install hermes@${ref}" >&2
         exit 1
@@ -176,7 +238,7 @@ case "${1:-}" in
     --rollback|-r)
         echo "❌ Error: --rollback is not supported." >&2
         echo "Install a specific release instead, e.g.:" >&2
-        echo "  sudo /opt/hermes/update-hermes.sh v2026.9.14" >&2
+        echo "  sudo /opt/hermes/update-hermes.sh v0.22.6" >&2
         exit 1
         ;;
     *)

@@ -41,7 +41,55 @@ esac
 curl -fsSL "https://raw.githubusercontent.com/NousResearch/hermes-agent/${APP_VERSION}/scripts/install.sh" -o "$INSTALLER"
 chmod 0755 "$INSTALLER"
 
-su - "$HERMES_USER" -c "HERMES_HOME=$HERMES_HOME bash $INSTALLER --skip-setup --skip-browser --branch $APP_VERSION"
+# Release tags are refs/tags/*, not branches. --branch v0.22.6 makes the
+# installer fetch refs/heads/v0.22.6 and fail. --commit pins that tag.
+# Do not pass --channel main: that saves the main update channel, and a
+# later `hermes update` follows main's tip instead of this release.
+# The upstream installer otherwise rejects a tag cut from a release branch
+# because it is not an ancestor of main. If a future installer drops that
+# check, leave it unchanged and continue.
+HERMES_COMMIT="$(git ls-remote https://github.com/NousResearch/hermes-agent.git "refs/tags/${APP_VERSION}^{}" | awk 'NR==1 { print $1 }')"
+if [ -z "$HERMES_COMMIT" ]; then
+    HERMES_COMMIT="$(git ls-remote https://github.com/NousResearch/hermes-agent.git "refs/tags/${APP_VERSION}" | awk 'NR==1 { print $1 }')"
+fi
+if [ -z "$HERMES_COMMIT" ]; then
+    echo "ERROR: ${APP_VERSION} is not a Hermes release tag." >&2
+    exit 1
+fi
+
+awk -v tag="$APP_VERSION" '
+    function emit_fetch(dir,    indent) {
+        indent = (dir == "$staged/tree") ? "            " : "        "
+        print indent "git -C \"" dir "\" cat-file -e \"${INSTALL_COMMIT}^{commit}\" 2>/dev/null \\"
+        print indent "    || git -C \"" dir "\" fetch --no-tags origin \"+refs/tags/" tag ":refs/tags/" tag "\" \\"
+        if (dir == "$staged/tree") {
+            print indent "    || { rm -rf \"$staged\"; fail \"could not fetch release tag\" commit_not_on_branch; }"
+        } else {
+            print indent "    || fail \"could not fetch release tag\" commit_not_on_branch"
+        }
+    }
+    {
+        if (have) {
+            if (prev ~ /git -C "\$staged\/tree" merge-base --is-ancestor "\$INSTALL_COMMIT"/ && /not on branch \$BRANCH/) {
+                emit_fetch("$staged/tree")
+                have = 0
+                next
+            }
+            if (prev ~ /git -C "\$INSTALL_DIR" merge-base --is-ancestor "\$INSTALL_COMMIT"/ && /not on branch \$BRANCH/) {
+                emit_fetch("$INSTALL_DIR")
+                have = 0
+                next
+            }
+            print prev
+        }
+        prev = $0
+        have = 1
+    }
+    END { if (have) print prev }
+' "$INSTALLER" >"${INSTALLER}.patched"
+mv "${INSTALLER}.patched" "$INSTALLER"
+chmod 0755 "$INSTALLER"
+su - "$HERMES_USER" -c "HERMES_HOME=$HERMES_HOME bash $INSTALLER --skip-setup --skip-browser --commit $HERMES_COMMIT"
 rm -f "$INSTALLER"
 
 if [ ! -x "$HERMES_BIN" ]; then
