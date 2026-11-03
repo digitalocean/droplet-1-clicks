@@ -36,7 +36,7 @@ OpenCode is lightweight; most compute happens at the LLM provider.
 ## Included System Components
 
 - **Ubuntu 24.04 LTS** – Base operating system
-- **OpenCode** – AI coding agent (version 1.2.6)
+- **OpenCode** – AI coding agent (version 1.19.5)
 - **DigitalOcean Serverless Inference** – Pre-configured inference provider
 - **Git** – Version control
 - **UFW Firewall** – SSH only (rate-limited)
