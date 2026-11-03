@@ -81,7 +81,7 @@ On first SSH login, the wizard prompts for your key if it was not pre-configured
 
 To create a key:
 
-1. Go to https://cloud.digitalocean.com/gen-ai/model-access-keys
+1. Go to https://cloud.digitalocean.com/model-studio/manage-keys
 2. Click **Create Model Access Key**
 3. Copy the new key and use it with one of the options above
 
