@@ -192,8 +192,8 @@ prompt_and_save_key() {
   echo "========================================================================"
   echo ""
   echo "You need a DigitalOcean model access key. To create one:"
-  echo "  1. Go to https://cloud.digitalocean.com/gen-ai"
-  echo "  2. Navigate to API Keys > Model Access Keys"
+  echo "  1. Go to https://cloud.digitalocean.com/model-studio/manage-keys"
+  echo "  2. Or from the cloud console, navigate to Inference > Manage"
   echo "  3. Click 'Create Model Access Key'"
   echo ""
 
