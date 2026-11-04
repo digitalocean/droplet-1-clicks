@@ -19,7 +19,7 @@ Where to get keys:
   OpenAI       https://platform.openai.com/api-keys
   Anthropic    https://console.anthropic.com/
   Google       https://aistudio.google.com/apikey
-  DO Inference     https://cloud.digitalocean.com/gen-ai
+  DO Inference     https://cloud.digitalocean.com/model-studio/manage-keys
 
 Example:
 
