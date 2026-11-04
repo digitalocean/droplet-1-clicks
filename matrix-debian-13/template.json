@@ -1,16 +1,16 @@
 {
   "variables": {
-    "do_token": "{{env `DIGITALOCEAN_TOKEN`}}",
+    "do_api_token": "{{env `DIGITALOCEAN_TOKEN`}}",
     "image_name": "matrix-debian-13-snapshot-{{timestamp}}",
     "apt_packages": "debian-keyring debian-archive-keyring lsb-release wget curl jq apt-transport-https sudo dnsutils",
     "application_name": "Matrix",
     "application_version": "latest"
   },
-  "sensitive-variables": ["do_token"],
+  "sensitive-variables": ["do_api_token"],
   "builders": [
     {
       "type": "digitalocean",
-      "api_token": "{{user `do_token`}}",
+      "api_token": "{{user `do_api_token`}}",
       "image": "debian-13-x64",
       "region": "nyc3",
       "size": "s-1vcpu-1gb",
