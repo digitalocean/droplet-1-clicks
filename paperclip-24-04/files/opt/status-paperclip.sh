@@ -15,6 +15,14 @@ echo "=== Caddy service ==="
 systemctl --no-pager --full status caddy || true
 echo
 echo "=== Version ==="
+if [ -x /usr/bin/node ]; then
+  echo "Node.js: $(/usr/bin/node --version) ($(readlink -f /usr/bin/node 2>/dev/null || echo /usr/bin/node))"
+fi
+if [ -x /usr/local/bin/opencode ]; then
+  echo "OpenCode: $(/usr/local/bin/opencode --version 2>/dev/null || echo unknown)"
+else
+  echo "OpenCode: not installed"
+fi
 if [ -x /home/paperclip/.local/bin/paperclipai ]; then
   su - paperclip -c "paperclipai --version" 2>/dev/null || true
 fi
@@ -53,15 +61,18 @@ fi
 echo
 echo "=== Serverless Inference ==="
 if [ -f /opt/paperclip/.provider-configured ]; then
-  echo "DigitalOcean key: staged in /opt/paperclip.env (connect providers in UI)"
-  grep -E '^(INFERENCE_MODEL|DO_INFERENCE_ROUTER|OPENAI_BASE_URL)=' /opt/paperclip.env 2>/dev/null || true
+  echo "DigitalOcean Serverless Inference: configured"
+  grep -E '^(INFERENCE_MODEL|DO_INFERENCE_ROUTER|OPENAI_BASE_URL|PAPERCLIP_OPENCODE_SMALL_MODEL)=' /opt/paperclip.env 2>/dev/null || true
   if grep -qE '^MODEL_ACCESS_KEY=.' /opt/paperclip.env 2>/dev/null; then
     echo "MODEL_ACCESS_KEY: set"
   else
     echo "MODEL_ACCESS_KEY: missing"
   fi
+  if grep -qE '^PAPERCLIP_OPENCODE_PROVIDERS=.' /opt/paperclip.env 2>/dev/null; then
+    echo "OpenCode provider: digitalocean (select digitalocean/<model> on the agent)"
+  fi
 else
-  echo "DigitalOcean key: not staged (optional — run /etc/setup_wizard.sh)"
+  echo "DigitalOcean key: not configured (optional — run /etc/setup_wizard.sh)"
 fi
 if [ -f /root/paperclip_firstboot_failed ]; then
   echo

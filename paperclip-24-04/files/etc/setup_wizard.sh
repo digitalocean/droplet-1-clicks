@@ -274,6 +274,14 @@ echo "  Dashboard: https://${myip}"
 echo "  Email:     ${email:-admin@paperclip.local}"
 echo "  Password:  ${PASSWORD:-"(see /opt/paperclip.env INITIAL_PASSWORD)"}"
 echo "  Default:   ${CHOSEN_LABEL}"
+if [ -n "${ROUTER_NAME:-}" ]; then
+  echo "  OpenCode model: digitalocean/router:${ROUTER_NAME}"
+  echo "  Codex model:           router:${ROUTER_NAME}"
+else
+  echo "  OpenCode model: digitalocean/${INFERENCE_MODEL}"
+  echo "  Codex model:           ${INFERENCE_MODEL}"
+fi
+echo "  Select that model on each agent in the dashboard."
 echo "========================================================================"
 echo ""
 

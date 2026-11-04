@@ -6,7 +6,7 @@ This directory contains the Packer builder configuration for creating a Papercli
 
 [Paperclip](https://github.com/paperclipai/paperclip) is open-source orchestration for teams of AI agents. This builder creates an Ubuntu 24.04 LTS Droplet with a managed Paperclip CLI install (`paperclipai`), Caddy HTTPS (shortlived TLS by IP), and first-boot configuration for authenticated/public mode behind a reverse proxy.
 
-Latest stable version pinned in `template.json` (from [paperclipai/paperclip releases](https://github.com/paperclipai/paperclip/releases)): **2026.916.1**.
+Latest stable version pinned in `template.json` (from [paperclipai/paperclip releases](https://github.com/paperclipai/paperclip/releases)): **2026.1023.0**.
 
 ## Directory Structure
 
@@ -26,7 +26,10 @@ paperclip-24-04/
     │   └── update-motd.d/99-one-click
     ├── opt/
 │   ├── start|stop|restart|status|update-paperclip.sh
+│   ├── ensure-paperclip-node.sh
+│   ├── ensure-paperclip-opencode.sh
 │   ├── apply-inference-from-env.sh
+│   ├── install-paperclip-inference-ui.sh
 │   ├── claim-paperclip-admin.sh
 │   ├── setup-paperclip-domain.sh
 │   ├── write-paperclip-config.sh
@@ -56,8 +59,9 @@ make build-paperclip-24-04
 
 ## What Gets Installed
 
-- **Paperclip** managed CLI (`paperclipai@2026.916.1` from `application_version` in `template.json`)
-- **Node.js 24** (required by Paperclip)
+- **Paperclip** managed CLI (`paperclipai@2026.1023.0` from `application_version` in `template.json`)
+- **Node.js 24.22.1 or later** at `/usr/bin/node` (NodeSource `node_24.x`). The service refuses to start on an older binary and upgrades Node before first boot and before each Paperclip update.
+- **OpenCode CLI** at `/usr/local/bin/opencode`, installed during the image bake. A later reinstall failure does not stop Paperclip.
 - **PostgreSQL** (local package; required for authenticated/public — embedded Postgres is refused)
 - **Caddy** – reverse proxy on ports 80/443 to `127.0.0.1:3100` with shortlived TLS by IP
 - **UFW** – SSH (rate-limited), HTTP, HTTPS
@@ -70,14 +74,14 @@ make build-paperclip-24-04
 2. Writes authenticated/public/loopback instance config with `PAPERCLIP_PUBLIC_URL=https://<droplet-ip>`
 3. Installs Caddyfile (shortlived TLS for droplet IP) and starts `postgresql` + `paperclip` + `caddy`
 4. Creates a bootstrap invite, auto-claims it with generated `ADMIN_EMAIL` / `INITIAL_PASSWORD`, then locks open signup
-5. Optionally stages `MODEL_ACCESS_KEY` (if set); otherwise hooks the SSH setup wizard
+5. Configures DigitalOcean Serverless Inference when `MODEL_ACCESS_KEY` is set (OpenCode provider `digitalocean`, and Codex via `OPENAI_BASE_URL` when OpenAI is unset). Otherwise hooks the SSH setup wizard
 6. Writes `/root/paperclip_info.txt`
 
 ## First Login / Access
 
 1. Open `https://<droplet-ip>` and sign in with `ADMIN_EMAIL` / `INITIAL_PASSWORD` from the SSH MOTD
 2. Complete UI onboarding (company, agents, goals)
-3. If `MODEL_ACCESS_KEY` was not staged at create time, the SSH wizard can stage a DigitalOcean model access key
+3. If `MODEL_ACCESS_KEY` was not set at create time, the SSH wizard can configure DigitalOcean Serverless Inference. When it is configured, onboarding's "Connect a model" step offers DigitalOcean Inference and hires OpenCode on `digitalocean/<model>`. Codex can use the raw model id.
 
 ### Staging from droplet environment
 
@@ -90,7 +94,7 @@ make build-paperclip-24-04
 | `ANTHROPIC_API_KEY` | No | Anthropic key written into `/opt/paperclip.env` on first boot |
 | `OPENROUTER_API_KEY` | No | OpenRouter key written into `/opt/paperclip.env` on first boot |
 
-`MODEL_ACCESS_KEY` is optional. When set, first boot stages it in `/opt/paperclip.env` and skips the interactive wizard. If `OPENAI_API_KEY` is empty, apply also sets `OPENAI_API_KEY`/`OPENAI_BASE_URL` for OpenAI-compatible adapters; an existing distinct OpenAI key is preserved. Paperclip has no native DigitalOcean provider API — connect providers in the UI after bootstrap. Create keys at https://cloud.digitalocean.com/model-studio/manage-keys.
+`MODEL_ACCESS_KEY` is optional. When set, first boot writes it to `/opt/paperclip.env`, sets `PAPERCLIP_OPENCODE_PROVIDERS` (provider id `digitalocean`, base URL `https://inference.do-ai.run/v1`, key `{env:MODEL_ACCESS_KEY}`), `PAPERCLIP_OPENCODE_SMALL_MODEL=digitalocean/<model>`, and `OPENCODE_ALLOW_ALL_MODELS=true`, then skips the interactive wizard. `INFERENCE_MODEL` is `router:<name>` when `DO_INFERENCE_ROUTER` is set. If `OPENAI_API_KEY` is empty, apply also sets `OPENAI_API_KEY`/`OPENAI_BASE_URL` for Codex; an existing distinct OpenAI key is preserved. `paperclipai@2026.1023.0` has no `llm.baseUrl` field, so the endpoint is configured through those environment variables. The connect step's DigitalOcean Inference tile hires that OpenCode model without putting the key in the browser. Create keys at https://cloud.digitalocean.com/model-studio/manage-keys.
 
 ## Management
 
@@ -115,4 +119,4 @@ Paperclip publishes a recommended managed npm install (`paperclipai`). The upstr
 
 - https://github.com/paperclipai/paperclip
 - https://paperclip.ing
-- https://github.com/paperclipai/paperclip/releases/tag/v2026.916.1
+- https://github.com/paperclipai/paperclip/releases/tag/v2026.1023.0

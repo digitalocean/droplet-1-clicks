@@ -3,8 +3,8 @@
 #
 # Usage:
 #   /opt/update-paperclip.sh                 # latest stable
-#   /opt/update-paperclip.sh 2026.916.1      # exact version
-#   /opt/update-paperclip.sh v2026.916.1     # same (v stripped)
+#   /opt/update-paperclip.sh 2026.1023.0      # exact version
+#   /opt/update-paperclip.sh v2026.1023.0     # same (v stripped)
 #   /opt/update-paperclip.sh --rollback      # previous managed payload
 
 set -euo pipefail
@@ -16,12 +16,19 @@ if [ "$(id -u)" -ne 0 ]; then
   exit 1
 fi
 
+chmod +x /opt/ensure-paperclip-node.sh
+/opt/ensure-paperclip-node.sh
+chmod +x /opt/ensure-paperclip-opencode.sh
+if ! /opt/ensure-paperclip-opencode.sh; then
+  echo "WARNING: OpenCode CLI is not installed. OpenCode agent verification cannot pass until /usr/local/bin/opencode exists." >&2
+fi
+
 usage() {
   cat <<'EOF'
 Usage: /opt/update-paperclip.sh [version|--rollback]
 
   (no args) / latest   Update to the latest stable managed release
-  2026.916.1           Install that exact published version
+  2026.1023.0          Install that exact published version
   --rollback           Roll back to the previous managed CLI payload
 
 PAPERCLIP_VERSION in /opt/paperclip.env is updated after a successful pin.
@@ -82,7 +89,7 @@ systemctl stop paperclip || true
 
 if [ "$MODE" = "rollback" ]; then
   echo "Rolling back managed Paperclip CLI..."
-  if ! su - paperclip -c "paperclipai update --rollback"; then
+  if ! su - paperclip -c "PATH=/usr/bin:/bin:\$HOME/.local/bin paperclipai update --rollback"; then
     echo "Rollback failed." >&2
     systemctl start paperclip || true
     exit 1
@@ -94,14 +101,14 @@ else
   else
     UPDATE_CMD="paperclipai update --version ${TARGET} --yes"
   fi
-  if ! su - paperclip -c "$UPDATE_CMD"; then
+  if ! su - paperclip -c "PATH=/usr/bin:/bin:\$HOME/.local/bin ${UPDATE_CMD}"; then
     echo "Update failed." >&2
     systemctl start paperclip || true
     exit 1
   fi
 fi
 
-RAW_VERSION="$(su - paperclip -c "paperclipai --version" 2>/dev/null | head -n 1 || true)"
+RAW_VERSION="$(su - paperclip -c "PATH=/usr/bin:/bin:\$HOME/.local/bin paperclipai --version" 2>/dev/null | head -n 1 || true)"
 # Accept calver (YYYY.N.N) or semver (N.N.N); only keep INSTALLED when extraction succeeds
 INSTALLED="$(printf '%s' "$RAW_VERSION" | sed -nE 's/.*([0-9]{4}\.[0-9]+\.[0-9]+|[0-9]+\.[0-9]+\.[0-9]+).*/\1/p')"
 if [ -z "${INSTALLED}" ]; then
@@ -134,6 +141,8 @@ if [ -f "$INSTANCE_ENV" ]; then
   chown paperclip:paperclip "$INSTANCE_ENV"
   chmod 600 "$INSTANCE_ENV"
 fi
+
+/opt/install-paperclip-inference-ui.sh --from-env
 
 echo "Starting Paperclip..."
 systemctl start paperclip

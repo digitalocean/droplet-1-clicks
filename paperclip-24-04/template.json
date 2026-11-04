@@ -4,7 +4,7 @@
     "image_name": "paperclip-24-04-snapshot-{{timestamp}}",
     "apt_packages": "procps file apt-transport-https ca-certificates curl software-properties-common git jq unzip openssl ufw gnupg fail2ban python3 postgresql",
     "application_name": "Paperclip",
-    "application_version": "2026.916.1"
+    "application_version": "2026.1023.0"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
@@ -12,7 +12,7 @@
       "type": "digitalocean",
       "api_token": "{{user `do_api_token`}}",
       "image": "ubuntu-24-04-x64",
-      "region": "nyc3",
+      "region": "ams3",
       "size": "s-2vcpu-4gb",
       "ssh_username": "root",
       "snapshot_name": "{{user `image_name`}}"

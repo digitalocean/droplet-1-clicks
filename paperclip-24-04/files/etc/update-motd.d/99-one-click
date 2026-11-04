@@ -7,6 +7,22 @@ pub=$(curl -fsS --retry 3 --retry-connrefused --max-time 3 \
 myip="${pub:-$(hostname -I | awk '{print$1}')}"
 email=$(grep "^ADMIN_EMAIL=" /opt/paperclip.env 2>/dev/null | cut -d= -f2-)
 password=$(grep "^INITIAL_PASSWORD=" /opt/paperclip.env 2>/dev/null | cut -d= -f2-)
+inference_model=$(grep "^INFERENCE_MODEL=" /opt/paperclip.env 2>/dev/null | tail -n 1 | cut -d= -f2-)
+inference_model=${inference_model#\"}
+inference_model=${inference_model%\"}
+
+if [ -f /opt/paperclip/.provider-configured ] && [ -n "$inference_model" ]; then
+  inference_step="2. DigitalOcean Serverless Inference is configured.
+     Model: ${inference_model}
+     Onboarding shows a DigitalOcean Inference tile beside Claude and OpenAI.
+     It hires OpenCode on digitalocean/${inference_model}.
+     Codex can use ${inference_model} via https://inference.do-ai.run/v1.
+  3. Create a company, hire agents, and set a goal in the UI"
+else
+  inference_step="2. Complete the SSH setup wizard for DigitalOcean Serverless Inference
+     (optional: Intelligent Inference Router), or set MODEL_ACCESS_KEY
+  3. Create a company, hire agents, and set a goal in the UI"
+fi
 
 cat <<EOF
 ********************************************************************************
@@ -26,9 +42,7 @@ prefers DigitalOcean Serverless Inference when you supply a model access key.
 
 📝 First steps:
   1. Open the Dashboard and sign in
-  2. Complete the SSH setup wizard for DigitalOcean Serverless Inference
-     (optional: Intelligent Inference Router), or set MODEL_ACCESS_KEY
-  3. Create a company, hire agents, and set a goal in the UI
+  ${inference_step}
 
 🔧 Management:
   Restart:  /opt/restart-paperclip.sh

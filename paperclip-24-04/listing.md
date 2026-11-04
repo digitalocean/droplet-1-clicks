@@ -17,7 +17,9 @@ Paperclip looks like a task manager. Under the hood it provides org charts, budg
 - Always-on Paperclip server with local PostgreSQL (`DATABASE_URL`)
 - Caddy reverse proxy (ports 80/443 → loopback `:3100`) with shortlived TLS by IP
 - Generated admin email/password in MOTD
-- Optional DigitalOcean Serverless Inference (`MODEL_ACCESS_KEY`, model list, Intelligent Inference Router)
+- Optional DigitalOcean Serverless Inference (`MODEL_ACCESS_KEY`, live model list, Intelligent Inference Router)
+- Onboarding "Connect a model" offers DigitalOcean Inference when `MODEL_ACCESS_KEY` is set, and hires OpenCode on `digitalocean/<model>`
+- Codex pointed at `https://inference.do-ai.run/v1` when no separate OpenAI key is set
 - Helper scripts for start/stop/restart/status/update, inference apply, and custom domain TLS
 - Ubuntu 24.04 LTS with UFW and fail2ban
 
@@ -33,8 +35,9 @@ Paperclip runs the Node.js server and local PostgreSQL on the host. Prefer at le
 ## Included System Components
 
 - **Ubuntu 24.04 LTS**
-- **Paperclip** `2026.916.1` (managed CLI install, version pinned in the image build)
-- **Node.js 24**
+- **Paperclip** `2026.1023.0` (managed CLI install, version pinned in the image build)
+- **Node.js 24.22.1 or later** at `/usr/bin/node`. Paperclip will not start on an older Node, and first boot and updates install a newer NodeSource 24.x package when needed.
+- **OpenCode CLI** at `/usr/local/bin/opencode`, required for DigitalOcean Inference agent verification.
 - **PostgreSQL** (local; required for authenticated/public deployments)
 - **Caddy** reverse proxy (ports 80/443 → `127.0.0.1:3100`)
 - **UFW** and **fail2ban**
@@ -65,7 +68,13 @@ ssh root@your-droplet-ip
 cat /root/paperclip_info.txt
 ```
 
-If you passed `MODEL_ACCESS_KEY` as a droplet environment variable, the key is staged in `/opt/paperclip.env` (wizard skipped). Otherwise the first-login wizard can stage a key. Connect providers in the Paperclip UI after bootstrap. Create keys at https://cloud.digitalocean.com/model-studio/manage-keys (Inference > Manage > Create Model Access Key). `MODEL_ACCESS_KEY` is optional.
+If you passed `MODEL_ACCESS_KEY` as a droplet environment variable, first boot configures Serverless Inference and skips the wizard. Otherwise the first-login wizard asks for a key. Create keys at https://cloud.digitalocean.com/model-studio/manage-keys (Inference > Manage > Create Model Access Key). `MODEL_ACCESS_KEY` is optional.
+
+After the key is applied, the onboarding "Connect a model" step shows DigitalOcean Inference next to Claude and OpenAI. Choosing it hires the agent on OpenCode with `digitalocean/<model>` (or `digitalocean/router:<name>`) and does not ask for a subscription or a pasted key.
+
+Codex can still use the raw model id with `OPENAI_BASE_URL=https://inference.do-ai.run/v1` when you did not set a separate `OPENAI_API_KEY`.
+
+Claude stays on `ANTHROPIC_API_KEY`. DigitalOcean Inference is an OpenAI-compatible endpoint.
 
 If the invite was not generated, run:
 
@@ -81,6 +90,7 @@ sudo /etc/setup_wizard.sh
 # or:
 sudo nano /opt/paperclip.env   # MODEL_ACCESS_KEY=...
 sudo /opt/apply-inference-from-env.sh
+# Then the onboarding Connect step offers DigitalOcean Inference.
 
 # Or other providers:
 sudo nano /opt/paperclip.env
@@ -97,7 +107,7 @@ sudo systemctl restart paperclip
 | Restart | `/opt/restart-paperclip.sh` |
 | Status | `/opt/status-paperclip.sh` |
 | Update (latest) | `sudo /opt/update-paperclip.sh` |
-| Update (specific version) | `sudo /opt/update-paperclip.sh 2026.916.1` |
+| Update (specific version) | `sudo /opt/update-paperclip.sh 2026.1023.0` |
 | Rollback | `sudo /opt/update-paperclip.sh --rollback` |
 | Domain TLS | `/opt/setup-paperclip-domain.sh` |
 | Apply DO inference | `/opt/apply-inference-from-env.sh` |
@@ -112,7 +122,7 @@ sudo systemctl restart paperclip
 sudo /opt/update-paperclip.sh
 
 # Install a specific version
-sudo /opt/update-paperclip.sh 2026.916.1
+sudo /opt/update-paperclip.sh 2026.1023.0
 
 # Roll back to the previous managed CLI payload
 sudo /opt/update-paperclip.sh --rollback

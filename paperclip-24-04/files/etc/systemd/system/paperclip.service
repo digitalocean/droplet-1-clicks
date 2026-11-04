@@ -15,9 +15,12 @@ Environment=PAPERCLIP_INSTANCE_ID=default
 Environment=PAPERCLIP_NO_BROWSER=1
 Environment=PAPERCLIP_OPEN_ON_LISTEN=false
 Environment=TRUST_PROXY=1
-Environment=PATH=/home/paperclip/.local/bin:/usr/local/bin:/usr/bin:/bin
+# /usr/bin first so child processes resolve the NodeSource binary, not a copy under ~/.local or /usr/local.
+Environment=PATH=/usr/bin:/bin:/home/paperclip/.local/bin:/usr/local/bin
 EnvironmentFile=-/opt/paperclip.env
 EnvironmentFile=-/home/paperclip/.paperclip/instances/default/.env
+# Upgrade or refuse start when /usr/bin/node is older than 24.22.1. "+" runs this as root.
+ExecStartPre=+/opt/ensure-paperclip-node.sh
 # --force allows the system unit to run even if a user-service manager check fires
 ExecStart=/home/paperclip/.local/bin/paperclipai run --force
 Restart=always

@@ -1,22 +1,17 @@
 #!/bin/bash
 set -euo pipefail
 
-APP_VERSION="${application_version:-2026.916.1}"
+APP_VERSION="${application_version:-2026.1023.0}"
 # Normalize optional leading "v" from release tags
 APP_VERSION="${APP_VERSION#v}"
 
 export DEBIAN_FRONTEND=noninteractive
 
-# Node.js 24 (Paperclip requires >=24.11.0)
-mkdir -p /etc/apt/keyrings
-curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
-  | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
-chmod a+r /etc/apt/keyrings/nodesource.gpg
-echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_24.x nodistro main" \
-  > /etc/apt/sources.list.d/nodesource.list
-apt-get update -y
-apt-get install -y nodejs
-
+# Node.js >=24.22.1 at /usr/bin/node before paperclipai install pins the shim.
+chmod +x /opt/ensure-paperclip-node.sh
+/opt/ensure-paperclip-node.sh
+chmod +x /opt/ensure-paperclip-opencode.sh
+/opt/ensure-paperclip-opencode.sh
 node --version
 npm --version
 
@@ -74,14 +69,19 @@ EOF
 fi
 
 echo "Installing managed Paperclip CLI (${APP_VERSION})..."
-su - paperclip -c "npx --registry https://registry.npmjs.org paperclipai install --version ${APP_VERSION} --yes"
+su - paperclip -c "PATH=/usr/bin:/bin:\$HOME/.local/bin npx --registry https://registry.npmjs.org paperclipai install --version ${APP_VERSION} --yes"
 
-# Verify managed shim
+# Verify managed shim and pin it to /usr/bin/node
 if [ ! -x /home/paperclip/.local/bin/paperclipai ]; then
   echo "ERROR: managed paperclipai shim missing after install" >&2
   exit 1
 fi
-su - paperclip -c "paperclipai --version" || true
+/opt/ensure-paperclip-node.sh
+if ! grep -q "exec '/usr/bin/node' " /home/paperclip/.local/bin/paperclipai; then
+  echo "ERROR: paperclipai shim is not pinned to /usr/bin/node" >&2
+  exit 1
+fi
+su - paperclip -c "PATH=/usr/bin:/bin:\$HOME/.local/bin paperclipai --version" || true
 
 # Materialize env from Packer template (Packer may skip hidden .env files)
 if [ -f /opt/paperclip/env.template ]; then
@@ -101,10 +101,13 @@ chmod +x /opt/stop-paperclip.sh
 chmod +x /opt/restart-paperclip.sh
 chmod +x /opt/status-paperclip.sh
 chmod +x /opt/update-paperclip.sh
+chmod +x /opt/ensure-paperclip-node.sh
+chmod +x /opt/ensure-paperclip-opencode.sh
 chmod +x /opt/setup-paperclip-domain.sh
 chmod +x /opt/write-paperclip-config.sh
 chmod +x /opt/claim-paperclip-admin.sh
 chmod +x /opt/apply-inference-from-env.sh
+chmod +x /opt/install-paperclip-inference-ui.sh
 chmod +x /opt/retry-apply-inference-after-cloud-init.sh
 chmod +x /etc/setup_wizard.sh
 chmod +x /etc/update-motd.d/99-one-click
@@ -118,6 +121,10 @@ systemctl enable caddy
 # Do not start Paperclip during image bake — first boot writes per-droplet secrets/config
 systemctl stop paperclip 2>/dev/null || true
 systemctl stop caddy 2>/dev/null || true
+
+# Inject the onboarding tile script into the managed UI. The tile stays hidden
+# until first boot writes a configured inference model into the public JSON.
+/opt/install-paperclip-inference-ui.sh --from-env
 
 echo "Paperclip (${APP_VERSION}) installation complete."
 echo "Stack will start on first boot after secrets and public URL are generated."

@@ -173,6 +173,14 @@ systemctl daemon-reload
 systemctl enable caddy
 systemctl enable paperclip
 systemctl enable postgresql
+chmod +x /opt/ensure-paperclip-node.sh
+/opt/ensure-paperclip-node.sh
+chmod +x /opt/ensure-paperclip-opencode.sh
+# The image already contains /usr/local/bin/opencode. A failed reinstall must
+# not block SSH unlock or the Paperclip service.
+if ! /opt/ensure-paperclip-opencode.sh; then
+  echo "WARNING: OpenCode CLI is not installed. OpenCode agent verification cannot pass until /usr/local/bin/opencode exists." >&2
+fi
 systemctl restart caddy
 systemctl restart paperclip
 
@@ -280,14 +288,20 @@ fi
 
 # DigitalOcean Serverless Inference: apply from droplet env, else first-login wizard
 chmod +x /opt/apply-inference-from-env.sh
+chmod +x /opt/install-paperclip-inference-ui.sh
 chmod +x /opt/retry-apply-inference-after-cloud-init.sh
 chmod +x /etc/setup_wizard.sh
 
 INFERENCE_APPLIED=0
 if /opt/apply-inference-from-env.sh; then
   INFERENCE_APPLIED=1
-  echo "Serverless Inference key staged from MODEL_ACCESS_KEY."
+  echo "Serverless Inference configured from MODEL_ACCESS_KEY."
 else
+  if [ -f /opt/paperclip/.provider-configured ]; then
+    echo "ERROR: Inference key was stored but the onboarding tile was not published." >&2
+    exit 1
+  fi
+  /opt/install-paperclip-inference-ui.sh --from-env
   touch /root/.bashrc
   if ! grep -q '/etc/setup_wizard.sh' /root/.bashrc 2>/dev/null; then
     cat >> /root/.bashrc <<'EOM'
@@ -339,11 +353,15 @@ LLM / SERVERLESS INFERENCE:
 EOF
 
 if [ "$INFERENCE_APPLIED" = "1" ]; then
-  cat >> "$INFO_FILE" << 'EOF'
-  DigitalOcean Serverless Inference was staged from MODEL_ACCESS_KEY.
-  Default model / router: see INFERENCE_MODEL and DO_INFERENCE_ROUTER in /opt/paperclip.env.
-  Cached model list (MOTD): /opt/paperclip/available-models.txt
-  Connect providers in the Paperclip UI after bootstrap.
+  APPLIED_MODEL="$(grep -E '^INFERENCE_MODEL=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d= -f2-)"
+  cat >> "$INFO_FILE" << EOF
+  DigitalOcean Serverless Inference is configured from MODEL_ACCESS_KEY.
+  Model: ${APPLIED_MODEL:-see /opt/paperclip.env}
+  Onboarding "Connect a model" includes a DigitalOcean Inference tile.
+  That tile hires OpenCode on digitalocean/${APPLIED_MODEL:-<model>}.
+  Codex: ${APPLIED_MODEL:-<model>} via https://inference.do-ai.run/v1
+    (only when OPENAI_API_KEY was empty or already this key)
+  Cached model list: /opt/paperclip/available-models.txt
 EOF
 else
   cat >> "$INFO_FILE" << 'EOF'

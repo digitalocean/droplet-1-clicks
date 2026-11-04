@@ -1,7 +1,16 @@
 #!/bin/bash
 # Apply DigitalOcean Serverless Inference from droplet env or /opt/paperclip.env
 # (MODEL_ACCESS_KEY, INFERENCE_MODEL, DO_INFERENCE_ROUTER).
-# Stages keys for OpenAI-compatible adapters; connect providers in the UI after.
+#
+# Writes:
+#   OPENAI_API_KEY + OPENAI_BASE_URL   Codex, when OpenAI is unset or already this key
+#   PAPERCLIP_OPENCODE_PROVIDERS       OpenCode provider "digitalocean"
+#   PAPERCLIP_OPENCODE_SMALL_MODEL     digitalocean/<model>
+#   OPENCODE_ALLOW_ALL_MODELS=true
+#
+# paperclipai@2026.1023.0 has no llm.baseUrl in config.json. The onboarding
+# "Connect a model" step gains a DigitalOcean Inference tile that hires
+# OpenCode on digitalocean/<id>. The key stays in this env file.
 # Returns 0 when a key was applied; 1 when skipped.
 set -euo pipefail
 
@@ -92,6 +101,7 @@ redact_inference_secrets_from_system_environment() {
 
 # Only map DO key onto OPENAI_* when OpenAI is unset, or already points at DO.
 # Never set OPENAI_BASE_URL alone while leaving a distinct OpenAI API key in place.
+# Sets OPENAI_COMPAT_APPLIED=1 when this file received the DigitalOcean key.
 maybe_set_openai_compat_env() {
   local file="$1"
   local existing_key
@@ -100,9 +110,43 @@ maybe_set_openai_compat_env() {
   if ! env_value_usable "$existing_key" || [ "$existing_key" = "$MODEL_ACCESS_KEY" ]; then
     write_env_file_kv "$file" OPENAI_API_KEY "$MODEL_ACCESS_KEY"
     write_env_file_kv "$file" OPENAI_BASE_URL "$INFERENCE_BASE_URL"
+    if [ "$file" = "$ENV_FILE" ]; then
+      OPENAI_COMPAT_APPLIED=1
+    fi
   else
     echo "Keeping existing OPENAI_API_KEY / OPENAI_BASE_URL; MODEL_ACCESS_KEY stored separately." >&2
+    if [ "$file" = "$ENV_FILE" ]; then
+      OPENAI_COMPAT_APPLIED=0
+    fi
   fi
+}
+
+# systemd EnvironmentFile and bash both treat a leading double quote as a quoted
+# value and unescape \". Compact JSON is stored that way so inner quotes survive.
+write_env_file_quoted_kv() {
+  local file="$1" key="$2" raw="$3" quoted
+  quoted="$(printf '%s' "$raw" | python3 -c '
+import sys
+raw = sys.stdin.read()
+escaped = raw.replace("\\", "\\\\").replace("\"", "\\\"")
+sys.stdout.write("\"" + escaped + "\"")
+')"
+  write_env_file_kv "$file" "$key" "$quoted"
+}
+
+# OpenCode resolves provider/model only when the id is in the provider models map.
+# The apiKey placeholder is expanded by Paperclip from MODEL_ACCESS_KEY; the JSON
+# itself does not contain the key.
+write_opencode_provider_env() {
+  local file="$1"
+  [ -n "${PROVIDERS_JSON:-}" ] || return 0
+  write_env_file_kv "$file" OPENCODE_ALLOW_ALL_MODELS "true"
+  write_env_file_kv "$file" PAPERCLIP_OPENCODE_SMALL_MODEL "digitalocean/${PRIMARY_MODEL}"
+  write_env_file_quoted_kv "$file" PAPERCLIP_OPENCODE_PROVIDERS "$PROVIDERS_JSON"
+  # Paperclip's picker does not read OpenCode's provider JSON. Declare the
+  # same model ids explicitly so every DigitalOcean model from /v1/models is
+  # selectable on an existing OpenCode agent.
+  write_env_file_quoted_kv "$file" PAPERCLIP_ADAPTER_MODELS "$ADAPTER_MODELS_JSON"
 }
 
 sync_instance_env() {
@@ -111,6 +155,7 @@ sync_instance_env() {
     write_env_file_kv "$INSTANCE_ENV" INFERENCE_MODEL "$INFERENCE_MODEL"
     write_env_file_kv "$INSTANCE_ENV" DO_INFERENCE_ROUTER "${DO_INFERENCE_ROUTER:-}"
     maybe_set_openai_compat_env "$INSTANCE_ENV"
+    write_opencode_provider_env "$INSTANCE_ENV"
     chown paperclip:paperclip "$INSTANCE_ENV"
     chmod 600 "$INSTANCE_ENV"
   fi
@@ -119,6 +164,7 @@ sync_instance_env() {
 MODEL_ACCESS_KEY=$(read_config_value MODEL_ACCESS_KEY || true)
 INFERENCE_MODEL=$(read_config_value INFERENCE_MODEL || true)
 DO_INFERENCE_ROUTER=$(read_config_value DO_INFERENCE_ROUTER || true)
+OPENAI_COMPAT_APPLIED=0
 
 if ! env_value_usable "$MODEL_ACCESS_KEY"; then
   exit 1
@@ -131,10 +177,9 @@ PRIMARY_MODEL=""
 if env_value_usable "$DO_INFERENCE_ROUTER"; then
   ROUTER_NAME=$(normalize_router_name "$DO_INFERENCE_ROUTER")
   if [ -n "$ROUTER_NAME" ]; then
+    # This is the id Paperclip should call. A separate fallback model is not stored.
     PRIMARY_MODEL="router:${ROUTER_NAME}"
-    if ! env_value_usable "$INFERENCE_MODEL"; then
-      INFERENCE_MODEL="$DEFAULT_MODEL"
-    fi
+    INFERENCE_MODEL="$PRIMARY_MODEL"
     write_env_file_kv "$ENV_FILE" INFERENCE_MODEL "$INFERENCE_MODEL"
     write_env_file_kv "$ENV_FILE" DO_INFERENCE_ROUTER "$ROUTER_NAME"
     DO_INFERENCE_ROUTER="$ROUTER_NAME"
@@ -164,6 +209,66 @@ if [ -z "${PRIMARY_MODEL:-}" ]; then
   INFERENCE_MODEL="$PRIMARY_MODEL"
 fi
 
+PROVIDERS_JSON="$(
+  printf '%s\n' "$CHAT_IDS" | python3 -c '
+import json, re, sys
+base = sys.argv[1]
+primary = sys.argv[2]
+safe = re.compile(r"^[A-Za-z0-9_.:/+-]+$")
+ids = []
+
+def add(raw):
+    mid = raw.strip()
+    if not mid or not safe.fullmatch(mid) or mid in ids:
+        return
+    ids.append(mid)
+
+add(primary)
+for line in sys.stdin:
+    add(line)
+if not ids:
+    sys.stderr.write("No safe model id for PAPERCLIP_OPENCODE_PROVIDERS; OpenCode provider not written.\n")
+    sys.exit(0)
+doc = {
+    "digitalocean": {
+        "npm": "@ai-sdk/openai-compatible",
+        "name": "DigitalOcean Serverless Inference",
+        "options": {
+            "baseURL": base,
+            "apiKey": "{env:MODEL_ACCESS_KEY}",
+        },
+        "models": {mid: {} for mid in ids},
+    }
+}
+sys.stdout.write(json.dumps(doc, separators=(",", ":")))
+' "$INFERENCE_BASE_URL" "$PRIMARY_MODEL"
+)"
+
+ADAPTER_MODELS_JSON="$(
+  printf '%s\n' "$CHAT_IDS" | python3 -c '
+import json, re, sys
+primary = sys.argv[1]
+safe = re.compile(r"^[A-Za-z0-9_.:/+-]+$")
+ids = []
+
+def add(raw):
+    mid = raw.strip()
+    if mid and safe.fullmatch(mid) and mid not in ids:
+        ids.append(mid)
+
+add(primary)
+for line in sys.stdin:
+    add(line)
+print(json.dumps({
+    "opencode_local": [
+        {"id": "digitalocean/" + mid, "label": "DigitalOcean · " + mid}
+        for mid in ids
+    ]
+}, separators=(",", ":")))
+' "$PRIMARY_MODEL"
+)"
+
+write_opencode_provider_env "$ENV_FILE"
 sync_instance_env
 
 mkdir -p /opt/paperclip
@@ -179,6 +284,8 @@ fi
 remove_setup_wizard_bashrc_hook
 redact_inference_secrets_from_system_environment
 
+/opt/install-paperclip-inference-ui.sh --from-env
+
 if systemctl is-active --quiet paperclip 2>/dev/null; then
   systemctl restart paperclip || true
 fi
@@ -189,8 +296,14 @@ HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
   -H "Content-Type: application/json" \
   "${INFERENCE_BASE_URL}/models" 2>/dev/null || true)
 
-echo "DigitalOcean Serverless Inference staged: model ${PRIMARY_MODEL}"
-echo "  Key in /opt/paperclip.env; connect OpenAI-compatible / provider apps in the Paperclip UI."
+echo "DigitalOcean Serverless Inference configured: model ${PRIMARY_MODEL}"
+echo "  OpenCode model: digitalocean/${PRIMARY_MODEL}"
+if [ "$OPENAI_COMPAT_APPLIED" = "1" ]; then
+  echo "  Codex: OPENAI_BASE_URL=${INFERENCE_BASE_URL} model ${PRIMARY_MODEL}"
+else
+  echo "  Codex left on the existing OPENAI_API_KEY."
+fi
+echo "  Select that model on each agent in the Paperclip UI."
 if [ "$HTTP_STATUS" != "200" ]; then
   echo "Warning: Received HTTP ${HTTP_STATUS:-000} from the Serverless Inference API." >&2
 fi
