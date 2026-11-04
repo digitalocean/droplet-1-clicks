@@ -4,7 +4,7 @@
     "image_name": "paper-minecraft-24-04-snapshot-{{timestamp}}",
     "application_name": "PaperMC",
     "application_version": "26.1.2",
-    "paper_build": "74"
+    "paper_build": "latest"
   },
   "sensitive-variables": [
     "do_api_token"
@@ -15,7 +15,7 @@
       "api_token": "{{user `do_api_token`}}",
       "image": "ubuntu-24-04-x64",
       "region": "nyc3",
-      "size": "s-1vcpu-1gb",
+      "size": "s-2vcpu-4gb",
       "ssh_username": "root",
       "snapshot_name": "{{user `image_name`}}"
     }
