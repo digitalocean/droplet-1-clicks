@@ -1,0 +1,105 @@
+{
+  "variables": {
+    "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
+    "image_name": "dsh-superagent-24-04-snapshot-{{timestamp}}",
+    "apt_packages": "procps file apt-transport-https ca-certificates curl software-properties-common git build-essential python3 tmux jq unzip ufw fail2ban",
+    "application_name": "DSH Superagent",
+    "application_version": "0.1.0",
+    "dsh_superagent_commit": "8c32a9dc5d72c033816c6a8110b37f40cf94fba4",
+    "dsh_version": "0.2.1-rc.3",
+    "pnpm_version": "11.7.0",
+    "node_version": "24.x",
+    "gh_version": "2.103.3",
+    "gh_sha256": "4c806978ffce1cec70853302a56d70ac6da4f19bae7adca4e1a8ab00633dd91d"
+  },
+  "sensitive-variables": ["do_api_token"],
+  "builders": [
+    {
+      "type": "digitalocean",
+      "api_token": "{{user `do_api_token`}}",
+      "image": "ubuntu-24-04-x64",
+      "region": "nyc3",
+      "size": "s-2vcpu-4gb",
+      "ssh_username": "root",
+      "snapshot_name": "{{user `image_name`}}"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "inline": [
+        "cloud-init status --wait"
+      ]
+    },
+    {
+      "type": "file",
+      "source": "common/files/var/",
+      "destination": "/var/"
+    },
+    {
+      "type": "file",
+      "source": "dsh-superagent-24-04/files/etc/",
+      "destination": "/etc/"
+    },
+    {
+      "type": "file",
+      "source": "dsh-superagent-24-04/files/opt/",
+      "destination": "/opt/"
+    },
+    {
+      "type": "file",
+      "source": "dsh-superagent-24-04/files/var/",
+      "destination": "/var/"
+    },
+    {
+      "type": "shell",
+      "environment_vars": [
+        "DEBIAN_FRONTEND=noninteractive",
+        "LC_ALL=C",
+        "LANG=en_US.UTF-8",
+        "LC_CTYPE=en_US.UTF-8"
+      ],
+      "inline": [
+        "apt -qqy update",
+        "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' full-upgrade",
+        "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' install {{user `apt_packages`}}",
+        "apt-get -qqy clean"
+      ]
+    },
+    {
+      "type": "shell",
+      "environment_vars": [
+        "NODE_VERSION={{user `node_version`}}",
+        "DEBIAN_FRONTEND=noninteractive",
+        "LC_ALL=C",
+        "LANG=en_US.UTF-8",
+        "LC_CTYPE=en_US.UTF-8"
+      ],
+      "scripts": [
+        "common/scripts/010-nodejs.sh"
+      ]
+    },
+    {
+      "type": "shell",
+      "environment_vars": [
+        "application_name={{user `application_name`}}",
+        "application_version={{user `application_version`}}",
+        "dsh_superagent_commit={{user `dsh_superagent_commit`}}",
+        "dsh_version={{user `dsh_version`}}",
+        "pnpm_version={{user `pnpm_version`}}",
+        "gh_version={{user `gh_version`}}",
+        "gh_sha256={{user `gh_sha256`}}",
+        "DEBIAN_FRONTEND=noninteractive",
+        "LC_ALL=C",
+        "LANG=en_US.UTF-8",
+        "LC_CTYPE=en_US.UTF-8"
+      ],
+      "scripts": [
+        "dsh-superagent-24-04/scripts/dsh-superagent.sh",
+        "common/scripts/018-force-ssh-logout.sh",
+        "common/scripts/020-application-tag.sh",
+        "common/scripts/900-cleanup.sh"
+      ]
+    }
+  ]
+}

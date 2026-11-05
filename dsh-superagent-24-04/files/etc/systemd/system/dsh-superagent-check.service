@@ -1,0 +1,9 @@
+[Unit]
+Description=Check DSH Superagent and restart it if it stopped unexpectedly
+After=dsh-superagent.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/dsh-superagent/check-dsh-superagent.sh
+SuccessExitStatus=2 3
+TimeoutStartSec=400

@@ -1,0 +1,11 @@
+[Unit]
+Description=Hourly check of DSH Superagent
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=1h
+Persistent=true
+Unit=dsh-superagent-check.service
+
+[Install]
+WantedBy=timers.target
