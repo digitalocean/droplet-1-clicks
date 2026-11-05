@@ -1,0 +1,197 @@
+name: qm
+
+# QM (https://github.com/yc-software/qm) has no published docker-compose file
+# of its own — its official `qm` CLI drives a `docker` deploy target instead,
+# but that target's own sandbox-backend policy refuses e2b/sprites/etc. This
+# compose file plays the same role as this repo's qm-kubernetes/values.yml:
+# it wires the same images the upstream Helm chart uses (deploy/helm) by hand,
+# matching how that chart embeds "auth" inside portal and "admin" inside
+# web-ui rather than running them as separate containers.
+#
+# web-ui/portal are pinned to the digests published in the v0.1.13 release's
+# images.json (https://github.com/yc-software/qm/releases/tag/v0.1.13) and
+# pulled from upstream's registry (docker compose pull in scripts/010-qm.sh).
+#
+# core is instead built from source at Packer build time, pinned to our own
+# droplet-pin-no-csp integration branch (v-aisac/qm) — not itself an
+# upstream PR, just this droplet's own branch cherry-picking two
+# independent, still-unmerged upstream PRs this droplet needs: #2393 (the
+# deploy-runtime image auto-matches the Managed Agents sandbox's glibc/Node
+# ABI when that's the active sandbox backend) and #2399 (DATA_DIR=/data,
+# backed by a per-deployment named volume, so a published app's own state
+# survives a redeploy). Deliberately EXCLUDES #2388 (APP_SANDBOX_CSP gains
+# allow-same-origin) — that fix is a real security tradeoff needed only on
+# a droplet with no DEPLOY_APPS_DOMAIN configured, serving every published
+# app through the same-origin `/d/<id>/` proxy; this droplet has a real
+# apps domain configured, so every app already gets its own genuinely
+# separate subdomain with no sandbox CSP applied at all, and including
+# #2388 here would just weaken isolation for no reason. See
+# scripts/010-qm.sh for the build and README.md "Docker-in-Docker for app
+# publishing" for the full story on all three PRs. Before this pin, core
+# tracked yc-software/qm main directly (and before that, a DigitalOcean-
+# team fork, prior to do-managed-agents sandbox-backend support landing
+# upstream) — this one image still serves either sandbox backend the setup
+# wizard offers (do-managed-agents alongside e2b/local/etc.) regardless of
+# pin. Switch back to tracking main directly once both PRs merge or are
+# otherwise resolved upstream.
+#
+# To move core to a newer commit: bump QM_SHA and QM_CORE_TAG in
+# scripts/010-qm.sh and the default below, then rebuild the image. To move
+# web-ui/portal to a newer upstream release: fetch that release's
+# images.json and replace their digests below, then run
+# /srv/qm/update-qm.sh.
+
+services:
+  # Gated behind the "local-postgres" profile so an attached DigitalOcean
+  # Managed Database (DBaaS) can replace it entirely: 001_onboot leaves
+  # COMPOSE_PROFILES=local-postgres in .env by default (this service runs),
+  # or blank when DBaaS is detected (it doesn't) — see env-lib.sh's
+  # bootstrap_do_dbaas and README.md "Attached DigitalOcean Managed
+  # Database" for the full story.
+  postgres:
+    image: docker.io/library/postgres:16
+    container_name: qm-postgres
+    restart: unless-stopped
+    profiles: ["local-postgres"]
+    environment:
+      POSTGRES_DB: qm
+      POSTGRES_USER: qm
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - qm-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qm"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  core:
+    image: ${QM_CORE_IMAGE:-qm-core:4b37691d}
+    container_name: qm-core
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # tcp://127.0.0.1:2375, not a "dind" hostname — dind shares this
+      # container's own network namespace (network_mode: service:core
+      # below), not the regular compose bridge network, specifically so
+      # QM's app-publish feature (DEPLOY_PROVIDER=docker) can reach what it
+      # creates. See the dind service's own comment for the full story.
+      DOCKER_HOST: tcp://127.0.0.1:2375
+    depends_on:
+      postgres:
+        condition: service_healthy
+        # Not required when the "local-postgres" profile is inactive (the
+        # DBaaS path) — otherwise core would refuse to start without a
+        # service that was never meant to run.
+        required: false
+      # dind is deliberately NOT a depends_on dependency of core (even an
+      # optional one) — see dind's own comment for why that would be a
+      # circular wait. core already treats a not-yet-reachable Docker
+      # daemon as a non-fatal "publishing is unavailable" warning, not a
+      # startup failure, so this omission is safe.
+    volumes:
+      - qm-coredata:/data
+
+  # A nested, isolated Docker daemon dedicated to QM's own "publish a web
+  # app" feature (DEPLOY_PROVIDER=docker, QM's default) — core needs some
+  # Docker daemon reachable to run a published app, and this keeps that
+  # daemon separate from the real host Docker running this very stack
+  # (postgres/core/web-ui/portal/caddy), rather than mounting the host's
+  # own /var/run/docker.sock into core — see README.md "Docker-in-Docker
+  # for app publishing" for the full security tradeoff this was chosen
+  # over (host-socket mount gives a published app effective root on this
+  # droplet; an external deploy target needs a whole separate credential
+  # we don't collect). privileged:true is the real cost here — needed for
+  # dind to create its own nested namespaces/cgroups/mounts at all.
+  #
+  # network_mode: service:core (not the regular compose bridge network,
+  # and deliberately not host networking either) — confirmed live and by
+  # reading QM's own source: core's "publish a web app" code runs
+  # `docker run -p 127.0.0.1:<port>:8080 ...` for each published app and
+  # then reverse-proxies to that literal 127.0.0.1 address itself,
+  # assuming (undocumented, confirmed by reading QM's own reference
+  # "docker" deploy target in cli/src/backends/docker.ts, which has the
+  # exact same assumption) that whatever runs this code shares a network
+  # namespace with the Docker daemon it drives. Sharing specifically
+  # core's namespace (not the host's) means published apps' 127.0.0.1
+  # becomes core's own loopback — reachable — while core itself stays on
+  # the regular compose network (postgres/web-ui/portal reachability is
+  # completely unaffected), and dind's own control API (2375) becomes
+  # reachable only via core's loopback, not from any other container on
+  # the bridge network. Bound to 127.0.0.1 specifically (not 0.0.0.0) so
+  # it doesn't also become reachable via core's bridge-network IP.
+  #
+  # Ordering: network_mode: service:core needs core's container to exist
+  # first, so this is deliberately not a two-way depends_on with core
+  # (core doesn't wait on dind — see core's own comment) to avoid a
+  # circular wait; Compose orders dind after core automatically because
+  # of the network_mode reference itself.
+  #
+  # qm-coredata is ALSO mounted here, at the identical path (/data) core
+  # itself uses — confirmed live and by reading QM's source
+  # (src/deploy/deploy-service.ts's snapshotFiles, under config.dataDir):
+  # core writes each published app's source to its own /data/deployments/
+  # <id> before asking dind to `docker run -v /data/deployments/<id>:/app`
+  # for it. Sharing the network namespace doesn't share the filesystem —
+  # without this, dind resolves that path against its OWN (separate, empty)
+  # root filesystem, silently creating an empty directory to mount instead
+  # of finding the real files, and the published app crashes with "Cannot
+  # find module '/app/server.js'" (confirmed live). Same volume, same path,
+  # in both containers, so dind's bind-mount actually finds what core wrote.
+  dind:
+    image: docker:27-dind
+    container_name: qm-dind
+    restart: unless-stopped
+    privileged: true
+    network_mode: "service:core"
+    environment:
+      DOCKER_TLS_CERTDIR: ""
+    volumes:
+      - qm-dind-data:/var/lib/docker
+      - qm-coredata:/data
+    # "dockerd" as the literal first arg matters, not just style: the
+    # image's own entrypoint auto-injects its own --host=tcp://0.0.0.0:2375
+    # (colliding with ours on the same port) whenever the first argument
+    # starts with "-" — confirmed by reading dockerd-entrypoint.sh — so a
+    # bare ["--host=...", ...] command silently triggers that and crash-
+    # loops with "address already in use". Leading with "dockerd" takes
+    # the entrypoint's other branch, which execs our args as-is.
+    command: ["dockerd", "--host=unix:///var/run/docker.sock", "--host=tcp://127.0.0.1:2375"]
+    healthcheck:
+      test: ["CMD", "docker", "info"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web-ui:
+    image: ${QM_WEBUI_IMAGE:-ghcr.io/yc-software/qm/web-ui@sha256:eb4fda23cbeba3b7884efdea8fc815558ecfecb1564c8e36f5c6b1ae6f742d8e}
+    container_name: qm-web-ui
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - core
+
+  portal:
+    image: ${QM_PORTAL_IMAGE:-ghcr.io/yc-software/qm/portal@sha256:7f643afce9d67f7bc71f9b954c5257e77e40795f47d89d751fce6a8caf753806}
+    container_name: qm-portal
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - core
+      - web-ui
+    # Public front door — everything else (core, web-ui, postgres) stays
+    # internal to the compose network. Bound to loopback only: Caddy (a host
+    # systemd service, not a compose service — see /etc/caddy/Caddyfile)
+    # terminates TLS on 80/443 and reverse-proxies here. QM's own sign-in
+    # flow (both the password form and the CLI's admin-login link) refuses
+    # to work at all without HTTPS or literal "localhost" — see README.md.
+    ports:
+      - "127.0.0.1:8081:8080"
+
+volumes:
+  qm-pgdata:
+  qm-coredata:
+  qm-dind-data:
