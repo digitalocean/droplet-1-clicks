@@ -1,63 +1,88 @@
 #!/bin/bash
+set -euo pipefail
 
-echo "This script will setup Supabase"
+# Configure a custom domain with Caddy HTTPS and update Supabase public URLs.
+
+COMPOSE_DIR="/srv/supabase/supabase/docker"
+ENV_FILE="${COMPOSE_DIR}/.env"
+DOMAIN_TMP="/etc/caddy/Caddyfile.domain.tmp"
+
+echo "This script configures a custom domain and HTTPS for Supabase (Caddy)."
 echo "--------------------------------------------------"
-echo "This setup requires a domain name.  If you do not have one yet, you may"
-echo "cancel this setup, press Ctrl+C.  This script will run again on your next login"
-echo "--------------------------------------------------"
-echo "Enter the domain name for your new Supabase site."
-echo "(ex. example.org or test.example.org) do not include www or http/s"
+echo "Point a DNS A/AAAA record at this Droplet before continuing."
+echo "Press Ctrl+C to cancel."
 echo "--------------------------------------------------"
 
-a=0
-while [ $a -eq 0 ]
-do
- read -p "Domain/Subdomain name: " dom
- if [ -z "$dom" ]
- then
-  a=0
-  echo "Please provide a valid domain or subdomain name to continue or press Ctrl+C to cancel"
- else
-  a=1
+if [ ! -f "${DOMAIN_TMP}" ]; then
+  echo "ERROR: missing ${DOMAIN_TMP}" >&2
+  exit 1
 fi
+
+if [ ! -f "${ENV_FILE}" ]; then
+  echo "ERROR: missing ${ENV_FILE}" >&2
+  exit 1
+fi
+
+dom=""
+while [ -z "${dom}" ]; do
+  read -r -p "Domain/Subdomain name (e.g. supabase.example.com): " dom
+  if [ -z "${dom}" ]; then
+    echo "Please provide a valid domain or subdomain name, or press Ctrl+C to cancel"
+  fi
 done
 
-while [ -z $email ]
-do
-    echo -en "\n"
-    read -p "Your Email Address: " email
-done
+# Strip scheme / trailing slash if pasted by mistake
+dom="${dom#http://}"
+dom="${dom#https://}"
+dom="${dom%%/*}"
 
-service nginx stop
+read -r -p "Email for Let's Encrypt notifications (optional): " email
 
-sudo certbot certonly --standalone --agree-tos --no-eff-email --staple-ocsp --preferred-challenges http -m $email -d $dom
-if [ $? -eq 0 ]
-then
-    echo "certbot successfully created a certificate"
-else
-    echo "certbot failed"
-    exit 1
+shell_quote() {
+  printf "'"
+  printf '%s' "$1" | sed "s/'/'\\\\''/g"
+  printf "'"
+}
+
+upsert_env() {
+  local key="$1"
+  local value="$2"
+  sed -i "/^${key}=/d" "${ENV_FILE}"
+  printf '%s=%s\n' "${key}" "$(shell_quote "${value}")" >> "${ENV_FILE}"
+}
+
+PUBLIC_URL="https://${dom}"
+upsert_env SUPABASE_PUBLIC_URL "${PUBLIC_URL}"
+upsert_env API_EXTERNAL_URL "${PUBLIC_URL}/auth/v1"
+upsert_env SITE_URL "${PUBLIC_URL}"
+
+sed "s/PLACEHOLDER_DOMAIN/${dom}/" "${DOMAIN_TMP}" > /etc/caddy/Caddyfile
+if [ -n "${email}" ]; then
+  sed -i "1iemail ${email}" /etc/caddy/Caddyfile
 fi
 
-sudo openssl dhparam -out /etc/ssl/certs/dhparam.pem 4096
-if [ $? -eq 0 ]
-then
-    echo "dhparam successed"
-else
-    echo "dhparam failed"
-    exit 1
+systemctl enable caddy
+
+# Apply .env URL changes even if Caddy/ACME is not ready yet (e.g. DNS lag).
+COMPOSE_ARGS=(-f docker-compose.yml)
+if [ -f "${COMPOSE_DIR}/docker-compose.dbaas.yml" ]; then
+  COMPOSE_ARGS+=(-f docker-compose.dbaas.yml)
 fi
 
-sudo mkdir -p /var/lib/letsencrypt
+cd "${COMPOSE_DIR}"
+docker compose "${COMPOSE_ARGS[@]}" up -d
 
-cat > /etc/cron.daily/certbot-renew <<EOM
-#!/bin/sh
-certbot renew --cert-name $dom --webroot -w /var/lib/letsencrypt/ --post-hook "systemctl reload nginx" 
-EOM
-sudo chmod +x /etc/cron.daily/certbot-renew
+set +e
+systemctl restart caddy
+caddy_rc=$?
+set -e
 
-sed -i "s/supabase.example.com/$dom/g" /var/supabase/supabase_ssl
-rm -rf /etc/nginx/sites-available/supabase
-cp -rf /var/supabase/supabase_ssl /etc/nginx/sites-available/supabase
-
-service nginx start
+echo ""
+echo "Supabase .env public URLs were updated to ${PUBLIC_URL}."
+if [ "${caddy_rc}" -ne 0 ]; then
+  echo "WARNING: caddy failed to start (rc=${caddy_rc}). Check DNS for ${dom}, ports 80/443, and journalctl -u caddy." >&2
+  echo "When DNS is ready: systemctl restart caddy" >&2
+else
+  echo "Caddy is now proxying ${PUBLIC_URL} to Kong on localhost:8000."
+  echo "Ensure DNS for ${dom} points at this Droplet and ports 80/443 are open."
+fi

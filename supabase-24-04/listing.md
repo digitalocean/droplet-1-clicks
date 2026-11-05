@@ -1,6 +1,6 @@
 # Supabase 1-Click Application
 
-Deploy self-hosted Supabase on Ubuntu 24.04 with Docker Compose and Nginx. Supabase provides Postgres-backed Auth, REST/Realtime APIs, Storage, and Studio. By default the stack uses its local `db` container; with **Add a Database**, Supabase is configured to use Managed PostgreSQL instead.
+Deploy self-hosted Supabase on Ubuntu 24.04 with Docker Compose and Caddy HTTPS. Supabase provides Postgres-backed Auth, REST/Realtime APIs, Storage, and Studio. By default the stack uses its local `db` container; with **Add a Database**, Supabase is configured to use Managed PostgreSQL instead.
 
 ## Included System Components
 
@@ -8,8 +8,7 @@ Deploy self-hosted Supabase on Ubuntu 24.04 with Docker Compose and Nginx. Supab
 - **Docker Engine** and **Docker Compose plugin**
 - **Supabase** (pinned release from the image build, currently `v1.26.05`) — Studio, Kong, Auth, PostgREST, Realtime, Storage, and related services
 - **PostgreSQL** via the Supabase `db` container (`supabase/postgres`), or DigitalOcean Managed PostgreSQL when **Add a Database** is selected
-- **Nginx** reverse proxy (ports 80/443 → Kong on `localhost:8000`)
-- **Certbot** (Snap) for optional custom-domain TLS
+- **Caddy** reverse proxy (ports 80/443 → Kong on `localhost:8000`) with Let's Encrypt shortlived TLS for the Droplet IP
 - **UFW** — SSH, HTTP, and HTTPS
 - **postgresql-client** — used on first boot when a Managed Database is attached
 
@@ -31,7 +30,7 @@ Deploy self-hosted Supabase on Ubuntu 24.04 with Docker Compose and Nginx. Supab
 
 ### 2. Access Supabase
 
-1. Open `http://your-droplet-ip` in a browser (Nginx → Kong / Studio)
+1. Open `https://your-droplet-ip` in a browser (Caddy → Kong / Studio)
 2. SSH in for credentials:
 
 ```bash
@@ -40,9 +39,9 @@ ssh root@your-droplet-ip
 
 Dashboard username and password are shown in the MOTD and stored in `/root/.digitalocean_passwords`.
 
-### 3. Optional domain / HTTPS
+### 3. Optional custom domain
 
-Domain and TLS setup is manual (not prompted on every login). When ready, run:
+HTTPS on the Droplet IP is enabled automatically (shortlived Let's Encrypt certificates, renewed by Caddy). For a custom domain, point DNS at the Droplet, then run:
 
 ```bash
 /var/supabase/supabase-setup.sh
@@ -62,7 +61,7 @@ Supabase runs as Docker Compose services under `/srv/supabase/supabase/docker`.
 | Update | Pin/bump `application_version` in a new image build, or follow [Supabase self-hosting update docs](https://supabase.com/docs/guides/self-hosting/docker) then `docker compose pull && docker compose up -d` |
 | Domain TLS | `/var/supabase/supabase-setup.sh` |
 
-Nginx: `systemctl {start|stop|restart|status} nginx`
+Caddy: `systemctl {start|stop|restart|status} caddy`
 
 ### Configuration paths
 
@@ -70,6 +69,7 @@ Nginx: `systemctl {start|stop|restart|status} nginx`
 - Env / secrets: `/srv/supabase/supabase/docker/.env`
 - Passwords: `/root/.digitalocean_passwords`
 - Managed DB credentials (when attached): `/root/.digitalocean_dbaas_credentials`
+- Caddy config: `/etc/caddy/Caddyfile`
 - Domain / TLS helper: `/var/supabase/supabase-setup.sh`
 - Setup log: `/var/log/one_click_setup.log`
 
@@ -105,7 +105,7 @@ Without that checkbox, `/root/.digitalocean_dbaas_credentials` is never injected
 
 - Change the Studio dashboard password after first login if needed (value in `/root/.digitalocean_passwords`)
 - Prefer restricting SSH (and optionally HTTP/HTTPS) with a Cloud Firewall
-- For production, configure a custom domain and TLS via `/var/supabase/supabase-setup.sh`
+- HTTPS on the Droplet IP is automatic; for production hostnames use `/var/supabase/supabase-setup.sh`
 - Rotate default JWT / API secrets in `/srv/supabase/supabase/docker/.env` for production use
 
 ## Additional Resources
