@@ -61,7 +61,7 @@ Each provider maps to one environment variable. Export the variables that match 
 | 1 | `OPENAI_API_KEY` | OpenAI | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
 | 2 | `ANTHROPIC_API_KEY` | Anthropic | [console.anthropic.com](https://console.anthropic.com/) |
 | 3 | `GOOGLE_API_KEY` | Google Gemini | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
-| 4 | `DO_MODEL_ACCESS_API_KEY` | DigitalOcean Inference | [cloud.digitalocean.com/gen-ai](https://cloud.digitalocean.com/gen-ai) |
+| 4 | `DO_MODEL_ACCESS_API_KEY` | DigitalOcean Inference | [cloud.digitalocean.com/model-studio/manage-keys](https://cloud.digitalocean.com/model-studio/manage-keys) |
 
 **Typical `export` block:**
 

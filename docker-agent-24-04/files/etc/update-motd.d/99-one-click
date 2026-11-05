@@ -31,7 +31,7 @@ QUICK START
       export GOOGLE_API_KEY=your_key_here
       export DO_MODEL_ACCESS_API_KEY=your_key_here
 
-    DO model keys: https://cloud.digitalocean.com/gen-ai
+    DO model keys: https://cloud.digitalocean.com/model-studio/manage-keys
     All key URLs:  /opt/docker-agent/README.txt
 
 (2) RUN EXAMPLES
