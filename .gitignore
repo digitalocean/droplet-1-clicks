@@ -4,5 +4,13 @@ packer_cache/
 # Crash log
 crash.log
 
+# Build debug output
+packer-debug.log
+
+# SSH/API private keys used by builds: never commit
+*.pem
+*.key
+
 # For built boxes
 *.box
+.claude
