@@ -1,4 +1,5 @@
 #!/bin/bash
+exec >>/var/log/one_click_setup.log 2>&1
 
 DB_USER=keycloak
 DB_TYPE=postgres
@@ -14,6 +15,7 @@ KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWD}
 KEYCLOAK_DATABASE_PASSWORD=${DB_PASS}
 KEYSTORE_PASSWORD=${KEYSTORE_PASSWORD}
 EOM
+chmod 600 /root/.digitalocean_passwords
 
 DROPLET_IP=$(hostname -I | awk '{print$1}')
 
@@ -54,7 +56,7 @@ else
 fi
 
 # Build keycloak image with randomized keystore password
-docker build --build-arg="STORE_PASS=${KEYSTORE_PASSWORD}" /var/digitalocean/. -t local-keycloak >> /var/temp.log
+docker build --build-arg="STORE_PASS=${KEYSTORE_PASSWORD}" /var/digitalocean/. -t local-keycloak
 
 # Run keycloak image with network mode set to host,
 # so Keycloak connects to the Postgres as localhost, not docker internal host
@@ -67,10 +69,11 @@ docker run -d --network=host \
   -e KC_DB_USERNAME=${DB_USER} \
   -e KC_DB_PASSWORD=${DB_PASS} \
   -e KC_HOSTNAME=${DROPLET_IP} \
+  -e KC_PROXY_HEADERS=xforwarded \
   local-keycloak \
   start \
   --https-key-store-password=${KEYSTORE_PASSWORD} \
-  --optimized >> /var/temp.log
+  --optimized
 
 
 # Allow ports used by keycloak for redirecting
@@ -83,3 +86,5 @@ sed -e '/Match User root/d' \
     -i /etc/ssh/sshd_config
 
 systemctl restart ssh
+
+chmod 600 /var/log/one_click_setup.log

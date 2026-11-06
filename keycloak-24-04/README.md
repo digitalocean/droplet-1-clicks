@@ -13,9 +13,14 @@ On first boot, Keycloak is built and started automatically in Docker. This can t
 
 ### Access Keycloak
 
-After your Droplet is created, open your Droplet's IP address in a browser.
+After your Droplet is created, use one of these URLs in a browser:
 
-Your browser may show a **Privacy Error** — this is expected because Keycloak uses self-signed certificates. Click **Advanced**, then **Proceed** to continue.
+- **`http://your-droplet-ip`** — Nginx on port 80 proxies to Keycloak's HTTPS listener (recommended entry point).
+- **`https://your-droplet-ip:8443`** — connect directly to Keycloak (same app as above).
+
+Nothing listens on plain **HTTPS port 443** until you complete **Certbot** for a domain; UFW still allows 443 so that workflow works.
+
+Your browser may show a **Privacy Error** — this is expected because Keycloak uses self-signed certificates until you configure a hostname certificate. Click **Advanced**, then **Proceed** to continue.
 
 ![Keycloak Privacy Error](https://do-not-delete-droplet-assets.nyc3.digitaloceanspaces.com/Screenshot%202024-07-03%20at%2018.21.13.png)
 
@@ -25,7 +30,7 @@ After this, you will be greeted by the Keycloak login page:
 
 If you see **Site can't be reached** or an **Nginx 502 Bad Gateway** error, wait 2–3 minutes for the Docker build and Keycloak startup to finish, then reload the page. If it still does not load, try a larger Droplet size.
 
-Nginx acts as a reverse proxy on port 80 (`http://your-droplet-ip`) and forwards requests to Keycloak.
+Nginx listens on **port 80** and forwards to Keycloak's **HTTPS** port **8443**, sending `X-Forwarded-*` headers so redirect URLs stay on port 80 until you add a domain.
 
 ### Retrieve Login Credentials
 
@@ -49,7 +54,7 @@ This file contains three passwords:
 
 **Keycloak admin console:**
 
-- **URL:** `http://your-droplet-ip` (via Nginx) or `https://your-droplet-ip:8443` (Keycloak directly)
+- **URL:** `http://your-droplet-ip` (via Nginx) or `https://your-droplet-ip:8443` (direct)
 - **Username:** `admin`
 - **Password:** `KEYCLOAK_ADMIN_PASSWORD` from `/root/.digitalocean_passwords`
 
@@ -120,10 +125,10 @@ Your Droplet is not automatically added to the Managed Database's trusted source
 
 ## Droplet Summary
 
-- UFW firewall allows SSH (port 22, rate limited), Nginx (ports 80 and 443), and Keycloak (ports 8443 and 9000)
+- UFW firewall allows SSH (port 22, rate limited), Nginx (ports 80 and 443; 443 is for Certbot/domain HTTPS), and Keycloak (ports 8443 and 9000)
 - Keycloak runs in a Docker container (`docker logs keycloak` to view logs)
-- Nginx redirects requests to Keycloak, acting as a reverse proxy for the application server
-- Passwords are shown in the message of the day (MOTD) on SSH login and saved in `/root/.digitalocean_passwords`
+- Nginx on port 80 reverse-proxies to Keycloak over HTTPS (8443) with forwarded headers; Keycloak runs with `KC_PROXY_HEADERS=xforwarded`
+- Passwords are shown in the message of the day (MOTD) on SSH login and saved in `/root/.digitalocean_passwords` (root-only **600**)
 - The Keycloak Dockerfile is at `/var/digitalocean/Dockerfile`
 
 ## Additional Resources
