@@ -2,16 +2,15 @@ server {
     listen 80;
     server_name _;
 
+    # ACME HTTP-01 (Certbot) — keep reachable on plain HTTP
     location ~ /.well-known {
         allow all;
     }
 
+    # Do not terminate admin traffic on plain HTTP: send browsers to Keycloak HTTPS.
+    # After Certbot adds TLS on 443, use the hostname URL; :8443 remains the container HTTPS port.
     location / {
-        proxy_pass https://localhost:8443;
-        proxy_set_header Host $host:8443;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        return 302 https://$host:8443$request_uri;
     }
 }
 
@@ -24,10 +23,6 @@ server {
     }
 
     location / {
-        proxy_pass https://localhost:9000;
-        proxy_set_header Host $host:9000;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        return 302 https://$host:9000$request_uri;
     }
 }
