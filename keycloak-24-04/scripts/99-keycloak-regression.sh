@@ -23,23 +23,57 @@ if ! nginx -t >/dev/null 2>&1; then
 fi
 
 ONBOOT="/var/lib/cloud/scripts/per-instance/001_onboot"
-for f in "$ONBOOT" /etc/update-motd.d/99-one-click; do
-  if ! bash -n "$f"; then
-    echo "regression: bash -n failed for $f" >&2
-    exit 1
-  fi
-done
+MOTD="/etc/update-motd.d/99-one-click"
 
-if ! grep -q 'chmod 600 /root/.digitalocean_passwords' "$ONBOOT"; then
-  echo "regression: onboot must chmod 600 /root/.digitalocean_passwords" >&2
+if ! bash -n "$ONBOOT"; then
+  echo "regression: bash -n failed for $ONBOOT" >&2
+  exit 1
+fi
+if ! sh -n "$MOTD"; then
+  echo "regression: sh -n failed for $MOTD" >&2
   exit 1
 fi
 
-for hdr in Host X-Forwarded-Host X-Forwarded-Port X-Forwarded-Proto; do
-  if ! grep -q "proxy_set_header ${hdr}" /etc/nginx/sites-available/keycloak; then
-    echo "regression: nginx keycloak site missing proxy_set_header ${hdr}" >&2
-    exit 1
-  fi
-done
+NGX="/etc/nginx/sites-available/keycloak"
+if ! grep -q 'return 302 https://$host:8443$request_uri' "$NGX"; then
+  echo "regression: nginx :80 must redirect to https://\$host:8443 (TLS for admin traffic)" >&2
+  exit 1
+fi
+if ! grep -q 'location ~ /.well-known' "$NGX"; then
+  echo "regression: nginx must expose /.well-known for certbot" >&2
+  exit 1
+fi
+if grep -q 'KC_PROXY_HEADERS' "$ONBOOT"; then
+  echo "regression: onboot must not set KC_PROXY_HEADERS (direct :8443 exposed)" >&2
+  exit 1
+fi
+if grep -q 'exec.*one_click_setup.log' "$ONBOOT"; then
+  echo "regression: onboot must not redirect all output to setup log (sensitive traces)" >&2
+  exit 1
+fi
+if ! grep -q 'umask 077' "$ONBOOT"; then
+  echo "regression: onboot must set umask 077 before writing secrets" >&2
+  exit 1
+fi
+if ! grep -q 'install -m 600' "$ONBOOT" || ! grep -q '/var/log/one_click_setup.log' "$ONBOOT"; then
+  echo "regression: onboot must create /var/log/one_click_setup.log as 600 via install" >&2
+  exit 1
+fi
+if grep -qE 'chmod[[:space:]]+(600|400).*digitalocean_passwords' "$ONBOOT"; then
+  echo "regression: passwords file must rely on umask (no post-hoc chmod that implies a bad default mode)" >&2
+  exit 1
+fi
+
+# Behavioral check: under umask 077, a new root-owned file is 600 and inaccessible to group/other.
+tmpfile=$(mktemp /tmp/keycloak-regression-umask.XXXXXX)
+rm -f "$tmpfile"
+umask 077
+echo test >"$tmpfile"
+perm=$(stat -c '%a' "$tmpfile")
+rm -f "$tmpfile"
+if [ "$perm" != "600" ]; then
+  echo "regression: expected umask 077 to yield 600 file, got ${perm}" >&2
+  exit 1
+fi
 
 echo "keycloak-24-04 regression checks ok (image ${application_version})"

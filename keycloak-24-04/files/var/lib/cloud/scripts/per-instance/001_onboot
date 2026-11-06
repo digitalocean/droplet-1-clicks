@@ -1,5 +1,10 @@
 #!/bin/bash
-exec >>/var/log/one_click_setup.log 2>&1
+set -euo pipefail
+umask 077
+
+# Root-only log from creation; append only non-sensitive milestones (no command traces, no credentials).
+install -m 600 -o root -g root /dev/null /var/log/one_click_setup.log
+echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") Keycloak 1-Click first boot starting" >>/var/log/one_click_setup.log
 
 DB_USER=keycloak
 DB_TYPE=postgres
@@ -15,7 +20,6 @@ KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWD}
 KEYCLOAK_DATABASE_PASSWORD=${DB_PASS}
 KEYSTORE_PASSWORD=${KEYSTORE_PASSWORD}
 EOM
-chmod 600 /root/.digitalocean_passwords
 
 DROPLET_IP=$(hostname -I | awk '{print$1}')
 
@@ -59,7 +63,8 @@ fi
 docker build --build-arg="STORE_PASS=${KEYSTORE_PASSWORD}" /var/digitalocean/. -t local-keycloak
 
 # Run keycloak image with network mode set to host,
-# so Keycloak connects to the Postgres as localhost, not docker internal host
+# so Keycloak connects to the Postgres as localhost, not docker internal host.
+# Do not set KC_PROXY_HEADERS: port 8443 is exposed to clients and must not trust X-Forwarded-* from the Internet.
 docker run -d --network=host \
   --name keycloak \
   -e KEYCLOAK_ADMIN=admin \
@@ -69,11 +74,12 @@ docker run -d --network=host \
   -e KC_DB_USERNAME=${DB_USER} \
   -e KC_DB_PASSWORD=${DB_PASS} \
   -e KC_HOSTNAME=${DROPLET_IP} \
-  -e KC_PROXY_HEADERS=xforwarded \
   local-keycloak \
   start \
   --https-key-store-password=${KEYSTORE_PASSWORD} \
   --optimized
+
+echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") Keycloak container started" >>/var/log/one_click_setup.log
 
 
 # Allow ports used by keycloak for redirecting
@@ -87,4 +93,4 @@ sed -e '/Match User root/d' \
 
 systemctl restart ssh
 
-chmod 600 /var/log/one_click_setup.log
+echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") Keycloak 1-Click first boot finished" >>/var/log/one_click_setup.log

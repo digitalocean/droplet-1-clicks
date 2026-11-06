@@ -29,11 +29,11 @@ Welcome to DigitalOcean's 1-Click Keycloak Droplet.
 To keep this Droplet secure, the UFW firewall is enabled.
 All ports are BLOCKED except 22 (SSH), 80 (HTTP), 443 (HTTPS), 8443 and 9000 (Keycloak ports).
 
-The admin console is available over HTTPS. Nginx on port 80 proxies to Keycloak; your browser shows a privacy warning until you add a domain and run Certbot.
+The admin console uses HTTPS only. Port 80 sends a redirect to HTTPS on 8443 (self-signed until you add a domain and run Certbot). Use https://${myip}:8443 or open http://${myip} and follow the redirect.
 
 Access the Keycloak dashboard
-    URL: http://${myip}  (redirects to HTTPS; self-signed certificate)
-    Direct: https://${myip}:8443
+    Primary URL: https://${myip}:8443  (self-signed certificate — use Advanced / Proceed if prompted)
+    Alternate:     http://${myip}  (302 redirect to https://${myip}:8443)
     User: admin
     Pass: ${KEYCLOAK_ADMIN_PASSWORD}
 
