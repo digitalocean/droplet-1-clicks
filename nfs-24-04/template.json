@@ -1,15 +1,17 @@
 {
   "variables": {
+    "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "token": "{{env `DIGITALOCEAN_TOKEN`}}",
     "image_name": "nfs-24-04-snapshot-{{timestamp}}",
     "apt_packages": "fail2ban jq nfs-kernel-server",
     "application_name": "NFS",
     "application_version": ""
   },
+  "sensitive-variables": ["do_api_token", "token"],
   "builders": [
     {
       "type": "digitalocean",
-      "api_token": "{{user `token`}}",
+      "api_token": "{{user `do_api_token`}}",
       "image": "ubuntu-24-04-x64",
       "region": "nyc3",
       "size": "s-1vcpu-1gb",
@@ -61,6 +63,14 @@
     },
     {
       "type": "shell",
+      "environment_vars": [
+        "application_name={{user `application_name`}}",
+        "application_version={{user `application_version`}}",
+        "DEBIAN_FRONTEND=noninteractive",
+        "LC_ALL=C",
+        "LANG=en_US.UTF-8",
+        "LC_CTYPE=en_US.UTF-8"
+      ],
       "scripts": [
         "nfs-24-04/scripts/010-nfs.sh",
         "common/scripts/018-force-ssh-logout.sh",
