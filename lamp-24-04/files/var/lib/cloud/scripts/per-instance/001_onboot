@@ -9,35 +9,22 @@ cat > /root/.digitalocean_password <<EOM
 root_mysql_pass="${root_mysql_pass}"
 EOM
 
-mysqladmin -u root -h localhost password ${root_mysql_pass}
+# Configure MySQL passwords (Ubuntu MySQL 8.0 defaults root to auth_socket)
+mysql -u root <<EOSQL
+ALTER USER 'root'@'localhost' IDENTIFIED WITH caching_sha2_password BY '${root_mysql_pass}';
+CREATE USER IF NOT EXISTS 'root'@'127.0.0.1' IDENTIFIED WITH caching_sha2_password BY '${root_mysql_pass}';
+ALTER USER 'debian-sys-maint'@'localhost' IDENTIFIED WITH caching_sha2_password BY '${debian_sys_maint_mysql_pass}';
+FLUSH PRIVILEGES;
+EOSQL
 
-mysql -uroot -p${root_mysql_pass} \
-      -e "ALTER USER 'debian-sys-maint'@'localhost' IDENTIFIED BY '${debian_sys_maint_mysql_pass}'"
-
-# Run mysql_secure_installation
-
-MYSQL_ROOT_PASSWORD=${debian_sys_maint_mysql_pass}
-
-SECURE_MYSQL=$(expect -c "
-set timeout 10
-spawn mysql_secure_installation
-expect \"Enter current password for root (enter for none):\"
-send \"$MYSQL_ROOT_PASSWORD\r\"
-expect \"Change the root password?\"
-send \"n\r\"
-expect \"Remove anonymous users?\"
-send \"y\r\"
-expect \"Disallow root login remotely?\"
-send \"y\r\"
-expect \"Remove test database and access to it?\"
-send \"y\r\"
-expect \"Reload privilege tables now?\"
-send \"y\r\"
-expect eof
-")
-
-echo "$SECURE_MYSQL"
-
+# Harden MySQL (equivalent to mysql_secure_installation; works once root has a real password)
+mysql -uroot -p${root_mysql_pass} <<EOSQL
+DELETE FROM mysql.user WHERE User='';
+DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
+DROP DATABASE IF EXISTS test;
+DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
+FLUSH PRIVILEGES;
+EOSQL
 
 cat > /etc/mysql/debian.cnf <<EOM
 # Automatically generated for Debian scripts. DO NOT TOUCH!
