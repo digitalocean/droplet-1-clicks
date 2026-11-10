@@ -1,0 +1,73 @@
+#!/bin/bash
+set -euo pipefail
+
+INFO_FILE=/root/prometheus_info.txt
+
+# Remove the ssh force logout command first so SSH is not left locked if later steps fail
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
+
+meta() { curl -fsS --retry 10 --retry-connrefused --max-time 2 "$1"; }
+DROPLET_PUBLIC_IP="$(meta http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)"
+DROPLET_PRIVATE_IP="$(hostname -I | awk '{print $1}')"
+DROPLET_IP="${DROPLET_PUBLIC_IP:-$DROPLET_PRIVATE_IP}"
+
+if [ -z "${DROPLET_IP}" ]; then
+  echo "ERROR: Unable to determine droplet IP; cannot configure Caddy." >&2
+  exit 1
+fi
+
+if [ ! -f /etc/caddy/Caddyfile.tmp ]; then
+  echo "ERROR: Missing /etc/caddy/Caddyfile.tmp; cannot configure Caddy." >&2
+  exit 1
+fi
+
+echo "Configuring Caddy with droplet IP address..."
+sed "s/PLACEHOLDER_DOMAIN/${DROPLET_IP}/g" /etc/caddy/Caddyfile.tmp > /etc/caddy/Caddyfile
+
+if grep -q 'PLACEHOLDER_DOMAIN' /etc/systemd/system/prometheus.service 2>/dev/null; then
+  sed -i "s/PLACEHOLDER_DOMAIN/${DROPLET_IP}/g" /etc/systemd/system/prometheus.service
+  systemctl daemon-reload
+fi
+
+cat > "$INFO_FILE" << EOF
+================================================================================
+Prometheus 1-Click Droplet - Getting Started
+================================================================================
+
+Prometheus is running behind Caddy with shortlived Let's Encrypt TLS.
+
+ACCESS:
+  Web UI:  https://${DROPLET_IP}/
+
+  Prometheus binds to 127.0.0.1:9090 only. Public access is via Caddy on 80/443.
+
+MANAGEMENT:
+  Start:     /opt/start-prometheus.sh
+  Stop:      /opt/stop-prometheus.sh
+  Restart:   /opt/restart-prometheus.sh
+  Status:    /opt/status-prometheus.sh
+  Domain:    sudo /opt/setup-prometheus-domain.sh
+
+CONFIG:
+  Prometheus: /etc/prometheus/prometheus.yml
+  Caddy:      /etc/caddy/Caddyfile
+  Data:       /var/lib/prometheus
+
+DOCS:
+  https://prometheus.io/docs/introduction/overview/
+
+================================================================================
+EOF
+chmod 600 "$INFO_FILE"
+
+systemctl enable prometheus
+systemctl enable caddy
+systemctl restart prometheus
+systemctl restart caddy
+
+echo "Prometheus first-boot initialization complete!"
+echo "Access info saved to ${INFO_FILE}"

@@ -33,12 +33,33 @@ sudo chown -R prometheus:prometheus /etc/prometheus /var/lib/prometheus
 # Remove extracted release directory
 sudo rm -rf /root/prometheus-*
 
-# Ensure MOTD script is executable
-sudo chmod +x /etc/update-motd.d/99-one-click-prom
+# Install Caddy reverse proxy (TLS terminated at Caddy; certs requested on first boot)
+curl -1sLf "https://dl.cloudsmith.io/public/caddy/stable/gpg.key" \
+  | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+echo "deb [signed-by=/usr/share/keyrings/caddy-stable-archive-keyring.gpg] https://dl.cloudsmith.io/public/caddy/stable/deb/debian any-version main" \
+  > /etc/apt/sources.list.d/caddy-stable.list
+apt-get update -y
+apt-get install -y caddy
+
+mkdir -p /var/log/caddy
+chown -R caddy:caddy /var/log/caddy
+
+# Defer Caddy until first boot writes the droplet IP into the Caddyfile
+systemctl disable --now caddy || true
+
+# Ensure helper / MOTD / onboot scripts are executable
+chmod +x /etc/update-motd.d/99-one-click-prom
+chmod +x /var/lib/cloud/scripts/per-instance/001_onboot
+chmod +x /opt/setup-prometheus-domain.sh
+chmod +x /opt/start-prometheus.sh
+chmod +x /opt/stop-prometheus.sh
+chmod +x /opt/restart-prometheus.sh
+chmod +x /opt/status-prometheus.sh
 
 # Reload systemd and enable Prometheus for first boot (do not start during image build)
-sudo systemctl daemon-reload
-sudo systemctl enable prometheus
+systemctl daemon-reload
+systemctl enable prometheus
+systemctl disable --now prometheus || true
 
 # Clean up
-sudo apt-get -qqy clean
+apt-get -qqy clean
