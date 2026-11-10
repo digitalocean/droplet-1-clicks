@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 
 # Install Docker Compose plugin from Docker's official repository
 apt-get -y update
@@ -12,11 +13,6 @@ cd /srv/supabase
 git clone --depth 1 --branch "$application_version" https://github.com/supabase/supabase
 cd supabase/docker
 cp .env.example .env
-
-# Install SSL tooling
-snap install core && snap refresh core
-snap install --classic certbot
-ln -sf /snap/bin/certbot /usr/bin/certbot
 
 chmod +x /var/supabase/supabase-setup.sh \
   /var/lib/digitalocean/setup-dbaas.sh \
