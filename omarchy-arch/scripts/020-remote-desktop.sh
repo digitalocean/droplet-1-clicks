@@ -29,7 +29,7 @@ echo "==> Installing hypr-rdp ${HYPR_RDP_VERSION} runtime dependencies"
 # per-instance onboot script (random account password, per-droplet cert).
 sudo pacman -S --noconfirm --needed \
   fuse3 libpulse libva libxkbcommon mesa pipewire pipewire-pulse \
-  pwgen openssl 2>&1 | tail -1
+  pwgen openssl
 
 echo "==> Installing hypr-rdp ${HYPR_RDP_VERSION}"
 # Pinned release binary rather than the AUR package: the AUR builds this Rust

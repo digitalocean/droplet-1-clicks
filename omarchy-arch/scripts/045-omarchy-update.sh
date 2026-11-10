@@ -23,6 +23,9 @@ set -euo pipefail
 # children rather than depending on the session.
 export OMARCHY_PATH="${OMARCHY_PATH:-/usr/share/omarchy}"
 
+echo "==> Clearing partial package downloads before the Omarchy update"
+sudo find /var/cache/pacman/pkg -maxdepth 1 -type f -name '*.part' -delete
+
 echo "==> Updating Omarchy and system packages (from $(pacman -Q omarchy))"
 
 # Repeat the answer rather than sending it once: the prompt appears minutes

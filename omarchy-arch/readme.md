@@ -169,6 +169,12 @@ droplet. Reach it remotely over an SSH tunnel rather than by rebinding it.
 
 ## What the provisioners do
 
+The execution order is set by `template.json`, not script numbering:
+`030-optimize.sh` and `040-application-tag.sh` run first, followed by
+`045-omarchy-update.sh`, then the remaining provisioners. This upgrades the
+base through Omarchy's supported updater before any dependency installs;
+direct `pacman -Syu` is blocked by Omarchy's update-entrypoint hook.
+
 | Script | Purpose |
 |---|---|
 | `020-remote-desktop.sh` | SDDM autologin, hypr-rdp (pinned release binary + `graphical-session` user unit + `/etc/hypr-rdp/options`), setup assistant + first-login hook, MOTD-on-ssh, per-instance onboot install |

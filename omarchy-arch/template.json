@@ -47,13 +47,13 @@
         "ollama_models={{user `ollama_models`}}"
       ],
       "scripts": [
-        "omarchy-arch/scripts/020-remote-desktop.sh",
-        "omarchy-arch/scripts/025-fail2ban.sh",
         "omarchy-arch/scripts/030-optimize.sh",
-        "omarchy-arch/scripts/035-do-agent.sh",
-        "omarchy-arch/scripts/036-droplet-agent.sh",
         "omarchy-arch/scripts/040-application-tag.sh",
         "omarchy-arch/scripts/045-omarchy-update.sh",
+        "omarchy-arch/scripts/020-remote-desktop.sh",
+        "omarchy-arch/scripts/025-fail2ban.sh",
+        "omarchy-arch/scripts/035-do-agent.sh",
+        "omarchy-arch/scripts/036-droplet-agent.sh",
         "omarchy-arch/scripts/optional/050-nvidia.sh",
         "omarchy-arch/scripts/optional/060-ollama.sh",
         "omarchy-arch/scripts/900-cleanup.sh"
