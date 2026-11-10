@@ -4,7 +4,7 @@
     "image_name": "keycloak-24-04-snapshot-{{timestamp}}",
     "apt_packages": "postgresql docker.io docker-compose super nginx python3 python3-certbot python3-certbot-nginx",
     "application_name": "Keycloak",
-    "application_version": "26.7.4"
+    "application_version": "26.8.2"
   },
   "sensitive-variables": [
     "do_api_token"
@@ -70,6 +70,7 @@
       ],
       "scripts": [
         "keycloak-24-04/scripts/01-keycloak.sh",
+        "keycloak-24-04/scripts/99-keycloak-regression.sh",
         "common/scripts/018-force-ssh-logout.sh",
         "common/scripts/014-ufw-nginx.sh",
         "common/scripts/020-application-tag.sh",
