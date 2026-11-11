@@ -3,6 +3,19 @@
 # Configured as part of the DigitalOcean 1-Click Image build process
 
 # Read in the passwords....
+if [ ! -f /root/.digitalocean_passwords ]; then
+  cat <<EOF
+********************************************************************************
+
+Elasticsearch setup is still running on first boot.
+This shell is ready. Credentials appear in this banner when setup finishes.
+
+    tail -f /var/log/elasticsearch-oneclick-setup.log
+
+********************************************************************************
+EOF
+  exit 0
+fi
 . /root/.digitalocean_passwords
 
 myip=$(hostname -I | awk '{print$1}')
@@ -22,7 +35,7 @@ Use these parameters to access your ElasticSearch:
 
 Use these parameters to connect Kibana to your ElasticSearch:
     Host: ${myip}
-    User: kibana
+    User: kibana_system
     Pass: ${KIBANA_PASSWORD}
 
     or
@@ -40,3 +53,11 @@ To ping your ElasticSearch, run:
 ********************************************************************************
 To delete this message of the day: rm -rf $(readlink -f ${0})
 EOF
+
+if [ -z "${ELASTIC_PASSWORD:-}" ]; then
+  cat <<EOF
+
+Password setup did not finish, so the values above are blank and port 9200
+may be closed. Details are in /var/log/elasticsearch-oneclick-setup.log
+EOF
+fi
