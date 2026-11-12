@@ -27,7 +27,7 @@ On the server:
  * SSL certificates: /var/lib/caddy/.local/share/caddy/certificates/
  * Database credentials: /root/.digitalocean_password
    (If using DBaaS: /root/.digitalocean_dbaas_credentials)
- * WP-Fail2Ban plugin: /var/www/html/wp-content/mu-plugins/fail2ban.php
+ * WP-Fail2Ban plugin: /var/www/html/wp-content/plugins/wp-fail2ban
 
 🔧 USEFUL COMMANDS:
  * Add a custom domain: /root/wp_setup_domain.sh
