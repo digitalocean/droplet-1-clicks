@@ -1,0 +1,102 @@
+#!/bin/bash
+set -euo pipefail
+
+NOD_DIR="/opt/nod"
+SELF_HOST_DIR="${NOD_DIR}/deployment/self-host"
+ENV_FILE="${SELF_HOST_DIR}/.env"
+
+set -a
+source /etc/environment 2>/dev/null || true
+set +a
+
+# Remove the ssh force logout command
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+systemctl restart ssh
+
+# Wait for Docker after boot.
+i=0
+while [ "$i" -lt 60 ]; do
+  if docker info >/dev/null 2>&1; then
+    break
+  fi
+  i=$((i + 1))
+  sleep 2
+done
+
+if ! docker info >/dev/null 2>&1; then
+  echo "ERROR: Docker did not become ready within 120s." >&2
+  exit 1
+fi
+
+meta() { curl -fsS --retry 10 --retry-connrefused --max-time 2 "$1"; }
+DROPLET_PUBLIC_IP="$(meta http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)"
+DROPLET_PRIVATE_IP="$(hostname -I | awk '{print $1}')"
+DROPLET_IP="${DROPLET_PUBLIC_IP:-$DROPLET_PRIVATE_IP}"
+PUBLIC_URL="https://${DROPLET_IP}"
+
+# Generate per-droplet secrets once.
+if [ ! -f "${ENV_FILE}" ]; then
+  echo "Generating Nod secrets for this droplet..."
+  (
+    cd "${SELF_HOST_DIR}"
+    unset NOD_AUTH_TOKEN NOD_VAULT_KEY NOD_POSTGRES_PASSWORD || true
+    sh setup.sh
+  )
+fi
+
+# Point Nod at the Caddy HTTPS origin (IP or later custom domain).
+if grep -qE '^NOD_PUBLIC_URL=' "${ENV_FILE}"; then
+  sed -i "s|^NOD_PUBLIC_URL=.*|NOD_PUBLIC_URL=${PUBLIC_URL}|" "${ENV_FILE}"
+else
+  printf 'NOD_PUBLIC_URL=%s\n' "${PUBLIC_URL}" >> "${ENV_FILE}"
+fi
+chmod 600 "${ENV_FILE}"
+
+# Configure host Caddy with shortlived IP cert.
+if [ -f /etc/caddy/Caddyfile.tmp ]; then
+  mv /etc/caddy/Caddyfile.tmp /etc/caddy/Caddyfile
+fi
+
+if [ -f /etc/caddy/Caddyfile ] && grep -q "PLACEHOLDER_DOMAIN" /etc/caddy/Caddyfile; then
+  echo "Configuring Caddy with droplet IP ${DROPLET_IP}..."
+  sed -i "s/PLACEHOLDER_DOMAIN/${DROPLET_IP}/" /etc/caddy/Caddyfile
+fi
+
+systemctl enable caddy
+systemctl restart caddy
+
+chmod +x /opt/nod-compose.sh /opt/start-nod.sh /opt/stop-nod.sh /opt/restart-nod.sh \
+  /opt/status-nod.sh /opt/update-nod.sh /opt/setup-nod-domain.sh \
+  /opt/apply-inference-from-env.sh /etc/setup_wizard.sh
+chmod +x /var/lib/digitalocean/inference-models.sh 2>/dev/null || true
+
+# Optional: wire DigitalOcean Serverless Inference before first start.
+INFERENCE_APPLIED=0
+if /opt/apply-inference-from-env.sh; then
+  INFERENCE_APPLIED=1
+  echo "Pre-configured DigitalOcean Serverless Inference from droplet environment."
+elif ! grep -q 'setup_wizard.sh' /root/.bashrc 2>/dev/null; then
+  cat >>/root/.bashrc <<'EOM'
+
+chmod +x /etc/setup_wizard.sh
+/etc/setup_wizard.sh
+EOM
+fi
+
+# Start Nod stack (images were pre-built during Packer).
+systemctl enable nod.service
+systemctl start nod.service
+
+# Persist a convenience copy of the access token for MOTD/status (same as .env).
+if [ -f "${ENV_FILE}" ]; then
+  grep -E '^NOD_AUTH_TOKEN=' "${ENV_FILE}" | cut -d= -f2- > /root/nod-auth-token.txt
+  chmod 600 /root/nod-auth-token.txt
+fi
+
+if [ "$INFERENCE_APPLIED" -eq 1 ]; then
+  echo "Nod first-boot initialization complete at ${PUBLIC_URL} (Serverless Inference configured)."
+else
+  echo "Nod first-boot initialization complete at ${PUBLIC_URL} (connect a model in the UI or run /etc/setup_wizard.sh)."
+fi

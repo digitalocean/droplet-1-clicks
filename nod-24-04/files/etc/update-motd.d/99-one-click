@@ -1,0 +1,66 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+pub=$(curl -fsS --retry 3 --retry-connrefused --max-time 3 \
+  http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)
+myip="${pub:-$(hostname -I | awk '{print$1}')}"
+auth_token=""
+if [ -f /opt/nod/deployment/self-host/.env ]; then
+  auth_token=$(grep -E '^NOD_AUTH_TOKEN=' /opt/nod/deployment/self-host/.env 2>/dev/null | cut -d= -f2-)
+elif [ -f /root/nod-auth-token.txt ]; then
+  auth_token=$(cat /root/nod-auth-token.txt)
+fi
+
+cat <<EOF
+********************************************************************************
+
+Welcome to Nod — open source personal agent with its own computer
+
+Nod chases invoices, preps your calls, and cancels trials on real websites.
+It runs on this Droplet with the model you choose, and asks before it acts.
+
+🌐 Web access:
+  URL: https://$myip
+  Access token: ${auth_token:-(generating — wait for first-boot to finish)}
+
+  Open the URL, paste the access token, then finish onboarding.
+
+🧠 DigitalOcean Serverless Inference:
+  Optional at create time: set MODEL_ACCESS_KEY (and INFERENCE_MODEL).
+  Or on first SSH: /etc/setup_wizard.sh
+  Re-apply later:   sudo /opt/apply-inference-from-env.sh && sudo /opt/restart-nod.sh
+  Keys / models:    /opt/nod.env
+  Create keys:      https://cloud.digitalocean.com/gen-ai/model-access-keys
+
+💾 Droplet size: use at least 8 GB RAM / 2 vCPU (16 GB recommended for heavy browser work).
+  Nod runs a server plus PostgreSQL, a Chromium browser container, and a workspace sandbox.
+
+📝 Configuration:
+  Secrets & settings: /opt/nod/deployment/self-host/.env
+  Inference env:      /opt/nod.env
+  Source checkout:    /opt/nod
+  Never share NOD_AUTH_TOKEN or NOD_VAULT_KEY. Keep NOD_VAULT_KEY with backups.
+
+🔧 Management:
+  Start:    /opt/start-nod.sh    (or: systemctl start nod)
+  Stop:     /opt/stop-nod.sh     (or: systemctl stop nod)
+  Restart:  /opt/restart-nod.sh  (or: systemctl restart nod)
+  Status:   /opt/status-nod.sh
+  Logs:     /opt/nod-compose.sh logs -f
+
+⬆️ Update Nod:
+  Latest release tag: sudo /opt/update-nod.sh
+  Specific tag:       sudo /opt/update-nod.sh nod-v0.7.2
+
+🔒 Custom domain (HTTPS):
+  HTTPS is already enabled on this droplet IP (shortlived TLS via Caddy).
+  Point DNS at this droplet, then run:
+    sudo /opt/setup-nod-domain.sh
+
+📚 Docs: https://nod.n8n.io/docs/deploy/self-host/
+🔗 GitHub: https://github.com/n8n-io/nod
+
+********************************************************************************
+To delete this message of the day: rm -rf /etc/update-motd.d/99-one-click
+EOF

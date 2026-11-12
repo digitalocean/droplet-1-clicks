@@ -1,0 +1,18 @@
+[Unit]
+Description=Nod self-hosted personal agent
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/nod/deployment/self-host
+Environment=NOD_DIR=/opt/nod
+ExecStart=/opt/start-nod.sh
+ExecStop=/opt/stop-nod.sh
+TimeoutStartSec=600
+TimeoutStopSec=120
+
+[Install]
+WantedBy=multi-user.target
