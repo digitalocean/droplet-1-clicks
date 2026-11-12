@@ -59,10 +59,13 @@ esac
 
 read -rsp "Enter your model access key: " MODEL_ACCESS_KEY
 echo
+# Strip CR from pasted keys (Windows clipboard / terminal paste).
+MODEL_ACCESS_KEY=$(printf '%s' "$MODEL_ACCESS_KEY" | tr -d '\r')
 while [ -z "${MODEL_ACCESS_KEY}" ]; do
   echo "Key cannot be empty."
   read -rsp "Enter your model access key: " MODEL_ACCESS_KEY
   echo
+  MODEL_ACCESS_KEY=$(printf '%s' "$MODEL_ACCESS_KEY" | tr -d '\r')
 done
 
 CHAT_IDS=""

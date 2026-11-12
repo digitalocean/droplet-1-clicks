@@ -55,10 +55,14 @@ read_config_value() {
 
 write_kv() {
   local file="$1" key="$2" val="$3" tmp
-  if printf '%s' "$val" | grep -q $'\n'; then
-    echo "ERROR: refusing to write multiline value for ${key}" >&2
-    exit 1
-  fi
+  # Use bash pattern match — `grep` with a newline pattern is treated as an
+  # empty pattern by GNU grep and matches every value (false positive).
+  case "$val" in
+    *$'\n'*)
+      echo "ERROR: refusing to write multiline value for ${key}" >&2
+      exit 1
+      ;;
+  esac
   tmp="${file}.tmp"
   touch "$file"
   grep -vE "^${key}=" "$file" >"$tmp" 2>/dev/null || : >"$tmp"
