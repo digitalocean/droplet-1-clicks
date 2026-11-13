@@ -1,0 +1,26 @@
+[Unit]
+Description=T3 Code server
+Documentation=https://github.com/pingdotgg/t3code
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=t3
+Group=t3
+WorkingDirectory=/home/t3/workspace
+Environment=HOME=/home/t3
+Environment=T3CODE_HOME=/home/t3/.t3
+Environment=T3CODE_HOST=127.0.0.1
+Environment=T3CODE_PORT=3773
+Environment=PATH=/usr/local/bin:/home/t3/.local/bin:/home/t3/.grok/bin:/home/t3/.opencode/bin:/usr/bin:/bin
+EnvironmentFile=-/opt/t3code.env
+ExecStart=/usr/local/bin/t3 serve
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
