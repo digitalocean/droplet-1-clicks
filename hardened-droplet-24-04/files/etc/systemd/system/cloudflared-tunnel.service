@@ -1,0 +1,21 @@
+[Unit]
+Description=Cloudflare Tunnel (token from /etc/cloudflared/tunnel.env)
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/etc/cloudflared/tunnel.env
+
+[Service]
+EnvironmentFile=/etc/cloudflared/tunnel.env
+ExecStart=/usr/bin/cloudflared --no-autoupdate tunnel run
+DynamicUser=yes
+StateDirectory=cloudflared-tunnel
+Environment=HOME=/var/lib/cloudflared-tunnel
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

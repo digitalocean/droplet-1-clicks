@@ -1,0 +1,2 @@
+# The agent user may start/stop previews and read status as root, nothing else.
+agent ALL=(root) NOPASSWD: /usr/local/bin/expose, /usr/local/bin/hardened status, /usr/local/bin/hardened status --json
