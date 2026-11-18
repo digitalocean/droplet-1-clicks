@@ -1,17 +1,17 @@
 # Hardened Droplet 1-Click Application
 
-An Ubuntu 24.04 Droplet that starts with every inbound port closed except SSH. A guided setup moves SSH to Tailscale so port 22 can close too, and web apps go public through Cloudflare Tunnel instead of open ports. It is set up for developers and AI agents.
+## What is Hardened Droplet?
 
-> **⚠ Warning:** Until you complete Tailscale setup, this Droplet accepts SSH from the internet on port 22 (SSH keys only, rate limited). The setup wizard moves SSH to Tailscale and closes port 22 at your first login, in about 2 minutes.
-
-## What is it?
+Hardened Droplet is an Ubuntu 24.04 Droplet that starts with every inbound port closed except SSH. A guided setup moves SSH to Tailscale so port 22 can close too, and web apps go public through Cloudflare Tunnel instead of open ports. It is set up for developers and AI agents.
 
 A new Droplet normally has no Cloud Firewall until you create and attach one, so any service that listens on a public port can be reached from the internet. This 1-Click flips that default:
 
-- **Inbound traffic denied by default** – The host firewall (ufw) allows only SSH, and you can close that too
+- **Inbound traffic denied by default** – The host firewall (UFW) allows only SSH, and you can close that too
 - **SSH over Tailscale** – Reach the Droplet from your own devices on your private tailnet, then close port 22
 - **Web traffic through Cloudflare Tunnel** – Publish apps through an outbound tunnel. Ports 80 and 443 stay closed.
 - **Built for AI agents** – A non-root `agent` user, commands with JSON output, setup from user data, and an `AGENTS.md` with rules
+
+> **⚠ Warning:** Until you complete Tailscale setup, this Droplet accepts SSH from the internet on port 22 (SSH keys only, rate limited). The setup wizard moves SSH to Tailscale and closes port 22 at your first login, in about 2 minutes.
 
 ## Key Features
 
@@ -24,39 +24,46 @@ A new Droplet normally has no Cloud Firewall until you create and attach one, so
 - Hands-off setup: put `TAILSCALE_AUTHKEY` in user data and the Droplet secures itself at first boot
 - Automatic security updates for Ubuntu, Tailscale, and cloudflared
 
+## System Requirements
+
+Hardened Droplet adds very little overhead; size the Droplet for the app you plan to run.
+
+| Use Case    | RAM  | CPU    | Storage |
+| ----------- | ---- | ------ | ------- |
+| Minimum     | 1 GB | 1 vCPU | 25 GB   |
+| Recommended | 2 GB | 2 vCPU | 50 GB   |
+
 ## Included System Components
 
 - **Ubuntu 24.04 LTS** – Base operating system
 - **Tailscale** (1.104.7) – Private network and Tailscale SSH
 - **cloudflared** (2026.11.1) – Cloudflare Tunnel connector
-- **UFW** – Host firewall: inbound denied, SSH rate limited until you close it
+- **UFW Firewall** – Inbound denied; SSH rate limited until you close it
 - **unattended-upgrades** – Automatic security updates
-- **Git, curl, jq** – Common tools for agents and scripts
-
-## System Requirements
-
-| Use Case | RAM | CPU | Storage |
-|----------|-----|-----|---------|
-| Minimum | 1 GB | 1 vCPU | 25 GB |
-| Recommended for agents | 2 GB | 2 vCPU | 50 GB |
+- **Git**, **curl**, **jq** – Common tools for agents and scripts
 
 ## Getting Started
 
-### 1. Before you create the Droplet
+### 1. Deploy the Droplet
 
-- Create a free Tailscale account at https://login.tailscale.com/start
-- Install Tailscale on the computer you will connect from: https://tailscale.com/download
-- Add an SSH key to the Droplet when you create it. Password login stays on if you don't.
+Before you start, create a free [Tailscale account](https://login.tailscale.com/start) and [install Tailscale](https://tailscale.com/download) on the computer you will connect from.
 
-### 2. Create the Droplet and log in
+1. Select this 1-Click App from the DigitalOcean Marketplace
+2. Choose a Droplet size (1 GB RAM minimum)
+3. Add your SSH key. Password login stays on if you don't.
+4. Create the Droplet
+
+Optional: add `TAILSCALE_AUTHKEY` as user data to skip the wizard. See [Hands-off Setup with User Data](#hands-off-setup-with-user-data).
+
+### 2. SSH In
 
 ```bash
 ssh root@your-droplet-ip
 ```
 
-### 3. Complete the setup wizard
+### 3. Complete the Setup Wizard
 
-The wizard starts automatically:
+The wizard starts automatically at first login:
 
 1. **Connect Tailscale.** Press Enter to get a sign-in link and approve the Droplet in your browser, or paste a Tailscale auth key.
 2. **Test the new path.** In a new terminal on your computer, run `ssh root@<droplet-name>`.
@@ -65,14 +72,19 @@ The wizard starts automatically:
 
 Skipped it? Run `hardened setup` anytime.
 
-### 4. Afterwards
+### 4. Connect over Tailscale
 
-- Connect with `ssh root@<droplet-name>` over Tailscale.
-- In the Tailscale admin console, turn off **key expiry** for this machine so access doesn't stop after the expiry period.
+From now on, connect with:
 
-## Hands-off setup with user data (API, doctl, AI agents)
+```bash
+ssh root@<droplet-name>
+```
 
-Add this as user data when you create the Droplet:
+In the Tailscale admin console, turn off **key expiry** for this machine so access doesn't stop after the expiry period.
+
+## Hands-off Setup with User Data
+
+For the API, `doctl`, and AI agents. Add this as user data when you create the Droplet:
 
 ```bash
 #!/bin/bash
@@ -80,21 +92,23 @@ TAILSCALE_AUTHKEY=tskey-auth-...
 CLOUDFLARE_TUNNEL_TOKEN=eyJ...
 ```
 
-First boot joins your tailnet with Tailscale SSH and closes port 22 once Tailscale is running. With a tunnel token, it also runs the tunnel and starts the welcome page on `localhost:8080`. If Tailscale fails, port 22 stays open and the login message says so. Use a one-off, pre-approved auth key: user data stays readable from the metadata service for the life of the Droplet. If the key is tagged, add an SSH rule for that tag in your Tailscale policy.
+First boot joins your tailnet with Tailscale SSH and closes port 22 once Tailscale is running. With a tunnel token, it also runs the tunnel and starts the welcome page on `localhost:8080`. If Tailscale fails, port 22 stays open and the login message says so.
+
+Use a one-off, pre-approved auth key: user data stays readable from the metadata service for the life of the Droplet. If the key is tagged, add an SSH rule for that tag in your Tailscale policy.
 
 For defense in depth, also attach a Cloud Firewall with no inbound rules by giving the Droplet a tag that is already on that firewall. Only do this together with `TAILSCALE_AUTHKEY`, because the Cloud Firewall also blocks port 22.
 
-## Publishing web apps
+## Publishing Web Apps
 
 Your app's front door is `localhost:8080`. Cloudflare sends visitors there, so the public URL stays the same when you swap what runs behind it.
 
 | Need | Command | Account |
-|------|---------|---------|
+| ---- | ------- | ------- |
 | Test page | `hardened welcome on` | None. Serves a welcome page on `localhost:8080`. It is not public until you run `expose 8080` or point a tunnel at it. |
 | Quick preview | `expose 8080` | None. Random `trycloudflare.com` URL that changes on restart. For testing only. |
-| Permanent address | `hardened tunnel` | Free Cloudflare account and a domain on Cloudflare. Create the tunnel under Zero Trust > Networks > Tunnels, paste its token, then add a public hostname such as `app.example.com` → `http://localhost:8080`. |
+| Permanent address | `hardened tunnel` | Free Cloudflare account and a domain on Cloudflare. Create the tunnel under **Zero Trust > Networks > Tunnels**, paste its token, then add a public hostname such as `app.example.com` with service `http://localhost:8080`. |
 
-**Replace the welcome page with your app:**
+To replace the welcome page with your app:
 
 ```bash
 hardened welcome off      # frees port 8080
@@ -105,10 +119,10 @@ Reload your URL and it shows your app. Nothing changes in Cloudflare. Bind your 
 
 Prefer another port? Run `expose 3000`, or set the hostname's service to `http://localhost:3000` in the Cloudflare dashboard. Stop a preview with `expose --stop <port>`. Remove the permanent tunnel with `hardened tunnel --remove`.
 
-## Managing the Droplet
+## Managing Hardened Droplet
 
 | Action | Command |
-|--------|---------|
+| ------ | ------- |
 | Re-run the setup wizard | `hardened setup` |
 | Show what is exposed | `hardened status` (or `--json`) |
 | Close public SSH | `hardened close-ssh` |
@@ -127,7 +141,7 @@ Security updates for Ubuntu, Tailscale, and cloudflared install automatically. T
 apt update && apt upgrade
 ```
 
-## Running AI agents
+## Running AI Agents
 
 Run agents as the `agent` user (`ssh agent@<droplet-name>`). It has no general sudo, it can't reach the metadata service where user data secrets live, and it can start previews with `expose`. Rules and commands for agents are in `~/AGENTS.md`.
 
@@ -135,7 +149,7 @@ Run agents as the `agent` user (`ssh agent@<droplet-name>`). It has no general s
 
 ### Locked out after closing port 22
 
-Use the **Recovery Console**: control panel → your Droplet → **Settings** → **Recovery console** → **Launch Console**. It needs a root password, so first use **Settings** → **Reset root password**. Log in as root and run:
+Use the **Recovery Console**: control panel > your Droplet > **Settings** > **Recovery console** > **Launch Console**. It needs a root password, so first use **Settings** > **Reset root password**. Log in as root and run:
 
 ```bash
 hardened open-ssh
@@ -151,14 +165,24 @@ The Droplet Console does not work on this image.
 
 ## Additional Resources
 
-- Tailscale SSH: https://tailscale.com/kb/1193/tailscale-ssh
-- Tailscale auth keys: https://tailscale.com/kb/1085/auth-keys
-- Cloudflare Tunnel: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/
-- Recovery Console: https://docs.digitalocean.com/products/droplets/how-to/recovery/recovery-console/
-- Cloud Firewalls: https://docs.digitalocean.com/products/networking/firewalls/
+- **Tailscale SSH**: [https://tailscale.com/kb/1193/tailscale-ssh](https://tailscale.com/kb/1193/tailscale-ssh)
+- **Tailscale auth keys**: [https://tailscale.com/kb/1085/auth-keys](https://tailscale.com/kb/1085/auth-keys)
+- **Cloudflare Tunnel**: [https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/)
+- **Recovery Console**: [https://docs.digitalocean.com/products/droplets/how-to/recovery/recovery-console/](https://docs.digitalocean.com/products/droplets/how-to/recovery/recovery-console/)
+- **Cloud Firewalls**: [https://docs.digitalocean.com/products/networking/firewalls/](https://docs.digitalocean.com/products/networking/firewalls/)
 
 ## Support
 
+For Tailscale or Cloudflare account issues:
+
+- Tailscale support: [https://tailscale.com/contact/support](https://tailscale.com/contact/support)
+- Cloudflare community: [https://community.cloudflare.com](https://community.cloudflare.com)
+
 For DigitalOcean Droplet issues:
-- DigitalOcean Support: https://www.digitalocean.com/support
-- Community Tutorials: https://www.digitalocean.com/community
+
+- DigitalOcean Support: [https://www.digitalocean.com/support](https://www.digitalocean.com/support)
+- Community Tutorials: [https://www.digitalocean.com/community](https://www.digitalocean.com/community)
+
+---
+
+**Note**: This 1-Click installs Tailscale and cloudflared from their official package repositories. Until you finish setup, SSH on port 22 is the only open inbound port; after setup, no public inbound ports are open.
