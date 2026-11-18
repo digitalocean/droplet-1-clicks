@@ -15,13 +15,14 @@ cd /opt/pmm3
 /bin/bash get-pmm.sh
 
 chmod +x /var/lib/digitalocean/pmm-mitigate-nginx2root.sh
-echo "Waiting for pmm-server container..."
+echo "Waiting for pmm-server container to start..."
 for _ in $(seq 1 60); do
   if docker ps --filter name=pmm-server --filter status=running -q | grep -q .; then
     break
   fi
   sleep 5
 done
+# Mitigation waits internally for PMM TLS cert /v1/readyz before nginx -t.
 /var/lib/digitalocean/pmm-mitigate-nginx2root.sh
 systemctl enable pmm-mitigate-nginx2root.service
 

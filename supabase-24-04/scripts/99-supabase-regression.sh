@@ -7,9 +7,10 @@ set -euo pipefail
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 SUPABASE_DIR=$(cd "${SCRIPT_DIR}/.." && pwd)
 
-ENV_FILE="/srv/supabase/supabase/docker/.env"
+COMPOSE_DIR="/srv/supabase/supabase/docker"
+ENV_FILE="${COMPOSE_DIR}/.env"
+COMPOSE_FILE="${COMPOSE_DIR}/docker-compose.yml"
 
-# Packer guest paths; fall back to repo layout for local runs.
 DEFAULT_SSL_TEMPLATE="/var/supabase/supabase_ssl"
 DEFAULT_MITIGATE="/var/lib/digitalocean/mitigate-nginx2root.sh"
 DEFAULT_ALPN="/var/lib/digitalocean/nginx2root-alpn-check.sh"
@@ -65,6 +66,15 @@ if [ "${checked_out}" != "${application_version}" ]; then
   exit 1
 fi
 
+if ! grep -q 'KONG_PROXY_LISTEN: ${KONG_PROXY_LISTEN}' "${COMPOSE_FILE}"; then
+  echo "regression: docker-compose.yml must pass KONG_PROXY_LISTEN into the kong service" >&2
+  exit 1
+fi
+if ! grep -q 'KONG_ADMIN_LISTEN: ${KONG_ADMIN_LISTEN}' "${COMPOSE_FILE}"; then
+  echo "regression: docker-compose.yml must pass KONG_ADMIN_LISTEN into the kong service" >&2
+  exit 1
+fi
+
 if kong_env_has_http2_listen "${ENV_FILE}"; then
   echo "regression: ${ENV_FILE} must not set KONG_*_LISTEN with http2" >&2
   exit 1
@@ -82,6 +92,16 @@ fi
 
 if nginx_site_listens_with_http2 "${NGX_SITE}"; then
   echo "regression: default nginx site must not use listen … http2 (pre-domain)" >&2
+  exit 1
+fi
+
+if [ -f /etc/nginx/conf.d/default.conf ]; then
+  echo "regression: /etc/nginx/conf.d/default.conf must be removed (nginx.org default)" >&2
+  exit 1
+fi
+
+if ! grep -q 'sites-enabled' /etc/nginx/nginx.conf; then
+  echo "regression: /etc/nginx/nginx.conf must include sites-enabled" >&2
   exit 1
 fi
 
@@ -105,10 +125,34 @@ else
   exit 1
 fi
 
+verify_kong_listen_in_container() {
+  local out
+  cd "${COMPOSE_DIR}"
+  echo "regression: verifying KONG_*_LISTEN reaches kong container..."
+  if ! docker compose pull kong; then
+    echo "regression: docker compose pull kong failed" >&2
+    return 1
+  fi
+  out=$(docker compose run --rm --no-deps --entrypoint /bin/sh kong -c \
+    'printf "PROXY=%s\nADMIN=%s\n" "$KONG_PROXY_LISTEN" "$KONG_ADMIN_LISTEN"')
+  if ! grep -q '^PROXY=0\.0\.0\.0:8000' <<<"${out}"; then
+    echo "regression: KONG_PROXY_LISTEN not injected into kong container (got: ${out})" >&2
+    return 1
+  fi
+  if grep -qi 'http2' <<<"${out}"; then
+    echo "regression: kong container listen env still contains http2" >&2
+    return 1
+  fi
+}
+
+verify_kong_listen_in_container
+
 if docker ps --format '{{.Names}}' | grep -qx supabase-kong; then
   https_port=$(sed -n 's/^KONG_HTTPS_PORT=//p' "${ENV_FILE}" | tail -n1)
   https_port="${https_port:-8443}"
   assert_alpn_no_h2 "Kong HTTPS" 127.0.0.1 "${https_port}"
+else
+  echo "regression: supabase-kong not running; compose env injection verified (ALPN checked on first boot)"
 fi
 
 echo "supabase-24-04 regression checks ok (${application_version}, CVE-2026-123007 mitigation)"

@@ -2,6 +2,7 @@
 Description=Disable HTTP/2 in PMM Server nginx (CVE-2026-123007)
 After=docker.service network-online.target
 Wants=network-online.target
+# ExecStart waits for PMM TLS cert/readyz before patching nginx.
 
 [Service]
 Type=oneshot

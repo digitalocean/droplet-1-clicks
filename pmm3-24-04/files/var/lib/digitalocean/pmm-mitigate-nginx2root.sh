@@ -5,9 +5,45 @@ set -euo pipefail
 
 CONTAINER_NAME="${PMM_CONTAINER_NAME:-pmm-server}"
 PMM_CONF="/etc/nginx/conf.d/pmm.conf"
+PMM_CERT="/srv/nginx/certificate.crt"
+PMM_READY_TIMEOUT="${PMM_READY_TIMEOUT:-600}"
 
 container_running() {
   docker ps --format '{{.Names}}' | grep -qx "${CONTAINER_NAME}"
+}
+
+pmm_tls_ready() {
+  if docker exec "${CONTAINER_NAME}" test -f "${PMM_CERT}" 2>/dev/null; then
+    return 0
+  fi
+  local code
+  code=$(curl -ksS -o /dev/null -w '%{http_code}' --connect-timeout 5 --max-time 15 \
+    "https://127.0.0.1:443/v1/readyz" 2>/dev/null || echo "000")
+  [ "${code}" = "200" ]
+}
+
+wait_for_pmm_ready() {
+  local start now elapsed
+  start=$(date +%s)
+
+  echo "pmm-mitigate-nginx2root: waiting for PMM TLS readiness (timeout ${PMM_READY_TIMEOUT}s)..."
+  while true; do
+    if ! container_running; then
+      echo "ERROR: ${CONTAINER_NAME} is not running" >&2
+      return 1
+    fi
+    if pmm_tls_ready; then
+      echo "pmm-mitigate-nginx2root: PMM TLS is ready"
+      return 0
+    fi
+    now=$(date +%s)
+    elapsed=$((now - start))
+    if [ "${elapsed}" -ge "${PMM_READY_TIMEOUT}" ]; then
+      echo "ERROR: timed out waiting for ${PMM_CERT} or /v1/readyz=200" >&2
+      return 1
+    fi
+    sleep 5
+  done
 }
 
 patch_pmm_nginx_conf() {
@@ -17,14 +53,11 @@ patch_pmm_nginx_conf() {
     return 1
   fi
 
-  # Standalone http2 directive first (nginx 1.25+). Do this before any global " http2 " substitution
-  # that would corrupt "http2 on;" into "on;".
   sed -i \
     -e '/^[[:space:]]*http2[[:space:]]*on;/d' \
     -e 's/^[[:space:]]*http2[[:space:]]*off;/http2 off;/' \
     "${f}"
 
-  # Remove http2 only from listen lines (legacy "listen … ssl http2;").
   sed -i -E '/^[[:space:]]*listen[[:space:]]/{
     s/[[:space:]]+http2([[:space:]]*;)/\1/
     s/[[:space:]]+http2([[:space:]]+)/ /
@@ -50,7 +83,6 @@ restart_pmm_nginx() {
     docker exec "${CONTAINER_NAME}" supervisorctl restart nginx
     return 0
   fi
-  # Fallback: signal master (full restart, not reload)
   docker exec "${CONTAINER_NAME}" bash -c 'if pidof nginx >/dev/null; then kill "$(pidof nginx)"; fi'
   sleep 1
   docker exec "${CONTAINER_NAME}" nginx
@@ -61,6 +93,8 @@ main() {
     echo "pmm-mitigate-nginx2root: ${CONTAINER_NAME} not running (skipped)" >&2
     return 0
   fi
+
+  wait_for_pmm_ready
 
   tmp=$(mktemp)
   docker cp "${CONTAINER_NAME}:${PMM_CONF}" "${tmp}"

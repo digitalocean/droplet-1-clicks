@@ -56,6 +56,7 @@ upsert_password_var() {
   touch "${file}"
   sed -i "/^${key}=/d" "${file}"
   printf '%s=%s\n' "${key}" "$(shell_quote "${value}")" >> "${file}"
+  chmod 600 "${file}"
 }
 
 mark_dbaas_status() {

@@ -50,6 +50,12 @@ if ! docker ps --format '{{.Names}}' | grep -qx pmm-server; then
   exit 1
 fi
 
+# Mitigation must have waited for TLS material; cert should exist post-build.
+if ! docker exec pmm-server test -f /srv/nginx/certificate.crt 2>/dev/null; then
+  echo "regression: PMM certificate not present after install" >&2
+  exit 1
+fi
+
 if docker exec pmm-server sh -c 'grep -v "^#" /etc/nginx/conf.d/pmm.conf | grep -q "listen.*http2"'; then
   echo "regression: pmm.conf still has active listen … http2" >&2
   exit 1
