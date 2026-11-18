@@ -27,7 +27,7 @@ if nginx_config_enables_http2 "${WEB_SSL}"; then
   exit 1
 fi
 
-if grep -v '^[[:space:]]*#' "${DO_TEMPLATE}" | grep -qE '^[[:space:]]*listen.*http2'; then
+if grep -v '^[[:space:]]*#' "${DO_TEMPLATE}" | grep -E '^[[:space:]]*listen.*http2' >/dev/null; then
   echo "regression: digitalocean template must not add http2 listen lines" >&2
   exit 1
 fi
@@ -41,6 +41,20 @@ sample_count=$(grep -c 'digitalocean-nginx2root.template.yml' "${SAMPLES}" || tr
 if [ "${sample_count}" -gt 1 ]; then
   echo "regression: samples/standalone.yml lists digitalocean template more than once" >&2
   exit 1
+fi
+
+if command -v python3 >/dev/null 2>&1; then
+  if ! python3 -c 'import yaml' 2>/dev/null; then
+    echo "regression: python3-yaml required to validate Discourse templates" >&2
+    exit 1
+  fi
+  for yml in "${WEB_SSL}" "${DO_TEMPLATE}"; do
+    python3 -c 'import yaml,sys; yaml.safe_load(open(sys.argv[1]))' "${yml}"
+  done
+  le_ssl=/var/discourse/templates/web.letsencrypt.ssl.template.yml
+  if [ -f "${le_ssl}" ]; then
+    python3 -c 'import yaml,sys; yaml.safe_load(open(sys.argv[1]))' "${le_ssl}"
+  fi
 fi
 
 echo "discourse-24-04 regression checks ok (CVE-2026-123007 mitigation)"

@@ -29,13 +29,12 @@ source "${ALPN_LIB}"
 # shellcheck source=/dev/null
 source "${SIGIL_FIND}"
 
-SIGIL=$(dokku_nginx_sigil_candidates | head -n1)
-if [ -z "${SIGIL}" ]; then
+if ! SIGIL=$(dokku_nginx_sigil_first); then
   echo "regression: Dokku nginx sigil template missing (is dokku installed?)" >&2
   exit 1
 fi
 
-if grep 'listen' "${SIGIL}" | grep -q 'http2'; then
+if grep 'listen' "${SIGIL}" | grep 'http2' >/dev/null; then
   echo "regression: Dokku sigil still references http2 on listen lines" >&2
   exit 1
 fi

@@ -37,7 +37,8 @@ EOF
 
 apt-get -y update
 
-if apt-cache madison nginx | grep -q '1\.31\.9-1~'; then
+madison_nginx=$(apt-cache madison nginx 2>/dev/null || true)
+if grep '1\.31\.9-1~' <<<"${madison_nginx}" >/dev/null; then
   nginx_pkg="nginx=1.31.9-1~${codename}"
 else
   nginx_pkg="nginx"

@@ -29,7 +29,7 @@ bash -n "${STRIP_LIB}"
 # shellcheck source=/dev/null
 source "${ALPN_LIB}"
 
-if grep -v '^[[:space:]]*#' "${SETUP}" | grep -q 'listen 443 ssl http2'; then
+if grep -v '^[[:space:]]*#' "${SETUP}" | grep 'listen 443 ssl http2' >/dev/null; then
   echo "regression: complete-jitsi-setup.sh must not add listen … http2" >&2
   exit 1
 fi

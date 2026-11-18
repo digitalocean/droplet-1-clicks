@@ -12,8 +12,7 @@ patch_ssl_template_file() {
   local f="${1:?file}"
   [ -f "${f}" ] || return 0
   sed -i \
-    -e 's/^[[:space:]]*http2[[:space:]]\+on;/http2 off;/g' \
-    -e 's/http2 on;/http2 off;/g' \
+    -e 's/^\([[:space:]]*\)http2[[:space:]]\+on;/\1http2 off;/g' \
     -e 's/listen 443 ssl http2;/listen 443 ssl;/g' \
     -e 's/listen \[::\]:443 ssl http2;/listen [::]:443 ssl;/g' \
     "${f}"
@@ -66,7 +65,7 @@ PY
 
 patch_discourse_samples
 
-if [ -f "${WEB_SSL_TEMPLATE}" ] && grep -v '^[[:space:]]*#' "${WEB_SSL_TEMPLATE}" | grep -qE 'http2[[:space:]]+on'; then
+if [ -f "${WEB_SSL_TEMPLATE}" ] && grep -v '^[[:space:]]*#' "${WEB_SSL_TEMPLATE}" | grep -E 'http2[[:space:]]+on' >/dev/null; then
   echo "ERROR: ${WEB_SSL_TEMPLATE} still enables http2 on" >&2
   exit 1
 fi

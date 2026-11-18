@@ -419,8 +419,10 @@ else
     exit 1
 fi
 
-grep -rl "$BUILD_HOSTNAME" /etc/jitsi /etc/prosody /etc/nginx 2>/dev/null | \
-    xargs -r sed -i "s/${BUILD_HOSTNAME}/${JITSI_HOSTNAME}/g"
+mapfile -t _jitsi_rename_files < <(grep -rl "$BUILD_HOSTNAME" /etc/jitsi /etc/prosody /etc/nginx 2>/dev/null || true)
+if ((${#_jitsi_rename_files[@]} > 0)); then
+    sed -i "s/${BUILD_HOSTNAME}/${JITSI_HOSTNAME}/g" "${_jitsi_rename_files[@]}"
+fi
 
 ensure_prosody_host_config
 systemctl restart prosody
@@ -432,7 +434,8 @@ printf '%s\n' "ok" > /usr/share/jitsi-meet/.well-known/acme-challenge/do-1click-
 
 restart_nginx_safe
 
-if ! nginx -T 2>/dev/null | grep -q "server_name .*${JITSI_HOSTNAME}"; then
+_nginx_full_config=$(nginx -T 2>/dev/null || true)
+if ! grep -E "server_name .*${JITSI_HOSTNAME}" <<<"${_nginx_full_config}" >/dev/null; then
     echo "ERROR: nginx did not load the Jitsi site for ${JITSI_HOSTNAME}." >&2
     echo "Check /etc/nginx/sites-enabled/${JITSI_HOSTNAME}.conf before retrying certificate setup." >&2
     exit 1

@@ -8,7 +8,7 @@ fi
 if [ -f /var/lib/digitalocean/nginx2root-alpn-check.sh ]; then
   # shellcheck source=/dev/null
   source /var/lib/digitalocean/nginx2root-alpn-check.sh
-  if systemctl is-active nginx >/dev/null 2>&1 && ss -tln 2>/dev/null | grep -q ':443 '; then
+  if systemctl is-active nginx >/dev/null 2>&1 && ss -tln 2>/dev/null | grep ':443 ' >/dev/null; then
     servername=localhost
     for f in /etc/nginx/sites-enabled/*.conf; do
       [ -f "${f}" ] || continue

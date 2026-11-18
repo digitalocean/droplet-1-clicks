@@ -14,3 +14,13 @@ dokku_nginx_sigil_candidates() {
     printf '%s\n' "${f}"
   done < <(find /var/lib/dokku -path '*/nginx-vhosts/templates/nginx.conf.sigil' 2>/dev/null || true)
 }
+
+dokku_nginx_sigil_first() {
+  local f
+  while IFS= read -r f; do
+    [ -n "${f}" ] || continue
+    printf '%s' "${f}"
+    return 0
+  done < <(dokku_nginx_sigil_candidates | sort -u)
+  return 1
+}
