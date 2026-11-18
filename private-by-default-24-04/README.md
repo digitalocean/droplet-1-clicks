@@ -13,11 +13,6 @@ export DIGITALOCEAN_API_TOKEN=...
 packer build private-by-default-24-04/template.json
 ```
 
-The last provisioner runs the Marketplace `99-img-check.sh`
-(`scripts/999-img-check.sh`, vendored from
-[marketplace-partners](https://github.com/digitalocean/marketplace-partners/tree/master/scripts)).
-It exits non-zero on any failure, so a failing image fails the build.
-
 Versions are pinned in `template.json`: `tailscale_version`, `cloudflared_version`.
 
 ## Layout

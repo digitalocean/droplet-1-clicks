@@ -78,15 +78,7 @@
         "private-by-default-24-04/scripts/010-private-by-default.sh",
         "common/scripts/018-force-ssh-logout.sh",
         "common/scripts/020-application-tag.sh",
-        "common/scripts/900-cleanup.sh",
-        "private-by-default-24-04/scripts/999-img-check.sh"
-      ]
-    },
-    {
-      "type": "shell",
-      "inline": [
-        "find /var/log -type f -exec truncate -s 0 {} \\;",
-        "rm -rf /var/log/*.gz /var/log/*.[0-9] /var/log/*-????????"
+        "common/scripts/900-cleanup.sh"
       ]
     }
   ]
