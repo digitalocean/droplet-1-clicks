@@ -6,7 +6,7 @@ Deploy self-hosted Supabase on Ubuntu 24.04 with Docker Compose and Nginx. Supab
 
 - **Ubuntu 24.04 LTS**
 - **Docker Engine** and **Docker Compose plugin**
-- **Supabase** (pinned release from the image build, currently `v1.26.05`) — Studio, Kong, Auth, PostgREST, Realtime, Storage, and related services
+- **Supabase** (pinned release from the image build, currently `v1.26.08`) — Studio, Kong, Auth, PostgREST, Realtime, Storage, and related services
 - **PostgreSQL** via the Supabase `db` container (`supabase/postgres`), or DigitalOcean Managed PostgreSQL when **Add a Database** is selected
 - **Nginx** reverse proxy from nginx.org mainline (≥1.31.9; ports 80/443 → Kong on `localhost:8000`; TLS without HTTP/2)
 - **Certbot** (Snap) for optional custom-domain TLS

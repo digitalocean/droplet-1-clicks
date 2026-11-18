@@ -8,28 +8,60 @@ SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 SUPABASE_DIR=$(cd "${SCRIPT_DIR}/.." && pwd)
 
 ENV_FILE="/srv/supabase/supabase/docker/.env"
-SSL_TEMPLATE="${SUPABASE_DIR}/files/var/supabase/supabase_ssl"
-MITIGATE="${SUPABASE_DIR}/files/var/lib/digitalocean/mitigate-nginx2root.sh"
-ALPN_LIB="${SUPABASE_DIR}/../common/files/var/lib/digitalocean/nginx2root-alpn-check.sh"
-ONBOOT="${SUPABASE_DIR}/files/var/lib/cloud/scripts/per-instance/001_onboot"
-NGX_SITE="${SUPABASE_DIR}/files/etc/nginx/sites-available/supabase"
 
-for f in "${SSL_TEMPLATE}" "${MITIGATE}" "${ALPN_LIB}" "${ONBOOT}" "${NGX_SITE}"; do
-  if [ ! -f "${f}" ]; then
-    echo "regression: missing ${f}" >&2
+# Packer guest paths; fall back to repo layout for local runs.
+DEFAULT_SSL_TEMPLATE="/var/supabase/supabase_ssl"
+DEFAULT_MITIGATE="/var/lib/digitalocean/mitigate-nginx2root.sh"
+DEFAULT_ALPN="/var/lib/digitalocean/nginx2root-alpn-check.sh"
+DEFAULT_ONBOOT="/var/lib/cloud/scripts/per-instance/001_onboot"
+DEFAULT_NGX="/etc/nginx/sites-available/supabase"
+DEFAULT_MOTD="/etc/update-motd.d/99-one-click"
+
+resolve_file() {
+  local primary=$1
+  local alt=$2
+  if [ -f "${primary}" ]; then
+    printf '%s' "${primary}"
+  elif [ -n "${alt}" ] && [ -f "${alt}" ]; then
+    printf '%s' "${alt}"
+  else
+    echo "regression: missing file (expected ${primary} or ${alt})" >&2
     exit 1
   fi
-done
+}
 
-shellcheck -x "${MITIGATE}" "${ALPN_LIB}"
+SSL_TEMPLATE=$(resolve_file "${DEFAULT_SSL_TEMPLATE}" "${SUPABASE_DIR}/files/var/supabase/supabase_ssl")
+MITIGATE=$(resolve_file "${DEFAULT_MITIGATE}" "${SUPABASE_DIR}/files/var/lib/digitalocean/mitigate-nginx2root.sh")
+ALPN_LIB=$(resolve_file "${DEFAULT_ALPN}" "${SUPABASE_DIR}/../common/files/var/lib/digitalocean/nginx2root-alpn-check.sh")
+ONBOOT=$(resolve_file "${DEFAULT_ONBOOT}" "${SUPABASE_DIR}/files/var/lib/cloud/scripts/per-instance/001_onboot")
+NGX_SITE=$(resolve_file "${DEFAULT_NGX}" "${SUPABASE_DIR}/files/etc/nginx/sites-available/supabase")
+MOTD=$(resolve_file "${DEFAULT_MOTD}" "${SUPABASE_DIR}/files/etc/update-motd.d/99-one-click")
+
+if command -v shellcheck >/dev/null 2>&1; then
+  shellcheck -x "${MITIGATE}" "${ALPN_LIB}"
+else
+  echo "regression: skipping shellcheck (not installed)"
+fi
+
 bash -n "${ONBOOT}"
-sh -n "${SUPABASE_DIR}/files/etc/update-motd.d/99-one-click"
+sh -n "${MOTD}"
 
 # shellcheck source=/dev/null
 source "${ALPN_LIB}"
 
 if [ ! -f "${ENV_FILE}" ]; then
   echo "regression: missing ${ENV_FILE} (Supabase clone step should create it)" >&2
+  exit 1
+fi
+
+if [ ! -d /srv/supabase/supabase/.git ]; then
+  echo "regression: missing /srv/supabase/supabase clone" >&2
+  exit 1
+fi
+
+checked_out=$(git -C /srv/supabase/supabase describe --tags --exact-match 2>/dev/null || true)
+if [ "${checked_out}" != "${application_version}" ]; then
+  echo "regression: checked out ${checked_out:-unknown} != application_version ${application_version}" >&2
   exit 1
 fi
 
@@ -63,13 +95,16 @@ if command -v nginx >/dev/null 2>&1; then
     echo "regression: host nginx ${ver} is below 1.31.9 (CVE-2026-123007)" >&2
     exit 1
   fi
-  nginx -t
+  if ! nginx -t >/dev/null 2>&1; then
+    echo "regression: nginx -t failed on build host" >&2
+    nginx -t || true
+    exit 1
+  fi
 else
   echo "regression: nginx binary missing on build host" >&2
   exit 1
 fi
 
-# Kong may not be running during image build; skip live ALPN unless the container exists.
 if docker ps --format '{{.Names}}' | grep -qx supabase-kong; then
   https_port=$(sed -n 's/^KONG_HTTPS_PORT=//p' "${ENV_FILE}" | tail -n1)
   https_port="${https_port:-8443}"

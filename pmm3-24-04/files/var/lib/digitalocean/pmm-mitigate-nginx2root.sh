@@ -17,13 +17,18 @@ patch_pmm_nginx_conf() {
     return 1
   fi
 
-  # Remove legacy "listen … http2" and standalone http2 on/off directives.
+  # Standalone http2 directive first (nginx 1.25+). Do this before any global " http2 " substitution
+  # that would corrupt "http2 on;" into "on;".
   sed -i \
-    -e 's/ http2;/;/g' \
-    -e 's/ http2 / /g' \
-    -e 's/^[[:space:]]*http2[[:space:]]*on;/http2 off;/' \
     -e '/^[[:space:]]*http2[[:space:]]*on;/d' \
+    -e 's/^[[:space:]]*http2[[:space:]]*off;/http2 off;/' \
     "${f}"
+
+  # Remove http2 only from listen lines (legacy "listen … ssl http2;").
+  sed -i -E '/^[[:space:]]*listen[[:space:]]/{
+    s/[[:space:]]+http2([[:space:]]*;)/\1/
+    s/[[:space:]]+http2([[:space:]]+)/ /
+  }' "${f}"
 
   if grep -vE '^[[:space:]]*#' "${f}" | grep -qE 'listen[[:space:]].*http2'; then
     echo "ERROR: ${f} still contains listen … http2 after patch" >&2
@@ -31,6 +36,10 @@ patch_pmm_nginx_conf() {
   fi
   if grep -vE '^[[:space:]]*#' "${f}" | grep -qE '^[[:space:]]*http2[[:space:]]+on'; then
     echo "ERROR: ${f} still enables http2 via directive" >&2
+    return 1
+  fi
+  if grep -vE '^[[:space:]]*#' "${f}" | grep -qE '^[[:space:]]*on;'; then
+    echo "ERROR: ${f} contains orphan \"on;\" directive (bad http2 patch)" >&2
     return 1
   fi
   return 0
@@ -59,7 +68,10 @@ main() {
   docker cp "${tmp}" "${CONTAINER_NAME}:${PMM_CONF}"
   rm -f "${tmp}"
 
-  docker exec "${CONTAINER_NAME}" nginx -t
+  if ! docker exec "${CONTAINER_NAME}" nginx -t; then
+    echo "ERROR: nginx -t failed in ${CONTAINER_NAME} after HTTP/2 mitigation" >&2
+    exit 1
+  fi
   restart_pmm_nginx
   echo "pmm-mitigate-nginx2root: HTTP/2 disabled in ${CONTAINER_NAME} nginx"
 }
