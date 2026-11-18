@@ -21,6 +21,7 @@ ALPN_LIB=$(resolve_file "/var/lib/digitalocean/nginx2root-alpn-check.sh" "${JITS
 SETUP=$(resolve_file "/var/complete-jitsi-setup.sh" "${JITSI_DIR}/files/var/complete-jitsi-setup.sh")
 MITIGATE=$(resolve_file "/var/lib/digitalocean/jitsi-mitigate-nginx2root.sh" "${JITSI_DIR}/files/var/lib/digitalocean/jitsi-mitigate-nginx2root.sh")
 STRIP_LIB=$(resolve_file "/var/lib/digitalocean/nginx2root-strip-http2.sh" "${JITSI_DIR}/../common/files/var/lib/digitalocean/nginx2root-strip-http2.sh")
+LAYOUT=$(resolve_file "/var/lib/digitalocean/nginx-org-layout.sh" "${JITSI_DIR}/../common/files/var/lib/digitalocean/nginx-org-layout.sh")
 
 bash -n "${SETUP}"
 bash -n "${MITIGATE}"
@@ -48,7 +49,9 @@ if command -v nginx >/dev/null 2>&1 && [ -f /etc/nginx/nginx.conf ]; then
     echo "regression: host nginx ${ver} is below 1.31.9" >&2
     exit 1
   fi
-  nginx -t
+  # shellcheck source=/dev/null
+  source "${LAYOUT}"
+  nginx_org_install_regression_checks
 fi
 
 for f in /etc/nginx/sites-enabled/* /etc/nginx/sites-available/*; do

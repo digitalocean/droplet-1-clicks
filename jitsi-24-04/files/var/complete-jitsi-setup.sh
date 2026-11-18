@@ -1,6 +1,17 @@
 #!/bin/bash
 set -euo pipefail
 
+if [ -f /var/lib/digitalocean/nginx-org-layout.sh ]; then
+    # shellcheck source=/dev/null
+    . /var/lib/digitalocean/nginx-org-layout.sh
+    nginx_org_ensure_sites_enabled_layout
+fi
+
+restart_nginx_safe() {
+    nginx -t
+    systemctl restart nginx
+}
+
 # Scripts in this directory will be executed by cloud-init on the first boot of droplets
 # created from your image.  Things like generating passwords, configuration requiring IP address
 # or other items that will be unique to each instance should be done in scripts here.
@@ -419,8 +430,7 @@ ensure_acme_challenge_location "/etc/nginx/sites-available/${JITSI_HOSTNAME}.con
 install -d -m 0755 /usr/share/jitsi-meet/.well-known/acme-challenge
 printf '%s\n' "ok" > /usr/share/jitsi-meet/.well-known/acme-challenge/do-1click-check
 
-nginx -t
-systemctl restart nginx
+restart_nginx_safe
 
 if ! nginx -T 2>/dev/null | grep -q "server_name .*${JITSI_HOSTNAME}"; then
     echo "ERROR: nginx did not load the Jitsi site for ${JITSI_HOSTNAME}." >&2
@@ -437,7 +447,7 @@ rm -f /usr/share/jitsi-meet/.well-known/acme-challenge/do-1click-check
 
 install_letsencrypt_cert
 ensure_https_listener
-nginx -t
+nginx -t >/dev/null
 
 # update prosody to use internal user management
 for f in /etc/prosody/conf.avail/*.cfg.lua; do
@@ -452,7 +462,7 @@ done
 systemctl restart prosody
 systemctl restart jicofo
 systemctl restart jitsi-videobridge2
-systemctl restart nginx
+restart_nginx_safe
 
 if ! curl -kfsS -H "Host: ${JITSI_HOSTNAME}" "https://127.0.0.1/" >/dev/null 2>&1; then
     echo "WARNING: nginx did not respond on local HTTPS for ${JITSI_HOSTNAME}." >&2

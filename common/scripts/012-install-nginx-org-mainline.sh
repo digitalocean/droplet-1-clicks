@@ -6,6 +6,19 @@ NGINX_MIN_MAJOR=1
 NGINX_MIN_MINOR=31
 NGINX_MIN_PATCH=9
 
+# Keep certbot when Ubuntu nginx meta-packages are swapped out.
+for pkg in certbot python3-certbot python3-certbot-nginx; do
+  if dpkg -l "${pkg}" 2>/dev/null | awk '/^ii/ {found=1} END {exit !found}'; then
+    apt-mark manual "${pkg}" 2>/dev/null || true
+  fi
+done
+
+cat >/etc/apt/preferences.d/digitalocean-no-apache2-on-nginx-swap <<'EOF'
+Package: apache2 apache2-bin apache2-data apache2-utils libapache2-mod-md
+Pin: release *
+Pin-Priority: -1
+EOF
+
 install -d -m 0755 /usr/share/keyrings /etc/apt/preferences.d
 
 curl -fsSL https://nginx.org/keys/nginx_signing.key |
@@ -24,14 +37,31 @@ EOF
 
 apt-get -y update
 
-DEBIAN_FRONTEND=noninteractive apt-get -y remove \
-  nginx nginx-common nginx-core nginx-full nginx-light nginx-extras 2>/dev/null || true
-
 if apt-cache madison nginx | grep -q '1\.31\.9-1~'; then
-  apt-get -y install -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' \
-    nginx=1.31.9-1~"${codename}"
+  nginx_pkg="nginx=1.31.9-1~${codename}"
 else
-  apt-get -y install -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' nginx
+  nginx_pkg="nginx"
+fi
+
+# Swap Ubuntu nginx for nginx.org without a dependency window where apt picks apache2.
+DEBIAN_FRONTEND=noninteractive apt-get -y -o APT::Install-Recommends=false \
+  -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' \
+  install --no-install-recommends "${nginx_pkg}" || {
+  DEBIAN_FRONTEND=noninteractive apt-get -y -o APT::Install-Recommends=false \
+    -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' \
+    remove nginx nginx-common nginx-core nginx-full nginx-light nginx-extras 2>/dev/null || true
+  DEBIAN_FRONTEND=noninteractive apt-get -y -o APT::Install-Recommends=false \
+    -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' \
+    install --no-install-recommends "${nginx_pkg}"
+}
+
+DEBIAN_FRONTEND=noninteractive apt-get -y -o APT::Install-Recommends=false \
+  install --no-install-recommends certbot python3-certbot-nginx
+
+if dpkg -l apache2 2>/dev/null | awk '/^ii/ {found=1} END {exit !found}'; then
+  echo "ERROR: apache2 installed during nginx.org swap; aborting" >&2
+  dpkg -l apache2 >&2 || true
+  exit 1
 fi
 
 ver=$(nginx -v 2>&1 | sed -n 's/.*nginx\/\([0-9.]*\).*/\1/p')
@@ -57,6 +87,11 @@ if [ "${version_ok}" -ne 1 ]; then
   echo "ERROR: nginx ${ver} is below CVE-2026-123007 fix floor (need >=1.31.9)" >&2
   exit 1
 fi
+
+# shellcheck source=/dev/null
+source /var/lib/digitalocean/nginx-org-layout.sh
+nginx_org_ensure_sites_enabled_layout
+nginx_org_install_regression_checks
 
 systemctl enable nginx 2>/dev/null || true
 echo "Installed nginx ${ver} from nginx.org mainline"

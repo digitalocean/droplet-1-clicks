@@ -20,6 +20,7 @@ resolve_file() {
 ALPN_LIB=$(resolve_file "/var/lib/digitalocean/nginx2root-alpn-check.sh" "${GHOST_DIR}/../common/files/var/lib/digitalocean/nginx2root-alpn-check.sh")
 BOOT=$(resolve_file "/opt/ghost-setup/boot_strap.sh" "${GHOST_DIR}/files/opt/ghost-setup/boot_strap.sh")
 MITIGATE=$(resolve_file "/var/lib/digitalocean/ghost-mitigate-nginx2root.sh" "${GHOST_DIR}/files/var/lib/digitalocean/ghost-mitigate-nginx2root.sh")
+LAYOUT=$(resolve_file "/var/lib/digitalocean/nginx-org-layout.sh" "${GHOST_DIR}/../common/files/var/lib/digitalocean/nginx-org-layout.sh")
 HTTP2_SNIPPET="/etc/nginx/conf.d/digitalocean-http2-off.conf"
 
 bash -n "${BOOT}"
@@ -37,7 +38,9 @@ if command -v nginx >/dev/null 2>&1 && [ -f /etc/nginx/nginx.conf ]; then
     echo "regression: host nginx ${ver} is below 1.31.9" >&2
     exit 1
   fi
-  nginx -t
+  # shellcheck source=/dev/null
+  source "${LAYOUT}"
+  nginx_org_install_regression_checks
 fi
 
 for f in /etc/nginx/sites-enabled/* /etc/nginx/sites-available/* /etc/nginx/conf.d/*; do

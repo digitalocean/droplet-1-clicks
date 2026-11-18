@@ -2,11 +2,12 @@
 # CVE-2026-123007: Dokku nginx-vhosts template adds http2 on TLS when nginx supports it.
 set -euo pipefail
 
-DOKKU_TEMPLATE=/var/lib/dokku/core-plugins/available/nginx-vhosts/templates/nginx.conf.sigil
 MITIGATE=/var/lib/digitalocean/mitigate-host-nginx-http2.sh
 
 # shellcheck source=/dev/null
 source /var/lib/digitalocean/nginx2root-strip-http2.sh
+# shellcheck source=/dev/null
+source /var/lib/digitalocean/dokku-find-nginx-sigil.sh
 
 patch_dokku_sigil() {
   local f="${1:?file}"
@@ -15,8 +16,15 @@ patch_dokku_sigil() {
   nginx_strip_http2_from_listen_lines_file "${f}"
 }
 
-if [ -f "${DOKKU_TEMPLATE}" ]; then
-  patch_dokku_sigil "${DOKKU_TEMPLATE}"
+patched=0
+while IFS= read -r sigil; do
+  [ -n "${sigil}" ] || continue
+  patch_dokku_sigil "${sigil}"
+  patched=1
+done < <(dokku_nginx_sigil_candidates | sort -u)
+
+if [ "${patched}" -eq 0 ]; then
+  echo "WARN: no Dokku nginx.conf.sigil found to patch" >&2
 fi
 
 if [ -x "${MITIGATE}" ]; then

@@ -57,6 +57,17 @@ kong_env_has_http2_listen() {
   ' "${env_file}"
 }
 
+# Active http2 on; or listen … http2 (ignore comments).
+nginx_config_enables_http2() {
+  local f="${1:?config}"
+  awk '
+    /^[[:space:]]*#/ { next }
+    /^[[:space:]]*http2[[:space:]]+on;/ { found=1; exit }
+    /^[[:space:]]*listen[[:space:]]/ && /http2/ { found=1; exit }
+    END { exit !found }
+  ' "${f}"
+}
+
 # Any non-comment line with an active listen directive advertising http2.
 nginx_configs_have_listen_http2() {
   local path="${1:?path}"

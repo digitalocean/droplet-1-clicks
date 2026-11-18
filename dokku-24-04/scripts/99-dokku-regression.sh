@@ -19,13 +19,18 @@ resolve_file() {
 
 ALPN_LIB=$(resolve_file "/var/lib/digitalocean/nginx2root-alpn-check.sh" "${DOKKU_DIR}/../common/files/var/lib/digitalocean/nginx2root-alpn-check.sh")
 MITIGATE=$(resolve_file "/var/lib/digitalocean/dokku-mitigate-nginx2root.sh" "${DOKKU_DIR}/files/var/lib/digitalocean/dokku-mitigate-nginx2root.sh")
-SIGIL=/var/lib/dokku/core-plugins/available/nginx-vhosts/templates/nginx.conf.sigil
+LAYOUT=$(resolve_file "/var/lib/digitalocean/nginx-org-layout.sh" "${DOKKU_DIR}/../common/files/var/lib/digitalocean/nginx-org-layout.sh")
+SIGIL_FIND=$(resolve_file "/var/lib/digitalocean/dokku-find-nginx-sigil.sh" "${DOKKU_DIR}/../common/files/var/lib/digitalocean/dokku-find-nginx-sigil.sh")
 
 bash -n "${MITIGATE}"
+bash -n "${SIGIL_FIND}"
 # shellcheck source=/dev/null
 source "${ALPN_LIB}"
+# shellcheck source=/dev/null
+source "${SIGIL_FIND}"
 
-if [ ! -f "${SIGIL}" ]; then
+SIGIL=$(dokku_nginx_sigil_candidates | head -n1)
+if [ -z "${SIGIL}" ]; then
   echo "regression: Dokku nginx sigil template missing (is dokku installed?)" >&2
   exit 1
 fi
@@ -45,7 +50,9 @@ if command -v nginx >/dev/null 2>&1 && [ -f /etc/nginx/nginx.conf ]; then
     echo "regression: host nginx ${ver} is below 1.31.9" >&2
     exit 1
   fi
-  nginx -t
+  # shellcheck source=/dev/null
+  source "${LAYOUT}"
+  nginx_org_install_regression_checks
 fi
 
 for f in /etc/nginx/conf.d/*.conf; do

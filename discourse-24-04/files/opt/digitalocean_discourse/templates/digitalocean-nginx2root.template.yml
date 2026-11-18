@@ -1,29 +1,18 @@
-## DigitalOcean 1-Click: CVE-2026-123007 — ensure Discourse nginx does not use HTTP/2 on TLS.
-## Include after web.ssl / Lets Encrypt templates in containers/app.yml.
+## DigitalOcean 1-Click: CVE-2026-123007 — belt-and-suspenders HTTP/2 disable in the container.
+## Listed after web.ssl in discourse_docker samples (patched at image build).
 run:
   - replace:
-      filename: "/etc/nginx/conf.d/discourse.conf"
+      filename: "/etc/nginx/conf.d/outlets/server/20-https.conf"
+      from: /http2 on;/
+      to: |
+        http2 off;
+  - replace:
+      filename: "/etc/nginx/conf.d/outlets/server/20-https.conf"
       from: / ssl http2/
       to: |
         ssl
   - replace:
       filename: "/etc/nginx/conf.d/discourse.conf"
-      from: /\[::\]:443 ssl http2/
+      from: /http2 on;/
       to: |
-        [::]:443 ssl
-  - exec:
-      cmd:
-        - |
-          set -e
-          ver=$(nginx -v 2>&1 | sed -n 's/.*nginx\/\([0-9.]*\).*/\1/p')
-          maj=$(echo "$ver" | cut -d. -f1)
-          min=$(echo "$ver" | cut -d. -f2)
-          pat=$(echo "$ver" | cut -d. -f3)
-          ok=0
-          if [ "$maj" -gt 1 ]; then ok=1; fi
-          if [ "$maj" -eq 1 ] && [ "$min" -gt 25 ]; then ok=1; fi
-          if [ "$maj" -eq 1 ] && [ "$min" -eq 25 ] && [ "${pat:-0}" -ge 1 ]; then ok=1; fi
-          if [ "$ok" -eq 1 ] && ! grep -q 'http2 off' /etc/nginx/nginx.conf 2>/dev/null; then
-            sed -i '/^http {/a\    http2 off;' /etc/nginx/nginx.conf
-          fi
-          nginx -t
+        http2 off;

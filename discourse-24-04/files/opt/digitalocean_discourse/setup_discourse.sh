@@ -22,9 +22,6 @@ if [ -x /opt/digitalocean_discourse/mitigate-nginx2root.sh ]; then
 fi
 
 if ./discourse-setup; then
-  if [ -x /opt/digitalocean_discourse/mitigate-nginx2root.sh ]; then
-    /opt/digitalocean_discourse/mitigate-nginx2root.sh
-  fi
   clear
   echo "Discourse is now installed.  Log into your admin account in a browser to continue"
   echo "configuring Discourse."
