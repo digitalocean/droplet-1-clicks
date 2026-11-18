@@ -34,8 +34,18 @@
     },
     {
       "type": "file",
+      "source": "common/files/etc/",
+      "destination": "/etc/"
+    },
+    {
+      "type": "file",
       "source": "dokku-24-04/files/etc/",
       "destination": "/etc/"
+    },
+    {
+      "type": "file",
+      "source": "dokku-24-04/files/var/",
+      "destination": "/var/"
     },
     {
       "type": "shell",
@@ -68,6 +78,8 @@
         "common/scripts/010-docker.sh",
         "common/scripts/011-docker-compose.sh",
         "dokku-24-04/scripts/010-dokku.sh",
+        "dokku-24-04/scripts/011-nginx-cve-patch.sh",
+        "dokku-24-04/scripts/99-dokku-regression.sh",
         "common/scripts/012-grub-opts.sh",
         "common/scripts/013-docker-dns.sh",
         "common/scripts/014-ufw-docker.sh",

@@ -13,6 +13,9 @@ On your first login you will be prompted to configure your Discourse installatio
 All Discourse scripts and files may be found in /var/discourse and the setup
 utility can be run again by launching discourse-setup in that directory.
 
+HTTPS in the Discourse container uses HTTP/1.1 only (HTTP/2 disabled) for
+CVE-2026-123007 mitigation.
+
 For help and more information, visit https://do.co/3dmapBw
 
 ********************************************************************************

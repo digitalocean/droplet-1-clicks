@@ -1,6 +1,6 @@
 # Ghost (Ubuntu 24.04)
 
-This 1-click builds an image with **Ubuntu 24.04 LTS**, **Ghost 6.x**, **Node.js 22** (via NodeSource), MySQL, nginx (managed by Ghost CLI), Postfix, and fail2ban.
+This 1-click builds an image with **Ubuntu 24.04 LTS**, **Ghost 6.x**, **Node.js 22** (via NodeSource), MySQL, nginx (managed by Ghost CLI; **HTTP/1.1 only** over HTTPS with nginx.org mainline ≥ 1.31.9 for CVE-2026-123007), Postfix, and fail2ban.
 
 ## Prereqs
 

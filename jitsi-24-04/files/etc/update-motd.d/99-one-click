@@ -16,6 +16,9 @@ Jitsi packages are already installed. Type 'bash /var/complete-jitsi-setup.sh'
 to enter your public domain name and finish certificate setup if and only if
 you agree to the Jitsi License.
 
+HTTPS is served with HTTP/1.1 only (HTTP/2 disabled) as a mitigation for
+CVE-2026-123007; host nginx is from nginx.org mainline (>= 1.31.9).
+
 ********************************************************************************
 To delete this message of the day: rm -rf $(readlink -f ${0})
 EOF

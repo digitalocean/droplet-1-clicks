@@ -240,9 +240,9 @@ if target is None:
 start, end, block = target
 insert = []
 if not re.search(r"^[ \t]*listen[ \t]+443\b", block, re.M):
-    insert.append("    listen 443 ssl http2;\n")
+    insert.append("    listen 443 ssl;\n")
 if not re.search(r"^[ \t]*listen[ \t]+\[::\]:443\b", block, re.M):
-    insert.append("    listen [::]:443 ssl http2;\n")
+    insert.append("    listen [::]:443 ssl;\n")
 if not re.search(r"^[ \t]*ssl_certificate[ \t]+", block, re.M):
     insert.append(f"    ssl_certificate {cert};\n")
 if not re.search(r"^[ \t]*ssl_certificate_key[ \t]+", block, re.M):
@@ -345,7 +345,7 @@ for domain in ${RENEWED_DOMAINS:-}; do
     fi
 done
 
-systemctl reload nginx.service >/dev/null 2>&1 || true
+systemctl restart nginx.service >/dev/null 2>&1 || true
 EOF
     chmod 0755 /etc/letsencrypt/renewal-hooks/deploy/jitsi-meet-coturn
 
@@ -457,4 +457,16 @@ systemctl restart nginx
 if ! curl -kfsS -H "Host: ${JITSI_HOSTNAME}" "https://127.0.0.1/" >/dev/null 2>&1; then
     echo "WARNING: nginx did not respond on local HTTPS for ${JITSI_HOSTNAME}." >&2
     echo "Check: nginx -t; systemctl status nginx; ss -tulpn | grep ':443'" >&2
+fi
+
+if [ -x /var/lib/digitalocean/jitsi-mitigate-nginx2root.sh ]; then
+    /var/lib/digitalocean/jitsi-mitigate-nginx2root.sh
+fi
+
+if [ -f /var/lib/digitalocean/nginx2root-alpn-check.sh ]; then
+    # shellcheck source=/dev/null
+    . /var/lib/digitalocean/nginx2root-alpn-check.sh
+    if assert_alpn_no_h2 "Jitsi HTTPS" 127.0.0.1 443 "${JITSI_HOSTNAME}"; then
+        echo "HTTPS uses HTTP/1.1 only (CVE-2026-123007 mitigation; no ALPN h2 on :443)."
+    fi
 fi

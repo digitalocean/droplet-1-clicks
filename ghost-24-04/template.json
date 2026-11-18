@@ -23,6 +23,11 @@
   "provisioners": [
     {
       "type": "file",
+      "source": "common/files/etc/",
+      "destination": "/etc/"
+    },
+    {
+      "type": "file",
       "source": "ghost-24-04/files/etc/",
       "destination": "/etc/"
     },
@@ -73,6 +78,8 @@
       "scripts": [
         "ghost-24-04/scripts/014-configure_ghost.sh",
         "ghost-24-04/scripts/012-configure_postfix.sh",
+        "ghost-24-04/scripts/012-nginx-cve-patch.sh",
+        "ghost-24-04/scripts/99-ghost-regression.sh",
         "common/scripts/014-ufw-nginx.sh",
         "common/scripts/020-application-tag.sh",
         "common/scripts/900-cleanup.sh"
