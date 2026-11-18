@@ -40,7 +40,7 @@ Versions are pinned in `template.json`: `tailscale_version`, `cloudflared_versio
 **Image (build time):** ufw denies inbound traffic except `limit 22/tcp`. Tailscale is installed but not logged in, and its state directory is emptied so Droplets don't share a node identity. The `agent` user has a locked password and no keys.
 
 **First boot:**
-1. If root has SSH keys, they are copied (never moved: the Marketplace image check reads root's file) to the root-owned `/etc/ssh/authorized_keys.d/agent`, which `05-private-by-default.conf` adds to `AuthorizedKeysFile`. Nothing goes in `/home/agent/.ssh`, so agents can't add keys and the image check never sees them. `sshd-hardening.conf` then turns off password login. Without keys, password login stays on.
+1. If root has SSH keys, they are copied (never moved: the Marketplace image check reads root's file) to the root-owned `/etc/ssh/authorized_keys.d/agent`. `05-private-by-default.conf` makes that the agent's only `AuthorizedKeysFile`, so sshd ignores `/home/agent/.ssh/authorized_keys` and agents can't add keys. The image check never sees the copy. `sshd-hardening.conf` then turns off password login. Without keys, password login stays on.
 2. User data is read from the metadata service. Per-instance scripts run before user data scripts, so the script parses the raw `NAME=value` lines itself instead of relying on them having run.
 3. With `TAILSCALE_AUTHKEY`: `private connect`, then `close-ssh --yes` (unless `PRIVATE_CLOSE_SSH=no`). On failure, port 22 stays open and the error goes to `/var/lib/private-by-default/last-error` (shown in the MOTD).
 4. With `CLOUDFLARE_TUNNEL_TOKEN`: `private tunnel`, then `private welcome on`, so a hostname pointed at `http://localhost:8080` shows the welcome page right away.
