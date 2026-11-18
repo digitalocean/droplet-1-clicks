@@ -2,9 +2,9 @@
 
 ## What is Hardened Droplet?
 
-Try the Hardened Ubuntu Droplet on DigitalOcean: an Ubuntu 24.04 server that is locked down from the first boot, so nothing is reachable from the internet unless you choose to expose it.
+Try the Hardened Ubuntu Droplet on DigitalOcean: an Ubuntu 24.04 server where every inbound port is blocked except SSH, with a 2-minute setup that moves SSH to Tailscale and closes port 22 too.
 
-Most servers start open. Any service that listens on a public port can be reached by anyone, and bots start probing SSH within minutes of a server going online. Hardened Droplet starts closed and walks you through keeping it that way in about 2 minutes:
+Most servers start open. Any service that listens on a public port can be reached by anyone, and bots start probing SSH within minutes of a server going online. Hardened Droplet blocks everything but SSH by default and walks you through closing that last port:
 
 - **Inbound traffic denied by default** – The host firewall (UFW) allows only SSH, and you can close that too
 - **SSH over Tailscale** – Reach the Droplet from your own devices on your private tailnet, then close port 22
@@ -21,7 +21,7 @@ Most servers start open. Any service that listens on a public port can be reache
 - `hardened tunnel` – a permanent address on your own domain through Cloudflare Tunnel
 - `hardened welcome on` – a test page that shows the Cloudflare path works, then makes way for your app
 - `hardened status --json` – shows what the Droplet exposes, for scripts and agents
-- Hands-off setup: put `TAILSCALE_AUTHKEY` in user data and the Droplet secures itself at first boot
+- Hands-off setup: put `TAILSCALE_AUTHKEY` in user data and the Droplet joins your tailnet and closes port 22 at first boot
 - Automatic security updates for Ubuntu, Tailscale, and cloudflared
 
 ## System Requirements
@@ -185,4 +185,4 @@ For DigitalOcean Droplet issues:
 
 ---
 
-**Note**: This 1-Click installs Tailscale and cloudflared from their official package repositories. Until you finish setup, SSH on port 22 is the only open inbound port; after setup, no public inbound ports are open.
+**Note**: This 1-Click installs Tailscale and cloudflared from their official package repositories. Until port 22 is closed, SSH is the only open public inbound port; once it is closed, none are.
