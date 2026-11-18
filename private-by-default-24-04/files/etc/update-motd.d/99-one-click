@@ -1,0 +1,45 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+cat <<'EOF'
+********************************************************************************
+
+Welcome to DigitalOcean's One-Click Private by Default Droplet.
+
+To keep this Droplet secure, the UFW firewall is enabled and blocks inbound
+traffic. SSH can move to Tailscale and web apps are served through Cloudflare
+Tunnel, so no ports need to be opened.
+
+EOF
+
+/usr/local/bin/private status 2>/dev/null || true
+
+cat <<'EOF'
+
+Web Apps (no open ports, served through Cloudflare):
+  Your app's front door is localhost:8080.
+  Test page:       private welcome on
+  Temporary URL:   expose 8080
+  Your domain:     private tunnel
+
+AI Agents:
+  Run agents as the 'agent' user: ssh agent@<this Droplet>
+  Rules and commands: ~/AGENTS.md
+
+Management Commands:
+  Setup wizard:    private setup
+  Status:          private status   (add --json for scripts)
+  All commands:    private help
+
+Locked Out?
+  Control panel > Droplet > Settings > Recovery console, log in as root,
+  then run: private open-ssh
+
+Documentation:
+  Tailscale SSH:      https://tailscale.com/kb/1193/tailscale-ssh
+  Cloudflare Tunnel:  https://developers.cloudflare.com/cloudflare-one/
+
+********************************************************************************
+EOF
+echo "To delete this message of the day: rm -rf $(readlink -f "$0")"
