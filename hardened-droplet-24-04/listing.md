@@ -2,9 +2,9 @@
 
 ## What is Hardened Droplet?
 
-Hardened Droplet is an Ubuntu 24.04 Droplet that starts with every inbound port closed except SSH. A guided setup moves SSH to Tailscale so port 22 can close too, and web apps go public through Cloudflare Tunnel instead of open ports. It is set up for developers and AI agents.
+Try the Hardened Ubuntu Droplet on DigitalOcean: an Ubuntu 24.04 server that is locked down from the first boot, so nothing is reachable from the internet unless you choose to expose it.
 
-A new Droplet normally has no Cloud Firewall until you create and attach one, so any service that listens on a public port can be reached from the internet. This 1-Click flips that default:
+Most servers start open. Any service that listens on a public port can be reached by anyone, and bots start probing SSH within minutes of a server going online. Hardened Droplet starts closed and walks you through keeping it that way in about 2 minutes:
 
 - **Inbound traffic denied by default** – The host firewall (UFW) allows only SSH, and you can close that too
 - **SSH over Tailscale** – Reach the Droplet from your own devices on your private tailnet, then close port 22
