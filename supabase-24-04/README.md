@@ -9,7 +9,7 @@ Deploy self-hosted Supabase on Ubuntu 24.04 with Docker Compose and Nginx. By de
 3. Optionally select **Add a Database** to provision Managed PostgreSQL (see below)
 4. Create the Droplet and SSH in as `root`
 
-On first boot, the Supabase Docker stack starts automatically and Nginx proxies to Kong.
+On first boot, the Supabase Docker stack starts automatically and Nginx proxies to Kong. Host nginx is upgraded from nginx.org (≥1.31.9) and custom-domain TLS uses HTTP/1.1 only; Kong is configured without HTTP/2 to mitigate [CVE-2026-123007](https://nginx.org/en/security_advisories.html).
 
 **Supabase Studio / API:**
 

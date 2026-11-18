@@ -52,7 +52,7 @@ sudo mkdir -p /var/lib/letsencrypt
 
 cat > /etc/cron.daily/certbot-renew <<EOM
 #!/bin/sh
-certbot renew --cert-name $dom --webroot -w /var/lib/letsencrypt/ --post-hook "systemctl reload nginx" 
+certbot renew --cert-name $dom --webroot -w /var/lib/letsencrypt/ --post-hook "systemctl restart nginx"
 EOM
 sudo chmod +x /etc/cron.daily/certbot-renew
 
