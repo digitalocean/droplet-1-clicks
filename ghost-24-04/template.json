@@ -78,6 +78,7 @@
       "scripts": [
         "ghost-24-04/scripts/014-configure_ghost.sh",
         "ghost-24-04/scripts/012-configure_postfix.sh",
+        "common/scripts/012-install-nginx-org-mainline.sh",
         "ghost-24-04/scripts/012-nginx-cve-patch.sh",
         "ghost-24-04/scripts/99-ghost-regression.sh",
         "common/scripts/014-ufw-nginx.sh",

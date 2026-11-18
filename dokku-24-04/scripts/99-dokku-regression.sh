@@ -3,16 +3,23 @@ set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 DOKKU_DIR=$(cd "${SCRIPT_DIR}/.." && pwd)
-ALPN_LIB="${DOKKU_DIR}/../common/files/var/lib/digitalocean/nginx2root-alpn-check.sh"
-SIGIL=/var/lib/dokku/core-plugins/available/nginx-vhosts/templates/nginx.conf.sigil
-MITIGATE="${DOKKU_DIR}/files/var/lib/digitalocean/dokku-mitigate-nginx2root.sh"
 
-for f in "${ALPN_LIB}" "${MITIGATE}"; do
-  if [ ! -f "${f}" ]; then
-    echo "regression: missing ${f}" >&2
+resolve_file() {
+  local primary=$1
+  local alt=$2
+  if [ -f "$primary" ]; then
+    printf '%s' "$primary"
+  elif [ -n "$alt" ] && [ -f "$alt" ]; then
+    printf '%s' "$alt"
+  else
+    echo "regression: missing file (expected $primary or $alt)" >&2
     exit 1
   fi
-done
+}
+
+ALPN_LIB=$(resolve_file "/var/lib/digitalocean/nginx2root-alpn-check.sh" "${DOKKU_DIR}/../common/files/var/lib/digitalocean/nginx2root-alpn-check.sh")
+MITIGATE=$(resolve_file "/var/lib/digitalocean/dokku-mitigate-nginx2root.sh" "${DOKKU_DIR}/files/var/lib/digitalocean/dokku-mitigate-nginx2root.sh")
+SIGIL=/var/lib/dokku/core-plugins/available/nginx-vhosts/templates/nginx.conf.sigil
 
 bash -n "${MITIGATE}"
 # shellcheck source=/dev/null
@@ -23,14 +30,12 @@ if [ ! -f "${SIGIL}" ]; then
   exit 1
 fi
 
-if grep -v '^[[:space:]]*{{' "${SIGIL}" | grep -q 'http2'; then
-  if grep 'listen' "${SIGIL}" | grep -q 'http2'; then
-    echo "regression: Dokku sigil still references http2 on listen lines" >&2
-    exit 1
-  fi
+if grep 'listen' "${SIGIL}" | grep -q 'http2'; then
+  echo "regression: Dokku sigil still references http2 on listen lines" >&2
+  exit 1
 fi
 
-if command -v nginx >/dev/null 2>&1; then
+if command -v nginx >/dev/null 2>&1 && [ -f /etc/nginx/nginx.conf ]; then
   ver=$(nginx -v 2>&1 | sed -n 's/.*nginx\/\([0-9.]*\).*/\1/p')
   major=$(echo "${ver}" | cut -d. -f1)
   minor=$(echo "${ver}" | cut -d. -f2)

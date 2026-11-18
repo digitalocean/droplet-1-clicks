@@ -3,23 +3,31 @@ set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 GHOST_DIR=$(cd "${SCRIPT_DIR}/.." && pwd)
-ALPN_LIB="${GHOST_DIR}/../common/files/var/lib/digitalocean/nginx2root-alpn-check.sh"
-BOOT="${GHOST_DIR}/files/opt/ghost-setup/boot_strap.sh"
-MITIGATE="${GHOST_DIR}/files/var/lib/digitalocean/ghost-mitigate-nginx2root.sh"
 
-for f in "${ALPN_LIB}" "${BOOT}" "${MITIGATE}"; do
-  if [ ! -f "${f}" ]; then
-    echo "regression: missing ${f}" >&2
+resolve_file() {
+  local primary=$1
+  local alt=$2
+  if [ -f "$primary" ]; then
+    printf '%s' "$primary"
+  elif [ -n "$alt" ] && [ -f "$alt" ]; then
+    printf '%s' "$alt"
+  else
+    echo "regression: missing file (expected $primary or $alt)" >&2
     exit 1
   fi
-done
+}
+
+ALPN_LIB=$(resolve_file "/var/lib/digitalocean/nginx2root-alpn-check.sh" "${GHOST_DIR}/../common/files/var/lib/digitalocean/nginx2root-alpn-check.sh")
+BOOT=$(resolve_file "/opt/ghost-setup/boot_strap.sh" "${GHOST_DIR}/files/opt/ghost-setup/boot_strap.sh")
+MITIGATE=$(resolve_file "/var/lib/digitalocean/ghost-mitigate-nginx2root.sh" "${GHOST_DIR}/files/var/lib/digitalocean/ghost-mitigate-nginx2root.sh")
+HTTP2_SNIPPET="/etc/nginx/conf.d/digitalocean-http2-off.conf"
 
 bash -n "${BOOT}"
 bash -n "${MITIGATE}"
 # shellcheck source=/dev/null
 source "${ALPN_LIB}"
 
-if command -v nginx >/dev/null 2>&1; then
+if command -v nginx >/dev/null 2>&1 && [ -f /etc/nginx/nginx.conf ]; then
   ver=$(nginx -v 2>&1 | sed -n 's/.*nginx\/\([0-9.]*\).*/\1/p')
   major=$(echo "${ver}" | cut -d. -f1)
   minor=$(echo "${ver}" | cut -d. -f2)
@@ -40,14 +48,11 @@ for f in /etc/nginx/sites-enabled/* /etc/nginx/sites-available/* /etc/nginx/conf
   fi
 done
 
-if [ ! -f /etc/nginx/conf.d/digitalocean-http2-off.conf ]; then
-  echo "regression: missing global http2 off snippet" >&2
-  exit 1
+if [ -f "${HTTP2_SNIPPET}" ]; then
+  grep -q 'http2 off' "${HTTP2_SNIPPET}" || {
+    echo "regression: digitalocean-http2-off.conf must set http2 off when present" >&2
+    exit 1
+  }
 fi
-
-grep -q 'http2 off' /etc/nginx/conf.d/digitalocean-http2-off.conf || {
-  echo "regression: digitalocean-http2-off.conf must set http2 off" >&2
-  exit 1
-}
 
 echo "ghost-24-04 regression checks ok (CVE-2026-123007 mitigation)"

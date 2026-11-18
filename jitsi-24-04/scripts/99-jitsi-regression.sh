@@ -3,19 +3,28 @@ set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 JITSI_DIR=$(cd "${SCRIPT_DIR}/.." && pwd)
-ALPN_LIB="${JITSI_DIR}/../common/files/var/lib/digitalocean/nginx2root-alpn-check.sh"
-SETUP="${JITSI_DIR}/files/var/complete-jitsi-setup.sh"
-MITIGATE="${JITSI_DIR}/files/var/lib/digitalocean/jitsi-mitigate-nginx2root.sh"
 
-for f in "${ALPN_LIB}" "${SETUP}" "${MITIGATE}"; do
-  if [ ! -f "${f}" ]; then
-    echo "regression: missing ${f}" >&2
+resolve_file() {
+  local primary=$1
+  local alt=$2
+  if [ -f "$primary" ]; then
+    printf '%s' "$primary"
+  elif [ -n "$alt" ] && [ -f "$alt" ]; then
+    printf '%s' "$alt"
+  else
+    echo "regression: missing file (expected $primary or $alt)" >&2
     exit 1
   fi
-done
+}
+
+ALPN_LIB=$(resolve_file "/var/lib/digitalocean/nginx2root-alpn-check.sh" "${JITSI_DIR}/../common/files/var/lib/digitalocean/nginx2root-alpn-check.sh")
+SETUP=$(resolve_file "/var/complete-jitsi-setup.sh" "${JITSI_DIR}/files/var/complete-jitsi-setup.sh")
+MITIGATE=$(resolve_file "/var/lib/digitalocean/jitsi-mitigate-nginx2root.sh" "${JITSI_DIR}/files/var/lib/digitalocean/jitsi-mitigate-nginx2root.sh")
+STRIP_LIB=$(resolve_file "/var/lib/digitalocean/nginx2root-strip-http2.sh" "${JITSI_DIR}/../common/files/var/lib/digitalocean/nginx2root-strip-http2.sh")
 
 bash -n "${SETUP}"
 bash -n "${MITIGATE}"
+bash -n "${STRIP_LIB}"
 # shellcheck source=/dev/null
 source "${ALPN_LIB}"
 
@@ -29,7 +38,7 @@ if ! grep -q 'listen 443 ssl;' "${SETUP}"; then
   exit 1
 fi
 
-if command -v nginx >/dev/null 2>&1; then
+if command -v nginx >/dev/null 2>&1 && [ -f /etc/nginx/nginx.conf ]; then
   ver=$(nginx -v 2>&1 | sed -n 's/.*nginx\/\([0-9.]*\).*/\1/p')
   major=$(echo "${ver}" | cut -d. -f1)
   minor=$(echo "${ver}" | cut -d. -f2)

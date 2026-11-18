@@ -69,6 +69,7 @@
       ],
       "scripts": [
         "jitsi-24-04/scripts/01-packages.sh",
+        "common/scripts/012-install-nginx-org-mainline.sh",
         "jitsi-24-04/scripts/012-nginx-cve-patch.sh",
         "jitsi-24-04/scripts/99-jitsi-regression.sh",
         "common/scripts/020-application-tag.sh",

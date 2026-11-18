@@ -11,15 +11,14 @@ else
   exit 1
 fi
 
-# Jitsi packages may rewrite nginx vhosts on upgrade; strip http2 again.
+# shellcheck source=/dev/null
+source /var/lib/digitalocean/nginx2root-strip-http2.sh
+
 for f in /etc/nginx/sites-enabled/* /etc/nginx/sites-available/*; do
   [ -f "${f}" ] || continue
-  sed -i \
-    -e 's/\blisten\([^;]*\) ssl http2;/listen\1 ssl;/g' \
-    -e 's/ ssl http2\b/ ssl/g' \
-  "${f}"
+  nginx_strip_http2_from_listen_lines_file "${f}"
 done
 
-nginx -t
+nginx_assert_config_or_die
 systemctl restart nginx
 echo "jitsi-mitigate-nginx2root: HTTP/2 disabled on host nginx"

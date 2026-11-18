@@ -14,8 +14,16 @@ run:
   - exec:
       cmd:
         - |
-          if nginx -v 2>&1 | grep -qE 'nginx/1\.(2[5-9]|[3-9][0-9]|[0-9]{2,})'; then
-            if ! grep -q 'http2 off' /etc/nginx/nginx.conf 2>/dev/null; then
-              sed -i '/^http {/a\    http2 off;' /etc/nginx/nginx.conf
-            fi
+          set -e
+          ver=$(nginx -v 2>&1 | sed -n 's/.*nginx\/\([0-9.]*\).*/\1/p')
+          maj=$(echo "$ver" | cut -d. -f1)
+          min=$(echo "$ver" | cut -d. -f2)
+          pat=$(echo "$ver" | cut -d. -f3)
+          ok=0
+          if [ "$maj" -gt 1 ]; then ok=1; fi
+          if [ "$maj" -eq 1 ] && [ "$min" -gt 25 ]; then ok=1; fi
+          if [ "$maj" -eq 1 ] && [ "$min" -eq 25 ] && [ "${pat:-0}" -ge 1 ]; then ok=1; fi
+          if [ "$ok" -eq 1 ] && ! grep -q 'http2 off' /etc/nginx/nginx.conf 2>/dev/null; then
+            sed -i '/^http {/a\    http2 off;' /etc/nginx/nginx.conf
           fi
+          nginx -t

@@ -78,6 +78,7 @@
         "common/scripts/010-docker.sh",
         "common/scripts/011-docker-compose.sh",
         "dokku-24-04/scripts/010-dokku.sh",
+        "common/scripts/012-install-nginx-org-mainline.sh",
         "dokku-24-04/scripts/011-nginx-cve-patch.sh",
         "dokku-24-04/scripts/99-dokku-regression.sh",
         "common/scripts/012-grub-opts.sh",

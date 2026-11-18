@@ -9,6 +9,9 @@ if [ ! -x "${MITIGATE}" ]; then
 fi
 
 "${MITIGATE}" --restart
-nginx -t
+
+# shellcheck source=/dev/null
+source /var/lib/digitalocean/nginx2root-strip-http2.sh
+nginx_assert_config_or_die
 systemctl restart nginx
 echo "ghost-mitigate-nginx2root: HTTP/2 disabled on host nginx"
