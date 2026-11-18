@@ -1,0 +1,8 @@
+// private-by-default: keep Tailscale and cloudflared patched along with Ubuntu security updates.
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Unattended-Upgrade "1";
+
+Unattended-Upgrade::Origins-Pattern {
+        "origin=Tailscale";
+        "origin=cloudflared";
+};

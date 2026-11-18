@@ -1,0 +1,15 @@
+[Unit]
+Description=Cloudflare quick tunnel preview for localhost:%i
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/bin/cloudflared --no-autoupdate tunnel --url http://localhost:%i
+DynamicUser=yes
+Environment=HOME=/tmp
+PrivateTmp=yes
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+Restart=on-failure
+RestartSec=5
