@@ -1,6 +1,71 @@
-## DigitalOcean 1-Click: CVE-2026-123007 — belt-and-suspenders HTTP/2 disable in the container.
-## Listed after web.ssl in discourse_docker samples (patched at image build).
+## DigitalOcean 1-Click: CVE-2026-123007 — disable HTTP/2 (ALPN h2 and cleartext h2c) in the app container.
+## Runs after web.ssl / web.letsencrypt.ssl; re-applies after SSL hooks rewrite outlet snippets.
 run:
+  - file:
+      path: /etc/nginx/conf.d/00-digitalocean-http2-off.conf
+      contents: |
+        # DigitalOcean 1-Click: CVE-2026-123007
+        http2 off;
+
+  - file:
+      path: /usr/local/bin/digitalocean-nginx2root-apply
+      chmod: "+x"
+      contents: |
+        #!/bin/bash
+        # Disable HTTP/2 in every nginx snippet (listen http2, http2 on, and per-server belt-and-suspenders).
+        set -euo pipefail
+
+        shopt -s nullglob
+        conf_roots=(
+          /etc/nginx
+          /etc/nginx/conf.d/outlets/before-server
+          /etc/nginx/conf.d/outlets/server
+          /etc/nginx/conf.d/outlets/discourse
+        )
+
+        patch_file() {
+          local f="${1:?file}"
+          [ -f "${f}" ] || return 0
+          sed -i -E \
+            -e 's/^([[:space:]]*)http2[[:space:]]+on;/\1http2 off;/g' \
+            -e 's/([[:space:]]listen[^;[:space:]]*)[[:space:]]+http2/\1/g' \
+            -e 's/http2[[:space:]]+ssl/ssl/g' \
+            "${f}"
+        }
+
+        for root in "${conf_roots[@]}"; do
+          [ -d "${root}" ] || continue
+          while IFS= read -r f; do
+            patch_file "${f}"
+          done < <(find "${root}" -type f -name '*.conf' 2>/dev/null || true)
+        done
+
+        for f in /etc/nginx/conf.d/outlets/before-server/*.conf \
+                 /etc/nginx/conf.d/outlets/server/*.conf \
+                 /etc/nginx/conf.d/outlets/discourse/*.conf; do
+          [ -f "${f}" ] || continue
+          if ! grep -E '^[[:space:]]*http2[[:space:]]+(on|off);' "${f}" >/dev/null 2>&1; then
+            printf '\nhttp2 off;\n' >>"${f}"
+          fi
+        done
+
+        _nginx_test=$(
+          if command -v nginx >/dev/null 2>&1; then
+            nginx -t 2>&1 || true
+          fi
+        )
+        if grep -E 'syntax is ok|test is successful' <<<"${_nginx_test}" >/dev/null; then
+          :
+        elif [ -n "${_nginx_test}" ]; then
+          echo "digitalocean-nginx2root-apply: nginx -t failed:" >&2
+          printf '%s\n' "${_nginx_test}" >&2
+          exit 1
+        fi
+
+  - exec:
+      cmd:
+        - /usr/local/bin/digitalocean-nginx2root-apply
+
   - replace:
       filename: "/etc/nginx/conf.d/outlets/server/20-https.conf"
       from: /http2 on;/
@@ -16,3 +81,13 @@ run:
       from: /http2 on;/
       to: |
         http2 off;
+
+hooks:
+  after_ssl:
+    - exec:
+        cmd:
+          - /usr/local/bin/digitalocean-nginx2root-apply
+  web:
+    - exec:
+        cmd:
+          - /usr/local/bin/digitalocean-nginx2root-apply

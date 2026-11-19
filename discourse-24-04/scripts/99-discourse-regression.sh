@@ -12,12 +12,14 @@ require_installed() {
 
 ALPN_LIB=$(require_installed "/var/lib/digitalocean/nginx2root-alpn-check.sh")
 MITIGATE=$(require_installed "/opt/digitalocean_discourse/mitigate-nginx2root.sh")
+VERIFY=$(require_installed "/opt/digitalocean_discourse/verify-container-nginx2root.sh")
 SETUP=$(require_installed "/opt/digitalocean_discourse/setup_discourse.sh")
 WEB_SSL=$(require_installed "/var/discourse/templates/web.ssl.template.yml")
 DO_TEMPLATE=$(require_installed "/var/discourse/templates/digitalocean-nginx2root.template.yml")
 SAMPLES=$(require_installed "/var/discourse/samples/standalone.yml")
 
 bash -n "${MITIGATE}"
+bash -n "${VERIFY}"
 bash -n "${SETUP}"
 # shellcheck source=/dev/null
 source "${ALPN_LIB}"
@@ -29,6 +31,23 @@ fi
 
 if grep -v '^[[:space:]]*#' "${DO_TEMPLATE}" | grep -E '^[[:space:]]*listen.*http2' >/dev/null; then
   echo "regression: digitalocean template must not add http2 listen lines" >&2
+  exit 1
+fi
+
+for needle in 00-digitalocean-http2-off.conf digitalocean-nginx2root-apply after_ssl; do
+  if ! grep -F "${needle}" "${DO_TEMPLATE}" >/dev/null; then
+    echo "regression: digitalocean template missing ${needle}" >&2
+    exit 1
+  fi
+done
+
+if [ ! -x "${VERIFY}" ]; then
+  echo "regression: verify-container-nginx2root.sh must be executable" >&2
+  exit 1
+fi
+
+if ! grep -F verify-container-nginx2root.sh "${SETUP}" >/dev/null; then
+  echo "regression: setup_discourse.sh must run container nginx2root verification" >&2
   exit 1
 fi
 

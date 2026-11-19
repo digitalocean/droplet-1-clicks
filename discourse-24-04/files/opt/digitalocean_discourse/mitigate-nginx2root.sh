@@ -15,7 +15,22 @@ patch_ssl_template_file() {
     -e 's/^\([[:space:]]*\)http2[[:space:]]\+on;/\1http2 off;/g' \
     -e 's/listen 443 ssl http2;/listen 443 ssl;/g' \
     -e 's/listen \[::\]:443 ssl http2;/listen [::]:443 ssl;/g' \
-    "${f}"
+  "${f}"
+}
+
+patch_web_templates_http_listeners() {
+  local web_template="${DISCOURSE_ROOT}/templates/web.template.yml"
+  local web_ssl="${DISCOURSE_ROOT}/templates/web.ssl.template.yml"
+  [ -f "${web_template}" ] || return 0
+  sed -i \
+    -e 's/echo "listen 80;\\nlisten \[::\]:80;"/echo -e "listen 80;\\nlisten [::]:80;\\nhttp2 off;"/' \
+    "${web_template}"
+  if [ -f "${web_ssl}" ]; then
+    if ! grep -B3 'return 301 https' "${web_ssl}" | grep 'http2 off' >/dev/null 2>&1; then
+      sed -i '0,/listen \[::\]:80;/{/listen \[::\]:80;/a\          http2 off;
+}' "${web_ssl}"
+    fi
+  fi
 }
 
 install_do_template() {
@@ -26,6 +41,7 @@ install_do_template() {
 
 patch_ssl_template_file "${WEB_SSL_TEMPLATE}"
 patch_ssl_template_file "${LE_SSL_TEMPLATE}"
+patch_web_templates_http_listeners
 install_do_template
 
 patch_discourse_samples() {
@@ -70,4 +86,4 @@ if [ -f "${WEB_SSL_TEMPLATE}" ] && grep -v '^[[:space:]]*#' "${WEB_SSL_TEMPLATE}
   exit 1
 fi
 
-echo "discourse mitigate-nginx2root: templates patched (HTTP/2 disabled for HTTPS)"
+echo "discourse mitigate-nginx2root: templates patched (HTTP/2 disabled on :80/:443)"
