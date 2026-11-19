@@ -24,6 +24,8 @@
   let companiesCache = null;
   let doAgents = [];
   let doAgentsPath = "";
+  // One automatic host-compat repair per agent per page session.
+  const repairedAgents = new Set();
 
   const isOpenCodeModel = (value) => {
     if (typeof value !== "string") return false;
@@ -117,14 +119,38 @@
     return response.json();
   };
 
+  const retryAgentLifecycle = async (agentId, companyId) => {
+    const response = await fetch(
+      "/api/agents/" + encodeURIComponent(agentId) + "/lifecycle/retry?companyId=" + encodeURIComponent(companyId),
+      {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: "{}",
+      },
+    );
+    if (!response.ok) throw new Error(await errorMessage(response));
+    return response.json().catch(() => null);
+  };
+
   // Host PATH for the paperclip service includes /usr/local/bin, but the
   // verification hello probe is more reliable with an absolute command. Force
   // the classic local adapter so Paperclip Runner does not skip the host CLI.
-  const digitalOceanAdapterConfig = () => ({
-    model: config && typeof config.model === "string" ? config.model : "",
-    command: "/usr/local/bin/opencode",
-    dangerouslySkipPermissions: true,
-  });
+  const digitalOceanAdapterConfig = (existing) => {
+    const base = existing && typeof existing === "object" ? { ...existing } : {};
+    const model = config && typeof config.model === "string" && config.model
+      ? config.model
+      : (typeof base.model === "string" ? base.model : "");
+    return {
+      ...base,
+      model: model,
+      command: "/usr/local/bin/opencode",
+      // Unattended Marketplace agents run as the unprivileged `paperclip`
+      // user. Without this, OpenCode blocks on interactive permission prompts
+      // and verification / heartbeats hang.
+      dangerouslySkipPermissions: true,
+    };
+  };
 
   const canHireDigitalOcean = () =>
     Boolean(config && config.enabled === true && isOpenCodeModel(config.model));
@@ -172,20 +198,80 @@
     return false;
   };
 
+  const agentNeedsHostCompatRepair = (agent) => {
+    if (!agent || agent.adapterType !== "opencode_local") return false;
+    const adapter = agent.adapterConfig && typeof agent.adapterConfig === "object"
+      ? agent.adapterConfig
+      : {};
+    const model = typeof adapter.model === "string" ? adapter.model : "";
+    if (model.indexOf("digitalocean/") !== 0) return false;
+    const command = typeof adapter.command === "string" ? adapter.command.trim() : "";
+    // Missing absolute command is the pre-fix hire shape. Do not treat
+    // "paused while preparing/verifying" alone as repair — that is normal.
+    if (command !== "/usr/local/bin/opencode") return true;
+    return agentVerificationFailed(agent);
+  };
+
+  // Older images hired DO agents without an absolute opencode path. After the
+  // host apply-inference fix, patch adapterConfig and retry verification so
+  // operators do not have to click Retry now by hand.
+  const repairDigitalOceanAgent = async (agent, companyId) => {
+    if (!agent || typeof agent.id !== "string" || !companyId) return agent;
+    if (repairedAgents.has(agent.id) || !agentNeedsHostCompatRepair(agent)) return agent;
+    repairedAgents.add(agent.id);
+    const patched = await fetch(
+      "/api/agents/" + encodeURIComponent(agent.id) + "?companyId=" + encodeURIComponent(companyId),
+      {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          runner: "legacy",
+          adapterConfig: digitalOceanAdapterConfig(agent.adapterConfig),
+        }),
+      },
+    );
+    if (!patched.ok) throw new Error(await errorMessage(patched));
+    const updated = await patched.json().catch(() => agent);
+    try {
+      await retryAgentLifecycle(agent.id, companyId);
+    } catch {
+      // Retry is a no-op when setup already finished; resume may still apply.
+    }
+    if (agentNeedsResume(updated) || agentNeedsResume(agent)) {
+      try {
+        await resumeAgent(agent.id, companyId);
+      } catch {
+        // Resume can 409 while verification is still running.
+      }
+    }
+    return (await fetchAgent(agent.id, companyId)) || updated || agent;
+  };
+
   const waitForRunnableAgent = async (agentId, companyId, initialAgent) => {
     // New hires enter preparing/verifying asynchronously. Poll until ready.
     // A failed hello probe leaves the agent paused (Live + paused in the UI)
-    // until Configuration → Run test / Retry now succeeds.
+    // until Configuration → Run test / Retry now succeeds. Auto-repair once
+    // for agents hired before absolute command + host OpenCode config landed.
     status("Verifying your DigitalOcean agent…", false);
     let agent = initialAgent || null;
     let resumed = false;
+    let retried = false;
     const deadline = Date.now() + 120000;
     while (Date.now() < deadline) {
       agent = (await fetchAgent(agentId, companyId)) || agent;
       if (agentIsReady(agent)) return;
-      if (agentVerificationFailed(agent)) {
+      if (!retried && (agentVerificationFailed(agent) || agentNeedsHostCompatRepair(agent))) {
+        try {
+          agent = await repairDigitalOceanAgent(agent, companyId);
+          retried = true;
+        } catch {
+          retried = true;
+        }
+      }
+      if (retried && agentVerificationFailed(agent)) {
         throw new Error(
-          "DigitalOcean agent verification failed. On the Droplet run: sudo /opt/ensure-paperclip-opencode.sh && sudo /opt/apply-inference-from-env.sh && sudo systemctl restart paperclip — then open the agent and click Retry now.",
+          "DigitalOcean agent verification failed. On the Droplet run: sudo /opt/ensure-paperclip-opencode.sh && sudo /opt/apply-inference-from-env.sh && sudo systemctl daemon-reload && sudo systemctl restart paperclip — then open the agent and click Retry now.",
         );
       }
       if (!resumed && agentNeedsResume(agent)) {
@@ -248,6 +334,13 @@
       }
 
       let agentId = existingId;
+      if (agentId && selectedAgent) {
+        try {
+          selectedAgent = await repairDigitalOceanAgent(selectedAgent, companyId);
+        } catch {
+          // waitForRunnableAgent will surface a lasting verification failure.
+        }
+      }
       if (!agentId) {
         const hired = await fetch("/api/companies/" + encodeURIComponent(companyId) + "/agent-hires", {
           method: "POST",
@@ -399,7 +492,33 @@
       if (!listed.ok || window.location.pathname !== path) return;
       const agents = await listed.json().catch(() => []);
       if (!Array.isArray(agents) || window.location.pathname !== path) return;
-      doAgents = agents.filter((agent) =>
+      const matched = agents.filter((agent) =>
+        agent &&
+        agent.adapterType === "opencode_local" &&
+        agent.adapterConfig &&
+        typeof agent.adapterConfig.model === "string" &&
+        agent.adapterConfig.model.indexOf("digitalocean/") === 0 &&
+        typeof agent.id === "string"
+      );
+      doAgents = matched;
+      relabelDigitalOcean();
+      for (const agent of matched) {
+        if (!agentNeedsHostCompatRepair(agent) || repairedAgents.has(agent.id)) continue;
+        try {
+          await repairDigitalOceanAgent(agent, companyId);
+        } catch {
+          // Leave the agent as-is; listing.md covers manual Retry now.
+        }
+      }
+      if (window.location.pathname !== path) return;
+      const refreshed = await fetch("/api/companies/" + encodeURIComponent(companyId) + "/agents", {
+        credentials: "include",
+        headers: { Accept: "application/json" },
+      });
+      if (!refreshed.ok || window.location.pathname !== path) return;
+      const again = await refreshed.json().catch(() => []);
+      if (!Array.isArray(again) || window.location.pathname !== path) return;
+      doAgents = again.filter((agent) =>
         agent &&
         agent.adapterType === "opencode_local" &&
         agent.adapterConfig &&

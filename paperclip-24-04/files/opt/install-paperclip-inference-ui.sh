@@ -15,7 +15,7 @@ SETUP_MARKER="${PAPERCLIP_SETUP_MARKER:-/opt/paperclip/.provider-configured}"
 SOURCE_JS="${PAPERCLIP_INFERENCE_UI_JS:-/opt/paperclip/digitalocean-inference-onboarding.js}"
 SCRIPT_NAME="digitalocean-inference.js"
 JSON_NAME="digitalocean-inference.json"
-SCRIPT_TAG='<script src="/digitalocean-inference.js?v=8" defer></script>'
+SCRIPT_TAG='<script src="/digitalocean-inference.js?v=9" defer></script>'
 
 read_env_value() {
   local key="$1" line value

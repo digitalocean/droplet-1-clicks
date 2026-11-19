@@ -5,8 +5,15 @@
 pub=$(curl -fsS --retry 3 --retry-connrefused --max-time 3 \
   http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)
 myip="${pub:-$(hostname -I | awk '{print$1}')}"
-email=$(grep "^ADMIN_EMAIL=" /opt/paperclip.env 2>/dev/null | cut -d= -f2-)
-password=$(grep "^INITIAL_PASSWORD=" /opt/paperclip.env 2>/dev/null | cut -d= -f2-)
+passwords_file=/root/.digitalocean_passwords
+email=$(grep "^ADMIN_EMAIL=" "$passwords_file" 2>/dev/null | cut -d= -f2-)
+password=$(grep "^INITIAL_PASSWORD=" "$passwords_file" 2>/dev/null | cut -d= -f2-)
+if [ -z "$email" ]; then
+  email=$(grep "^ADMIN_EMAIL=" /opt/paperclip.env 2>/dev/null | cut -d= -f2-)
+fi
+if [ -z "$password" ]; then
+  password=$(grep "^INITIAL_PASSWORD=" /opt/paperclip.env 2>/dev/null | cut -d= -f2-)
+fi
 inference_model=$(grep "^INFERENCE_MODEL=" /opt/paperclip.env 2>/dev/null | tail -n 1 | cut -d= -f2-)
 inference_model=${inference_model#\"}
 inference_model=${inference_model%\"}
@@ -38,7 +45,7 @@ prefers DigitalOcean Serverless Inference when you supply a model access key.
   Password:  $password
 
   Sign in with the email and password above.
-  Credentials file: /opt/paperclip.env (ADMIN_EMAIL / INITIAL_PASSWORD)
+  Credentials file: /root/.digitalocean_passwords
 
 📝 First steps:
   1. Open the Dashboard and sign in
@@ -55,8 +62,9 @@ prefers DigitalOcean Serverless Inference when you supply a model access key.
   systemctl {start|stop|restart|status} paperclip
   journalctl -u paperclip -f
 
-📚 Docs: https://github.com/paperclipai/paperclip
+📚 Docs: https://docs.paperclip.ing/
 🔗 Site: https://paperclip.ing
+🐙 Source: https://github.com/paperclipai/paperclip
 
 ********************************************************************************
 To delete this message of the day: rm -rf $(readlink -f ${0})

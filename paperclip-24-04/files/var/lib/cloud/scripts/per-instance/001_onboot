@@ -9,6 +9,8 @@ set +a
 ENV_FILE=/opt/paperclip.env
 INFO_FILE=/root/paperclip_info.txt
 INVITE_FILE=/root/paperclip_bootstrap_invite.txt
+PASSWORDS_FILE=/root/.digitalocean_passwords
+INSTANCE_ENV=/home/paperclip/.paperclip/instances/default/.env
 
 write_env_kv() {
   local key="$1" val="$2" tmp
@@ -24,6 +26,34 @@ write_env_kv() {
   printf '%s=%s\n' "$key" "$val" >>"$tmp"
   mv "$tmp" "$ENV_FILE"
   chmod 600 "$ENV_FILE"
+}
+
+# MOTD / info file read credentials from here — not from systemd EnvironmentFiles.
+sync_admin_passwords_file() {
+  local email="$1" password="$2"
+  touch "$PASSWORDS_FILE"
+  {
+    grep -Ev '^(ADMIN_EMAIL|INITIAL_PASSWORD)=' "$PASSWORDS_FILE" 2>/dev/null || true
+    printf 'ADMIN_EMAIL=%s\nINITIAL_PASSWORD=%s\n' "$email" "$password"
+  } >"${PASSWORDS_FILE}.tmp"
+  mv "${PASSWORDS_FILE}.tmp" "$PASSWORDS_FILE"
+  chmod 600 "$PASSWORDS_FILE"
+}
+
+# Drop admin credentials from env files loaded by paperclip.service so the
+# long-running process does not retain INITIAL_PASSWORD in its environment.
+strip_admin_credentials_from_service_env() {
+  local file tmp
+  for file in "$ENV_FILE" "$INSTANCE_ENV"; do
+    [ -f "$file" ] || continue
+    tmp="$(mktemp)"
+    grep -Ev '^(ADMIN_EMAIL|INITIAL_PASSWORD)=' "$file" >"$tmp" 2>/dev/null || : >"$tmp"
+    mv "$tmp" "$file"
+    chmod 600 "$file"
+  done
+  if [ -f "$INSTANCE_ENV" ] && id paperclip >/dev/null 2>&1; then
+    chown paperclip:paperclip "$INSTANCE_ENV"
+  fi
 }
 
 meta() { curl -fsS --retry 10 --retry-connrefused --max-time 2 "$1"; }
@@ -202,7 +232,7 @@ done
 
 INVITE_URL=""
 ADMIN_CLAIMED=0
-# Reuse password generated at top of first boot (already in /opt/paperclip.env for MOTD)
+# Reuse password generated at top of first boot (MOTD reads /root/.digitalocean_passwords)
 ADMIN_EMAIL="$(grep -E '^ADMIN_EMAIL=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d= -f2-)"
 ADMIN_EMAIL="${ADMIN_EMAIL:-admin@paperclip.local}"
 INITIAL_PASSWORD="$(grep -E '^INITIAL_PASSWORD=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d= -f2-)"
@@ -211,6 +241,10 @@ if [ -z "$INITIAL_PASSWORD" ] || [ "$INITIAL_PASSWORD" = "PLACEHOLDER_WILL_BE_RE
   write_env_kv ADMIN_EMAIL "$ADMIN_EMAIL"
   write_env_kv INITIAL_PASSWORD "$INITIAL_PASSWORD"
 fi
+sync_admin_passwords_file "$ADMIN_EMAIL" "$INITIAL_PASSWORD"
+chmod +x /opt/lock-paperclip-signup.sh
+chmod +x /opt/paperclip-lock-signup-when-ready.sh
+chmod +x /opt/claim-paperclip-admin.sh
 
 if [ "$HEALTH_OK" = "1" ]; then
   echo "Waiting for public HTTPS via Caddy..."
@@ -222,7 +256,6 @@ if [ "$HEALTH_OK" = "1" ]; then
     sleep 2
   done
 
-  chmod +x /opt/claim-paperclip-admin.sh
   echo "Claiming first admin (sign-up + bootstrap invite + accept)..."
   CLAIM_OUT=""
   if CLAIM_OUT="$(/opt/claim-paperclip-admin.sh "$PUBLIC_URL" "$ADMIN_EMAIL" "$INITIAL_PASSWORD" "Admin" 2>&1)"; then
@@ -232,42 +265,16 @@ if [ "$HEALTH_OK" = "1" ]; then
       printf '%s\n' "$INVITE_URL" > "$INVITE_FILE"
       chmod 600 "$INVITE_FILE"
     fi
-    # Lock open signup after first admin exists (sign-in still works)
-    write_env_kv PAPERCLIP_AUTH_DISABLE_SIGN_UP true
-    if [ -f /home/paperclip/.paperclip/instances/default/config.json ]; then
-      python3 - <<'PY'
-import json
-path = "/home/paperclip/.paperclip/instances/default/config.json"
-with open(path, encoding="utf-8") as f:
-    cfg = json.load(f)
-cfg.setdefault("auth", {})["disableSignUp"] = True
-with open(path, "w", encoding="utf-8") as f:
-    json.dump(cfg, f, indent=2)
-    f.write("\n")
-PY
-      chown paperclip:paperclip /home/paperclip/.paperclip/instances/default/config.json
-    fi
-    INSTANCE_ENV=/home/paperclip/.paperclip/instances/default/.env
-    if [ -f "$INSTANCE_ENV" ]; then
-      tmp="$(mktemp)"
-      grep -Ev '^(ADMIN_EMAIL|INITIAL_PASSWORD|PAPERCLIP_AUTH_DISABLE_SIGN_UP)=' "$INSTANCE_ENV" >"$tmp" 2>/dev/null || : >"$tmp"
-      printf 'ADMIN_EMAIL=%s\nINITIAL_PASSWORD=%s\nPAPERCLIP_AUTH_DISABLE_SIGN_UP=true\n' \
-        "$ADMIN_EMAIL" "$INITIAL_PASSWORD" >>"$tmp"
-      mv "$tmp" "$INSTANCE_ENV"
-      chown paperclip:paperclip "$INSTANCE_ENV"
-      chmod 600 "$INSTANCE_ENV"
-    fi
-    systemctl restart paperclip || true
+    /opt/lock-paperclip-signup.sh
     for _ in $(seq 1 30); do
       curl -fsS --max-time 2 "http://127.0.0.1:3100/api/health" >/dev/null 2>&1 && break
       sleep 1
     done
-    echo "Admin credentials ready (ADMIN_EMAIL / INITIAL_PASSWORD in /opt/paperclip.env)."
+    echo "Admin credentials ready (see /root/.digitalocean_passwords)."
   else
     echo "Warning: auto-claim failed; falling back to bootstrap invite only." >&2
     printf '%s\n' "$CLAIM_OUT" > /root/paperclip_claim_failed.txt
     chmod 600 /root/paperclip_claim_failed.txt
-    # Keep ADMIN_EMAIL / INITIAL_PASSWORD in /opt/paperclip.env for console display
     BOOTSTRAP_OUT="$(su - paperclip -c "paperclipai auth bootstrap-ceo --force --base-url ${PUBLIC_URL}" 2>&1 || true)"
     BOOTSTRAP_CLEAN="$(printf '%s\n' "$BOOTSTRAP_OUT" | sed $'s/\033\\[[0-9;]*[[:alpha:]]//g')"
     INVITE_URL="$(printf '%s\n' "$BOOTSTRAP_CLEAN" | grep -oE 'https://[^[:space:]]+/invite/[^[:space:]]+' | head -n 1 || true)"
@@ -278,12 +285,23 @@ PY
       printf '%s\n' "$BOOTSTRAP_OUT" > /root/paperclip_bootstrap_raw.txt
       chmod 600 /root/paperclip_bootstrap_raw.txt
     fi
+    # Signup must stay open for InviteLanding; lock as soon as a user appears.
+    systemctl daemon-reload
+    systemctl enable paperclip-lock-signup.service
+    systemctl start --no-block paperclip-lock-signup.service || true
   fi
+  # Credentials stay in /root/.digitalocean_passwords for MOTD; strip from
+  # EnvironmentFiles so paperclip.service does not keep INITIAL_PASSWORD loaded.
+  strip_admin_credentials_from_service_env
+  systemctl restart paperclip || true
 else
   echo "ERROR: Paperclip health check did not succeed in time; bootstrap invite skipped." >&2
   journalctl -u paperclip -n 50 --no-pager >&2 || true
   printf 'health_failed\n' > /root/paperclip_firstboot_failed
   chmod 600 /root/paperclip_firstboot_failed
+  # Close public signup if/when the service comes up without a claim path.
+  /opt/lock-paperclip-signup.sh || true
+  strip_admin_credentials_from_service_env
 fi
 
 # DigitalOcean Serverless Inference: apply from droplet env, else first-login wizard
@@ -317,10 +335,10 @@ EOM
   systemctl start paperclip-apply-inference.service || true
 fi
 
-# Always re-read from env (same pattern as OmniRoute MOTD / info file)
-ADMIN_EMAIL="$(grep -E '^ADMIN_EMAIL=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d= -f2-)"
+# Prefer credentials file (service env no longer carries INITIAL_PASSWORD)
+ADMIN_EMAIL="$(grep -E '^ADMIN_EMAIL=' "$PASSWORDS_FILE" 2>/dev/null | tail -n 1 | cut -d= -f2-)"
 ADMIN_EMAIL="${ADMIN_EMAIL:-admin@paperclip.local}"
-PASSWORD="$(grep -E '^INITIAL_PASSWORD=' "$ENV_FILE" 2>/dev/null | tail -n 1 | cut -d= -f2-)"
+PASSWORD="$(grep -E '^INITIAL_PASSWORD=' "$PASSWORDS_FILE" 2>/dev/null | tail -n 1 | cut -d= -f2-)"
 
 cat > "$INFO_FILE" << EOF
 ================================================================================
@@ -334,8 +352,8 @@ ACCESS:
   Email:      ${ADMIN_EMAIL}
   Password:   ${PASSWORD}
 
-  Sign in with the email and password above (also in /opt/paperclip.env as
-  ADMIN_EMAIL / INITIAL_PASSWORD). Then complete onboarding in the UI.
+  Sign in with the email and password above (also in ${PASSWORDS_FILE}).
+  Then complete onboarding in the UI.
 EOF
 
 if [ "$ADMIN_CLAIMED" != "1" ]; then
@@ -395,10 +413,12 @@ PATHS:
 
 SECURITY:
   Port 3100 is bound to localhost; only HTTPS (80/443 via Caddy) is public.
-  Keep BETTER_AUTH_SECRET, DATABASE_URL, ADMIN_EMAIL, INITIAL_PASSWORD, MODEL_ACCESS_KEY private.
+  Keep BETTER_AUTH_SECRET, DATABASE_URL, MODEL_ACCESS_KEY, and
+  ${PASSWORDS_FILE} private.
   Prefer a DigitalOcean Cloud Firewall restricting SSH to your IP.
 
 DOCS:
+  https://docs.paperclip.ing/
   https://github.com/paperclipai/paperclip
   https://paperclip.ing
 

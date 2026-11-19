@@ -56,7 +56,7 @@ Paperclip runs the Node.js server and local PostgreSQL on the host. Prefer at le
 ### 2. Sign in (first admin)
 
 1. SSH in (or read the MOTD) and note **Email** / **Password**
-2. Open `https://your-droplet-ip` and sign in with those credentials (also in `/opt/paperclip.env` as `ADMIN_EMAIL` / `INITIAL_PASSWORD`)
+2. Open `https://your-droplet-ip` and sign in with those credentials (also in `/root/.digitalocean_passwords`)
 3. Create a company, hire agents, and define a goal
 
 If credentials were not generated, use the bootstrap invite in `/root/paperclip_bootstrap_invite.txt` instead.
@@ -85,14 +85,18 @@ sudo /opt/apply-inference-from-env.sh
 sudo systemctl daemon-reload
 sudo systemctl restart paperclip
 
-# Sanity-check the probe the UI runs (as the paperclip user)
+# Sanity-check the probe (MODEL_ACCESS_KEY must be in the process env;
+# ~/.config/opencode/opencode.json keeps apiKey as {env:MODEL_ACCESS_KEY})
+set -a; . /opt/paperclip.env; set +a
 sudo -u paperclip -H env PATH=/usr/bin:/bin:/usr/local/bin \
+  MODEL_ACCESS_KEY="$MODEL_ACCESS_KEY" \
   /usr/local/bin/opencode models | head
 sudo -u paperclip -H env PATH=/usr/bin:/bin:/usr/local/bin \
+  MODEL_ACCESS_KEY="$MODEL_ACCESS_KEY" \
   /usr/local/bin/opencode run --format json --model digitalocean/<your-model> <<<'Respond with hello.'
 ```
 
-Then open the agent → **Configuration** → set **Command** to `/usr/local/bin/opencode` if blank → **Harness / Runtime** → **Run test**, or click **Retry now**. After an image upgrade, hire a **new** DigitalOcean agent so the 1-Click pins `command` and the legacy local runner automatically.
+Then reload the Agents page (or open the agent). The Marketplace UI script patches absolute `command` + legacy runner and calls **lifecycle/retry** once per agent. If it stays paused, open the agent → **Configuration** → **Run test**, or click **Retry now**.
 
 The Agents list **Harness** column still stores adapter type `opencode_local` internally; the Marketplace UI script relabels it to **DigitalOcean** when the default model is `digitalocean/...`.
 
@@ -163,13 +167,15 @@ HTTPS already works on the droplet IP via Caddy shortlived certificates. For a c
 ## Security Notes
 
 - Paperclip binds to `127.0.0.1:3100`; only Caddy exposes 80/443
-- Keep `/opt/paperclip.env` (including `DATABASE_URL`, `ADMIN_EMAIL`, `INITIAL_PASSWORD`), bootstrap invites, and `/home/paperclip/.paperclip` private
+- Keep `/opt/paperclip.env` (including `DATABASE_URL`, `MODEL_ACCESS_KEY`), `/root/.digitalocean_passwords`, bootstrap invites, and `/home/paperclip/.paperclip` private
 - Prefer a Cloud Firewall that restricts SSH to your IP
-- First admin is auto-claimed on boot; open signup is locked afterward
+- First admin is auto-claimed on boot; open signup is locked afterward (claim-failure keeps signup open only until the invite creates an admin)
+- `ADMIN_EMAIL` / `INITIAL_PASSWORD` are not left in systemd EnvironmentFiles after first boot
 - Local PostgreSQL listens on localhost only; authenticated/public mode does **not** use embedded Postgres
 
 ## Support / Docs
 
-- GitHub: https://github.com/paperclipai/paperclip
+- Docs: https://docs.paperclip.ing/
 - Website: https://paperclip.ing
+- GitHub: https://github.com/paperclipai/paperclip
 - Installing guide: https://github.com/paperclipai/paperclip/blob/master/doc/INSTALLING.md

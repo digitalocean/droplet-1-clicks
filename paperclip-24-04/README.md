@@ -4,7 +4,7 @@ This directory contains the Packer builder configuration for creating a Papercli
 
 ## Overview
 
-[Paperclip](https://github.com/paperclipai/paperclip) is open-source orchestration for teams of AI agents. This builder creates an Ubuntu 24.04 LTS Droplet with a managed Paperclip CLI install (`paperclipai`), Caddy HTTPS (shortlived TLS by IP), and first-boot configuration for authenticated/public mode behind a reverse proxy.
+[Paperclip](https://docs.paperclip.ing/) ([GitHub](https://github.com/paperclipai/paperclip)) is open-source orchestration for teams of AI agents. This builder creates an Ubuntu 24.04 LTS Droplet with a managed Paperclip CLI install (`paperclipai`), Caddy HTTPS (shortlived TLS by IP), and first-boot configuration for authenticated/public mode behind a reverse proxy.
 
 Latest stable version pinned in `template.json` (from [paperclipai/paperclip releases](https://github.com/paperclipai/paperclip/releases)): **2026.1117.0**.
 
@@ -75,13 +75,13 @@ Packer builds on an 8 GB Droplet (`s-4vcpu-8gb` in `template.json`) so the manag
 1. Generates `BETTER_AUTH_SECRET`, `PAPERCLIP_TOOL_ACTION_SIGNING_SECRET`, and local Postgres `DATABASE_URL`
 2. Writes authenticated/public/loopback instance config with `PAPERCLIP_PUBLIC_URL=https://<droplet-ip>`
 3. Installs Caddyfile (shortlived TLS for droplet IP) and starts `postgresql` + `paperclip` + `caddy`
-4. Creates a bootstrap invite, auto-claims it with generated `ADMIN_EMAIL` / `INITIAL_PASSWORD`, then locks open signup
+4. Creates a bootstrap invite, auto-claims it with generated admin credentials (stored in `/root/.digitalocean_passwords`), then locks open signup
 5. Configures DigitalOcean Serverless Inference when `MODEL_ACCESS_KEY` is set (OpenCode provider `digitalocean`, and Codex via `OPENAI_BASE_URL` when OpenAI is unset). Otherwise hooks the SSH setup wizard
 6. Writes `/root/paperclip_info.txt`
 
 ## First Login / Access
 
-1. Open `https://<droplet-ip>` and sign in with `ADMIN_EMAIL` / `INITIAL_PASSWORD` from the SSH MOTD
+1. Open `https://<droplet-ip>` and sign in with credentials from the SSH MOTD (`/root/.digitalocean_passwords`)
 2. Complete UI onboarding (company, agents, goals)
 3. If `MODEL_ACCESS_KEY` was not set at create time, the SSH wizard can configure DigitalOcean Serverless Inference. When it is configured, onboarding's "Connect a model" step offers DigitalOcean Inference and hires OpenCode on `digitalocean/<model>`. Codex can use the raw model id.
 
@@ -119,6 +119,7 @@ Paperclip publishes a recommended managed npm install (`paperclipai`). The upstr
 
 ## References
 
-- https://github.com/paperclipai/paperclip
+- https://docs.paperclip.ing/
 - https://paperclip.ing
+- https://github.com/paperclipai/paperclip
 - https://github.com/paperclipai/paperclip/releases/tag/v2026.1117.0

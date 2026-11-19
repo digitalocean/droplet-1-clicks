@@ -35,20 +35,39 @@ read_env_kv() {
 
 # OmniRoute-style password read for console display
 read_password() {
-  local line val
-  line=$(grep -E '^INITIAL_PASSWORD=' "$ENV_FILE" 2>/dev/null | tail -n 1) || return 1
-  val="${line#INITIAL_PASSWORD=}"
-  val="${val#\"}"; val="${val%\"}"; val="${val#\'}"; val="${val%\'}"
-  case "$val" in
-    ''|PLACEHOLDER*) return 1 ;;
-  esac
-  printf '%s' "$val"
+  local line val file
+  for file in /root/.digitalocean_passwords "$ENV_FILE"; do
+    [ -f "$file" ] || continue
+    line=$(grep -E '^INITIAL_PASSWORD=' "$file" 2>/dev/null | tail -n 1) || continue
+    val="${line#INITIAL_PASSWORD=}"
+    val="${val#\"}"; val="${val%\"}"; val="${val#\'}"; val="${val%\'}"
+    case "$val" in
+      ''|PLACEHOLDER*) continue ;;
+    esac
+    printf '%s' "$val"
+    return 0
+  done
+  return 1
+}
+
+read_admin_email() {
+  local line val file
+  for file in /root/.digitalocean_passwords "$ENV_FILE"; do
+    [ -f "$file" ] || continue
+    line=$(grep -E '^ADMIN_EMAIL=' "$file" 2>/dev/null | tail -n 1) || continue
+    val="${line#ADMIN_EMAIL=}"
+    val="${val#\"}"; val="${val%\"}"; val="${val#\'}"; val="${val%\'}"
+    [ -n "$val" ] || continue
+    printf '%s' "$val"
+    return 0
+  done
+  return 1
 }
 
 pub=$(curl -fsS --retry 3 --retry-connrefused --max-time 3 \
   http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)
 myip="${pub:-$(hostname -I | awk '{print $1}')}"
-email="$(read_env_kv ADMIN_EMAIL || true)"
+email="$(read_admin_email || true)"
 PASSWORD="$(read_password || true)"
 
 cat <<EOF
@@ -59,11 +78,11 @@ cat <<EOF
 
 Dashboard: https://${myip}
 Email:     ${email:-admin@paperclip.local}
-Password:  ${PASSWORD:-"(see /opt/paperclip.env INITIAL_PASSWORD)"}
+Password:  ${PASSWORD:-"(see /root/.digitalocean_passwords)"}
 
 Sign in, then complete onboarding in the dashboard (company, agents, goals).
 
-Docs: https://github.com/paperclipai/paperclip
+Docs: https://docs.paperclip.ing/
 EOF
 
 if [ -f "$SETUP_MARKER" ] && [ "${1:-}" != "--force" ]; then
@@ -104,11 +123,12 @@ echo ""
 
 if [ -z "$MODEL_KEY" ]; then
   echo ""
-  echo "Skipped Serverless Inference setup for now."
-  echo "This prompt will run again on the next SSH login until a key is configured."
-  echo "Or run later: /etc/setup_wizard.sh"
+  echo "Skipped Serverless Inference setup."
+  echo "This login prompt will not run again. Configure later with:"
+  echo "  /etc/setup_wizard.sh"
+  echo "  or set MODEL_ACCESS_KEY in /opt/paperclip.env and run /opt/apply-inference-from-env.sh"
   echo ""
-  # Keep the .bashrc hook so reopen / next login asks again
+  remove_first_login_hook
   exit 0
 fi
 
@@ -165,10 +185,10 @@ while true; do
   fi
 
   echo ""
-  echo "Setup skipped for now. Next SSH login will ask again."
-  echo "Or run later: /etc/setup_wizard.sh"
+  echo "Setup skipped. This login prompt will not run again."
+  echo "Configure later with /etc/setup_wizard.sh"
   echo ""
-  # Keep the .bashrc hook so reopen / next login asks again
+  remove_first_login_hook
   exit 0
 done
 
@@ -262,8 +282,8 @@ fi
 
 /opt/apply-inference-from-env.sh
 
-# Re-read credentials so the completion banner always matches MOTD / env file
-email="$(read_env_kv ADMIN_EMAIL || true)"
+# Re-read credentials so the completion banner always matches MOTD
+email="$(read_admin_email || true)"
 PASSWORD="$(read_password || true)"
 
 echo ""
@@ -272,7 +292,7 @@ echo "  Setup complete! Paperclip is ready."
 echo ""
 echo "  Dashboard: https://${myip}"
 echo "  Email:     ${email:-admin@paperclip.local}"
-echo "  Password:  ${PASSWORD:-"(see /opt/paperclip.env INITIAL_PASSWORD)"}"
+echo "  Password:  ${PASSWORD:-"(see /root/.digitalocean_passwords)"}"
 echo "  Default:   ${CHOSEN_LABEL}"
 if [ -n "${ROUTER_NAME:-}" ]; then
   echo "  OpenCode model: digitalocean/router:${ROUTER_NAME}"

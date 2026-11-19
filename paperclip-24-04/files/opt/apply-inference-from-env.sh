@@ -273,23 +273,20 @@ sync_instance_env
 
 # Persist OpenCode provider config for the paperclip user so agent verification
 # (`opencode models` + hello probe) sees DigitalOcean Inference even before
-# Paperclip injects a temporary XDG config.
+# Paperclip injects a temporary XDG config. Keep apiKey as {env:MODEL_ACCESS_KEY}
+# — never write the secret into opencode.json. paperclip.service loads
+# MODEL_ACCESS_KEY from EnvironmentFile, and OpenCode substitutes {env:...}.
 write_paperclip_opencode_config() {
   local conf_dir=/home/paperclip/.config/opencode
   local conf_path="${conf_dir}/opencode.json"
   [ -n "${PROVIDERS_JSON:-}" ] || return 0
   mkdir -p "$conf_dir"
-  PROVIDERS_JSON="$PROVIDERS_JSON" MODEL_ACCESS_KEY="$MODEL_ACCESS_KEY" \
-  PRIMARY_MODEL="$PRIMARY_MODEL" python3 - "$conf_path" <<'PY'
+  PROVIDERS_JSON="$PROVIDERS_JSON" PRIMARY_MODEL="$PRIMARY_MODEL" python3 - "$conf_path" <<'PY'
 import json, os, sys
 path = sys.argv[1]
 providers = json.loads(os.environ["PROVIDERS_JSON"])
-key = os.environ.get("MODEL_ACCESS_KEY", "")
 primary = os.environ.get("PRIMARY_MODEL", "").strip()
-for provider in providers.values():
-    options = provider.get("options") if isinstance(provider, dict) else None
-    if isinstance(options, dict) and options.get("apiKey") == "{env:MODEL_ACCESS_KEY}":
-        options["apiKey"] = key
+# PROVIDERS_JSON already uses "{env:MODEL_ACCESS_KEY}"; leave it unsubstituted.
 doc = {
     "provider": providers,
     "permission": "allow",

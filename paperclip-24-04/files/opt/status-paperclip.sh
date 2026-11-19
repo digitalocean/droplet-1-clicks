@@ -54,7 +54,11 @@ else
   echo "Loopback health: unavailable"
 fi
 echo "Dashboard: https://${DROPLET_IP}"
-if [ -f /opt/paperclip.env ]; then
+if [ -f /root/.digitalocean_passwords ]; then
+  echo "Email:     $(grep -E '^ADMIN_EMAIL=' /root/.digitalocean_passwords | cut -d= -f2-)"
+  echo "Password:  $(grep -E '^INITIAL_PASSWORD=' /root/.digitalocean_passwords | cut -d= -f2-)"
+  echo "Credentials: /root/.digitalocean_passwords"
+elif [ -f /opt/paperclip.env ]; then
   echo "Email:     $(grep -E '^ADMIN_EMAIL=' /opt/paperclip.env | cut -d= -f2-)"
   echo "Password:  $(grep -E '^INITIAL_PASSWORD=' /opt/paperclip.env | cut -d= -f2-)"
 fi

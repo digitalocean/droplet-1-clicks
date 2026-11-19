@@ -83,9 +83,12 @@ SHIM=/home/paperclip/.local/bin/paperclipai
 INSTALL_LOG=/tmp/paperclipai-managed-install.log
 install -d -o paperclip -g paperclip -m 755 /home/paperclip/.local /home/paperclip/.local/bin
 
+# Pin the package via npm (`paperclipai@VERSION`). Do not pass `install
+# --version` — that flag collides with the root CLI `--version` on some
+# builds and can short-circuit before the managed install runs.
 if ! su - paperclip -c "umask 022; PATH=/usr/bin:/bin:\$HOME/.local/bin \
   npm exec --yes --registry=https://registry.npmjs.org --package=paperclipai@${APP_VERSION} -- \
-  paperclipai install --version ${APP_VERSION} --yes" >"$INSTALL_LOG" 2>&1; then
+  paperclipai install --yes" >"$INSTALL_LOG" 2>&1; then
   echo "ERROR: paperclipai install failed for ${APP_VERSION} (see ${INSTALL_LOG})" >&2
   tail -n 120 "$INSTALL_LOG" >&2 || true
   exit 1
@@ -101,7 +104,14 @@ if ! grep -q "exec '/usr/bin/node' " "$SHIM"; then
   echo "ERROR: paperclipai shim is not pinned to /usr/bin/node" >&2
   exit 1
 fi
-su - paperclip -c "PATH=/usr/bin:/bin:\$HOME/.local/bin paperclipai --version" || true
+INSTALLED_VERSION="$(su - paperclip -c "PATH=/usr/bin:/bin:\$HOME/.local/bin paperclipai --version" 2>/dev/null | head -n 1 || true)"
+INSTALLED_VERSION="${INSTALLED_VERSION%% *}"
+INSTALLED_VERSION="${INSTALLED_VERSION#v}"
+if [ "$INSTALLED_VERSION" != "$APP_VERSION" ]; then
+  echo "ERROR: expected paperclipai ${APP_VERSION} after install, got '${INSTALLED_VERSION:-unknown}'" >&2
+  tail -n 80 "$INSTALL_LOG" >&2 || true
+  exit 1
+fi
 echo "Installed managed paperclipai ${APP_VERSION}."
 
 # Materialize env from Packer template (Packer may skip hidden .env files)
@@ -127,6 +137,8 @@ chmod +x /opt/ensure-paperclip-opencode.sh
 chmod +x /opt/setup-paperclip-domain.sh
 chmod +x /opt/write-paperclip-config.sh
 chmod +x /opt/claim-paperclip-admin.sh
+chmod +x /opt/lock-paperclip-signup.sh
+chmod +x /opt/paperclip-lock-signup-when-ready.sh
 chmod +x /opt/apply-inference-from-env.sh
 chmod +x /opt/install-paperclip-inference-ui.sh
 chmod +x /opt/retry-apply-inference-after-cloud-init.sh

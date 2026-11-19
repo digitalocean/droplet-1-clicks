@@ -119,7 +119,7 @@ cat > "$CONFIG_PATH" <<EOF
     }
   },
   "telemetry": {
-    "enabled": true
+    "enabled": false
   },
   "updates": {
     "checkEnabled": true

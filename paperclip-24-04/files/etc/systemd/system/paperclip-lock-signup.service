@@ -1,0 +1,12 @@
+[Unit]
+Description=Lock Paperclip open signup after first admin exists
+After=paperclip.service
+Wants=paperclip.service
+
+[Service]
+Type=simple
+ExecStart=/opt/paperclip-lock-signup-when-ready.sh
+Restart=no
+
+[Install]
+WantedBy=multi-user.target

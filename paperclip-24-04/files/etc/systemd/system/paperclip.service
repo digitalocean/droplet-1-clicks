@@ -1,6 +1,6 @@
 [Unit]
 Description=Paperclip AI Agent Orchestration
-Documentation=https://github.com/paperclipai/paperclip
+Documentation=https://docs.paperclip.ing/
 After=network-online.target postgresql.service
 Wants=network-online.target postgresql.service
 
