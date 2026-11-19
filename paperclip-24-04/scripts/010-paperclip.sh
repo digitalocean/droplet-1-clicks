@@ -60,30 +60,49 @@ useradd -m -s /bin/bash paperclip || true
 mkdir -p /home/paperclip/.local/bin
 chown -R paperclip:paperclip /home/paperclip
 
-# Ensure paperclip user's PATH includes managed shim location
+# Ensure paperclip user's PATH includes managed shim location.
+# umask 022: @paperclipai/server Copilot postinstall rejects group-writable binaries.
 if ! grep -q '\.local/bin' /home/paperclip/.profile 2>/dev/null; then
   cat >> /home/paperclip/.profile <<'EOF'
 export PATH="$HOME/.local/bin:$PATH"
+umask 022
 EOF
+  chown paperclip:paperclip /home/paperclip/.profile
+elif ! grep -qE '^umask 022' /home/paperclip/.profile 2>/dev/null; then
+  printf '\numask 022\n' >> /home/paperclip/.profile
   chown paperclip:paperclip /home/paperclip/.profile
 fi
 
 echo "Installing managed Paperclip CLI (${APP_VERSION})..."
-# Pin via --package=paperclipai@VERSION (do not pass install --version: it collides
-# with the root CLI --version flag). -- keeps npm from eating trailing args.
-su - paperclip -c "PATH=/usr/bin:/bin:\$HOME/.local/bin npm exec --yes --registry=https://registry.npmjs.org --package=paperclipai@${APP_VERSION} -- paperclipai install --yes"
+# Use the official managed installer so install.json / shim stay compatible with
+# `paperclipai update`. umask 022 is required: @paperclipai/server postinstall
+# rejects group-writable Copilot binaries (Ubuntu user umask 002 → 775 →
+# "Copilot executable has unsafe permissions"). Log to a file because Packer
+# often drops Node's block-buffered stdout on failure.
+SHIM=/home/paperclip/.local/bin/paperclipai
+INSTALL_LOG=/tmp/paperclipai-managed-install.log
+install -d -o paperclip -g paperclip -m 755 /home/paperclip/.local /home/paperclip/.local/bin
 
-# Verify managed shim and pin it to /usr/bin/node
-if [ ! -x /home/paperclip/.local/bin/paperclipai ]; then
+if ! su - paperclip -c "umask 022; PATH=/usr/bin:/bin:\$HOME/.local/bin \
+  npm exec --yes --registry=https://registry.npmjs.org --package=paperclipai@${APP_VERSION} -- \
+  paperclipai install --version ${APP_VERSION} --yes" >"$INSTALL_LOG" 2>&1; then
+  echo "ERROR: paperclipai install failed for ${APP_VERSION} (see ${INSTALL_LOG})" >&2
+  tail -n 120 "$INSTALL_LOG" >&2 || true
+  exit 1
+fi
+
+if [ ! -x "$SHIM" ]; then
   echo "ERROR: managed paperclipai shim missing after install" >&2
+  tail -n 80 "$INSTALL_LOG" >&2 || true
   exit 1
 fi
 /opt/ensure-paperclip-node.sh
-if ! grep -q "exec '/usr/bin/node' " /home/paperclip/.local/bin/paperclipai; then
+if ! grep -q "exec '/usr/bin/node' " "$SHIM"; then
   echo "ERROR: paperclipai shim is not pinned to /usr/bin/node" >&2
   exit 1
 fi
 su - paperclip -c "PATH=/usr/bin:/bin:\$HOME/.local/bin paperclipai --version" || true
+echo "Installed managed paperclipai ${APP_VERSION}."
 
 # Materialize env from Packer template (Packer may skip hidden .env files)
 if [ -f /opt/paperclip/env.template ]; then

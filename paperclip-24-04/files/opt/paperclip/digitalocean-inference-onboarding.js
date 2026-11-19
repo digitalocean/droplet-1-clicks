@@ -117,25 +117,96 @@
     return response.json();
   };
 
+  // Host PATH for the paperclip service includes /usr/local/bin, but the
+  // verification hello probe is more reliable with an absolute command. Force
+  // the classic local adapter so Paperclip Runner does not skip the host CLI.
+  const digitalOceanAdapterConfig = () => ({
+    model: config && typeof config.model === "string" ? config.model : "",
+    command: "/usr/local/bin/opencode",
+    dangerouslySkipPermissions: true,
+  });
+
+  const canHireDigitalOcean = () =>
+    Boolean(config && config.enabled === true && isOpenCodeModel(config.model));
+
+  const fetchAgent = async (agentId, companyId) => {
+    const listed = await fetch("/api/companies/" + encodeURIComponent(companyId) + "/agents", {
+      credentials: "include",
+      headers: { Accept: "application/json" },
+    });
+    if (!listed.ok) return null;
+    const agents = await listed.json().catch(() => []);
+    if (!Array.isArray(agents)) return null;
+    return agents.find((agent) => agent && agent.id === agentId) || null;
+  };
+
+  const agentIsReady = (agent) => {
+    if (!agent) return false;
+    const lifecycle = typeof agent.lifecycleState === "string" ? agent.lifecycleState : "";
+    const legacy = typeof agent.status === "string" ? agent.status : "";
+    if (lifecycle === "ready" || lifecycle === "running" || lifecycle === "idle") return true;
+    // Compatibility status "active"/"running" without a failed lifecycle.
+    if (!lifecycle && (legacy === "active" || legacy === "running" || legacy === "idle")) return true;
+    return false;
+  };
+
+  const agentNeedsResume = (agent) => {
+    if (!agent) return false;
+    const lifecycle = typeof agent.lifecycleState === "string" ? agent.lifecycleState : "";
+    const legacy = typeof agent.status === "string" ? agent.status : "";
+    return lifecycle === "paused" || (!lifecycle && legacy === "paused");
+  };
+
+  const agentVerificationFailed = (agent) => {
+    if (!agent) return false;
+    const lifecycle = typeof agent.lifecycleState === "string" ? agent.lifecycleState.toLowerCase() : "";
+    const detail = [
+      agent.lifecycleError,
+      agent.lastError,
+      agent.statusMessage,
+      agent.verificationError,
+    ].filter((value) => typeof value === "string").join(" ").toLowerCase();
+    if (lifecycle.indexOf("fail") !== -1 || lifecycle === "error") return true;
+    if (detail.indexOf("verification") !== -1 && detail.indexOf("fail") !== -1) return true;
+    if (detail.indexOf("execution configuration") !== -1) return true;
+    return false;
+  };
+
   const waitForRunnableAgent = async (agentId, companyId, initialAgent) => {
-    const lifecycle = initialAgent && typeof initialAgent.lifecycleState === "string"
-      ? initialAgent.lifecycleState
-      : "";
-    const legacyStatus = initialAgent && typeof initialAgent.status === "string"
-      ? initialAgent.status
-      : "";
-    // New hires enter preparing/verifying asynchronously. Their compatibility
-    // status is "paused", but they are not actually paused: the lifecycle
-    // worker will transition verifying → ready. Resume is invalid until the
-    // lifecycle state is exactly paused.
-    if (lifecycle === "paused" || (!lifecycle && legacyStatus === "paused")) {
-      status("Starting your DigitalOcean agent…", false);
-      await resumeAgent(agentId, companyId);
+    // New hires enter preparing/verifying asynchronously. Poll until ready.
+    // A failed hello probe leaves the agent paused (Live + paused in the UI)
+    // until Configuration → Run test / Retry now succeeds.
+    status("Verifying your DigitalOcean agent…", false);
+    let agent = initialAgent || null;
+    let resumed = false;
+    const deadline = Date.now() + 120000;
+    while (Date.now() < deadline) {
+      agent = (await fetchAgent(agentId, companyId)) || agent;
+      if (agentIsReady(agent)) return;
+      if (agentVerificationFailed(agent)) {
+        throw new Error(
+          "DigitalOcean agent verification failed. On the Droplet run: sudo /opt/ensure-paperclip-opencode.sh && sudo /opt/apply-inference-from-env.sh && sudo systemctl restart paperclip — then open the agent and click Retry now.",
+        );
+      }
+      if (!resumed && agentNeedsResume(agent)) {
+        try {
+          await resumeAgent(agentId, companyId);
+          resumed = true;
+        } catch {
+          // Resume is invalid while still verifying; keep polling.
+        }
+      }
+      await new Promise((resolve) => window.setTimeout(resolve, 2000));
+    }
+    if (agentNeedsResume(agent) || agentVerificationFailed(agent)) {
+      throw new Error(
+        "DigitalOcean agent stayed paused (verification did not finish). Fix OpenCode/Inference on the host, then click Retry now on the agent page.",
+      );
     }
   };
 
   const connect = async (button) => {
-    if (busy || !config) return;
+    if (busy || !canHireDigitalOcean()) return;
     const draft = readDraft();
     const companyId = draft && typeof draft.createdCompanyId === "string" ? draft.createdCompanyId : "";
     if (!companyId) {
@@ -186,10 +257,8 @@
             name: name,
             role: role,
             adapterType: "opencode_local",
-            adapterConfig: {
-              model: config.model,
-              dangerouslySkipPermissions: true,
-            },
+            runner: "legacy",
+            adapterConfig: digitalOceanAdapterConfig(),
             onboardingFirstAgent: true,
             runtimeConfig: {},
           }),
@@ -393,13 +462,20 @@
         const value = row.querySelector("span.font-mono");
         if (value && value.textContent.trim() === "OpenCode") value.textContent = "DigitalOcean";
       });
+      // Agent header often renders "OpenCode • <name>" as separate or combined nodes.
       const heading = document.querySelector("h1");
-      const header = heading && heading.parentElement;
-      [header, header && header.parentElement].forEach((scope) => {
+      const scopes = [document.querySelector("main"), heading && heading.parentElement, heading && heading.parentElement && heading.parentElement.parentElement];
+      scopes.forEach((scope) => {
         if (!scope) return;
-        scope.querySelectorAll("a, span").forEach((node) => {
-          if (node.childElementCount === 0 && node.textContent.trim() === "OpenCode") {
+        scope.querySelectorAll("a, span, p, div").forEach((node) => {
+          if (node.childElementCount !== 0) return;
+          const text = node.textContent.trim();
+          if (text === "OpenCode") {
             node.textContent = "DigitalOcean";
+            return;
+          }
+          if (text.indexOf("OpenCode •") === 0) {
+            node.textContent = text.replace(/^OpenCode/, "DigitalOcean");
           }
         });
       });
@@ -409,31 +485,47 @@
     // short "OpenCode" label that sits next to a digitalocean/ model. Leave
     // the new-agent OpenCode tile and select options unchanged.
     document.querySelectorAll("a, span, p, dd, div").forEach((node) => {
-      if (node.childElementCount !== 0 || node.textContent.trim() !== "OpenCode") return;
+      if (node.childElementCount !== 0) return;
+      const text = node.textContent.trim();
+      if (text !== "OpenCode" && text.indexOf("OpenCode •") !== 0) return;
       if (node.closest("select, option, fieldset, [" + NEW_AGENT_MARK + "]")) return;
       const dialog = node.closest('[role="dialog"]');
       if (dialog && dialog.textContent.indexOf("Choose an adapter") !== -1) return;
-      const named = node.closest("li, tr, [role='row'], [data-testid='composer-run-settings-view']");
+      const named = node.closest("li, tr, [role='row'], [data-testid='composer-run-settings-view'], header, main");
       const agentName = named
         ? Array.from(named.querySelectorAll("span")).find((span) =>
           String(span.className).indexOf("font-medium") !== -1
         )
         : null;
       const knownAgent = agentName && names.has(agentName.textContent.trim().toLowerCase());
-      if (!knownAgent && !labelSitsWithDigitalOceanModel(node)) return;
-      node.textContent = "DigitalOcean";
+      if (!knownAgent && !viewingDoAgent() && !labelSitsWithDigitalOceanModel(node)) return;
+      node.textContent = text === "OpenCode" ? "DigitalOcean" : text.replace(/^OpenCode/, "DigitalOcean");
     });
+    relabelAgentsTable();
   };
 
   const labelSitsWithDigitalOceanModel = (node) => {
     let parent = node.parentElement;
-    for (let depth = 0; depth < 6 && parent && parent !== document.body; depth += 1) {
+    for (let depth = 0; depth < 8 && parent && parent !== document.body; depth += 1) {
       const text = parent.textContent || "";
-      if (text.length > 500) return false;
+      // Agents table rows can be long; still treat digitalocean/ as a DO agent.
       if (text.indexOf("digitalocean/") !== -1 || text.indexOf("DigitalOcean ·") !== -1) return true;
       parent = parent.parentElement;
     }
     return false;
+  };
+
+  // Agents list Harness column shows the adapter name ("OpenCode") beside the
+  // Default model column (digitalocean/...). Relabel those rows explicitly.
+  const relabelAgentsTable = () => {
+    document.querySelectorAll("table tbody tr, [role='row']").forEach((row) => {
+      const text = row.textContent || "";
+      if (text.indexOf("digitalocean/") === -1 && text.indexOf("DigitalOcean ·") === -1) return;
+      row.querySelectorAll("a, span, p, td, div").forEach((node) => {
+        if (node.childElementCount !== 0) return;
+        if (node.textContent.trim() === "OpenCode") node.textContent = "DigitalOcean";
+      });
+    });
   };
 
   const agentNameFromDialog = () => {
@@ -447,7 +539,7 @@
   };
 
   const hireNewAgent = async (button) => {
-    if (newAgentBusy || !config) return;
+    if (newAgentBusy || !canHireDigitalOcean()) return;
     const name = agentNameFromDialog();
     if (!name) {
       status("Enter an agent name, then choose DigitalOcean.", true);
@@ -481,10 +573,8 @@
           role: existing.length ? "general" : "ceo",
           reportsTo: leader ? leader.id : undefined,
           adapterType: "opencode_local",
-          adapterConfig: {
-            model: config.model,
-            dangerouslySkipPermissions: true,
-          },
+          runner: "legacy",
+          adapterConfig: digitalOceanAdapterConfig(),
           runtimeConfig: {},
         }),
       });
@@ -600,10 +690,13 @@
   };
 
   const scan = () => {
-    if (!config) return;
-    const group = document.querySelector('[role="radiogroup"][aria-label="Model source"]');
-    if (group) paint(group);
-    paintNewAgent();
+    // Onboarding tiles need a configured DO model; list/header relabeling should
+    // still run whenever digitalocean/ agents are visible.
+    if (config && config.enabled === true && isOpenCodeModel(config.model)) {
+      const group = document.querySelector('[role="radiogroup"][aria-label="Model source"]');
+      if (group) paint(group);
+      paintNewAgent();
+    }
     refreshDoAgents();
     relabelDigitalOcean();
   };
@@ -653,10 +746,15 @@
   fetch("/digitalocean-inference.json", { cache: "no-store", credentials: "same-origin" })
     .then((response) => (response.ok ? response.json() : null))
     .then((data) => {
-      if (!data || data.enabled !== true || !isOpenCodeModel(data.model)) return;
-      config = data;
+      config = data && typeof data === "object" ? data : { enabled: false, model: "" };
+      // Always start: agents list / headers still need OpenCode → DigitalOcean
+      // relabeling even when the onboarding tile is hidden.
       if (document.body) start();
       else document.addEventListener("DOMContentLoaded", start);
     })
-    .catch(() => {});
+    .catch(() => {
+      config = { enabled: false, model: "" };
+      if (document.body) start();
+      else document.addEventListener("DOMContentLoaded", start);
+    });
 })();

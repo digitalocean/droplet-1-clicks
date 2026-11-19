@@ -25,7 +25,7 @@ Paperclip looks like a task manager. Under the hood it provides org charts, budg
 
 ## System Requirements
 
-Paperclip runs the Node.js server and local PostgreSQL on the host. Prefer at least 4 GB RAM.
+Paperclip runs the Node.js server and local PostgreSQL on the host. Prefer at least 4 GB RAM for deployed Droplets. Packer image builds use an 8 GB Droplet (`s-4vcpu-8gb` in `template.json`) only during bake; that size is not the Marketplace runtime minimum.
 
 | Use Case | RAM | CPU | Storage |
 |----------|-----|-----|---------|
@@ -70,7 +70,31 @@ cat /root/paperclip_info.txt
 
 If you passed `MODEL_ACCESS_KEY` as a droplet environment variable, first boot configures Serverless Inference and skips the wizard. Otherwise the first-login wizard asks for a key. Create keys at https://cloud.digitalocean.com/model-studio/manage-keys (Inference > Manage > Create Model Access Key). `MODEL_ACCESS_KEY` is optional.
 
-After the key is applied, the onboarding "Connect a model" step shows DigitalOcean Inference next to Claude and OpenAI. Choosing it hires the agent on OpenCode with `digitalocean/<model>` (or `digitalocean/router:<name>`) and does not ask for a subscription or a pasted key.
+After the key is applied, the onboarding "Connect a model" step shows DigitalOcean Inference next to Claude and OpenAI. Choosing it hires an agent that uses the OpenCode CLI under the hood with model `digitalocean/<model>` (or `digitalocean/router:<name>`). The UI labels that agent **DigitalOcean**; it does not ask for a subscription or a pasted key.
+
+If you see **Agent verification failed** / **Execution configuration check failed**, or the agent stays **Live** and **paused**, the host hello probe could not run OpenCode against Inference. Tasks stay queued until verification passes. On the Droplet:
+
+```bash
+# OpenCode CLI must exist for the paperclip service
+/usr/local/bin/opencode --version
+sudo /opt/ensure-paperclip-opencode.sh
+
+# Inference env + OpenCode provider config, then restart Paperclip
+grep -E '^(MODEL_ACCESS_KEY|PAPERCLIP_OPENCODE_PROVIDERS|OPENCODE_ALLOW_ALL_MODELS)=' /opt/paperclip.env
+sudo /opt/apply-inference-from-env.sh
+sudo systemctl daemon-reload
+sudo systemctl restart paperclip
+
+# Sanity-check the probe the UI runs (as the paperclip user)
+sudo -u paperclip -H env PATH=/usr/bin:/bin:/usr/local/bin \
+  /usr/local/bin/opencode models | head
+sudo -u paperclip -H env PATH=/usr/bin:/bin:/usr/local/bin \
+  /usr/local/bin/opencode run --format json --model digitalocean/<your-model> <<<'Respond with hello.'
+```
+
+Then open the agent → **Configuration** → set **Command** to `/usr/local/bin/opencode` if blank → **Harness / Runtime** → **Run test**, or click **Retry now**. After an image upgrade, hire a **new** DigitalOcean agent so the 1-Click pins `command` and the legacy local runner automatically.
+
+The Agents list **Harness** column still stores adapter type `opencode_local` internally; the Marketplace UI script relabels it to **DigitalOcean** when the default model is `digitalocean/...`.
 
 Codex can still use the raw model id with `OPENAI_BASE_URL=https://inference.do-ai.run/v1` when you did not set a separate `OPENAI_API_KEY`.
 

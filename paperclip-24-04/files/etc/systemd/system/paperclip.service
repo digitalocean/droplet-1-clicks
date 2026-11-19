@@ -17,6 +17,9 @@ Environment=PAPERCLIP_OPEN_ON_LISTEN=false
 Environment=TRUST_PROXY=1
 # /usr/bin first so child processes resolve the NodeSource binary, not a copy under ~/.local or /usr/local.
 Environment=PATH=/usr/bin:/bin:/home/paperclip/.local/bin:/usr/local/bin
+# Pin OpenCode for agent verification / hello probes (opencode_local + DigitalOcean Inference).
+Environment=PAPERCLIP_OPENCODE_COMMAND=/usr/local/bin/opencode
+Environment=OPENCODE_ALLOW_ALL_MODELS=true
 EnvironmentFile=-/opt/paperclip.env
 EnvironmentFile=-/home/paperclip/.paperclip/instances/default/.env
 # Upgrade or refuse start when /usr/bin/node is older than 24.22.3. "+" runs this as root.

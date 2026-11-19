@@ -57,6 +57,8 @@ make build-paperclip-24-04
 # or: packer build paperclip-24-04/template.json
 ```
 
+Packer builds on an 8 GB Droplet (`s-4vcpu-8gb` in `template.json`) so the managed CLI npm install has enough headroom. Deployed Marketplace Droplets can still use the 4 GB minimum from the listing.
+
 ## What Gets Installed
 
 - **Paperclip** managed CLI (`paperclipai@2026.1117.0` from `application_version` in `template.json`)

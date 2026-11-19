@@ -271,6 +271,41 @@ print(json.dumps({
 write_opencode_provider_env "$ENV_FILE"
 sync_instance_env
 
+# Persist OpenCode provider config for the paperclip user so agent verification
+# (`opencode models` + hello probe) sees DigitalOcean Inference even before
+# Paperclip injects a temporary XDG config.
+write_paperclip_opencode_config() {
+  local conf_dir=/home/paperclip/.config/opencode
+  local conf_path="${conf_dir}/opencode.json"
+  [ -n "${PROVIDERS_JSON:-}" ] || return 0
+  mkdir -p "$conf_dir"
+  PROVIDERS_JSON="$PROVIDERS_JSON" MODEL_ACCESS_KEY="$MODEL_ACCESS_KEY" \
+  PRIMARY_MODEL="$PRIMARY_MODEL" python3 - "$conf_path" <<'PY'
+import json, os, sys
+path = sys.argv[1]
+providers = json.loads(os.environ["PROVIDERS_JSON"])
+key = os.environ.get("MODEL_ACCESS_KEY", "")
+primary = os.environ.get("PRIMARY_MODEL", "").strip()
+for provider in providers.values():
+    options = provider.get("options") if isinstance(provider, dict) else None
+    if isinstance(options, dict) and options.get("apiKey") == "{env:MODEL_ACCESS_KEY}":
+        options["apiKey"] = key
+doc = {
+    "provider": providers,
+    "permission": "allow",
+}
+if primary:
+    doc["small_model"] = "digitalocean/" + primary
+with open(path, "w", encoding="utf-8") as handle:
+    json.dump(doc, handle, indent=2)
+    handle.write("\n")
+PY
+  chown -R paperclip:paperclip /home/paperclip/.config
+  chmod 700 "$conf_dir"
+  chmod 600 "$conf_path"
+}
+write_paperclip_opencode_config
+
 mkdir -p /opt/paperclip
 printf '%s\n' "digitalocean" > "$SETUP_MARKER"
 chmod 600 "$SETUP_MARKER"
