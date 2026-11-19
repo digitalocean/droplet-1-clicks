@@ -127,6 +127,10 @@ ssh arch@<ip> '
   sudo grep -q "machine-id=$(cat /etc/machine-id)" /boot/limine.conf && echo limine-ok
   sudo ls -d /boot/*/ | grep -c .                 # expect 3: current id, EFI, loader
   echo $OMARCHY_PATH                              # expect /usr/share/omarchy
+  # No build-time snapshots or build password hashes may ship. Run these
+  # BEFORE omarchy-update below, which takes a new snapshot of its own.
+  sudo snapper --csvout -c root list --columns number | grep -cvx -e number -e 0  # expect 0
+  sudo awk -F: "\$1==\"root\"{print \$2}" /etc/shadow   # expect !* (no build hash)
   omarchy-update -y                               # must complete unattended
 '
 ```

@@ -5,6 +5,18 @@
 # o.launch_on_start).
 set -euo pipefail
 
+echo "==> Clearing the build password hashes before anything snapshots /"
+# The ISO autoinstall gives root and arch the build password (cidata
+# root_enc_password/enc_password). This script runs first, before
+# 045-omarchy-update.sh, whose omarchy-update takes a snapper snapshot of /.
+# Clearing the hashes here keeps them out of that snapshot as well as the live
+# /etc/shadow. '*' matches no password; key auth and NOPASSWD sudo use neither.
+# usermod refreshes /etc/shadow- with the old hashes, so delete the backups.
+# 900-cleanup.sh repeats this and deletes all build-time snapper snapshots.
+sudo usermod -p '*' root
+sudo usermod -p '*' arch
+sudo rm -f /etc/shadow- /etc/gshadow-
+
 echo "==> Disabling dead-hardware services"
 sudo systemctl disable --now \
   bluetooth.service cups.service cups.socket cups.path \
