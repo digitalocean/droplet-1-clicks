@@ -1,0 +1,22 @@
+[Unit]
+Description=hypr-rdp remote desktop for the Omarchy session
+Documentation=https://github.com/MuNeNICK/hypr-rdp
+# The server attaches to the running compositor rather than starting one, so it
+# cannot come up before the session exists and must go away with it.
+After=graphical-session.target
+PartOf=graphical-session.target
+# The password lives in /run, which is tmpfs. Its absence means one of two
+# things, and the same behaviour is right for both: setup has never run, or the
+# droplet has rebooted and the secret went with the RAM that held it. Either
+# way nothing should listen on the public IP until a human re-arms it with
+# omarchy-rdp-password over SSH.
+ConditionPathExists=/run/hypr-rdp/password
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/omarchy-rdp-server
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=graphical-session.target

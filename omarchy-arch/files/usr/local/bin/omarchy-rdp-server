@@ -1,0 +1,40 @@
+#!/bin/bash
+#
+# Launch hypr-rdp against the running Omarchy session. This exists as a script
+# rather than an ExecStart line so that tuning can be changed on a live droplet
+# by editing /etc/hypr-rdp/options, with no unit file edits and no daemon-reload.
+set -euo pipefail
+
+CONF_DIR=/etc/hypr-rdp
+RUN_DIR=/run/hypr-rdp
+
+# The certificate is long-lived and identifies the droplet, so it stays on disk:
+# regenerating it every boot would make every client re-prompt to trust a new
+# fingerprint, training users to click through exactly the warning that would
+# otherwise catch an impostor. The password is the opposite, and lives in tmpfs.
+for f in "$CONF_DIR/tls.crt" "$CONF_DIR/tls.key" "$RUN_DIR/password"; do
+  [[ -r $f ]] || {
+    echo "hypr-rdp: $f is missing or unreadable; run omarchy-rdp-password" >&2
+    exit 1
+  }
+done
+
+# Defaults, overridable from the options file. BIND is a variable rather than
+# something appended to OPTIONS because hypr-rdp rejects a repeated --bind
+# outright ("cannot be used multiple times"), so a second one cannot win.
+BIND="0.0.0.0:3389"
+OPTIONS=""
+# shellcheck source=/dev/null
+[[ -r $CONF_DIR/options ]] && source "$CONF_DIR/options"
+
+# --password-file, not --password: the password would otherwise sit in
+# /proc/<pid>/cmdline, readable by every user on the droplet.
+# shellcheck disable=SC2086
+# (OPTIONS is deliberately word-split; it holds whole flags, not one value.)
+exec /usr/local/bin/hypr-rdp \
+  --bind "$BIND" \
+  --cert "$CONF_DIR/tls.crt" \
+  --key "$CONF_DIR/tls.key" \
+  --username omarchy \
+  --password-file "$RUN_DIR/password" \
+  $OPTIONS
