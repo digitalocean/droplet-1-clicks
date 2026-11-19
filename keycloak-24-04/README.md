@@ -128,6 +128,7 @@ Your Droplet is not automatically added to the Managed Database's trusted source
 
 - UFW firewall allows SSH (port 22, rate limited), Nginx (ports 80 and 443; 443 is for Certbot/domain HTTPS), and Keycloak (ports 8443 and 9000)
 - Keycloak runs in a Docker container (`docker logs keycloak` to view logs)
+- **CVE-2026-114938 (Java4Shell):** the Keycloak image overlays **Amazon Corretto 21.0.13.1.2** (replaces vulnerable Red Hat OpenJDK). Packer verifies the tarball checksum and version; first boot deletes `/var/digitalocean/corretto.tar.gz` after the image build to reclaim disk. Confirm with `docker exec keycloak java -version` (expect `21.0.13.1` / `Corretto-21.0.13.1.2`). Host packages (PostgreSQL, Nginx, Certbot) do not use Java and are unaffected.
 - Nginx on port 80 redirects browsers to Keycloak HTTPS on **8443**; Keycloak does **not** enable `KC_PROXY_HEADERS` because **8443** is reachable directly from the Internet (forwarding headers would be spoofable on that path)
 - Passwords are shown in the message of the day (MOTD) on SSH login and saved in `/root/.digitalocean_passwords` (root-only **600**)
 - The Keycloak Dockerfile is at `/var/digitalocean/Dockerfile`

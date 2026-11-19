@@ -4,6 +4,8 @@
 set -euo pipefail
 
 : "${application_version:?application_version must be set}"
+: "${corretto_version:?corretto_version must be set}"
+: "${corretto_md5:?corretto_md5 must be set}"
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 KEYCLOAK_DIR=$(cd "$SCRIPT_DIR/.." && pwd)
@@ -62,6 +64,82 @@ run_regression_checks() {
 
   if grep -q "KEYCLOAK_VERSION_PLACEHOLDER" "$df_resolved"; then
     echo "regression: Dockerfile still contains KEYCLOAK_VERSION_PLACEHOLDER after substitute" >&2
+    return 1
+  fi
+
+  # CVE-2026-114938 (Java4Shell): Corretto 21.0.13.1+ via busybox extract (no dnf/grep).
+  if [[ "$corretto_version" != 21.0.13.1* ]]; then
+    echo "regression: corretto_version must be 21.0.13.1+ (got ${corretto_version})" >&2
+    return 1
+  fi
+  if [[ ! "$corretto_md5" =~ ^[0-9a-f]{32}$ ]]; then
+    echo "regression: corretto_md5 must be a 32-char hex digest (got ${corretto_md5})" >&2
+    return 1
+  fi
+  if ! grep -qE '^FROM busybox:1\.36' "$df_resolved"; then
+    echo "regression: Dockerfile must FROM busybox:1.36* for offline tar extract" >&2
+    return 1
+  fi
+  if ! grep -q 'COPY corretto.tar.gz /tmp/corretto.tar.gz' "$df_resolved"; then
+    echo "regression: Dockerfile must COPY Packer-fetched corretto.tar.gz" >&2
+    return 1
+  fi
+  if ! grep -q 'JAVA_HOME=/opt/java/corretto-21' "$df_resolved"; then
+    echo "regression: Dockerfile must set JAVA_HOME=/opt/java/corretto-21" >&2
+    return 1
+  fi
+  if [ "$(grep -c '\*21.0.13.1\*)' "$df_resolved")" -lt 2 ]; then
+    echo "regression: Dockerfile must case-assert java -version *21.0.13.1* at least twice" >&2
+    return 1
+  fi
+  if strip_shell_comments "$df_resolved" | grep -qE '(^|[[:space:]])grep([[:space:]]|$)'; then
+    echo "regression: Dockerfile must not invoke grep (may be missing on ubi-micro)" >&2
+    return 1
+  fi
+  if strip_shell_comments "$df_resolved" | grep -qE '(^|[[:space:]])(micro)?dnf([[:space:]]|$)'; then
+    echo "regression: Dockerfile must not use dnf/microdnf (first-boot repo dependency)" >&2
+    return 1
+  fi
+
+  if ! grep -q 'trap unlock_ssh EXIT' "$ONBOOT"; then
+    echo "regression: onboot must trap unlock_ssh EXIT so ForceCommand is cleared on failure" >&2
+    return 1
+  fi
+  if ! grep -q 'rm -f /var/digitalocean/corretto.tar.gz' "$ONBOOT"; then
+    echo "regression: onboot must remove corretto.tar.gz after successful docker build" >&2
+    return 1
+  fi
+  if grep -q 'JAVA_OPTS_APPEND' "$ONBOOT"; then
+    echo "regression: onboot must not use JAVA_OPTS_APPEND mitigation when Corretto 21.0.13.1+ is shipped" >&2
+    return 1
+  fi
+  # Packer uploads scripts to /tmp, so KEYCLOAK_DIR/scripts/01-*.sh is not on the guest.
+  # Assert the Packer artifacts instead; fall back to repo script content for local/CI.
+  SCRIPT_01="$KEYCLOAK_DIR/scripts/01-keycloak.sh"
+  if [ -f /var/digitalocean/corretto.tar.gz ]; then
+    if ! echo "${corretto_md5}  /var/digitalocean/corretto.tar.gz" | md5sum -c - >/dev/null; then
+      echo "regression: /var/digitalocean/corretto.tar.gz failed md5sum (${corretto_md5})" >&2
+      return 1
+    fi
+    if ! docker image inspect busybox:1.36.1 >/dev/null 2>&1; then
+      echo "regression: busybox:1.36.1 image must be pre-pulled on the Packer guest" >&2
+      return 1
+    fi
+  elif [ -f "$SCRIPT_01" ]; then
+    if ! grep -q 'corretto.tar.gz' "$SCRIPT_01"; then
+      echo "regression: 01-keycloak.sh must download corretto.tar.gz at Packer time" >&2
+      return 1
+    fi
+    if ! grep -q 'md5sum -c' "$SCRIPT_01"; then
+      echo "regression: 01-keycloak.sh must md5sum-check Corretto tarball" >&2
+      return 1
+    fi
+    if ! grep -q 'busybox:1.36' "$SCRIPT_01"; then
+      echo "regression: 01-keycloak.sh must pre-pull busybox:1.36*" >&2
+      return 1
+    fi
+  else
+    echo "regression: missing /var/digitalocean/corretto.tar.gz and $SCRIPT_01" >&2
     return 1
   fi
 
