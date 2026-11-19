@@ -22,14 +22,62 @@ patch_web_templates_http_listeners() {
   local web_template="${DISCOURSE_ROOT}/templates/web.template.yml"
   local web_ssl="${DISCOURSE_ROOT}/templates/web.ssl.template.yml"
   [ -f "${web_template}" ] || return 0
-  sed -i \
-    -e 's/echo "listen 80;\\nlisten \[::\]:80;"/echo -e "listen 80;\\nlisten [::]:80;\\nhttp2 off;"/' \
-    "${web_template}"
+  if grep -F 'http2 off' "${web_template}" >/dev/null 2>&1; then
+    :
+  else
+    sed -i \
+      -e 's/echo "listen 80;\\nlisten \[::\]:80;"/echo -e "listen 80;\\nlisten [::]:80;\\nhttp2 off;"/' \
+      "${web_template}"
+  fi
   if [ -f "${web_ssl}" ]; then
-    if ! grep -B3 'return 301 https' "${web_ssl}" | grep 'http2 off' >/dev/null 2>&1; then
-      sed -i '0,/listen \[::\]:80;/{/listen \[::\]:80;/a\          http2 off;
-}' "${web_ssl}"
-    fi
+    python3 - "${web_ssl}" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+
+def server_block_at(text: str, idx: int) -> tuple[int, int] | None:
+    start = text.rfind("server {", 0, idx)
+    if start < 0:
+        return None
+    depth = 0
+    j = start
+    while j < len(text):
+        if text.startswith("server {", j):
+            depth += 1
+            j += len("server {")
+            continue
+        if text[j] == "{":
+            depth += 1
+        elif text[j] == "}":
+            depth -= 1
+            if depth == 0:
+                return start, j + 1
+        j += 1
+    return None
+
+
+path = Path(sys.argv[1])
+text = path.read_text()
+needle = "return 301 https"
+idx = text.find(needle)
+if idx < 0:
+    sys.exit(0)
+span = server_block_at(text, idx)
+if not span:
+    sys.exit(0)
+start, end = span
+block = text[start:end]
+if re.search(r"^[ \t]*http2[ \t]+(on|off)\s*;", block, re.M):
+    sys.exit(0)
+listen_v6 = re.search(r"^([ \t]*)listen \[::\]:80;\s*$", block, re.M)
+if not listen_v6:
+    sys.exit(0)
+indent = listen_v6.group(1)
+insert = f"{listen_v6.group(0)}\n{indent}http2 off;"
+block_new = block[: listen_v6.start()] + insert + block[listen_v6.end() :]
+path.write_text(text[:start] + block_new + text[end:])
+PY
   fi
 }
 
@@ -84,6 +132,11 @@ patch_discourse_samples
 if [ -f "${WEB_SSL_TEMPLATE}" ] && grep -v '^[[:space:]]*#' "${WEB_SSL_TEMPLATE}" | grep -E 'http2[[:space:]]+on' >/dev/null; then
   echo "ERROR: ${WEB_SSL_TEMPLATE} still enables http2 on" >&2
   exit 1
+fi
+
+if [ -x /opt/digitalocean_discourse/discourse-template-nginx2root-checks.py ]; then
+  python3 /opt/digitalocean_discourse/discourse-template-nginx2root-checks.py \
+    "${WEB_SSL_TEMPLATE}" "${LE_SSL_TEMPLATE}"
 fi
 
 echo "discourse mitigate-nginx2root: templates patched (HTTP/2 disabled on :80/:443)"

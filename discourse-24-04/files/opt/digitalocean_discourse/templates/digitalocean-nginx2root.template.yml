@@ -23,6 +23,23 @@ run:
           /etc/nginx/conf.d/outlets/discourse
         )
 
+        dedupe_http2_directives() {
+          local f="${1:?file}"
+          [ -f "${f}" ] || return 0
+          awk '
+            /^[[:space:]]*#/ { print; next }
+            /^[[:space:]]*http2[[:space:]]+(on|off);/ {
+              if (!seen++) {
+                sub(/http2[[:space:]]+(on|off);/, "http2 off;")
+                print
+              }
+              next
+            }
+            { print }
+          ' "${f}" >"${f}.do-http2.tmp"
+          mv "${f}.do-http2.tmp" "${f}"
+        }
+
         patch_file() {
           local f="${1:?file}"
           [ -f "${f}" ] || return 0
@@ -31,6 +48,7 @@ run:
             -e 's/([[:space:]]listen[^;[:space:]]*)[[:space:]]+http2/\1/g' \
             -e 's/http2[[:space:]]+ssl/ssl/g' \
             "${f}"
+          dedupe_http2_directives "${f}"
         }
 
         for root in "${conf_roots[@]}"; do
@@ -38,15 +56,6 @@ run:
           while IFS= read -r f; do
             patch_file "${f}"
           done < <(find "${root}" -type f -name '*.conf' 2>/dev/null || true)
-        done
-
-        for f in /etc/nginx/conf.d/outlets/before-server/*.conf \
-                 /etc/nginx/conf.d/outlets/server/*.conf \
-                 /etc/nginx/conf.d/outlets/discourse/*.conf; do
-          [ -f "${f}" ] || continue
-          if ! grep -E '^[[:space:]]*http2[[:space:]]+(on|off);' "${f}" >/dev/null 2>&1; then
-            printf '\nhttp2 off;\n' >>"${f}"
-          fi
         done
 
         _nginx_test=$(

@@ -12,6 +12,7 @@ require_installed() {
 
 ALPN_LIB=$(require_installed "/var/lib/digitalocean/nginx2root-alpn-check.sh")
 MITIGATE=$(require_installed "/opt/digitalocean_discourse/mitigate-nginx2root.sh")
+TEMPLATE_CHK=$(require_installed "/opt/digitalocean_discourse/discourse-template-nginx2root-checks.py")
 VERIFY=$(require_installed "/opt/digitalocean_discourse/verify-container-nginx2root.sh")
 SETUP=$(require_installed "/opt/digitalocean_discourse/setup_discourse.sh")
 WEB_SSL=$(require_installed "/var/discourse/templates/web.ssl.template.yml")
@@ -21,6 +22,7 @@ SAMPLES=$(require_installed "/var/discourse/samples/standalone.yml")
 bash -n "${MITIGATE}"
 bash -n "${VERIFY}"
 bash -n "${SETUP}"
+python3 -m py_compile "${TEMPLATE_CHK}"
 # shellcheck source=/dev/null
 source "${ALPN_LIB}"
 
@@ -61,6 +63,8 @@ if [ "${sample_count}" -gt 1 ]; then
   echo "regression: samples/standalone.yml lists digitalocean template more than once" >&2
   exit 1
 fi
+
+python3 "${TEMPLATE_CHK}" "${WEB_SSL}" /var/discourse/templates/web.letsencrypt.ssl.template.yml
 
 if command -v python3 >/dev/null 2>&1; then
   if ! python3 -c 'import yaml' 2>/dev/null; then
