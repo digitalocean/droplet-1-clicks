@@ -269,7 +269,7 @@
 
     const tag = Array.from(button.querySelectorAll("span")).find((span) => {
       const text = span.textContent.trim();
-      // v2026.916.1 used "API". v2026.1023.0 uses "API key" and can show
+      // Older builds used "API". Current UI uses "API key" and can show
       // "Custom Gateway" on an advanced source.
       return text === "API" || text === "API key" || text === "Subscription" || text === "Custom Gateway" || text === "Inference";
     });

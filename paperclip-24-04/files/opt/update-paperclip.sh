@@ -3,8 +3,8 @@
 #
 # Usage:
 #   /opt/update-paperclip.sh                 # latest stable
-#   /opt/update-paperclip.sh 2026.1023.0      # exact version
-#   /opt/update-paperclip.sh v2026.1023.0     # same (v stripped)
+#   /opt/update-paperclip.sh 2026.1117.0      # exact version
+#   /opt/update-paperclip.sh v2026.1117.0     # same (v stripped)
 #   /opt/update-paperclip.sh --rollback      # previous managed payload
 
 set -euo pipefail
@@ -28,7 +28,7 @@ usage() {
 Usage: /opt/update-paperclip.sh [version|--rollback]
 
   (no args) / latest   Update to the latest stable managed release
-  2026.1023.0          Install that exact published version
+  2026.1117.0          Install that exact published version
   --rollback           Roll back to the previous managed CLI payload
 
 PAPERCLIP_VERSION in /opt/paperclip.env is updated after a successful pin.

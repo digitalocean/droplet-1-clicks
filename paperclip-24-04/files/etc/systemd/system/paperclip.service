@@ -19,7 +19,7 @@ Environment=TRUST_PROXY=1
 Environment=PATH=/usr/bin:/bin:/home/paperclip/.local/bin:/usr/local/bin
 EnvironmentFile=-/opt/paperclip.env
 EnvironmentFile=-/home/paperclip/.paperclip/instances/default/.env
-# Upgrade or refuse start when /usr/bin/node is older than 24.22.1. "+" runs this as root.
+# Upgrade or refuse start when /usr/bin/node is older than 24.22.3. "+" runs this as root.
 ExecStartPre=+/opt/ensure-paperclip-node.sh
 # --force allows the system unit to run even if a user-service manager check fires
 ExecStart=/home/paperclip/.local/bin/paperclipai run --force

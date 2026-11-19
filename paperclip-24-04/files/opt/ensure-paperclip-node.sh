@@ -1,5 +1,5 @@
 #!/bin/bash
-# Keep Paperclip on /usr/bin/node >= 24.22.1.
+# Keep Paperclip on /usr/bin/node >= 24.22.3 (Node.js 24 LTS security floor).
 #
 # Image bake, first boot, update, and the systemd unit all call this before
 # paperclipai runs. A newer NodeSource 24.x package is installed when the
@@ -8,7 +8,7 @@
 set -euo pipefail
 
 NODE_BIN=/usr/bin/node
-NODE_FLOOR=24.22.1
+NODE_FLOOR=24.22.3
 SHIM=/home/paperclip/.local/bin/paperclipai
 SHIM_MARKER="paperclipai managed install shim v1"
 

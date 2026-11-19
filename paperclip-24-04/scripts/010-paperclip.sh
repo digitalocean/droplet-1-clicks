@@ -1,13 +1,13 @@
 #!/bin/bash
 set -euo pipefail
 
-APP_VERSION="${application_version:-2026.1023.0}"
+APP_VERSION="${application_version:-2026.1117.0}"
 # Normalize optional leading "v" from release tags
 APP_VERSION="${APP_VERSION#v}"
 
 export DEBIAN_FRONTEND=noninteractive
 
-# Node.js >=24.22.1 at /usr/bin/node before paperclipai install pins the shim.
+# Node.js >=24.22.3 at /usr/bin/node before paperclipai install pins the shim.
 chmod +x /opt/ensure-paperclip-node.sh
 /opt/ensure-paperclip-node.sh
 chmod +x /opt/ensure-paperclip-opencode.sh
@@ -69,7 +69,9 @@ EOF
 fi
 
 echo "Installing managed Paperclip CLI (${APP_VERSION})..."
-su - paperclip -c "PATH=/usr/bin:/bin:\$HOME/.local/bin npx --registry https://registry.npmjs.org paperclipai install --version ${APP_VERSION} --yes"
+# Pin via --package=paperclipai@VERSION (do not pass install --version: it collides
+# with the root CLI --version flag). -- keeps npm from eating trailing args.
+su - paperclip -c "PATH=/usr/bin:/bin:\$HOME/.local/bin npm exec --yes --registry=https://registry.npmjs.org --package=paperclipai@${APP_VERSION} -- paperclipai install --yes"
 
 # Verify managed shim and pin it to /usr/bin/node
 if [ ! -x /home/paperclip/.local/bin/paperclipai ]; then

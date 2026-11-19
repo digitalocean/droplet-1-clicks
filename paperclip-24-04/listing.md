@@ -35,8 +35,8 @@ Paperclip runs the Node.js server and local PostgreSQL on the host. Prefer at le
 ## Included System Components
 
 - **Ubuntu 24.04 LTS**
-- **Paperclip** `2026.1023.0` (managed CLI install, version pinned in the image build)
-- **Node.js 24.22.1 or later** at `/usr/bin/node`. Paperclip will not start on an older Node, and first boot and updates install a newer NodeSource 24.x package when needed.
+- **Paperclip** `2026.1117.0` (managed CLI install, version pinned in the image build)
+- **Node.js 24.22.3 or later** at `/usr/bin/node`. Paperclip will not start on an older Node, and first boot and updates install a newer NodeSource 24.x package when needed.
 - **OpenCode CLI** at `/usr/local/bin/opencode`, required for DigitalOcean Inference agent verification.
 - **PostgreSQL** (local; required for authenticated/public deployments)
 - **Caddy** reverse proxy (ports 80/443 → `127.0.0.1:3100`)
@@ -107,7 +107,7 @@ sudo systemctl restart paperclip
 | Restart | `/opt/restart-paperclip.sh` |
 | Status | `/opt/status-paperclip.sh` |
 | Update (latest) | `sudo /opt/update-paperclip.sh` |
-| Update (specific version) | `sudo /opt/update-paperclip.sh 2026.1023.0` |
+| Update (specific version) | `sudo /opt/update-paperclip.sh 2026.1117.0` |
 | Rollback | `sudo /opt/update-paperclip.sh --rollback` |
 | Domain TLS | `/opt/setup-paperclip-domain.sh` |
 | Apply DO inference | `/opt/apply-inference-from-env.sh` |
@@ -122,7 +122,7 @@ sudo systemctl restart paperclip
 sudo /opt/update-paperclip.sh
 
 # Install a specific version
-sudo /opt/update-paperclip.sh 2026.1023.0
+sudo /opt/update-paperclip.sh 2026.1117.0
 
 # Roll back to the previous managed CLI payload
 sudo /opt/update-paperclip.sh --rollback

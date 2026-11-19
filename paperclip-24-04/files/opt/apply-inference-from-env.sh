@@ -8,7 +8,7 @@
 #   PAPERCLIP_OPENCODE_SMALL_MODEL     digitalocean/<model>
 #   OPENCODE_ALLOW_ALL_MODELS=true
 #
-# paperclipai@2026.1023.0 has no llm.baseUrl in config.json. The onboarding
+# paperclipai@2026.1117.0 has no llm.baseUrl in config.json. The onboarding
 # "Connect a model" step gains a DigitalOcean Inference tile that hires
 # OpenCode on digitalocean/<id>. The key stays in this env file.
 # Returns 0 when a key was applied; 1 when skipped.

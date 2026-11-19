@@ -4,7 +4,7 @@
     "image_name": "paperclip-24-04-snapshot-{{timestamp}}",
     "apt_packages": "procps file apt-transport-https ca-certificates curl software-properties-common git jq unzip openssl ufw gnupg fail2ban python3 postgresql",
     "application_name": "Paperclip",
-    "application_version": "2026.1023.0"
+    "application_version": "2026.1117.0"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
