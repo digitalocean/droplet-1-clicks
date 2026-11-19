@@ -30,7 +30,7 @@ echo "==> Unattended updates: silence sudo -v (omarchy-update validates credenti
 # omarchy-update -y. verifypw=any succeeds via our NOPASSWD:ALL rule while
 # leaving per-command authorization untouched.
 sudo rm -f /etc/sudoers.d/04_arch
-printf "%%%%wheel ALL=(ALL) NOPASSWD: ALL\nDefaults verifypw = any\n" | sudo tee /etc/sudoers.d/99-wheel-nopasswd >/dev/null
+printf "%%wheel ALL=(ALL) NOPASSWD: ALL\nDefaults verifypw = any\n" | sudo tee /etc/sudoers.d/99-wheel-nopasswd >/dev/null
 sudo chmod 440 /etc/sudoers.d/99-wheel-nopasswd
 sudo visudo -c >/dev/null
 
