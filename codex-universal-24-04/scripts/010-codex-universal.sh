@@ -46,7 +46,7 @@ cp /opt/codex-universal/codex-universal.env /opt/codex-universal/.env
 chmod 600 /opt/codex-universal/.env
 
 CODEX_UPSTREAM_DIGEST="sha256:905e512f36460e1be4cfedb30928a8a28299edb0fcd5de7998ceaa72d27fe304"
-CODEX_LOCAL_IMAGE="codex-universal-do:cve-2026-10-22"
+CODEX_LOCAL_IMAGE="codex-universal-do:cve-2026-11-19"
 
 chmod +x /opt/codex-universal/patch-php-cve.sh
 chmod +x /opt/codex-universal/patch-node-cve.sh

@@ -103,6 +103,8 @@ Supported variables (see [upstream docs](https://github.com/openai/codex-univers
 | `CODEX_ENV_PHP_VERSION` | `8.4` |
 | `CODEX_ENV_JAVA_VERSION` | `21` |
 
+**PHP note:** This 1-Click rebuilds PHP **8.2.36**, **8.3.37**, **8.4.28**, and **8.5.13** via phpenv/php-build (2026-11-19 security releases), including fixes for critical issues such as [CVE-2026-115560](https://www.php.net/ChangeLog-8.php#8.5.13). Default `CODEX_ENV_PHP_VERSION` is **8.4**; all four majors are available as `{major}snapshot` builds.
+
 **Node.js note:** This 1-Click ships only Node **22** and **24**, patched for [CVE-2026-111497](https://nodejs.org/en/blog/vulnerability/october-2026-security-releases). Upstream also documents Node 18/20; those majors are end-of-life with no fix and are **not** installed here. Set `CODEX_ENV_NODE_VERSION` to `22` or `24` only (droplet create-time `=18`/`=20` will fail validation).
 
 You can also pass these as droplet environment variables when creating the Droplet.
