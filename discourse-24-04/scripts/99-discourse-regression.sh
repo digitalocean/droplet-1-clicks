@@ -16,6 +16,7 @@ TEMPLATE_CHK=$(require_installed "/opt/digitalocean_discourse/discourse-template
 VERIFY=$(require_installed "/opt/digitalocean_discourse/verify-container-nginx2root.sh")
 SETUP=$(require_installed "/opt/digitalocean_discourse/setup_discourse.sh")
 WEB_SSL=$(require_installed "/var/discourse/templates/web.ssl.template.yml")
+WEB_TEMPLATE=$(require_installed "/var/discourse/templates/web.template.yml")
 DO_TEMPLATE=$(require_installed "/var/discourse/templates/digitalocean-nginx2root.template.yml")
 SAMPLES=$(require_installed "/var/discourse/samples/standalone.yml")
 
@@ -64,7 +65,11 @@ if [ "${sample_count}" -gt 1 ]; then
   exit 1
 fi
 
-python3 "${TEMPLATE_CHK}" "${WEB_SSL}" /var/discourse/templates/web.letsencrypt.ssl.template.yml
+python3 "${TEMPLATE_CHK}" \
+  "${WEB_SSL}" \
+  /var/discourse/templates/web.letsencrypt.ssl.template.yml \
+  "${WEB_TEMPLATE}" \
+  "${DO_TEMPLATE}"
 
 if command -v python3 >/dev/null 2>&1; then
   if ! python3 -c 'import yaml' 2>/dev/null; then

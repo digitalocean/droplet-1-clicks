@@ -22,11 +22,14 @@ patch_web_templates_http_listeners() {
   local web_template="${DISCOURSE_ROOT}/templates/web.template.yml"
   local web_ssl="${DISCOURSE_ROOT}/templates/web.ssl.template.yml"
   [ -f "${web_template}" ] || return 0
-  if grep -F 'http2 off' "${web_template}" >/dev/null 2>&1; then
+  sed -i \
+    -e 's/echo -e "listen 80;\\nlisten \[::\]:80;\\nhttp2 off;"/printf '"'"'%s\\n'"'"' "listen 80;" "listen [::]:80;" "http2 off;"/' \
+    "${web_template}"
+  if grep -F "printf '%s\\n' \"listen 80;\"" "${web_template}" >/dev/null 2>&1; then
     :
   else
     sed -i \
-      -e 's/echo "listen 80;\\nlisten \[::\]:80;"/echo -e "listen 80;\\nlisten [::]:80;\\nhttp2 off;"/' \
+      -e 's/echo "listen 80;\\nlisten \[::\]:80;"/printf '"'"'%s\\n'"'"' "listen 80;" "listen [::]:80;" "http2 off;"/' \
       "${web_template}"
   fi
   if [ -f "${web_ssl}" ]; then
@@ -135,8 +138,9 @@ if [ -f "${WEB_SSL_TEMPLATE}" ] && grep -v '^[[:space:]]*#' "${WEB_SSL_TEMPLATE}
 fi
 
 if [ -x /opt/digitalocean_discourse/discourse-template-nginx2root-checks.py ]; then
+  WEB_TEMPLATE="${DISCOURSE_ROOT}/templates/web.template.yml"
   python3 /opt/digitalocean_discourse/discourse-template-nginx2root-checks.py \
-    "${WEB_SSL_TEMPLATE}" "${LE_SSL_TEMPLATE}"
+    "${WEB_SSL_TEMPLATE}" "${LE_SSL_TEMPLATE}" "${WEB_TEMPLATE}" "${DO_TEMPLATE_DST}"
 fi
 
 echo "discourse mitigate-nginx2root: templates patched (HTTP/2 disabled on :80/:443)"
