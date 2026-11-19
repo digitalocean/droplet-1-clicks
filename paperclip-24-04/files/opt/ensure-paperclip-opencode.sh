@@ -7,11 +7,16 @@
 # reports "The lifecycle step failed. Retry the operation."
 # Image bake fails when this cannot install. First boot and update warn and
 # continue, so a later download failure does not stop Paperclip.
-# The paperclip service PATH includes /usr/local/bin. Copy the binary there;
-# a symlink into /root is not executable by the paperclip user.
+# The paperclip service PATH includes /usr/local/bin. Install the verified
+# release binary there; do not execute a remote installer as root.
 set -euo pipefail
 
 BIN=/usr/local/bin/opencode
+# OpenCode 1.x (opencode.ai/install). Digests from GitHub release asset metadata;
+# bump both version and hashes together when upgrading.
+OPENCODE_VERSION="${OPENCODE_VERSION:-1.19.6}"
+OPENCODE_SHA256_X64="47734e08968b30cc22a0bffb6d9feeed76ad4aa743213a12122040392d09a057"
+OPENCODE_SHA256_X64_BASELINE="8443113b3f3dfebf8b0fa91c4377e5519a62b9231732d9344a5df001e4a852b3"
 
 if [ -x "$BIN" ]; then
   exit 0
@@ -22,21 +27,26 @@ if [ "$(id -u)" -ne 0 ]; then
   exit 1
 fi
 
-export HOME=/root
-curl -fsSL https://opencode.ai/install | bash -s -- --no-modify-path
+asset="opencode-linux-x64.tar.gz"
+expected_sha="$OPENCODE_SHA256_X64"
+if ! grep -qwi avx2 /proc/cpuinfo 2>/dev/null; then
+  asset="opencode-linux-x64-baseline.tar.gz"
+  expected_sha="$OPENCODE_SHA256_X64_BASELINE"
+fi
 
-src=""
-for candidate in /root/.opencode/bin/opencode /home/paperclip/.opencode/bin/opencode; do
-  if [ -x "$candidate" ]; then
-    src="$candidate"
-    break
-  fi
-done
+url="https://github.com/anomalyco/opencode/releases/download/v${OPENCODE_VERSION}/${asset}"
+tmpdir="$(mktemp -d)"
+trap 'rm -rf "$tmpdir"' EXIT
 
-if [ -z "$src" ]; then
-  echo "ERROR: OpenCode installer did not produce a binary" >&2
+echo "Downloading OpenCode ${OPENCODE_VERSION} (${asset})..."
+curl -fsSL "$url" -o "${tmpdir}/${asset}"
+echo "${expected_sha}  ${tmpdir}/${asset}" | sha256sum -c -
+
+tar -xzf "${tmpdir}/${asset}" -C "$tmpdir"
+if [ ! -f "${tmpdir}/opencode" ]; then
+  echo "ERROR: OpenCode archive did not contain an opencode binary" >&2
   exit 1
 fi
 
-install -m 755 "$src" "$BIN"
+install -m 755 "${tmpdir}/opencode" "$BIN"
 "$BIN" --version
