@@ -1,11 +1,12 @@
 #!/bin/bash
-# Rebuild phpenv PHP runtimes with CVE-2026-109618 / CVE-2026-109619 fixes.
-# Upstream codex-universal still ships May 2026 snapshot builds; php-build
-# gained patched definitions on 2026-10-21.
+# Rebuild phpenv PHP runtimes with the 2026-11-19 PHP security releases.
+# Addresses CVE-2026-115560 (critical RCE) and related CVEs; includes prior
+# CVE-2026-109618 / CVE-2026-109619 fixes. php-build definitions for these
+# versions ship on the default php-build branch (git pull before install).
 
 set -euo pipefail
 
-PHP_PATCH_VERSIONS=(8.5.12 8.4.27 8.3.36 8.2.35)
+PHP_PATCH_VERSIONS=(8.5.13 8.4.28 8.3.37 8.2.36)
 PHP_SNAPSHOT_MAJORS=(8.5 8.4 8.3 8.2)
 
 # Upstream may rename default branch (phpenv: master -> main). Fetch that
@@ -35,7 +36,8 @@ for version in "${PHP_PATCH_VERSIONS[@]}"; do
 done
 
 for major in "${PHP_SNAPSHOT_MAJORS[@]}"; do
-    latest="$(ls -d "/root/.phpenv/versions/${major}."* 2>/dev/null | sort -V | tail -1)"
+    mapfile -t _php_candidates < <(ls -d "/root/.phpenv/versions/${major}."* 2>/dev/null | sort -V)
+    latest="${_php_candidates[${#_php_candidates[@]}-1]:-}"
     if [ -z "${latest}" ]; then
         echo "ERROR: no patched build found for PHP ${major}.x" >&2
         exit 1
@@ -47,5 +49,5 @@ done
 phpenv rehash
 
 for major in "${PHP_SNAPSHOT_MAJORS[@]}"; do
-    "/root/.phpenv/versions/${major}snapshot/bin/php" -v | head -1
+    echo "PHP ${major} snapshot: $("/root/.phpenv/versions/${major}snapshot/bin/php" -r 'echo PHP_VERSION;')"
 done

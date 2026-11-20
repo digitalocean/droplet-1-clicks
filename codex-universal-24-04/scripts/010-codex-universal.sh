@@ -46,7 +46,7 @@ cp /opt/codex-universal/codex-universal.env /opt/codex-universal/.env
 chmod 600 /opt/codex-universal/.env
 
 CODEX_UPSTREAM_DIGEST="sha256:905e512f36460e1be4cfedb30928a8a28299edb0fcd5de7998ceaa72d27fe304"
-CODEX_LOCAL_IMAGE="codex-universal-do:cve-2026-10-22"
+CODEX_LOCAL_IMAGE="codex-universal-do:cve-2026-11-19"
 
 chmod +x /opt/codex-universal/patch-php-cve.sh
 chmod +x /opt/codex-universal/patch-node-cve.sh
@@ -69,6 +69,23 @@ until docker exec codex-universal ps aux 2>/dev/null | grep -q '[s]leep infinity
     sleep 30
 done
 echo "Language runtime setup complete."
+
+RUBY_MIN_VERSION="3.4.13"
+echo "Verifying Ruby ${RUBY_MIN_VERSION}+ in container (CVE-2026-132825)..."
+docker exec codex-universal bash -lc '
+set -euo pipefail
+MIN="3.4.13"
+version_ge() {
+    lower=$(printf "%s\n%s\n" "$1" "$2" | sort -V | sed -n "1p")
+    [ "$lower" = "$2" ]
+}
+actual=$(ruby -e '"'"'print RUBY_VERSION'"'"')
+if ! version_ge "${actual}" "${MIN}"; then
+    echo "ERROR: Ruby ${actual} is below minimum ${MIN} (CVE-2026-132825)" >&2
+    exit 1
+fi
+echo "Ruby ${actual} meets minimum ${MIN} (mise install ok)"
+'
 
 echo "Cleaning package manager caches from container writable layer..."
 docker exec codex-universal bash -c '
