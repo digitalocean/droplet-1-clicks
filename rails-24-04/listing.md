@@ -7,7 +7,7 @@ Ruby on Rails with Docker on Ubuntu 24.04 provides a modern, containerized devel
 ## Features
 
 - **Ruby on Rails** - Latest stable version with modern features
-- **Ruby 3.4.7** - Current stable Ruby version optimized for performance
+- **Ruby 3.4.13** - Current stable Ruby version optimized for performance
 - **PostgreSQL 15** - Robust relational database with advanced features
 - **Docker & Docker Compose** - Containerized environment for consistency and portability
 - **Nginx Reverse Proxy** - High-performance web server with SSL support
@@ -69,7 +69,7 @@ docker-compose exec web bundle exec rails console
 ### Software Stack
 
 - **Operating System**: Ubuntu 24.04 LTS
-- **Ruby Version**: 3.4.7
+- **Ruby Version**: 3.4.13
 - **Rails Version**: 8.0.3
 - **Database**: PostgreSQL 15
 - **Web Server**: Nginx (reverse proxy) + Puma (application server)
