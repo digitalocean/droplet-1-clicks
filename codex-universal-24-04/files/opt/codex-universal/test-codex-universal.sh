@@ -161,6 +161,15 @@ version_ge() {
     [ "${lower}" = "$2" ]
 }
 
+ruby_min="3.4.13"
+ruby_actual="$(ruby -e '"'"'print RUBY_VERSION'"'"')"
+if version_ge "${ruby_actual}" "${ruby_min}"; then
+    echo "  OK: Ruby ${ruby_actual} meets minimum ${ruby_min} (CVE-2026-132825 / GHSA-34m4-m9fh-gqp5)"
+else
+    echo "  FAIL: Ruby ${ruby_actual} is below minimum ${ruby_min} for CVE-2026-132825"
+    exit 1
+fi
+
 php_major="${CODEX_ENV_PHP_VERSION:-8.4}"
 php_min="$(php_min_for_major "${php_major}")"
 php_actual="$(php -r "echo PHP_VERSION;")"

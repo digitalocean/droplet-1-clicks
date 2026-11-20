@@ -49,7 +49,7 @@ validate_codex_env_value() {
             ;;
         CODEX_ENV_RUBY_VERSION)
             case "$value" in
-                3.2.3|3.3.8|3.4.4) return 0 ;;
+                3.2.3|3.3.8|3.3.14|3.4.4|3.4.13) return 0 ;;
             esac
             ;;
         CODEX_ENV_PHP_VERSION)
