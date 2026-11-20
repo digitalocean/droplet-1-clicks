@@ -102,10 +102,10 @@ SECRET_KEY_BASE=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT
 DISABLE_SSL=true
 
 # Web Push notification public key (uncomment and set for push notifications)
-# VAPID_PUBLIC_KEY=$YOUR_PUBLIC_KEY
+# VAPID_PUBLIC_KEY=${YOUR_PUBLIC_KEY:-}
 
 # Web Push notification private key (uncomment and set for push notifications)
-# VAPID_PRIVATE_KEY=$YOUR_PRIVATE_KEY
+# VAPID_PRIVATE_KEY=${YOUR_PRIVATE_KEY:-}
 
 # Domain name for automatic SSL certificate generation (uncomment and set your domain)
 # TLS_DOMAIN=chat.example.com
