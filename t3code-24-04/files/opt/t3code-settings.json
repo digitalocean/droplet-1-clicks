@@ -1,0 +1,85 @@
+{
+  "providerInstances": {
+    "claudeAgent": {
+      "driver": "claudeAgent",
+      "displayName": "Claude",
+      "enabled": true,
+      "config": {
+        "binaryPath": "/usr/local/bin/claude",
+        "enabled": true
+      }
+    },
+    "codex": {
+      "driver": "codex",
+      "displayName": "Codex",
+      "enabled": true,
+      "config": {
+        "binaryPath": "/usr/local/bin/codex",
+        "enabled": true
+      }
+    },
+    "cursor": {
+      "driver": "cursor",
+      "displayName": "Cursor",
+      "enabled": true,
+      "config": {
+        "binaryPath": "/usr/local/bin/cursor-agent",
+        "enabled": true
+      }
+    },
+    "grok": {
+      "driver": "grok",
+      "displayName": "Grok Build",
+      "enabled": true,
+      "config": {
+        "binaryPath": "/usr/local/bin/grok",
+        "enabled": true
+      }
+    },
+    "opencode": {
+      "driver": "opencode",
+      "displayName": "OpenCode",
+      "enabled": true,
+      "config": {
+        "binaryPath": "/usr/local/bin/opencode",
+        "enabled": true
+      }
+    },
+    "antigravity": {
+      "driver": "antigravity",
+      "displayName": "Antigravity",
+      "enabled": true,
+      "config": {
+        "binaryPath": "/opt/antigravity-acp/current/agy_acp_server.par",
+        "enabled": true
+      }
+    },
+    "pi": {
+      "driver": "pi",
+      "displayName": "Pi",
+      "enabled": true,
+      "config": {
+        "binaryPath": "/usr/local/bin/pi",
+        "enabled": true
+      }
+    },
+    "muse": {
+      "driver": "muse",
+      "displayName": "Muse Code",
+      "enabled": true,
+      "config": {
+        "binaryPath": "/usr/local/bin/muse",
+        "enabled": true
+      }
+    },
+    "fx": {
+      "driver": "fx",
+      "displayName": "fx",
+      "enabled": true,
+      "config": {
+        "binaryPath": "/usr/local/bin/fx",
+        "enabled": true
+      }
+    }
+  }
+}
