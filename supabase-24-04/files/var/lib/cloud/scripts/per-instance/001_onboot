@@ -4,7 +4,8 @@
 # created from your image.  Things like generating passwords, configuration requiring IP address
 # or other items that will be unique to each instance should be done in scripts here.
 
-exec > >(tee /var/log/one_click_setup.log) 2>&1
+set -euo pipefail
+umask 077
 
 unlock_ssh() {
   sed -e '/Match User root/d' \
@@ -14,7 +15,8 @@ unlock_ssh() {
 }
 trap unlock_ssh EXIT
 
-set -euo pipefail
+install -m 600 -o root -g root /dev/null /var/log/one_click_setup.log
+exec > >(tee -a /var/log/one_click_setup.log) 2>&1
 
 COMPOSE_DIR="/srv/supabase/supabase/docker"
 ENV_FILE="${COMPOSE_DIR}/.env"
@@ -33,6 +35,7 @@ upsert_password_var() {
   touch "${PASSWORDS_FILE}"
   sed -i "/^${key}=/d" "${PASSWORDS_FILE}"
   printf '%s=%s\n' "${key}" "$(shell_quote "${value}")" >> "${PASSWORDS_FILE}"
+  chmod 600 "${PASSWORDS_FILE}"
 }
 
 cd "${COMPOSE_DIR}"
@@ -48,6 +51,11 @@ if [ ! -f "${GENERATE_KEYS}" ]; then
 fi
 sh "${GENERATE_KEYS}" --update-env
 rm -f "${ENV_FILE}.old"
+
+# CVE-2026-123007: Kong must not expose HTTP/2 on TLS (re-apply after key rotation).
+if [ -x /var/lib/digitalocean/mitigate-nginx2root.sh ]; then
+  /var/lib/digitalocean/mitigate-nginx2root.sh "${COMPOSE_DIR}"
+fi
 
 # Ensure dashboard user and a unique pooler tenant (not covered by generate-keys).
 # Quote values so special characters cannot break Compose .env parsing.
@@ -120,3 +128,23 @@ compose_up_with_retry() {
 }
 
 compose_up_with_retry
+
+chmod 600 "${ENV_FILE}" "${PASSWORDS_FILE}" /var/log/one_click_setup.log
+
+# First-boot regression: public Kong must not offer HTTP/2 (TLS ALPN h2 or h2c on :8000).
+if [ -f /var/lib/digitalocean/nginx2root-alpn-check.sh ]; then
+  # shellcheck source=/dev/null
+  . /var/lib/digitalocean/nginx2root-alpn-check.sh
+  KONG_HTTPS_PORT="$(sed -n 's/^KONG_HTTPS_PORT=//p' "${ENV_FILE}" | tail -n1)"
+  KONG_HTTPS_PORT="${KONG_HTTPS_PORT:-8443}"
+  KONG_HTTP_PORT="$(sed -n 's/^KONG_HTTP_PORT=//p' "${ENV_FILE}" | tail -n1)"
+  KONG_HTTP_PORT="${KONG_HTTP_PORT:-8000}"
+  if ! assert_alpn_no_h2 "Kong HTTPS" 127.0.0.1 "${KONG_HTTPS_PORT}"; then
+    echo "ERROR: CVE-2026-123007 mitigation failed (Kong still offers HTTP/2)" >&2
+    exit 1
+  fi
+  if curl -sI --http2-prior-knowledge "http://127.0.0.1:${KONG_HTTP_PORT}/" 2>/dev/null | head -1 | grep -qi 'HTTP/2'; then
+    echo "ERROR: CVE-2026-123007 mitigation failed (Kong cleartext HTTP/2 on :${KONG_HTTP_PORT})" >&2
+    exit 1
+  fi
+fi

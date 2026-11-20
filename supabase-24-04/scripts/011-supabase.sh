@@ -21,8 +21,12 @@ ln -sf /snap/bin/certbot /usr/bin/certbot
 chmod +x /var/supabase/supabase-setup.sh \
   /var/lib/digitalocean/setup-dbaas.sh \
   /var/lib/digitalocean/prepare-logflare-ssl.sh \
+  /var/lib/digitalocean/mitigate-nginx2root.sh \
   /var/lib/cloud/scripts/per-instance/001_onboot \
   /etc/update-motd.d/99-one-click
+
+# CVE-2026-123007: Kong inside the stack must not advertise HTTP/2 on TLS listeners.
+/var/lib/digitalocean/mitigate-nginx2root.sh /srv/supabase/supabase/docker
 
 # Bake Logflare Managed-DB SSL patch into the image so first boot does not depend
 # on a fragile docker pull during onboot.
