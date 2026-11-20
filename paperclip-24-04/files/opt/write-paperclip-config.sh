@@ -11,6 +11,9 @@
 # signUpEmail for bootstrap_ceo (paperclipai#5312). Operators can set it true after claim.
 set -euo pipefail
 
+# shellcheck source=/opt/paperclip-safe-file.sh
+source /opt/paperclip-safe-file.sh
+
 PUBLIC_URL="${1:-}"
 ALLOWED_HOSTNAME="${2:-}"
 DATABASE_URL="${3:-}"
@@ -58,13 +61,23 @@ STORAGE_DIR_JSON="$(json_escape "${INSTANCE_ROOT}/data/storage")"
 SECRETS_KEY_JSON="$(json_escape "$SECRETS_KEY_PATH")"
 NOW_JSON="$(json_escape "$NOW")"
 
-mkdir -p \
+# Own directories before writing files; never chown file paths after replace.
+install -d -o paperclip -g paperclip -m 700 /home/paperclip/.paperclip
+install -d -o paperclip -g paperclip -m 700 "$INSTANCE_ROOT"
+install -d -o paperclip -g paperclip -m 700 \
   "${INSTANCE_ROOT}/logs" \
+  "${INSTANCE_ROOT}/data" \
   "${INSTANCE_ROOT}/data/storage" \
   "${INSTANCE_ROOT}/data/backups" \
   "${INSTANCE_ROOT}/secrets"
 
-cat > "$CONFIG_PATH" <<EOF
+for path in "$CONFIG_PATH" "$ENV_PATH" "$SECRETS_KEY_PATH"; do
+  if [ -e "$path" ] || [ -L "$path" ]; then
+    paperclip_assert_safe_target "$path" || exit 1
+  fi
+done
+
+config_body=$(cat <<EOF
 {
   "\$meta": {
     "version": 1,
@@ -126,17 +139,20 @@ cat > "$CONFIG_PATH" <<EOF
   }
 }
 EOF
+)
+printf '%s\n' "$config_body" | paperclip_atomic_write "$CONFIG_PATH" 600
 
 # Mirror marketplace env into the instance .env (loaded by paperclipai / systemd)
 if [ -f /opt/paperclip.env ]; then
-  cp /opt/paperclip.env "$ENV_PATH"
+  cat /opt/paperclip.env | paperclip_atomic_write "$ENV_PATH" 600
 else
-  touch "$ENV_PATH"
+  : | paperclip_atomic_write "$ENV_PATH" 600
 fi
 
 ensure_env_kv() {
-  local key="$1" val="$2" file="$3" tmp cur
-  touch "$file"
+  local key="$1" val="$2" file="$3" cur
+  paperclip_assert_safe_target "$file" || return 1
+  [ -f "$file" ] || : | paperclip_atomic_write "$file" 600
   cur=""
   while IFS= read -r line || [ -n "$line" ]; do
     case "$line" in
@@ -147,16 +163,7 @@ ensure_env_kv() {
   if [ -n "$cur" ] && [ "$cur" != "PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT" ] && [[ "$cur" != *PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT* ]]; then
     return 0
   fi
-  tmp="$(mktemp)"
-  # Avoid sed replacements: values may contain & \ | etc.
-  while IFS= read -r line || [ -n "$line" ]; do
-    case "$line" in
-      "${key}="*) ;;
-      *) printf '%s\n' "$line" ;;
-    esac
-  done <"$file" >"$tmp"
-  printf '%s=%s\n' "$key" "$val" >>"$tmp"
-  mv "$tmp" "$file"
+  paperclip_write_env_kv "$file" "$key" "$val"
 }
 
 ensure_env_kv DATABASE_URL "$DATABASE_URL" "$ENV_PATH"
@@ -168,9 +175,8 @@ fi
 
 # Local-encrypted secrets key (required by paperclipai doctor / run)
 if [ ! -s "$SECRETS_KEY_PATH" ]; then
-  openssl rand -base64 32 >"$SECRETS_KEY_PATH"
+  openssl rand -base64 32 | paperclip_atomic_write "$SECRETS_KEY_PATH" 600
 fi
-chmod 600 "$SECRETS_KEY_PATH"
 
 # Agent JWT secret expected beside config.json
 if ! grep -q '^PAPERCLIP_AGENT_JWT_SECRET=.\+' "$ENV_PATH" 2>/dev/null; then
@@ -181,13 +187,6 @@ if [ -f /opt/paperclip.env ]; then
     ensure_env_kv PAPERCLIP_AGENT_JWT_SECRET "$(sed -n 's/^PAPERCLIP_AGENT_JWT_SECRET=//p' "$ENV_PATH" | tail -n 1)" /opt/paperclip.env
   fi
 fi
-
-chown -R paperclip:paperclip /home/paperclip/.paperclip
-chmod 700 /home/paperclip/.paperclip
-chmod 700 "$INSTANCE_ROOT"
-chmod 600 "$CONFIG_PATH"
-chmod 600 "$ENV_PATH" 2>/dev/null || true
-chmod 600 "$SECRETS_KEY_PATH"
 
 echo "Wrote Paperclip config to ${CONFIG_PATH}"
 echo "Database: postgres (local) via DATABASE_URL"

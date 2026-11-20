@@ -28,6 +28,7 @@ paperclip-24-04/
 │   ├── start|stop|restart|status|update-paperclip.sh
 │   ├── ensure-paperclip-node.sh
 │   ├── ensure-paperclip-opencode.sh
+│   ├── paperclip-safe-file.sh
 │   ├── apply-inference-from-env.sh
 │   ├── bootstrap-paperclip-do-agent.sh
 │   ├── claim-paperclip-admin.sh

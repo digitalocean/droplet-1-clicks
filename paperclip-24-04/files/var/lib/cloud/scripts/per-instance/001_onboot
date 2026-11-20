@@ -6,6 +6,9 @@ set -a
 source /etc/environment 2>/dev/null || true
 set +a
 
+# shellcheck source=/opt/paperclip-safe-file.sh
+source /opt/paperclip-safe-file.sh
+
 ENV_FILE=/opt/paperclip.env
 INFO_FILE=/root/paperclip_info.txt
 CREDS_FILE=/root/paperclip_admin_credentials
@@ -13,33 +16,12 @@ INVITE_FILE=/root/paperclip_bootstrap_invite.txt
 INSTANCE_ENV=/home/paperclip/.paperclip/instances/default/.env
 
 write_env_kv() {
-  local key="$1" val="$2" tmp
-  touch "$ENV_FILE"
-  tmp="$(mktemp)"
-  # Avoid sed replacements: values may contain & \ | etc.
-  while IFS= read -r line || [ -n "$line" ]; do
-    case "$line" in
-      "${key}="*) ;;
-      *) printf '%s\n' "$line" ;;
-    esac
-  done <"$ENV_FILE" >"$tmp"
-  printf '%s=%s\n' "$key" "$val" >>"$tmp"
-  mv "$tmp" "$ENV_FILE"
-  chmod 600 "$ENV_FILE"
+  paperclip_write_env_kv "$ENV_FILE" "$1" "$2"
 }
 
 remove_env_kv() {
-  local file="$1" key="$2" tmp
-  [ -f "$file" ] || return 0
-  tmp="$(mktemp)"
-  while IFS= read -r line || [ -n "$line" ]; do
-    case "$line" in
-      "${key}="*) ;;
-      *) printf '%s\n' "$line" ;;
-    esac
-  done <"$file" >"$tmp"
-  mv "$tmp" "$file"
-  chmod 600 "$file"
+  local file="$1" key="$2"
+  paperclip_remove_env_kv "$file" "$key"
 }
 
 write_admin_credentials() {
@@ -54,37 +36,42 @@ EOF
 # Lock open email signup (sign-in still works). Safe after claim, claim failure when
 # a user already exists, and health timeout.
 lock_paperclip_signup() {
+  local cfg=/home/paperclip/.paperclip/instances/default/config.json
   write_env_kv PAPERCLIP_AUTH_DISABLE_SIGN_UP true
-  if [ -f /home/paperclip/.paperclip/instances/default/config.json ]; then
-    python3 - <<'PY'
-import json
-path = "/home/paperclip/.paperclip/instances/default/config.json"
+  if [ -e "$cfg" ] || [ -L "$cfg" ]; then
+    paperclip_assert_safe_target "$cfg" || return 1
+  fi
+  if [ -f "$cfg" ]; then
+    cfg_json="$(
+      /usr/bin/python3 -I - "$cfg" <<'PY'
+import json, sys
+path = sys.argv[1]
 with open(path, encoding="utf-8") as f:
     cfg = json.load(f)
 cfg.setdefault("auth", {})["disableSignUp"] = True
-with open(path, "w", encoding="utf-8") as f:
-    json.dump(cfg, f, indent=2)
-    f.write("\n")
+print(json.dumps(cfg, indent=2))
 PY
-    chown paperclip:paperclip /home/paperclip/.paperclip/instances/default/config.json
+    )"
+    printf '%s\n' "$cfg_json" | paperclip_atomic_write "$cfg" 600
+  fi
+  if [ -e "$INSTANCE_ENV" ] || [ -L "$INSTANCE_ENV" ]; then
+    paperclip_assert_safe_target "$INSTANCE_ENV" || return 1
   fi
   if [ -f "$INSTANCE_ENV" ]; then
-    tmp="$(mktemp)"
-    grep -Ev '^(PAPERCLIP_AUTH_DISABLE_SIGN_UP|INITIAL_PASSWORD)=' "$INSTANCE_ENV" >"$tmp" 2>/dev/null || : >"$tmp"
-    printf 'PAPERCLIP_AUTH_DISABLE_SIGN_UP=true\n' >>"$tmp"
-    mv "$tmp" "$INSTANCE_ENV"
-    chown paperclip:paperclip "$INSTANCE_ENV"
-    chmod 600 "$INSTANCE_ENV"
+    paperclip_remove_env_kv "$INSTANCE_ENV" PAPERCLIP_AUTH_DISABLE_SIGN_UP
+    paperclip_remove_env_kv "$INSTANCE_ENV" INITIAL_PASSWORD
+    paperclip_write_env_kv "$INSTANCE_ENV" PAPERCLIP_AUTH_DISABLE_SIGN_UP true
   fi
 }
 
 # Keep INITIAL_PASSWORD out of systemd EnvironmentFiles; MOTD/info use CREDS_FILE.
 strip_initial_password_from_service_env() {
   remove_env_kv "$ENV_FILE" INITIAL_PASSWORD
+  if [ -e "$INSTANCE_ENV" ] || [ -L "$INSTANCE_ENV" ]; then
+    paperclip_assert_safe_target "$INSTANCE_ENV" || return 1
+  fi
   if [ -f "$INSTANCE_ENV" ]; then
     remove_env_kv "$INSTANCE_ENV" INITIAL_PASSWORD
-    chown paperclip:paperclip "$INSTANCE_ENV"
-    chmod 600 "$INSTANCE_ENV"
   fi
 }
 
@@ -307,13 +294,15 @@ if [ "$HEALTH_OK" = "1" ]; then
       chmod 600 "$INVITE_FILE"
     fi
     lock_paperclip_signup
+    if [ -e "$INSTANCE_ENV" ] || [ -L "$INSTANCE_ENV" ]; then
+      paperclip_assert_safe_target "$INSTANCE_ENV" || exit 1
+    fi
     if [ -f "$INSTANCE_ENV" ]; then
-      tmp="$(mktemp)"
-      grep -Ev '^(ADMIN_EMAIL|INITIAL_PASSWORD|PAPERCLIP_AUTH_DISABLE_SIGN_UP)=' "$INSTANCE_ENV" >"$tmp" 2>/dev/null || : >"$tmp"
-      printf 'ADMIN_EMAIL=%s\nPAPERCLIP_AUTH_DISABLE_SIGN_UP=true\n' "$ADMIN_EMAIL" >>"$tmp"
-      mv "$tmp" "$INSTANCE_ENV"
-      chown paperclip:paperclip "$INSTANCE_ENV"
-      chmod 600 "$INSTANCE_ENV"
+      paperclip_remove_env_kv "$INSTANCE_ENV" ADMIN_EMAIL
+      paperclip_remove_env_kv "$INSTANCE_ENV" INITIAL_PASSWORD
+      paperclip_remove_env_kv "$INSTANCE_ENV" PAPERCLIP_AUTH_DISABLE_SIGN_UP
+      paperclip_write_env_kv "$INSTANCE_ENV" ADMIN_EMAIL "$ADMIN_EMAIL"
+      paperclip_write_env_kv "$INSTANCE_ENV" PAPERCLIP_AUTH_DISABLE_SIGN_UP true
     fi
     strip_initial_password_from_service_env
     systemctl restart paperclip || true

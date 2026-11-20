@@ -14,6 +14,9 @@
 # Returns 0 when a key was applied; 1 when skipped.
 set -euo pipefail
 
+# shellcheck source=/opt/paperclip-safe-file.sh
+source /opt/paperclip-safe-file.sh
+
 ENV_FILE=/opt/paperclip.env
 INSTANCE_ENV=/home/paperclip/.paperclip/instances/default/.env
 SETUP_MARKER=/opt/paperclip/.provider-configured
@@ -64,19 +67,7 @@ read_config_value() {
 }
 
 write_env_file_kv() {
-  local file="$1" key="$2" val="$3" tmp
-  touch "$file"
-  tmp="$(mktemp)"
-  # Avoid sed replacements: values may contain & \ | etc.
-  while IFS= read -r line || [ -n "$line" ]; do
-    case "$line" in
-      "${key}="*) ;;
-      *) printf '%s\n' "$line" ;;
-    esac
-  done <"$file" >"$tmp"
-  printf '%s=%s\n' "$key" "$val" >>"$tmp"
-  mv "$tmp" "$file"
-  chmod 600 "$file"
+  paperclip_write_env_kv "$1" "$2" "$3"
 }
 
 # Accept "my-router", "router:my-router", or "digitalocean/router:my-router".
@@ -150,14 +141,15 @@ write_opencode_provider_env() {
 }
 
 sync_instance_env() {
+  if [ -e "$INSTANCE_ENV" ] || [ -L "$INSTANCE_ENV" ]; then
+    paperclip_assert_safe_target "$INSTANCE_ENV" || return 1
+  fi
   if [ -f "$INSTANCE_ENV" ]; then
     write_env_file_kv "$INSTANCE_ENV" MODEL_ACCESS_KEY "$MODEL_ACCESS_KEY"
     write_env_file_kv "$INSTANCE_ENV" INFERENCE_MODEL "$INFERENCE_MODEL"
     write_env_file_kv "$INSTANCE_ENV" DO_INFERENCE_ROUTER "${DO_INFERENCE_ROUTER:-}"
     maybe_set_openai_compat_env "$INSTANCE_ENV"
     write_opencode_provider_env "$INSTANCE_ENV"
-    chown paperclip:paperclip "$INSTANCE_ENV"
-    chmod 600 "$INSTANCE_ENV"
   fi
 }
 
@@ -281,12 +273,18 @@ sync_instance_env
 write_paperclip_opencode_config() {
   local conf_dir=/home/paperclip/.config/opencode
   local conf_path="${conf_dir}/opencode.json"
+  local tmp_json
   [ -n "${PROVIDERS_JSON:-}" ] || return 0
-  mkdir -p "$conf_dir"
-  PROVIDERS_JSON="$PROVIDERS_JSON" MODEL_ACCESS_KEY="$MODEL_ACCESS_KEY" \
-  PRIMARY_MODEL="$PRIMARY_MODEL" python3 - "$conf_path" <<'PY'
-import json, os, sys
-path = sys.argv[1]
+  # Ensure parent dirs exist and are owned before writing (no chown of conf_path after).
+  install -d -o paperclip -g paperclip -m 700 /home/paperclip/.config
+  install -d -o paperclip -g paperclip -m 700 "$conf_dir"
+  if [ -e "$conf_path" ] || [ -L "$conf_path" ]; then
+    paperclip_assert_safe_target "$conf_path" || return 1
+  fi
+  tmp_json="$(
+    PROVIDERS_JSON="$PROVIDERS_JSON" MODEL_ACCESS_KEY="$MODEL_ACCESS_KEY" \
+    PRIMARY_MODEL="$PRIMARY_MODEL" /usr/bin/python3 -I - <<'PY'
+import json, os
 providers = json.loads(os.environ["PROVIDERS_JSON"])
 key = os.environ.get("MODEL_ACCESS_KEY", "")
 primary = os.environ.get("PRIMARY_MODEL", "").strip()
@@ -300,13 +298,10 @@ doc = {
 }
 if primary:
     doc["small_model"] = "digitalocean/" + primary
-with open(path, "w", encoding="utf-8") as handle:
-    json.dump(doc, handle, indent=2)
-    handle.write("\n")
+print(json.dumps(doc, indent=2))
 PY
-  chown -R paperclip:paperclip /home/paperclip/.config
-  chmod 700 "$conf_dir"
-  chmod 600 "$conf_path"
+  )"
+  printf '%s\n' "$tmp_json" | paperclip_atomic_write "$conf_path" 600
 }
 write_paperclip_opencode_config
 

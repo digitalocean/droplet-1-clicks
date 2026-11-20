@@ -9,6 +9,9 @@
 
 set -euo pipefail
 
+# shellcheck source=/opt/paperclip-safe-file.sh
+source /opt/paperclip-safe-file.sh
+
 ENV_FILE=/opt/paperclip.env
 
 if [ "$(id -u)" -ne 0 ]; then
@@ -49,19 +52,8 @@ read_env_kv() {
 }
 
 set_env_kv() {
-  local key="$1" value="$2" file="${3:-$ENV_FILE}" tmp
-  touch "$file"
-  tmp="$(mktemp)"
-  # Avoid sed replacements: values may contain & \ | etc.
-  while IFS= read -r line || [ -n "$line" ]; do
-    case "$line" in
-      "${key}="*) ;;
-      *) printf '%s\n' "$line" ;;
-    esac
-  done <"$file" >"$tmp"
-  printf '%s=%s\n' "$key" "$value" >>"$tmp"
-  mv "$tmp" "$file"
-  chmod 600 "$file"
+  local key="$1" value="$2" file="${3:-$ENV_FILE}"
+  paperclip_write_env_kv "$file" "$key" "$value"
 }
 
 normalize_version() {
@@ -171,6 +163,9 @@ EOF
 
 ensure_admin_credentials_file
 
+if [ -e "$INSTANCE_ENV" ] || [ -L "$INSTANCE_ENV" ]; then
+  paperclip_assert_safe_target "$INSTANCE_ENV" || exit 1
+fi
 if [ -f "$INSTANCE_ENV" ]; then
   while IFS= read -r line || [ -n "$line" ]; do
     case "$line" in
@@ -181,18 +176,11 @@ if [ -f "$INSTANCE_ENV" ]; then
         ;;
     esac
   done <"$ENV_FILE"
-  tmp="$(mktemp)"
-  grep -Ev '^INITIAL_PASSWORD=' "$INSTANCE_ENV" >"$tmp" 2>/dev/null || : >"$tmp"
-  mv "$tmp" "$INSTANCE_ENV"
-  chown paperclip:paperclip "$INSTANCE_ENV"
-  chmod 600 "$INSTANCE_ENV"
+  paperclip_remove_env_kv "$INSTANCE_ENV" INITIAL_PASSWORD
 fi
 # Strip INITIAL_PASSWORD from service env only when root creds already hold it.
 if [ -f "$ENV_FILE" ] && creds_password_usable; then
-  tmp="$(mktemp)"
-  grep -Ev '^INITIAL_PASSWORD=' "$ENV_FILE" >"$tmp" 2>/dev/null || : >"$tmp"
-  mv "$tmp" "$ENV_FILE"
-  chmod 600 "$ENV_FILE"
+  paperclip_remove_env_kv "$ENV_FILE" INITIAL_PASSWORD
 fi
 
 echo "Starting Paperclip..."

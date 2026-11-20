@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
+# shellcheck source=/opt/paperclip-safe-file.sh
+source /opt/paperclip-safe-file.sh
+
 PORT=3100
 BIND_IP=127.0.0.1
 ENV_FILE=/opt/paperclip.env
@@ -50,33 +53,26 @@ CADDYEOC
 }
 
 write_kv() {
-  local file="$1" key="$2" val="$3" tmp
-  touch "$file"
-  tmp="$(mktemp)"
-  # Avoid sed replacements: values may contain & \ | etc.
-  while IFS= read -r line || [ -n "$line" ]; do
-    case "$line" in
-      "${key}="*) ;;
-      *) printf '%s\n' "$line" ;;
-    esac
-  done <"$file" >"$tmp"
-  printf '%s=%s\n' "$key" "$val" >>"$tmp"
-  mv "$tmp" "$file"
+  paperclip_write_env_kv "$1" "$2" "$3"
 }
 
 write_kv "$ENV_FILE" PAPERCLIP_PUBLIC_URL "$PUBLIC_URL"
 write_kv "$ENV_FILE" PAPERCLIP_ALLOWED_HOSTNAMES "$DOMAIN"
-chmod 600 "$ENV_FILE"
 
+if [ -e "$INSTANCE_ENV" ] || [ -L "$INSTANCE_ENV" ]; then
+  paperclip_assert_safe_target "$INSTANCE_ENV" || exit 1
+fi
 if [ -f "$INSTANCE_ENV" ]; then
   write_kv "$INSTANCE_ENV" PAPERCLIP_PUBLIC_URL "$PUBLIC_URL"
   write_kv "$INSTANCE_ENV" PAPERCLIP_ALLOWED_HOSTNAMES "$DOMAIN"
-  chown paperclip:paperclip "$INSTANCE_ENV"
-  chmod 600 "$INSTANCE_ENV"
 fi
 
+if [ -e "$CONFIG" ] || [ -L "$CONFIG" ]; then
+  paperclip_assert_safe_target "$CONFIG" || exit 1
+fi
 if [ -f "$CONFIG" ] && command -v python3 >/dev/null 2>&1; then
-  python3 - "$CONFIG" "$PUBLIC_URL" "$DOMAIN" <<'PY'
+  cfg_json="$(
+    /usr/bin/python3 -I - "$CONFIG" "$PUBLIC_URL" "$DOMAIN" <<'PY'
 import json, sys
 path, public_url, domain = sys.argv[1], sys.argv[2], sys.argv[3]
 with open(path, encoding="utf-8") as f:
@@ -84,12 +80,10 @@ with open(path, encoding="utf-8") as f:
 cfg.setdefault("server", {})["allowedHostnames"] = [domain]
 cfg.setdefault("auth", {})["baseUrlMode"] = "explicit"
 cfg["auth"]["publicBaseUrl"] = public_url
-with open(path, "w", encoding="utf-8") as f:
-    json.dump(cfg, f, indent=2)
-    f.write("\n")
+print(json.dumps(cfg, indent=2))
 PY
-  chown paperclip:paperclip "$CONFIG"
-  chmod 600 "$CONFIG"
+  )"
+  printf '%s\n' "$cfg_json" | paperclip_atomic_write "$CONFIG" 600
 else
   # DATABASE_URL is read from /opt/paperclip.env (required for authenticated/public)
   /opt/write-paperclip-config.sh "$PUBLIC_URL" "$DOMAIN"

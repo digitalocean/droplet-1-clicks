@@ -127,6 +127,7 @@ chmod +x /opt/status-paperclip.sh
 chmod +x /opt/update-paperclip.sh
 chmod +x /opt/ensure-paperclip-node.sh
 chmod +x /opt/ensure-paperclip-opencode.sh
+chmod +x /opt/paperclip-safe-file.sh
 chmod +x /opt/setup-paperclip-domain.sh
 chmod +x /opt/write-paperclip-config.sh
 chmod +x /opt/claim-paperclip-admin.sh

@@ -22,8 +22,9 @@ Environment=PAPERCLIP_OPENCODE_COMMAND=/usr/local/bin/opencode
 Environment=OPENCODE_ALLOW_ALL_MODELS=true
 EnvironmentFile=-/opt/paperclip.env
 EnvironmentFile=-/home/paperclip/.paperclip/instances/default/.env
-# Upgrade or refuse start when /usr/bin/node is older than 24.22.3. "+" runs this as root.
-ExecStartPre=+/opt/ensure-paperclip-node.sh
+# Node pin runs only from bake / 001_onboot / update-paperclip.sh — never as a
+# root ExecStartPre here. A "+" pre-step would inherit this unit's WorkingDirectory
+# and paperclip-writable EnvironmentFile on every Restart=always cycle.
 # --force allows the system unit to run even if a user-service manager check fires
 ExecStart=/home/paperclip/.local/bin/paperclipai run --force
 Restart=always
