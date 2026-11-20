@@ -25,7 +25,15 @@ if [ -z "${php_fpm_ver}" ]; then
     echo "Build failed: php8.5-fpm package is not installed" >&2
     exit 1
 fi
-echo "php8.5-fpm package version: ${php_fpm_ver}"
+case "${php_fpm_ver}" in
+    *deb.sury.org*)
+        echo "php8.5-fpm package version: ${php_fpm_ver}"
+        ;;
+    *)
+        echo "Build failed: php8.5-fpm is not from packages.sury.org (${php_fpm_ver})" >&2
+        exit 1
+        ;;
+esac
 
 nginx_site="/etc/nginx/sites-available/digitalocean"
 if [ ! -f "${nginx_site}" ]; then

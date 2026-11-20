@@ -2,7 +2,7 @@
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "lemp-26-04-snapshot-{{timestamp}}",
-    "apt_packages": "fail2ban mysql-server nginx php8.5-apcu php8.5-curl php8.5-mysql php8.5-fpm postfix python3-certbot-nginx software-properties-common",
+    "apt_packages": "fail2ban mysql-server nginx php8.5-apcu php8.5-curl php8.5-mysql php8.5-fpm postfix python3-certbot-nginx",
     "application_name": "LEMP",
     "application_version": ""
   },
@@ -51,8 +51,12 @@
       "inline": [
         "apt -qqy update",
         "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' full-upgrade",
-        "add-apt-repository -y ppa:ondrej/php",
-        "printf '%s\\n' 'Package: php8.5* php-*-8.5*' 'Pin: release o=LP-PPA-ondrej-php' 'Pin-Priority: 1001' > /etc/apt/preferences.d/ondrej-php",
+        "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' install ca-certificates curl",
+        "curl -fsSLo /tmp/debsuryorg-archive-keyring.deb https://packages.sury.org/debsuryorg-archive-keyring.deb",
+        "dpkg -i /tmp/debsuryorg-archive-keyring.deb",
+        "rm -f /tmp/debsuryorg-archive-keyring.deb",
+        "printf '%s\\n' 'Types: deb' 'URIs: https://packages.sury.org/php/' \"Suites: $(. /etc/os-release && echo ${UBUNTU_CODENAME:-$VERSION_CODENAME})\" 'Components: main' \"Architectures: $(dpkg --print-architecture)\" 'Signed-By: /usr/share/keyrings/debsuryorg-archive-keyring.gpg' > /etc/apt/sources.list.d/php.sources",
+        "printf '%s\\n' 'Package: php8.5* php-*-8.5*' 'Pin: origin packages.sury.org' 'Pin-Priority: 1001' > /etc/apt/preferences.d/php-sury",
         "apt -qqy update",
         "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' install {{user `apt_packages`}}",
         "apt-get -qqy clean"
