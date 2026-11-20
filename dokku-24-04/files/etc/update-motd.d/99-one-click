@@ -17,6 +17,9 @@ In a web browser, you can view:
 
 For help and more information, visit https://do.co/3nzKhrp
 
+HTTPS for deployed apps uses HTTP/1.1 only (HTTP/2 disabled) as a mitigation
+for CVE-2026-123007; host nginx is nginx.org mainline (>= 1.31.9).
+
 ********************************************************************************
 To delete this message of the day: rm -rf $(readlink -f ${0})
 EOF

@@ -247,6 +247,22 @@ systemctl start fail2ban 2>/dev/null || systemctl restart fail2ban 2>/dev/null |
 cp /opt/ghost-setup/99-one-click /etc/update-motd.d/99-one-click
 chmod 0755 /etc/update-motd.d/99-one-click
 
+# CVE-2026-123007: Ghost-CLI SSL vhosts may enable HTTP/2; force HTTP/1.1 over TLS.
+if [ -x /var/lib/digitalocean/ghost-mitigate-nginx2root.sh ]; then
+    /var/lib/digitalocean/ghost-mitigate-nginx2root.sh
+fi
+
+if [ -f /var/lib/digitalocean/nginx2root-alpn-check.sh ] && [ "${GHOST_USE_SSL:-0}" -eq 1 ]; then
+    # shellcheck source=/dev/null
+    . /var/lib/digitalocean/nginx2root-alpn-check.sh
+    ghost_host="${GHOST_URL#https://}"
+    ghost_host="${ghost_host#http://}"
+    ghost_host="${ghost_host%%/*}"
+    if systemctl is-active nginx >/dev/null 2>&1; then
+        assert_alpn_no_h2 "Ghost HTTPS" 127.0.0.1 443 "${ghost_host}" || true
+    fi
+fi
+
 # Remove nginx default site
 rm -f /etc/nginx/sites-enabled/default
 systemctl restart nginx

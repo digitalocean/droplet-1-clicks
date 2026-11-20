@@ -17,10 +17,22 @@ echo "To cancel setup, press Ctrl+C and this script will be run again on your ne
 read wait
 cd /var/discourse
 
+if [ -x /opt/digitalocean_discourse/mitigate-nginx2root.sh ]; then
+  /opt/digitalocean_discourse/mitigate-nginx2root.sh
+fi
+
 if ./discourse-setup; then
+  if [ -x /opt/digitalocean_discourse/verify-container-nginx2root.sh ]; then
+    /opt/digitalocean_discourse/verify-container-nginx2root.sh
+  fi
+
   clear
   echo "Discourse is now installed.  Log into your admin account in a browser to continue"
   echo "configuring Discourse."
+  echo ""
+  echo "HTTPS in the Discourse container uses HTTP/1.1 only (HTTP/2 disabled) for CVE-2026-123007."
+  echo "Port 80 does not accept cleartext HTTP/2 (h2c). Rebuild after template edits:"
+  echo "  cd /var/discourse && ./launcher rebuild app"
 
   cp -f /etc/skel/.bashrc /root/.bashrc
 else
