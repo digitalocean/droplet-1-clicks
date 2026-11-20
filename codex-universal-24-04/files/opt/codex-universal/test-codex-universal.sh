@@ -138,10 +138,10 @@ check_version "PHP (${CODEX_ENV_PHP_VERSION:-default})" "php --version | head -1
 
 php_min_for_major() {
     case "$1" in
-        8.2) echo "8.2.35" ;;
-        8.3) echo "8.3.36" ;;
-        8.4) echo "8.4.27" ;;
-        8.5) echo "8.5.12" ;;
+        8.2) echo "8.2.36" ;;
+        8.3) echo "8.3.37" ;;
+        8.4) echo "8.4.28" ;;
+        8.5) echo "8.5.13" ;;
         *) echo "" ;;
     esac
 }
@@ -155,18 +155,36 @@ node_min_for_major() {
 }
 
 version_ge() {
-    [ "$(printf "%s\n%s\n" "$1" "$2" | sort -V | head -1)" = "$2" ]
+    # sort -C avoids ${var%%$'\n'*} (nounset "n: unbound variable") and head under pipefail.
+    printf '%s\n' "$2" "$1" | sort -C -V >/dev/null
 }
 
 php_major="${CODEX_ENV_PHP_VERSION:-8.4}"
 php_min="$(php_min_for_major "${php_major}")"
 php_actual="$(php -r "echo PHP_VERSION;")"
 if [ -n "${php_min}" ] && version_ge "${php_actual}" "${php_min}"; then
-    echo "  OK: PHP ${php_actual} meets minimum ${php_min} (CVE-2026-109618 / CVE-2026-109619)"
+    echo "  OK: PHP ${php_actual} meets minimum ${php_min} (2026-11-19 PHP security releases; CVE-2026-115560 et al.)"
 else
     echo "  FAIL: PHP ${php_actual} is below minimum ${php_min} for CODEX_ENV_PHP_VERSION=${php_major}"
     exit 1
 fi
+
+for major in 8.2 8.3 8.4 8.5; do
+  min="$(php_min_for_major "${major}")"
+  snap_php="/root/.phpenv/versions/${major}snapshot/bin/php"
+  if [ -x "${snap_php}" ]; then
+    shipped_actual="$("${snap_php}" -r "echo PHP_VERSION;")"
+    if version_ge "${shipped_actual}" "${min}"; then
+      echo "  OK: shipped PHP ${major} → ${shipped_actual} (>= ${min}, 2026-11-19 security releases)"
+    else
+      echo "  FAIL: shipped PHP ${major} is ${shipped_actual} (need >= ${min})"
+      exit 1
+    fi
+  else
+    echo "  FAIL: missing phpenv snapshot for PHP ${major} at ${snap_php}"
+    exit 1
+  fi
+done
 
 node_major="${CODEX_ENV_NODE_VERSION:-22}"
 node_min="$(node_min_for_major "${node_major}")"
