@@ -55,7 +55,14 @@ mkdir -p "/tmp/zeroclaw-update-${TARGET}"
 cd "/tmp/zeroclaw-update-${TARGET}"
 curl -fsSLO "$LATEST_URL"
 tar xzf "zeroclaw-${TARGET}.tar.gz"
-install -m 0755 zeroclaw /usr/local/bin/zeroclaw
+mkdir -p /usr/local/lib/zeroclaw
+install -m 0755 zeroclaw /usr/local/lib/zeroclaw/zeroclaw
+# Keep the root→zeroclaw PATH wrapper (do not overwrite with the raw binary).
+if [ -f /opt/zeroclaw-wrapper.sh ]; then
+    install -m 0755 /opt/zeroclaw-wrapper.sh /usr/local/bin/zeroclaw
+elif [ ! -f /usr/local/bin/zeroclaw ]; then
+    install -m 0755 /usr/local/lib/zeroclaw/zeroclaw /usr/local/bin/zeroclaw
+fi
 if [ -f zerocode ]; then
     install -m 0755 zerocode /usr/local/bin/zerocode
 fi

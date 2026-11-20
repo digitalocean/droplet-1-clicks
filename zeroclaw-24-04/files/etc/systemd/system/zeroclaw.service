@@ -12,7 +12,7 @@ EnvironmentFile=/opt/zeroclaw.env
 Environment="HOME=/home/zeroclaw"
 Environment="PATH=/usr/local/bin:/usr/bin:/bin"
 
-ExecStart=/usr/local/bin/zeroclaw daemon -p ${ZEROCLAW_GATEWAY_PORT}
+ExecStart=/usr/local/lib/zeroclaw/zeroclaw daemon -p ${ZEROCLAW_GATEWAY_PORT}
 
 Restart=always
 RestartSec=10
