@@ -1,4 +1,43 @@
 #!/bin/bash
+set -euo pipefail
+
+MIN_RUBY_VERSION="3.4.13"
+NGINX_IMAGE="nginx:1.31.9-alpine"
+MIN_NGINX_VERSION="1.31.9"
+
+version_ge() {
+    local actual="$1"
+    local minimum="$2"
+    local lower
+    lower=$(printf '%s\n%s\n' "$actual" "$minimum" | sort -V | sed -n '1p')
+    [ "$lower" = "$minimum" ]
+}
+
+verify_ruby_slim_image() {
+    local image="ruby:${ruby_version}-slim"
+    echo "Verifying Ruby image ${image} (CVE-2026-132825 / GHSA-34m4-m9fh-gqp5)..."
+    docker pull "$image"
+    local actual
+    actual=$(docker run --rm "$image" ruby -e 'print RUBY_VERSION')
+    if ! version_ge "$actual" "$MIN_RUBY_VERSION"; then
+        echo "ERROR: Ruby ${actual} in ${image} is below minimum ${MIN_RUBY_VERSION}" >&2
+        exit 1
+    fi
+    echo "Ruby ${actual} meets minimum ${MIN_RUBY_VERSION}"
+}
+
+verify_nginx_image() {
+    echo "Verifying Nginx image ${NGINX_IMAGE} (CVE-2026-123007 / nginx2root)..."
+    docker pull "$NGINX_IMAGE"
+    local nginx_banner actual
+    nginx_banner=$(docker run --rm "$NGINX_IMAGE" nginx -v 2>&1)
+    actual=$(printf '%s\n' "$nginx_banner" | sed -n 's/.*nginx\///p' | sed 's/ .*//')
+    if [ -z "$actual" ] || ! version_ge "$actual" "$MIN_NGINX_VERSION"; then
+        echo "ERROR: Nginx ${actual:-unknown} is below minimum ${MIN_NGINX_VERSION}" >&2
+        exit 1
+    fi
+    echo "Nginx ${actual} meets minimum ${MIN_NGINX_VERSION}"
+}
 
 # Configure firewall for Rails application - but don't enable during build
 ufw allow 3000
@@ -31,6 +70,8 @@ chmod +x /opt/rails-app/*.sh
 
 # Ensure onboot script is executable
 chmod +x /var/lib/cloud/scripts/per-instance/001_onboot
+
+verify_ruby_slim_image
 
 # Generate Rails application
 echo "Generating Rails application..."
@@ -112,10 +153,10 @@ EOF
 systemctl daemon-reload
 
 # Don't build or start during Packer build - this will be handled by systemd on first boot
-# Pre-pull images to speed up first boot
-docker pull ruby:${ruby_version}-slim || true
-docker pull postgres:15 || true  
-docker pull nginx:alpine || true
+# Pre-pull images to speed up first boot (pinned for CVE fixes)
+verify_ruby_slim_image
+docker pull postgres:15
+verify_nginx_image
 
 echo "Docker images pre-pulled for faster startup"
 
