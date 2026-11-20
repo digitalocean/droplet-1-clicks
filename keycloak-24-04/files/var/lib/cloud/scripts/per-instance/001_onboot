@@ -65,7 +65,7 @@ docker build --build-arg="STORE_PASS=${KEYSTORE_PASSWORD}" /var/digitalocean/. -
 # Run keycloak image with network mode set to host,
 # so Keycloak connects to the Postgres as localhost, not docker internal host.
 # Do not set KC_PROXY_HEADERS: port 8443 is exposed to clients and must not trust X-Forwarded-* from the Internet.
-docker run -d --network=host \
+docker run -d --restart unless-stopped --network=host \
   --name keycloak \
   -e KEYCLOAK_ADMIN=admin \
   -e KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWD} \
