@@ -2,7 +2,7 @@
   "variables": {
     "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "supabase-24-04-snapshot-{{timestamp}}",
-    "apt_packages": "ca-certificates curl jq git ufw dirmngr gnupg lsb-release debian-archive-keyring snapd nginx postgresql-client",
+    "apt_packages": "ca-certificates curl jq git ufw dirmngr gnupg lsb-release debian-archive-keyring postgresql-client",
     "application_name": "Supabase",
     "application_version": "v1.26.05"
   },
@@ -68,6 +68,7 @@
       "scripts": [
         "common/scripts/010-docker.sh",
         "supabase-24-04/scripts/011-supabase.sh",
+        "supabase-24-04/scripts/012-caddy.sh",
         "common/scripts/014-ufw-http.sh",
         "common/scripts/018-force-ssh-logout.sh",
         "common/scripts/020-application-tag.sh",

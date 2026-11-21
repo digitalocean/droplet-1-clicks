@@ -412,6 +412,13 @@ SQL
   # Studio must not wait on analytics healthy — otherwise Logflare issues hide Studio.
   # Storage: TLS via compose DATABASE_URL ?sslmode=require (patched above) — do not use
   # NODE_TLS_REJECT_UNAUTHORIZED (process-wide disable).
+  # postgres-meta has two connections:
+  # - Its own URL uses PG_META_DB_SSL_MODE (default disable). require encrypts
+  # that URL without verifying DigitalOcean's CA.
+  # - Studio does not use that URL. It sends x-connection-encrypted, a
+  # postgresql://supabase_admin@... string with no sslmode. @supabase/pg then
+  # reads PGSSLMODE. no-verify encrypts without CA verification; require would
+  # verify the cert and reject DigitalOcean's CA.
   cat > "${COMPOSE_DIR}/docker-compose.dbaas.yml" <<EOF
 services:
   realtime:
@@ -419,7 +426,8 @@ services:
       DB_SSL: "true"
   meta:
     environment:
-      PGSSLMODE: require
+      PG_META_DB_SSL_MODE: require
+      PGSSLMODE: no-verify
   rest:
     environment:
       PGRST_DB_POOL: "5"

@@ -35,6 +35,19 @@ upsert_password_var() {
   printf '%s=%s\n' "${key}" "$(shell_quote "${value}")" >> "${PASSWORDS_FILE}"
 }
 
+upsert_env() {
+  local key="$1"
+  local value="$2"
+  sed -i "/^${key}=/d" "${ENV_FILE}"
+  printf '%s=%s\n' "${key}" "$(shell_quote "${value}")" >> "${ENV_FILE}"
+}
+
+meta() { curl -fsS --retry 10 --retry-connrefused --max-time 2 "$1"; }
+DROPLET_PUBLIC_IP="$(meta http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)"
+DROPLET_PRIVATE_IP="$(hostname -I | awk '{print $1}')"
+DROPLET_IP="${DROPLET_PUBLIC_IP:-$DROPLET_PRIVATE_IP}"
+PUBLIC_URL="https://${DROPLET_IP}"
+
 cd "${COMPOSE_DIR}"
 
 # Rotate all material secrets from the Packer-baked .env.example defaults so each
@@ -84,11 +97,21 @@ printf 'DASHBOARD_PASSWORD=%s\n' "$(shell_quote "${DASHBOARD_PASSWORD}")" >> "${
 upsert_password_var DASHBOARD_USERNAME supabase
 upsert_password_var DASHBOARD_PASSWORD "${DASHBOARD_PASSWORD}"
 
-# Enable supabase nginx ASAP so a later Compose health race never leaves the
-# default "Welcome to nginx!" page (no Basic-auth popup).
-ln -sf /etc/nginx/sites-available/supabase /etc/nginx/sites-enabled/supabase
-unlink /etc/nginx/sites-enabled/default 2>/dev/null || true
-systemctl restart nginx
+# Public HTTPS URLs for Studio / Auth (Caddy terminates TLS on the droplet IP).
+upsert_env SUPABASE_PUBLIC_URL "${PUBLIC_URL}"
+upsert_env API_EXTERNAL_URL "${PUBLIC_URL}/auth/v1"
+upsert_env SITE_URL "${PUBLIC_URL}"
+
+# Free ports 80/443 if an older nginx package is present; Caddy owns the edge.
+systemctl disable --now nginx 2>/dev/null || true
+
+# Install Caddyfile with shortlived TLS for the droplet public IP.
+if [ -f /etc/caddy/Caddyfile.tmp ]; then
+  sed "s/PLACEHOLDER_DOMAIN/${DROPLET_IP}/" /etc/caddy/Caddyfile.tmp > /etc/caddy/Caddyfile
+elif [ -f /etc/caddy/Caddyfile ] && grep -q "PLACEHOLDER_DOMAIN" /etc/caddy/Caddyfile; then
+  sed -i "s/PLACEHOLDER_DOMAIN/${DROPLET_IP}/" /etc/caddy/Caddyfile
+fi
+systemctl enable caddy
 
 chmod +x /var/lib/digitalocean/setup-dbaas.sh
 # On DBaaS failure setup-dbaas exits 1 after writing SUPABASE_DBAAS=failed for MOTD.
@@ -115,8 +138,18 @@ compose_up_with_retry() {
     sleep 30
   done
   echo "ERROR: docker compose up failed after retries" >&2
-  echo "ERROR: nginx already points at Kong — check: docker compose ${COMPOSE_ARGS[*]} ps" >&2
+  echo "ERROR: check: docker compose ${COMPOSE_ARGS[*]} ps" >&2
   return 1
 }
 
 compose_up_with_retry
+
+set +e
+systemctl restart caddy
+caddy_rc=$?
+set -e
+if [ "${caddy_rc}" -ne 0 ]; then
+  echo "WARNING: caddy failed to start (rc=${caddy_rc}). Check journalctl -u caddy and that ports 80/443 are reachable for ACME." >&2
+fi
+
+echo "Supabase first-boot complete. Studio/API: ${PUBLIC_URL}"

@@ -41,18 +41,18 @@ cat <<EOF
 
 Welcome to the DigitalOcean Supabase 1-Click Application
 
-Supabase Studio / API (via Nginx):
-    URL: http://${myip}
+Supabase Studio / API (via Caddy HTTPS):
+    URL: https://${myip}
     Dashboard user: ${DASHBOARD_USERNAME}
     Dashboard pass: ${DASHBOARD_PASSWORD}
 
 ${dbaas_text}
 
-Run setup manually when you are ready to configure a custom domain and TLS:
+HTTPS uses Let's Encrypt shortlived certificates for this Droplet IP (renewed by Caddy).
+For a custom domain, point DNS here then run:
     /var/supabase/supabase-setup.sh
 
-All Supabase scripts and files may be found in /srv/supabase and the setup
-utility can be run again by launching supabase-setup in that directory.
+All Supabase scripts and files may be found in /srv/supabase.
 
 Passwords are saved in /root/.digitalocean_passwords
 Setup log: /var/log/one_click_setup.log
