@@ -1,0 +1,27 @@
+[Unit]
+Description=OpenShell sandbox running OpenClaw (forward 18789)
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root
+
+ExecStartPre=-/bin/sh -c 'echo "pkill -9 -f openclaw" | /root/.local/bin/openshell sandbox connect openclaw-sandbox'
+
+# 2. THE MAIN PROCESS:
+ExecStart=/bin/sh -c 'echo "/sandbox/openclaw/openclaw-runner.sh" | /root/.local/bin/openshell sandbox connect openclaw-sandbox'
+
+# 3. CLEANUP ON STOP:
+# When you run 'systemctl stop', it will pipe this kill command in before shutting down
+ExecStop=/bin/sh -c 'echo "pkill -f openclaw" | /root/.local/bin/openshell sandbox connect openclaw-sandbox'
+ExecStart=/bin/sh -c 'echo "/sandbox/openclaw/openclaw-runner.sh" | /root/.local/bin/openshell sandbox connect openclaw-sandbox'
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

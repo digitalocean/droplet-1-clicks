@@ -1,0 +1,41 @@
+#!/bin/sh
+# Per-instance: unique gateway token, Caddy with droplet IP, run setup wizard on first login, start sandbox and Caddy.
+
+# Log errors and important output to a file
+ONBOOT_LOG="/var/log/openclaw-onboot.log"
+log() { echo "$(date -Iseconds): $*" >> "$ONBOOT_LOG"; }
+log_err() { echo "$(date -Iseconds): ERROR: $*" >> "$ONBOOT_LOG" 2>&1; }
+trap 'log_err "onboot failed at line $LINENO (exit $?)"; exit 1' ERR 2>/dev/null || true
+set -e
+
+touch "$ONBOOT_LOG" 2>/dev/null || true
+exec 2>>"$ONBOOT_LOG"
+log "onboot started"
+
+# Generate unique gateway token for this droplet
+echo "Generating unique gateway token for this droplet..."
+NEW_GATEWAY_TOKEN=$(openssl rand -hex 32)
+
+jq --arg token "$NEW_GATEWAY_TOKEN" '.gateway.auth.token = $token' /etc/config/openclaw.json > /etc/config/openclaw.json.tmp
+mv /etc/config/openclaw.json.tmp /etc/config/openclaw.json
+
+# Caddy: replace PLACEHOLDER_DOMAIN with droplet IP (same as OpenClaw 1-Click)
+meta() { curl -fsS --retry 10 --retry-connrefused --max-time 2 "$1"; }
+DROPLET_IP="$(meta http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)"
+mv /etc/caddy/Caddyfile.tmp /etc/caddy/Caddyfile
+if grep -q "PLACEHOLDER_DOMAIN" /etc/caddy/Caddyfile 2>/dev/null; then
+    sed -i "s/PLACEHOLDER_DOMAIN/$DROPLET_IP/" /etc/caddy/Caddyfile
+    systemctl enable caddy
+fi
+
+# Remove SSH force logout
+sed -e '/Match User root/d' -e '/.*ForceCommand.*droplet.*/d' -i /etc/ssh/sshd_config
+
+# Run setup wizard on first root login
+cat >> /root/.bashrc <<EOM
+chmod +x /etc/setup_wizard.sh
+/etc/setup_wizard.sh
+EOM
+
+systemctl restart ssh
+systemctl restart caddy
