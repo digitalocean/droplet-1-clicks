@@ -1,0 +1,40 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's 1-Click RabbitMQ Droplet.
+
+RabbitMQ is one of the most popular open source message brokers. RabbitMQ is lightweight and easy to deploy on premises and in the cloud.
+ It supports multiple messaging protocols. RabbitMQ can be deployed in distributed and federated configurations 
+to meet high-scale, high-availability requirements.
+
+
+To keep this Droplet secure, the UFW firewall is enabled.
+All ports are BLOCKED except 15672 and 5672
+
+RabbitMQ  is configured with local user called Guest and can only be used via localhost.
+
+To create a new rabbitmq user
+
+Run the following commands:
+
+A. rabbitmqctl add_user <username> <password>
+B. rabbitmqctl set_user_tags <username> administrator
+C. rabbitmqctl set_permissions -p / <username> ".*' ".*" ".*"
+
+In a web browser, you can view:
+ * Your Web  website: http://$myip:15672
+
+For help and more information, visit link to 1-click
+
+********************************************************************************
+
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF

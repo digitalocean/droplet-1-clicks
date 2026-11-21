@@ -1,0 +1,79 @@
+
+{
+  "variables": {
+    "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
+    "image_name": "rabbitmq-22-04-snapshot-{{timestamp}}",
+    "apt_packages": "apt-transport-https gnupg2 nginx wget curl unzip git python3-certbot-nginx",
+    "application_name": "RABBITMQ",
+    "application_version": ""
+  },
+  "sensitive-variables": ["do_api_token"],
+  "builders": [
+    {
+      "type": "digitalocean",
+      "api_token": "{{user `do_api_token`}}",
+      "image": "ubuntu-22-04-x64",
+      "region": "nyc3",
+      "size": "s-1vcpu-1gb",
+      "ssh_username": "root",
+      "snapshot_name": "{{user `image_name`}}"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "inline": [
+        "cloud-init status --wait"
+      ]
+    },
+    {
+      "type": "file",
+      "source": "common/files/var/",
+      "destination": "/var/"
+    },
+    {
+      "type": "file",
+      "source": "rabbitmq-22-04/files/etc/",
+      "destination": "/etc/"
+    },
+    {
+      "type": "file",
+      "source": "rabbitmq-22-04/files/var/",
+      "destination": "/var/"
+    },
+    {
+      "type": "shell",
+      "environment_vars": [
+        "DEBIAN_FRONTEND=noninteractive",
+        "LC_ALL=C",
+        "LANG=en_US.UTF-8",
+        "LC_CTYPE=en_US.UTF-8"
+      ],
+      "inline": [
+        "apt -qqy update",
+        "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' full-upgrade",
+        "apt -qqy -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' install {{user `apt_packages`}}",
+        "apt-get -qqy clean"
+      ]
+    },
+    {
+      "type": "shell",
+      "environment_vars": [
+        "application_name={{user `application_name`}}",
+        "application_version={{user `application_version`}}",
+        "DEBIAN_FRONTEND=noninteractive",
+        "LC_ALL=C",
+        "LANG=en_US.UTF-8",
+        "LC_CTYPE=en_US.UTF-8"
+      ],
+      "scripts": [
+        "common/scripts/010-nodejs.sh",
+        "rabbitmq-22-04/scripts/011-rabbitmq.sh",
+        "common/scripts/014-ufw-rabbitmq.sh",
+        "common/scripts/018-force-ssh-logout.sh",
+        "common/scripts/020-application-tag.sh",
+        "common/scripts/900-cleanup.sh"
+      ]
+    }
+  ]
+}
