@@ -1,0 +1,38 @@
+#!/usr/bin/bash
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+public_ip=$(curl -w "\n" http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address)
+
+cat <<EOF
+********************************************************************************
+Welcome to DigitalOcean's 1-Click StackStorm Droplet.
+StackStorm is composed of, and running as mulitple systemd services.
+To keep this Droplet secure, the UFW firewall is enabled.
+All ports are BLOCKED except 22 (ssh), 80 (http), and 443 (https).
+
+To get started on this server:
+
+ 1. Log in to the web UI: https://${public_ip}
+
+    You will likely have to accept the certificate error
+    Credentials are located at /root/.digitalocean_passwords
+
+ 2. Log in using the CLI
+
+    source /root/.digitalocean_passwords
+    st2 login "\$ST2_AUTH_USERNAME" -p "\$ST2_AUTH_PASSWORD"
+    st2 whoami
+    st2 action list
+    st2 run core.echo message="Hello, StackStorm"
+
+ 3. Read about, and enable, RBAC: https://docs.stackstorm.com/rbac.html
+
+ 4. Explore and install more packs: https://exchange.stackstorm.org/
+
+ 5. Learn more about StackStorm by reading the rest of official documentation:
+    https://docs.stackstorm.com/
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF

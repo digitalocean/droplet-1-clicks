@@ -1,0 +1,12 @@
+---
+collections:
+  - name: ansible.posix
+    version: 1.4.0
+  - name: community.general
+    version: 6.0.1
+  - name: community.rabbitmq
+    version: 1.2.3
+roles:
+  - name: ansible-st2
+    src: https://github.com/StackStorm/ansible-st2.git
+    version: v3.2.0
