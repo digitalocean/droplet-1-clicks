@@ -1,39 +1,302 @@
 #!/bin/bash
 
-sudo apt-get --assume-yes update && sudo NEEDRESTART_MODE=a apt-get --assume-yes install elasticsearch
+# First boot installs Elasticsearch, binds it on port 9200, and records passwords.
+# Production mode (any non-loopback bind) refuses to start unless vm.max_map_count
+# is raised and discovery is set to a single node. If startup fails, the password
+# tools have nothing to talk to and the MOTD shows blank credentials.
 
-# Set host for the ElasticSearch server
-cat >> /etc/elasticsearch/elasticsearch.yml <<EOM
+LOG=/var/log/elasticsearch-oneclick-setup.log
+touch "$LOG"
+chmod 600 "$LOG"
+
+log() {
+  printf '%s %s\n' "$(date -Is)" "$*" >>"$LOG"
+}
+
+unlock_ssh() {
+  sed -e '/Match User root/d' \
+      -e '/.*ForceCommand.*droplet.*/d' \
+      -i /etc/ssh/sshd_config
+  # Reload keeps an open Droplet Console session. Restart drops it and the
+  # page stays on "Connected" with a blank screen.
+  systemctl reload ssh >>"$LOG" 2>&1 || systemctl restart ssh >>"$LOG" 2>&1 || true
+}
+
+elasticPass=""
+kibanaPass=""
+logstashSystemPass=""
+kibanaEnrollmentToken=""
+passwords_written=0
+
+# MOTD is /bin/sh (dash). Single quotes are safe; bash %q is not.
+sh_quote() {
+  printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"
+}
+
+# Always leave a password file behind. If this script exits without one, the
+# banner keeps saying setup is still running after cloud-init has finished.
+write_passwords() {
+  if [ "$passwords_written" -eq 1 ]; then
+    return 0
+  fi
+  umask 077
+  {
+    printf 'ELASTIC_PASSWORD=%s\n' "$(sh_quote "$elasticPass")"
+    printf 'KIBANA_PASSWORD=%s\n' "$(sh_quote "$kibanaPass")"
+    printf 'LOGSTASH_SYSTEM_PASSWORD=%s\n' "$(sh_quote "$logstashSystemPass")"
+    printf 'KIBANA_ENROLLMENT_TOKEN=%s\n' "$(sh_quote "$kibanaEnrollmentToken")"
+  } > /root/.digitalocean_passwords
+  chmod 600 /root/.digitalocean_passwords
+  passwords_written=1
+}
+
+policy_backup=""
+policy_held=0
+
+release_policy() {
+  if [ "${policy_held:-0}" -ne 1 ]; then
+    return 0
+  fi
+  if [ -n "$policy_backup" ] && [ -f "$policy_backup" ]; then
+    mv "$policy_backup" /usr/sbin/policy-rc.d
+  else
+    rm -f /usr/sbin/policy-rc.d
+  fi
+  policy_backup=""
+  policy_held=0
+}
+
+cleanup() {
+  release_policy
+  write_passwords
+  unlock_ssh
+}
+trap cleanup EXIT
+
+# Drop the root ForceCommand before apt or Elasticsearch can stall.
+unlock_ssh
+
+log "Starting Elasticsearch 1-Click setup"
+
+sysctl -w vm.max_map_count=1048576 >>"$LOG" 2>&1 || log "Failed to set vm.max_map_count"
+
+export DEBIAN_FRONTEND=noninteractive
+if ! apt-get --assume-yes update >>"$LOG" 2>&1; then
+  log "apt-get update failed"
+  exit 0
+fi
+
+# policy-rc.d is how Debian skips service starts. Masking the unit does not
+# hold: the Elasticsearch postinst unmasks it. A direct systemctl stop can
+# also wait forever because the unit sets TimeoutStopSec=0 and SendSIGKILL=no.
+if [ -e /usr/sbin/policy-rc.d ]; then
+  policy_backup=$(mktemp)
+  cp /usr/sbin/policy-rc.d "$policy_backup"
+fi
+printf '#!/bin/sh\nexit 101\n' > /usr/sbin/policy-rc.d
+chmod 755 /usr/sbin/policy-rc.d
+policy_held=1
+dpkg --configure -a >>"$LOG" 2>&1 || log "dpkg --configure -a failed"
+if ! NEEDRESTART_MODE=a apt-get --assume-yes install elasticsearch >>"$LOG" 2>&1; then
+  log "elasticsearch package install failed"
+  exit 0
+fi
+release_policy
+
+if [ -d /var/log/elasticsearch ]; then
+  chmod 755 -R /var/log/elasticsearch/
+fi
+
+# single-node is allowed during security auto-configuration. cluster.initial_master_nodes
+# cannot be set at the same time.
+sed -i -E 's/^(cluster\.initial_master_nodes:.*)$/# \1/' /etc/elasticsearch/elasticsearch.yml
+
+if ! grep -q '^network.host:' /etc/elasticsearch/elasticsearch.yml; then
+  cat >> /etc/elasticsearch/elasticsearch.yml <<'EOM'
+
+# DigitalOcean 1-Click: reachable on port 9200 as a single node
 network.host: 0.0.0.0
+discovery.type: single-node
+EOM
+elif ! grep -q '^discovery.type:' /etc/elasticsearch/elasticsearch.yml; then
+  printf '\ndiscovery.type: single-node\n' >> /etc/elasticsearch/elasticsearch.yml
+fi
+
+# Elasticsearch 9 wants at least a 1g heap. Pin it on 1 GB through 4 GB Droplets
+# (MemTotal for 4 GB is about 4,000,000 kB) and give those machines swap so the
+# JVM is not killed during first start.
+mem_kb=$(awk '/MemTotal:/ {print $2}' /proc/meminfo)
+mem_kb=${mem_kb:-0}
+log "MemTotal ${mem_kb} kB"
+if [ "$mem_kb" -lt 7000000 ]; then
+  if [ "$mem_kb" -lt 3000000 ]; then
+    heap=1g
+  else
+    heap=2g
+  fi
+  # A 1 GB Droplet cannot hold a 1g heap in RAM. swappiness 10 avoids swap
+  # until the OOM killer runs, so use the normal value there and let the
+  # 2 GB swap file absorb the heap. 2 GB and 4 GB Droplets have room for
+  # the heap, so keep Elasticsearch in RAM.
+  if [ "$mem_kb" -lt 1500000 ]; then
+    swappiness=60
+  else
+    swappiness=10
+  fi
+  if ! swapon --show=NAME --noheadings 2>/dev/null | grep -qx '/swapfile'; then
+    if [ ! -f /swapfile ]; then
+      fallocate -l 2G /swapfile >>"$LOG" 2>&1 || dd if=/dev/zero of=/swapfile bs=1M count=2048 >>"$LOG" 2>&1
+      chmod 600 /swapfile
+      mkswap /swapfile >>"$LOG" 2>&1 || log "mkswap failed"
+    fi
+    swapon /swapfile >>"$LOG" 2>&1 || log "Could not enable swap"
+    grep -q '/swapfile' /etc/fstab || printf '/swapfile none swap sw 0 0\n' >> /etc/fstab
+  fi
+  printf 'vm.swappiness=%s\n' "$swappiness" > /etc/sysctl.d/99-elasticsearch-swap.conf
+  sysctl -w "vm.swappiness=${swappiness}" >>"$LOG" 2>&1 || true
+  mkdir -p /etc/elasticsearch/jvm.options.d
+  cat > /etc/elasticsearch/jvm.options.d/heap.options <<EOM
+-Xms${heap}
+-Xmx${heap}
+EOM
+  chown root:elasticsearch /etc/elasticsearch/jvm.options.d/heap.options
+  chmod 660 /etc/elasticsearch/jvm.options.d/heap.options
+  log "Using heap ${heap}, swappiness ${swappiness}"
+fi
+
+# Written before any stop/start so a wedged process cannot block past this point
+# with the packaged TimeoutStopSec=0 and SendSIGKILL=no.
+mkdir -p /etc/systemd/system/elasticsearch.service.d
+cat > /etc/systemd/system/elasticsearch.service.d/override.conf <<'EOM'
+[Service]
+TimeoutStartSec=1800
+TimeoutStopSec=120
+SendSIGKILL=yes
 EOM
 
-# Set permissions for ElasticSearch logs
-sudo chmod 755 -R /var/log/elasticsearch/
+systemctl daemon-reload
+if systemctl is-active --quiet elasticsearch.service; then
+  timeout 150 systemctl stop elasticsearch.service >>"$LOG" 2>&1 || log "elasticsearch stop timed out"
+fi
+if systemctl is-active --quiet elasticsearch.service; then
+  log "Sending SIGKILL to elasticsearch"
+  systemctl kill --kill-who=all --signal=SIGKILL elasticsearch.service >>"$LOG" 2>&1 || true
+  sleep 2
+fi
+systemctl reset-failed elasticsearch.service >>"$LOG" 2>&1 || true
+systemctl enable elasticsearch.service >>"$LOG" 2>&1 || true
+systemctl restart elasticsearch.service >>"$LOG" 2>&1 || log "elasticsearch restart returned non-zero"
 
-# Start elastic service
-sudo systemctl daemon-reload
+wait_for_elasticsearch() {
+  local attempt code
+  for ((attempt=1; attempt<=90; attempt++)); do
+    code=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 5 https://127.0.0.1:9200 || true)
+    case "$code" in
+      200|401) return 0 ;;
+    esac
+    sleep 2
+  done
+  return 1
+}
 
-sudo systemctl enable elasticsearch.service
+listening_publicly() {
+  ss -ltn | grep -E '0\.0\.0\.0:9200|\[::\]:9200|\*:9200' >/dev/null
+}
 
-sudo systemctl start elasticsearch.service
+dump_elasticsearch_failure() {
+  log "--- systemctl status ---"
+  systemctl status elasticsearch.service --no-pager -l >>"$LOG" 2>&1 || true
+  log "--- journalctl ---"
+  journalctl -u elasticsearch --no-pager -n 80 >>"$LOG" 2>&1 || true
+  log "--- /var/log/elasticsearch ---"
+  tail -n 120 /var/log/elasticsearch/*.log >>"$LOG" 2>&1 || true
+  log "--- kernel oom ---"
+  dmesg -T 2>/dev/null | grep -Ei 'out of memory|killed process|elasticsearch' | tail -n 30 >>"$LOG" 2>&1 || true
+}
 
-# Generate random password for elastic, kibana and logstash users
-export elasticPass=$(echo "y" | /usr/share/elasticsearch/bin/elasticsearch-reset-password -u elastic --url https://localhost:9200 | awk '/^New/{print $3}')
-export kibanaPass=$(echo "y" | /usr/share/elasticsearch/bin/elasticsearch-reset-password -u kibana --url https://localhost:9200 | awk '/^New/{print $3}')
-export logstashSystemPass=$(echo "y" | /usr/share/elasticsearch/bin/elasticsearch-reset-password -u logstash_system --url https://localhost:9200 | awk '/^New/{print $3}')
-export kibanaEnrollmentToken=$(/usr/share/elasticsearch/bin/elasticsearch-create-enrollment-token -s kibana --url https://localhost:9200)
+if ! wait_for_elasticsearch; then
+  log "Elasticsearch did not accept HTTPS on 127.0.0.1:9200"
+  dump_elasticsearch_failure
+  exit 0
+fi
 
-# Set env variable for elastic, kibana and logstash passwords
-cat > /root/.digitalocean_passwords <<EOM
-ELASTIC_PASSWORD=${elasticPass}
-KIBANA_PASSWORD=${kibanaPass}
-LOGSTASH_SYSTEM_PASSWORD=${logstashSystemPass}
-KIBANA_ENROLLMENT_TOKEN=${kibanaEnrollmentToken}
-EOM
+if ! listening_publicly; then
+  log "Elasticsearch is up on loopback only; setting http.host"
+  if grep -q '^http\.host:' /etc/elasticsearch/elasticsearch.yml; then
+    sed -i -E 's/^http\.host:.*$/http.host: 0.0.0.0/' /etc/elasticsearch/elasticsearch.yml
+  else
+    printf '\nhttp.host: 0.0.0.0\n' >> /etc/elasticsearch/elasticsearch.yml
+  fi
+  systemctl restart elasticsearch.service >>"$LOG" 2>&1 || log "restart after http.host returned non-zero"
+  if ! wait_for_elasticsearch; then
+    log "Elasticsearch did not come back after setting http.host"
+    dump_elasticsearch_failure
+    exit 0
+  fi
+fi
 
-# Remove the ssh force logout command
-sed -e '/Match User root/d' \
-    -e '/.*ForceCommand.*droplet.*/d' \
-    -i /etc/ssh/sshd_config
+ss -ltn >>"$LOG" 2>&1 || true
 
-systemctl restart ssh
+# The HTTP certificate usually lists localhost, not 127.0.0.1. The reset tool
+# checks that name, so try localhost before the literal address.
+elasticsearch_cli() {
+  local max_len="$1"
+  shift
+  local spec out
+  for spec in https://localhost:9200 auto https://127.0.0.1:9200; do
+    if [ "$spec" = auto ]; then
+      out=$(timeout 45 "$@" 2>>"$LOG" || true)
+    else
+      out=$(timeout 45 "$@" --url "$spec" 2>>"$LOG" || true)
+    fi
+    out=$(printf '%s' "$out" | tr -d '[:space:]')
+    case "$out" in
+      ""|ERROR*|Exception*|Failed*) continue ;;
+    esac
+    if [ "${#out}" -le "$max_len" ]; then
+      printf '%s' "$out"
+      return 0
+    fi
+  done
+  return 1
+}
+
+reset_password() {
+  local user="$1"
+  local attempt pass
+  for ((attempt=1; attempt<=6; attempt++)); do
+    pass=$(elasticsearch_cli 200 /usr/share/elasticsearch/bin/elasticsearch-reset-password \
+      -u "$user" -b -s -f || true)
+    if [ -n "$pass" ]; then
+      printf '%s' "$pass"
+      return 0
+    fi
+    log "Password reset for ${user} did not return a password (attempt ${attempt})"
+    sleep 5
+  done
+  return 1
+}
+
+elasticPass=$(reset_password elastic || true)
+kibanaPass=$(reset_password kibana_system || true)
+logstashSystemPass=$(reset_password logstash_system || true)
+
+kibanaEnrollmentToken=""
+for ((attempt=1; attempt<=6; attempt++)); do
+  kibanaEnrollmentToken=$(elasticsearch_cli 8000 /usr/share/elasticsearch/bin/elasticsearch-create-enrollment-token \
+    -s kibana || true)
+  if [ -n "$kibanaEnrollmentToken" ]; then
+    break
+  fi
+  log "Kibana enrollment token was empty (attempt ${attempt})"
+  sleep 5
+done
+
+write_passwords
+
+if [ -z "$elasticPass" ]; then
+  log "Failed to generate the elastic password"
+  dump_elasticsearch_failure
+else
+  log "Recorded Elasticsearch credentials"
+fi
