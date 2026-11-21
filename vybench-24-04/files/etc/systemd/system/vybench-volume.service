@@ -1,0 +1,15 @@
+[Unit]
+Description=Bind DigitalOcean Block Storage over vybench data
+DefaultDependencies=no
+After=local-fs.target snapd.service
+Before=snap.vybench.mariadb.service
+Wants=local-fs.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+TimeoutStartSec=infinity
+ExecStart=/opt/vybench/mount_volume.sh
+
+[Install]
+WantedBy=multi-user.target
