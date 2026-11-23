@@ -61,15 +61,14 @@ STORAGE_DIR_JSON="$(json_escape "${INSTANCE_ROOT}/data/storage")"
 SECRETS_KEY_JSON="$(json_escape "$SECRETS_KEY_PATH")"
 NOW_JSON="$(json_escape "$NOW")"
 
-# Own directories before writing files; never chown file paths after replace.
-install -d -o paperclip -g paperclip -m 700 /home/paperclip/.paperclip
-install -d -o paperclip -g paperclip -m 700 "$INSTANCE_ROOT"
-install -d -o paperclip -g paperclip -m 700 \
-  "${INSTANCE_ROOT}/logs" \
-  "${INSTANCE_ROOT}/data" \
-  "${INSTANCE_ROOT}/data/storage" \
-  "${INSTANCE_ROOT}/data/backups" \
-  "${INSTANCE_ROOT}/secrets"
+# Create dirs as paperclip (never install -d -o as root — follows dir symlinks).
+paperclip_ensure_user_dir /home/paperclip/.paperclip 700
+paperclip_ensure_user_dir "$INSTANCE_ROOT" 700
+paperclip_ensure_user_dir "${INSTANCE_ROOT}/logs" 700
+paperclip_ensure_user_dir "${INSTANCE_ROOT}/data" 700
+paperclip_ensure_user_dir "${INSTANCE_ROOT}/data/storage" 700
+paperclip_ensure_user_dir "${INSTANCE_ROOT}/data/backups" 700
+paperclip_ensure_user_dir "${INSTANCE_ROOT}/secrets" 700
 
 for path in "$CONFIG_PATH" "$ENV_PATH" "$SECRETS_KEY_PATH"; do
   if [ -e "$path" ] || [ -L "$path" ]; then

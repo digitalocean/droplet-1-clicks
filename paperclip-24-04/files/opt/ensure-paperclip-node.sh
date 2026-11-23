@@ -81,8 +81,17 @@ pin_managed_shim() {
     echo "ERROR: refusing hardlinked shim: $SHIM" >&2
     return 1
   fi
-  # -I: isolate mode (no PYTHONPATH / cwd on sys.path). Rewrite via temp + atomic mv.
-  /usr/bin/python3 -I - "$SHIM" "$NODE_BIN" "$SHIM_MARKER" <<'PY'
+  # Refuse symlink parents under paperclip's writable tree before touching the shim.
+  local cur="$SHIM"
+  while [ -n "$cur" ] && [ "$cur" != "/" ]; do
+    if [ -L "$cur" ]; then
+      echo "ERROR: refusing symlink in shim path: $cur" >&2
+      return 1
+    fi
+    cur="$(dirname "$cur")"
+  done
+  # Rewrite as paperclip; fchmod/fchown on the open fd (never path-based chmod/chown).
+  runuser -u paperclip -- /usr/bin/python3 -I - "$SHIM" "$NODE_BIN" "$SHIM_MARKER" <<'PY'
 import os, pathlib, re, sys, tempfile
 path, node_bin, marker = sys.argv[1:]
 file = pathlib.Path(path)
@@ -115,14 +124,20 @@ if updated == text:
 dir_name = str(file.parent)
 fd, tmp = tempfile.mkstemp(prefix=".paperclip-shim.", dir=dir_name)
 try:
-    with os.fdopen(fd, "w", encoding="utf-8") as handle:
-        handle.write(updated)
-    os.chmod(tmp, 0o755)
-    # Keep paperclip ownership if present
-    st = file.stat()
-    os.chown(tmp, st.st_uid, st.st_gid)
+    os.write(fd, updated.encode("utf-8"))
+    os.fchmod(fd, 0o755)
+    st = os.fstat(fd)
+    # Keep ownership of the open inode (no path-based chown race).
+    os.fchown(fd, st.st_uid, st.st_gid)
+    os.close(fd)
+    fd = -1
     os.replace(tmp, path)
 except Exception:
+    if fd >= 0:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
     try:
         os.unlink(tmp)
     except OSError:

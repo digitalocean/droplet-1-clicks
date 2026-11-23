@@ -275,9 +275,9 @@ write_paperclip_opencode_config() {
   local conf_path="${conf_dir}/opencode.json"
   local tmp_json
   [ -n "${PROVIDERS_JSON:-}" ] || return 0
-  # Ensure parent dirs exist and are owned before writing (no chown of conf_path after).
-  install -d -o paperclip -g paperclip -m 700 /home/paperclip/.config
-  install -d -o paperclip -g paperclip -m 700 "$conf_dir"
+  # Create dirs as paperclip (never install -d -o as root — follows dir symlinks).
+  paperclip_ensure_user_dir /home/paperclip/.config 700
+  paperclip_ensure_user_dir "$conf_dir" 700
   if [ -e "$conf_path" ] || [ -L "$conf_path" ]; then
     paperclip_assert_safe_target "$conf_path" || return 1
   fi
