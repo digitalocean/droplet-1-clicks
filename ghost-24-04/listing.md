@@ -8,7 +8,7 @@ A DigitalOcean 1-Click Droplet running **Ghost** (publishing platform) on **Ubun
 - Ghost (installed via Ghost CLI on first boot; version pinned in the image build)  
 - Node.js 22 LTS (NodeSource)  
 - MySQL 8  
-- nginx (reverse proxy / SSL via Ghost CLI)  
+- nginx (reverse proxy / SSL via Ghost CLI; HTTP/1.1 only over HTTPS, nginx.org mainline ≥ 1.31.9)  
 - Postfix (loopback-only for mail)  
 - fail2ban  
 - UFW (SSH limited; HTTP/HTTPS for nginx)  

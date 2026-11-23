@@ -1,6 +1,17 @@
 #!/bin/bash
 set -euo pipefail
 
+if [ -f /var/lib/digitalocean/nginx-org-layout.sh ]; then
+    # shellcheck source=/dev/null
+    . /var/lib/digitalocean/nginx-org-layout.sh
+    nginx_org_ensure_sites_enabled_layout
+fi
+
+restart_nginx_safe() {
+    nginx -t
+    systemctl restart nginx
+}
+
 # Scripts in this directory will be executed by cloud-init on the first boot of droplets
 # created from your image.  Things like generating passwords, configuration requiring IP address
 # or other items that will be unique to each instance should be done in scripts here.
@@ -240,9 +251,9 @@ if target is None:
 start, end, block = target
 insert = []
 if not re.search(r"^[ \t]*listen[ \t]+443\b", block, re.M):
-    insert.append("    listen 443 ssl http2;\n")
+    insert.append("    listen 443 ssl;\n")
 if not re.search(r"^[ \t]*listen[ \t]+\[::\]:443\b", block, re.M):
-    insert.append("    listen [::]:443 ssl http2;\n")
+    insert.append("    listen [::]:443 ssl;\n")
 if not re.search(r"^[ \t]*ssl_certificate[ \t]+", block, re.M):
     insert.append(f"    ssl_certificate {cert};\n")
 if not re.search(r"^[ \t]*ssl_certificate_key[ \t]+", block, re.M):
@@ -345,7 +356,7 @@ for domain in ${RENEWED_DOMAINS:-}; do
     fi
 done
 
-systemctl reload nginx.service >/dev/null 2>&1 || true
+systemctl restart nginx.service >/dev/null 2>&1 || true
 EOF
     chmod 0755 /etc/letsencrypt/renewal-hooks/deploy/jitsi-meet-coturn
 
@@ -408,8 +419,10 @@ else
     exit 1
 fi
 
-grep -rl "$BUILD_HOSTNAME" /etc/jitsi /etc/prosody /etc/nginx 2>/dev/null | \
-    xargs -r sed -i "s/${BUILD_HOSTNAME}/${JITSI_HOSTNAME}/g"
+mapfile -t _jitsi_rename_files < <(grep -rl "$BUILD_HOSTNAME" /etc/jitsi /etc/prosody /etc/nginx 2>/dev/null || true)
+if ((${#_jitsi_rename_files[@]} > 0)); then
+    sed -i "s/${BUILD_HOSTNAME}/${JITSI_HOSTNAME}/g" "${_jitsi_rename_files[@]}"
+fi
 
 ensure_prosody_host_config
 systemctl restart prosody
@@ -419,10 +432,10 @@ ensure_acme_challenge_location "/etc/nginx/sites-available/${JITSI_HOSTNAME}.con
 install -d -m 0755 /usr/share/jitsi-meet/.well-known/acme-challenge
 printf '%s\n' "ok" > /usr/share/jitsi-meet/.well-known/acme-challenge/do-1click-check
 
-nginx -t
-systemctl restart nginx
+restart_nginx_safe
 
-if ! nginx -T 2>/dev/null | grep -q "server_name .*${JITSI_HOSTNAME}"; then
+_nginx_full_config=$(nginx -T 2>/dev/null || true)
+if ! grep -E "server_name .*${JITSI_HOSTNAME}" <<<"${_nginx_full_config}" >/dev/null; then
     echo "ERROR: nginx did not load the Jitsi site for ${JITSI_HOSTNAME}." >&2
     echo "Check /etc/nginx/sites-enabled/${JITSI_HOSTNAME}.conf before retrying certificate setup." >&2
     exit 1
@@ -437,7 +450,7 @@ rm -f /usr/share/jitsi-meet/.well-known/acme-challenge/do-1click-check
 
 install_letsencrypt_cert
 ensure_https_listener
-nginx -t
+nginx -t >/dev/null
 
 # update prosody to use internal user management
 for f in /etc/prosody/conf.avail/*.cfg.lua; do
@@ -452,9 +465,21 @@ done
 systemctl restart prosody
 systemctl restart jicofo
 systemctl restart jitsi-videobridge2
-systemctl restart nginx
+restart_nginx_safe
 
 if ! curl -kfsS -H "Host: ${JITSI_HOSTNAME}" "https://127.0.0.1/" >/dev/null 2>&1; then
     echo "WARNING: nginx did not respond on local HTTPS for ${JITSI_HOSTNAME}." >&2
     echo "Check: nginx -t; systemctl status nginx; ss -tulpn | grep ':443'" >&2
+fi
+
+if [ -x /var/lib/digitalocean/jitsi-mitigate-nginx2root.sh ]; then
+    /var/lib/digitalocean/jitsi-mitigate-nginx2root.sh
+fi
+
+if [ -f /var/lib/digitalocean/nginx2root-alpn-check.sh ]; then
+    # shellcheck source=/dev/null
+    . /var/lib/digitalocean/nginx2root-alpn-check.sh
+    if assert_alpn_no_h2 "Jitsi HTTPS" 127.0.0.1 443 "${JITSI_HOSTNAME}"; then
+        echo "HTTPS uses HTTP/1.1 only (CVE-2026-123007 mitigation; no ALPN h2 on :443)."
+    fi
 fi
