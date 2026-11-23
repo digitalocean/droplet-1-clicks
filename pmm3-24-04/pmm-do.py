@@ -8,14 +8,18 @@ Updated for PMM v3 API:
 - Updated list services endpoint to use /v1/management/services (GET)
 - Service creation uses /v1/management/services with correct payload format
 - Updated payload format to match PMM v3 management API structure
+- Resolve connected pmm-agent UUID via inventory API (do not hardcode "pmm-server")
+- Hide DigitalOcean token and PMM admin password prompts with getpass
 - Added Python 2/3 compatibility
 - Enhanced error handling for PMM v3 response format
 - Added support for PostgreSQL and MongoDB in addition to MySQL
 """
 
 from __future__ import print_function
+import getpass
 import os
 import sys
+import time
 import argparse
 import pprint
 import requests
@@ -31,17 +35,21 @@ except NameError:
 
 
 class PmmServer:
-    def __init__(self, baseURL="https://127.0.0.1:443", serverAdminPassword=None):
+    def __init__(self, baseURL="https://127.0.0.1:443", serverAdminPassword=None, pmmAgentId=None):
         self.baseURL = baseURL
         self.password = serverAdminPassword
-    
+        self.pmmAgentId = pmmAgentId
+
+    def _auth(self):
+        return ('admin', self.password)
+
     def listServices(self):
         requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
         # Updated endpoint for PMM v3 management API
         endpoint = self.baseURL + "/v1/management/services"
         try:
-            r = requests.get(endpoint, verify=False, auth=('admin', self.password))
+            r = requests.get(endpoint, verify=False, auth=self._auth())
             r.raise_for_status()
         except requests.exceptions.HTTPError as e:
             if r.status_code == 401:
@@ -55,6 +63,92 @@ class PmmServer:
             sys.exit(1)
     
         return r.json()
+
+    def _listPmmServerNodeIds(self):
+        """
+        Return node IDs for the local PMM Server (generic/container) so we can
+        look up its connected pmm-agent UUID.
+        """
+        endpoint = self.baseURL + "/v1/inventory/nodes"
+        r = requests.get(endpoint, verify=False, auth=self._auth())
+        r.raise_for_status()
+        nodes = r.json()
+
+        candidates = []
+        for key in ('generic', 'container'):
+            for node in nodes.get(key) or []:
+                if not isinstance(node, dict):
+                    continue
+                if node.get('is_pmm_server_node'):
+                    candidates.append(node)
+                elif node.get('node_name') in ('pmm-server', 'pmm-server-node'):
+                    candidates.append(node)
+
+        # Prefer explicitly marked PMM Server nodes; fall back to all generic nodes.
+        if not candidates:
+            candidates = [n for n in (nodes.get('generic') or []) if isinstance(n, dict)]
+
+        return [n.get('node_id') for n in candidates if n.get('node_id')]
+
+    def _connectedAgentIdForNode(self, node_id):
+        endpoint = self.baseURL + "/v1/inventory/agents"
+        r = requests.get(
+            endpoint,
+            params={
+                'node_id': node_id,
+                'agent_type': 'AGENT_TYPE_PMM_AGENT',
+            },
+            verify=False,
+            auth=self._auth(),
+        )
+        r.raise_for_status()
+        agents = r.json().get('pmm_agent') or []
+        for agent in agents:
+            if agent.get('connected') and agent.get('agent_id'):
+                return agent['agent_id']
+        return None
+
+    def getConnectedPmmAgentId(self, timeout_seconds=60, poll_seconds=5):
+        """
+        Resolve a connected local pmm-agent UUID. PMM 3 uses UUIDs, not the
+        legacy hard-coded id "pmm-server".
+        """
+        requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+        deadline = time.time() + timeout_seconds
+        last_error = None
+
+        while True:
+            try:
+                for node_id in self._listPmmServerNodeIds():
+                    agent_id = self._connectedAgentIdForNode(node_id)
+                    if agent_id:
+                        self.pmmAgentId = agent_id
+                        return agent_id
+            except requests.exceptions.HTTPError as e:
+                last_error = e
+                if getattr(e, 'response', None) is not None and e.response.status_code == 401:
+                    print("Invalid PMM admin password.")
+                    sys.exit(1)
+            except requests.exceptions.RequestException as e:
+                last_error = e
+
+            if time.time() >= deadline:
+                break
+            print("Waiting for local pmm-agent to connect...")
+            time.sleep(poll_seconds)
+
+        print("Could not find a connected local pmm-agent.")
+        print("PMM Management API needs a connected agent UUID to add remote databases.")
+        print("Try: docker ps --filter name=pmm-server ; docker restart pmm-server")
+        print("Then wait until the container is healthy and re-run this script.")
+        if last_error:
+            print("Last error: {}".format(last_error))
+        sys.exit(1)
+
+    def requirePmmAgentId(self):
+        if not self.pmmAgentId:
+            return self.getConnectedPmmAgentId()
+        return self.pmmAgentId
     
     def addMySQL(self, mysqlInstance, digitalocean_api_token=None):
         """
@@ -67,13 +161,14 @@ class PmmServer:
             return
         
         requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+        pmm_agent_id = self.requirePmmAgentId()
 
         # Use PMM v3 management API format for services
         body = {
             "mysql": {
                 "metricsParameters": "manually",
                 "schema": "https",
-                "pmm_agent_id": "pmm-server",
+                "pmm_agent_id": pmm_agent_id,
                 "port": str(mysqlInstance.port),
                 "qan_mysql_perfschema": True,
                 "disable_comments_parsing": True,
@@ -126,13 +221,14 @@ class PmmServer:
             return
         
         requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+        pmm_agent_id = self.requirePmmAgentId()
 
         # Use PMM v3 management API format for PostgreSQL services
         body = {
             "postgresql": {
                 "metricsParameters": "manually",
                 "schema": "https",
-                "pmm_agent_id": "pmm-server",
+                "pmm_agent_id": pmm_agent_id,
                 "port": str(pgInstance.port),
                 "disable_comments_parsing": True,
                 "autoDiscoveryOptions": "enabled",
@@ -183,13 +279,14 @@ class PmmServer:
             return
         
         requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+        pmm_agent_id = self.requirePmmAgentId()
 
         # Use PMM v3 management API format for MongoDB services
         body = {
             "mongodb": {
                 "metricsParameters": "manually",
                 "schema": "https",
-                "pmm_agent_id": "pmm-server",
+                "pmm_agent_id": pmm_agent_id,
                 "port": str(mongoInstance.port),
                 "address": mongoInstance.address,
                 "username": mongoInstance.monitoring_username,
@@ -477,13 +574,13 @@ class DbaasInstance:
 def getAPIToken():
     token = os.environ.get('DIGITALOCEAN_API_TOKEN')
     if not token:
-        token = input("Enter your DigitalOcean API token: ")
+        token = getpass.getpass("Enter your DigitalOcean API token: ")
     return token
 
 def getPMMAdminPassword():
     password = os.environ.get('PMM_ADMIN_PASSWORD')
     if not password:
-        password = input("Enter the password for the PMM 'admin' user: ")
+        password = getpass.getpass("Enter the password for the PMM 'admin' user: ")
     return password
 
 def getDBInstances(token):
@@ -542,11 +639,19 @@ def getPublicIPv4():
         r = requests.get("http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address")
         r.raise_for_status()
     except requests.exceptions.HTTPError:
-        jsonResponse = r.json()
-        print(jsonResponse['error'])
+        try:
+            jsonResponse = r.json()
+            print(jsonResponse.get('error', r.text))
+        except Exception:
+            print(r.text)
+        return ''
     except Exception as err:
         print(err)
-    return r.content
+        return ''
+    # metadata returns plain text; decode bytes for Python 3
+    if isinstance(r.content, bytes):
+        return r.content.decode('utf-8').strip()
+    return str(r.content).strip()
 
 def printBanner():
     print(
@@ -579,6 +684,8 @@ def main(arguments):
     digitalocean_api_token = getAPIToken()
     pmm_admin_password = getPMMAdminPassword()
     pmm = PmmServer(serverAdminPassword=pmm_admin_password)
+    agent_id = pmm.getConnectedPmmAgentId()
+    print("Using connected pmm-agent: {}".format(agent_id))
     
     instanceProperties = getDBInstances(digitalocean_api_token)
     eligibleInstances = [ DbaasInstance(i, pmm) for i in instanceProperties if i['engine'] in ['mysql', 'pg']]
