@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Private by Default</title>
+<style>
+  :root { color-scheme: light dark; --accent: #0069ff; }
+  body { margin: 0; font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 640px; margin: 0 auto; padding: 56px 24px; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 999px;
+           background: #15803d; color: #fff; font-size: 13px; font-weight: 600; }
+  h1 { margin: 16px 0 8px; font-size: 32px; line-height: 1.2; }
+  p.lead { margin: 0 0 32px; opacity: .8; }
+  h2 { margin: 32px 0 8px; font-size: 18px; }
+  ol { padding-left: 20px; }
+  li { margin: 6px 0; }
+  code, pre { font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  code { padding: 1px 5px; border-radius: 4px; background: rgba(127,127,127,.15); }
+  pre { padding: 14px 16px; border-radius: 8px; background: rgba(127,127,127,.15); overflow-x: auto; }
+  pre code { padding: 0; background: none; }
+  .path { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 8px; font-size: 14px; }
+  .path span { padding: 4px 10px; border: 1px solid rgba(127,127,127,.35); border-radius: 6px; }
+  footer { margin-top: 48px; font-size: 14px; opacity: .7; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <span class="badge">Cloudflare is working</span>
+  <h1>Your Private by Default Droplet is serving the web</h1>
+  <p class="lead">This page came through a Cloudflare Tunnel. The Droplet has no
+    open web ports: ports 80 and 443 are closed in its firewall.</p>
+
+  <div class="path">
+    <span>Visitor</span> &rarr; <span>Cloudflare</span> &rarr;
+    <span>outbound tunnel</span> &rarr; <span>localhost:8080</span>
+  </div>
+
+  <h2>Replace this page with your app</h2>
+  <ol>
+    <li>Stop the welcome page: <code>private welcome off</code></li>
+    <li>Start your app on <code>localhost:8080</code>.</li>
+    <li>Reload this URL. It now shows your app; nothing changes in Cloudflare.</li>
+  </ol>
+  <pre><code># examples
+PORT=8080 npm start
+python3 -m http.server 8080 --bind 127.0.0.1
+docker run -p 127.0.0.1:8080:80 nginx</code></pre>
+
+  <h2>Using a different port?</h2>
+  <p>For a quick preview run <code>expose 3000</code>. On your own domain, change the
+    hostname's service to <code>http://localhost:3000</code> in the Cloudflare dashboard
+    (Zero Trust &gt; Networks &gt; Tunnels).</p>
+
+  <footer>
+    Check what this Droplet exposes with <code>private status</code>.
+    <a href="https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/">Cloudflare Tunnel docs</a>
+  </footer>
+</main>
+</body>
+</html>

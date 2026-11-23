@@ -7,7 +7,7 @@ A DigitalOcean 1-Click Droplet running a **LEMP** stack on **Ubuntu 26.04 LTS**:
 - Ubuntu 26.04 LTS
 - Nginx
 - MySQL (local)
-- PHP 8.5 FPM (`php8.5-fpm`, `php8.5-mysql`, `php8.5-curl`, `php8.5-apcu`)
+- PHP 8.5 FPM (`php8.5-fpm`, `php8.5-mysql`, `php8.5-curl`, `php8.5-apcu`) from **[packages.sury.org](https://packages.sury.org/php/)** (≥ **8.5.13**, 2026-11-19 security releases incl. [CVE-2026-115560](https://www.php.net/ChangeLog-8.php#8.5.13))
 - Certbot (Nginx plugin)
 - fail2ban, Postfix (loopback), UFW
 

@@ -18,7 +18,7 @@ anywhere. Uses <5MB RAM and starts in <10ms.
   Default agent: assistant
 
   Configuration:
-    Config file:    /home/zeroclaw/.zeroclaw/config.toml (Schema V3)
+    Config file:    /home/zeroclaw/.zeroclaw/config.toml (0.9.0 Schema V4; run: zeroclaw config migrate)
     Environment:    /opt/zeroclaw.env (MODEL_ACCESS_KEY, INFERENCE_MODEL, DO_INFERENCE_ROUTER)
     Serverless Inference: set MODEL_ACCESS_KEY at create time or in /opt/zeroclaw.env
                     then: sudo /opt/apply-inference-from-env.sh
@@ -31,7 +31,8 @@ anywhere. Uses <5MB RAM and starts in <10ms.
     View logs:        journalctl -u zeroclaw -f
     System status:    /opt/zeroclaw-cli.sh status
     System doctor:    /opt/zeroclaw-cli.sh doctor
-    Pairing code:     /opt/zeroclaw-cli.sh gateway get-paircode --new
+    Pairing code:     zeroclaw gateway get-paircode --new
+                      (or: /opt/zeroclaw-cli.sh gateway get-paircode --new)
     Chat once:        /opt/zeroclaw-cli.sh agent -a assistant -m "Hello"
 
   Helper Scripts:

@@ -4,7 +4,7 @@ This Packer template builds a DigitalOcean Marketplace 1-Click image for [ZeroCl
 
 ## What's Included
 
-- **ZeroClaw** v0.8.4 (pre-built binary)
+- **ZeroClaw** v0.9.0 (pre-built binary)
 - **Caddy** reverse proxy with automatic TLS via Let's Encrypt
 - **UFW** firewall (ports 80, 443, 22)
 - **fail2ban** for SSH brute-force protection
@@ -12,7 +12,7 @@ This Packer template builds a DigitalOcean Marketplace 1-Click image for [ZeroCl
 
 ## How It Works
 
-ZeroClaw is installed as a pre-built binary at `/usr/local/bin/zeroclaw`. It runs as a systemd service under a dedicated `zeroclaw` user.
+ZeroClaw’s real binary is at `/usr/local/lib/zeroclaw/zeroclaw`. `/usr/local/bin/zeroclaw` is a thin wrapper: root SSH sessions re-run the CLI as the `zeroclaw` service user so dashboard instructions like `zeroclaw gateway get-paircode --new` find `/home/zeroclaw/.zeroclaw/data/gateway-admin.token` instead of looking under `/root`. The systemd unit starts the real binary directly as `User=zeroclaw`.
 
 On first boot, `001_onboot` sources `/etc/environment` and runs `/opt/apply-inference-from-env.sh`. If `MODEL_ACCESS_KEY` is set (droplet environment variables or `/opt/zeroclaw.env`), Serverless Inference is configured automatically and the interactive wizard is skipped. Otherwise, on first SSH login, an interactive setup wizard prompts you to select an AI provider (DigitalOcean Serverless Inference, OpenAI, Anthropic, or OpenRouter), choose a serverless inference model when applicable, and enter your API key.
 
@@ -66,6 +66,7 @@ ZeroClaw is extremely lightweight (<5MB RAM, ~8.8MB binary). The minimum `s-1vcp
 | `files/etc/caddy/Caddyfile.tmp` | Caddy config template |
 | `files/etc/update-motd.d/99-one-click` | MOTD with usage instructions |
 | `files/opt/zeroclaw.env` | Environment configuration (`MODEL_ACCESS_KEY`, `INFERENCE_MODEL`, `DO_INFERENCE_ROUTER`) |
+| `files/opt/zeroclaw-wrapper.sh` | Root→`zeroclaw` PATH wrapper installed as `/usr/local/bin/zeroclaw` |
 | `files/opt/apply-inference-from-env.sh` | Apply Serverless Inference key from env on boot |
 | `files/opt/*.sh` | Helper scripts (restart, status, update, domain, cli) |
 | `files/var/lib/cloud/scripts/per-instance/001_onboot` | First-boot initialization |

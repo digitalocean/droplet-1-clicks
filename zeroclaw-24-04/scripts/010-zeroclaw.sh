@@ -1,6 +1,6 @@
 #!/bin/sh
 
-APP_VERSION="${application_version:-v0.8.4}"
+APP_VERSION="${application_version:-v0.9.0}"
 
 # Open required ports
 ufw allow 80
@@ -35,7 +35,11 @@ DOWNLOAD_URL="https://github.com/zeroclaw-labs/zeroclaw/releases/download/${APP_
 echo "Downloading ZeroClaw ${APP_VERSION} for ${TARGET}..."
 curl -fsSLO "$DOWNLOAD_URL"
 tar xzf "zeroclaw-${TARGET}.tar.gz"
-install -m 0755 zeroclaw /usr/local/bin/zeroclaw
+# Real binary under lib/; /usr/local/bin/zeroclaw is a root→zeroclaw wrapper so the
+# UI-suggested `zeroclaw gateway get-paircode --new` works on root SSH sessions.
+mkdir -p /usr/local/lib/zeroclaw
+install -m 0755 zeroclaw /usr/local/lib/zeroclaw/zeroclaw
+install -m 0755 /opt/zeroclaw-wrapper.sh /usr/local/bin/zeroclaw
 # Optional TUI companion binary when present in the release archive
 if [ -f zerocode ]; then
     install -m 0755 zerocode /usr/local/bin/zerocode
@@ -79,6 +83,7 @@ chmod +x /opt/restart-zeroclaw.sh
 chmod +x /opt/status-zeroclaw.sh
 chmod +x /opt/update-zeroclaw.sh
 chmod +x /opt/zeroclaw-cli.sh
+chmod +x /opt/zeroclaw-wrapper.sh
 chmod +x /opt/setup-zeroclaw-domain.sh
 chmod +x /opt/apply-inference-from-env.sh
 chmod +x /opt/zeroclaw-run-onboard.sh
