@@ -14,6 +14,18 @@ echo "Installing PMM3..."
 cd /opt/pmm3
 /bin/bash get-pmm.sh
 
+chmod +x /var/lib/digitalocean/pmm-mitigate-nginx2root.sh
+echo "Waiting for pmm-server container to start..."
+for _ in $(seq 1 60); do
+  if docker ps --filter name=pmm-server --filter status=running -q | grep -q .; then
+    break
+  fi
+  sleep 5
+done
+# Mitigation waits internally for PMM TLS cert /v1/readyz before nginx -t.
+/var/lib/digitalocean/pmm-mitigate-nginx2root.sh
+systemctl enable pmm-mitigate-nginx2root.service
+
 # Create first-login setup script
 cat > /opt/pmm3/setup.sh << 'EOF'
 #!/bin/bash
@@ -71,6 +83,7 @@ echo -e "${YELLOW}Service Management:${NC}"
 echo "  • Check status: docker ps --filter name=pmm-server"
 echo "  • View logs: docker logs -f pmm-server"
 echo "  • Restart: docker restart pmm-server"
+echo "  • After PMM upgrades: /var/lib/digitalocean/pmm-mitigate-nginx2root.sh"
 echo ""
 echo -e "${YELLOW}Security Information:${NC}"
 echo "To keep this Droplet secure, the UFW firewall is enabled."
@@ -93,24 +106,6 @@ chmod +x /opt/pmm3/setup.sh
 
 # Add to root's .bashrc to run on first login
 echo "/opt/pmm3/setup.sh" >> /root/.bashrc
-
-# Create per-instance startup script
-mkdir -p /var/lib/cloud/scripts/per-instance
-cat > /var/lib/cloud/scripts/per-instance/01-setup-pmm3.sh << 'EOF'
-#!/bin/bash
-
-# This script runs on first boot of a newly created Droplet
-# to prepare the system for PMM3
-
-# Set the hostname to 'pmm3'
-hostnamectl set-hostname pmm3
-
-# Ensure Docker and the PMM Server container are running
-systemctl enable docker
-systemctl start docker
-docker start pmm-server || true
-
-EOF
 
 chmod +x /var/lib/cloud/scripts/per-instance/01-setup-pmm3.sh
 
@@ -201,6 +196,7 @@ PMM Server runs as a Docker container (`pmm-server`).
 3. Set up proper firewall rules
 4. Regular security updates
 5. Monitor access logs
+6. HTTP/2 is disabled inside `pmm-server` for CVE-2026-123007; re-run `/var/lib/digitalocean/pmm-mitigate-nginx2root.sh` after container upgrades
 
 EOF
 

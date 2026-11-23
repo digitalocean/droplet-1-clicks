@@ -19,7 +19,7 @@ With a memory footprint under 5MB and cold start times under 10ms, ZeroClaw is d
 
 | Component | Details |
 |-----------|---------|
-| ZeroClaw | v0.8.4 (pre-built Rust binary) |
+| ZeroClaw | v0.9.0 (pre-built Rust binary) |
 | Caddy | Reverse proxy with automatic TLS |
 | UFW | Firewall (HTTP, HTTPS, SSH) |
 | fail2ban | SSH brute-force protection |
@@ -70,7 +70,9 @@ journalctl -u zeroclaw -f
 # Show status and version
 /opt/status-zeroclaw.sh
 
-# Gateway pairing code (UI login)
+# Gateway pairing code (UI login; as root this uses the zeroclaw service user)
+zeroclaw gateway get-paircode --new
+# equivalent:
 /opt/zeroclaw-cli.sh gateway get-paircode --new
 
 # Update to latest version
@@ -111,7 +113,7 @@ This downloads the latest release binary from GitHub and restarts the service.
 
 ## Configuration
 
-The main configuration file is located at `/home/zeroclaw/.zeroclaw/config.toml` (Schema V3). Provider entries live under `[providers.models.<family>.<alias>]`, and the default agent is `[agents.assistant]`. See the [ZeroClaw documentation](https://zeroclawlabs.ai) for all configuration options.
+The main configuration file is located at `/home/zeroclaw/.zeroclaw/config.toml`. ZeroClaw 0.9.0 uses Schema V4 (run `zeroclaw config migrate` to persist the upgrade; the 1-Click onboard still writes a V3 config that loads with an in-memory migrate). Provider entries live under `[providers.models.<family>.<alias>]`, and the default agent is `[agents.assistant]`. See the [ZeroClaw documentation](https://zeroclawlabs.ai) for all configuration options.
 
 ## Resources
 

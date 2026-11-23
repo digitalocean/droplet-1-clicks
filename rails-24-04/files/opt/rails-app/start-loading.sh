@@ -18,7 +18,7 @@ if docker run -d \
     -p 80:80 \
     -v /opt/rails-app/nginx-loading.conf:/etc/nginx/nginx.conf:ro \
     -v /opt/rails-app/loading.html:/opt/rails-app/loading.html:ro \
-    nginx:alpine; then
+    nginx:1.31.9-alpine; then
     echo "✅ Loading page is now available"
 else
     echo "❌ Failed to start loading page"

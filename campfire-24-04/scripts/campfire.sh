@@ -1,10 +1,88 @@
 #!/bin/sh
+set -eu
 
 # open port for clients
 ufw allow 80
 ufw allow 443
 ufw limit ssh/tcp
 ufw --force enable
+
+cat > /opt/ensure-campfire-ruby.sh << 'ENSURE_EOF'
+#!/bin/sh
+set -eu
+
+MIN_RUBY_VERSION=4.0.10
+ONCE_CAMPFIRE_DIR=${1:-/opt/once-campfire}
+
+version_ge() {
+    lower=$(printf '%s\n%s\n' "$1" "$2" | sort -V | sed -n '1p')
+    [ "$lower" = "$2" ]
+}
+
+if [ ! -d "$ONCE_CAMPFIRE_DIR" ]; then
+    echo "ERROR: once-campfire directory not found: ${ONCE_CAMPFIRE_DIR}" >&2
+    exit 1
+fi
+
+cd "$ONCE_CAMPFIRE_DIR"
+
+target="$MIN_RUBY_VERSION"
+
+if [ -f .ruby-version ]; then
+    current=$(tr -d '[:space:]' < .ruby-version)
+    if [ -n "$current" ] && version_ge "$current" "$target"; then
+        target="$current"
+    fi
+fi
+
+if [ -f Dockerfile ]; then
+    arg_ruby=$(sed -n 's/^ARG RUBY_VERSION=//p' Dockerfile | sed -n '1p')
+    if [ -n "$arg_ruby" ] && version_ge "$arg_ruby" "$target"; then
+        target="$arg_ruby"
+    fi
+    from_ruby=$(sed -n 's|^FROM \(docker\.io/library/\)\{0,1\}ruby:\([0-9.]*\)-slim.*|\2|p' Dockerfile | sed -n '1p')
+    if [ -n "$from_ruby" ] && version_ge "$from_ruby" "$target"; then
+        target="$from_ruby"
+    fi
+fi
+
+if [ -f .ruby-version ]; then
+    printf '%s\n' "$target" > .ruby-version
+fi
+
+if [ -f Dockerfile ]; then
+    if grep -q '^ARG RUBY_VERSION=' Dockerfile; then
+        sed "s/^ARG RUBY_VERSION=.*/ARG RUBY_VERSION=${target}/" Dockerfile > Dockerfile.tmp
+        mv Dockerfile.tmp Dockerfile
+    fi
+    sed "s|^FROM \\(\\(docker\\.io/library/\\)\\{0,1\\}\\)ruby:[0-9.]*-slim|FROM \\1ruby:${target}-slim|" Dockerfile > Dockerfile.tmp
+    mv Dockerfile.tmp Dockerfile
+fi
+
+echo "Ensured once-campfire Ruby ${target} (minimum ${MIN_RUBY_VERSION}, CVE-2026-132825)"
+ENSURE_EOF
+
+cat > /opt/verify-campfire-ruby.sh << 'VERIFY_EOF'
+#!/bin/sh
+set -eu
+
+MIN_RUBY_VERSION=4.0.10
+IMAGE=${1:-campfire}
+
+version_ge() {
+    lower=$(printf '%s\n%s\n' "$1" "$2" | sort -V | sed -n '1p')
+    [ "$lower" = "$2" ]
+}
+
+actual=$(docker run --rm "$IMAGE" ruby -e 'print RUBY_VERSION')
+if ! version_ge "$actual" "$MIN_RUBY_VERSION"; then
+    echo "ERROR: Campfire image Ruby ${actual} is below minimum ${MIN_RUBY_VERSION} (CVE-2026-132825)" >&2
+    exit 1
+fi
+echo "Campfire image Ruby ${actual} meets minimum ${MIN_RUBY_VERSION} (CVE-2026-132825)"
+VERIFY_EOF
+
+chmod +x /opt/ensure-campfire-ruby.sh /opt/verify-campfire-ruby.sh
 
 # git clone the repo
 cd /opt && git clone https://github.com/basecamp/once-campfire.git
@@ -24,10 +102,10 @@ SECRET_KEY_BASE=PLACEHOLDER_WILL_BE_REPLACED_ON_FIRST_BOOT
 DISABLE_SSL=true
 
 # Web Push notification public key (uncomment and set for push notifications)
-# VAPID_PUBLIC_KEY=$YOUR_PUBLIC_KEY
+# VAPID_PUBLIC_KEY=${YOUR_PUBLIC_KEY:-}
 
 # Web Push notification private key (uncomment and set for push notifications)
-# VAPID_PRIVATE_KEY=$YOUR_PRIVATE_KEY
+# VAPID_PRIVATE_KEY=${YOUR_PRIVATE_KEY:-}
 
 # Domain name for automatic SSL certificate generation (uncomment and set your domain)
 # TLS_DOMAIN=chat.example.com
@@ -40,7 +118,9 @@ if ! docker buildx version >/dev/null 2>&1; then
   apt-get update -qq
   apt-get install -y -qq docker-buildx
 fi
+/opt/ensure-campfire-ruby.sh /opt/once-campfire
 cd /opt/once-campfire && DOCKER_BUILDKIT=1 docker build -t campfire .
+/opt/verify-campfire-ruby.sh campfire
 
 # Get the latest version of campfire
 cd /opt/once-campfire && docker run \
@@ -112,6 +192,8 @@ if ! git pull origin main; then
     exit 1
 fi
 
+/opt/ensure-campfire-ruby.sh /opt/once-campfire
+
 echo "Rebuilding Campfire image (existing container kept until build succeeds)..."
 # BuildKit + buildx required for COPY --chmod in once-campfire Dockerfile
 ensure_docker_buildx() {
@@ -133,6 +215,11 @@ fi
 
 if ! DOCKER_BUILDKIT=1 docker build -t campfire .; then
     echo "❌ Error: Failed to rebuild Campfire image; leaving running container as-is."
+    exit 1
+fi
+
+if ! /opt/verify-campfire-ruby.sh campfire; then
+    echo "❌ Error: Rebuilt Campfire image failed Ruby CVE verification; leaving running container as-is."
     exit 1
 fi
 
