@@ -155,8 +155,10 @@ node_min_for_major() {
 }
 
 version_ge() {
-    # sort -C avoids ${var%%$'\n'*} (nounset "n: unbound variable") and head under pipefail.
-    printf '%s\n' "$2" "$1" | sort -C -V >/dev/null
+    local sorted lower
+    sorted="$(printf "%s\n%s\n" "$1" "$2" | sort -V)"
+    lower="${sorted%%$'\n'*}"
+    [ "${lower}" = "$2" ]
 }
 
 ruby_min="3.4.13"
