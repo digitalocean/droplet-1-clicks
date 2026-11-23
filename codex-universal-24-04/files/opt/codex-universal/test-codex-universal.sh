@@ -155,9 +155,20 @@ node_min_for_major() {
 }
 
 version_ge() {
-    # sort -C avoids ${var%%$'\n'*} (nounset "n: unbound variable") and head under pipefail.
-    printf '%s\n' "$2" "$1" | sort -C -V >/dev/null
+    local sorted lower
+    sorted="$(printf "%s\n%s\n" "$1" "$2" | sort -V)"
+    lower="${sorted%%$'\n'*}"
+    [ "${lower}" = "$2" ]
 }
+
+ruby_min="3.4.13"
+ruby_actual="$(ruby -e '"'"'print RUBY_VERSION'"'"')"
+if version_ge "${ruby_actual}" "${ruby_min}"; then
+    echo "  OK: Ruby ${ruby_actual} meets minimum ${ruby_min} (CVE-2026-132825 / GHSA-34m4-m9fh-gqp5)"
+else
+    echo "  FAIL: Ruby ${ruby_actual} is below minimum ${ruby_min} for CVE-2026-132825"
+    exit 1
+fi
 
 php_major="${CODEX_ENV_PHP_VERSION:-8.4}"
 php_min="$(php_min_for_major "${php_major}")"

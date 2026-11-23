@@ -99,7 +99,7 @@ Supported variables (see [upstream docs](https://github.com/openai/codex-univers
 | `CODEX_ENV_RUST_VERSION` | `1.87.0` |
 | `CODEX_ENV_GO_VERSION` | `1.23.8` |
 | `CODEX_ENV_SWIFT_VERSION` | `6.2` |
-| `CODEX_ENV_RUBY_VERSION` | `3.4.4` |
+| `CODEX_ENV_RUBY_VERSION` | `3.4.13` |
 | `CODEX_ENV_PHP_VERSION` | `8.4` |
 | `CODEX_ENV_JAVA_VERSION` | `21` |
 

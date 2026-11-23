@@ -70,6 +70,23 @@ until docker exec codex-universal ps aux 2>/dev/null | grep -q '[s]leep infinity
 done
 echo "Language runtime setup complete."
 
+RUBY_MIN_VERSION="3.4.13"
+echo "Verifying Ruby ${RUBY_MIN_VERSION}+ in container (CVE-2026-132825)..."
+docker exec codex-universal bash -lc '
+set -euo pipefail
+MIN="3.4.13"
+version_ge() {
+    lower=$(printf "%s\n%s\n" "$1" "$2" | sort -V | sed -n "1p")
+    [ "$lower" = "$2" ]
+}
+actual=$(ruby -e '"'"'print RUBY_VERSION'"'"')
+if ! version_ge "${actual}" "${MIN}"; then
+    echo "ERROR: Ruby ${actual} is below minimum ${MIN} (CVE-2026-132825)" >&2
+    exit 1
+fi
+echo "Ruby ${actual} meets minimum ${MIN} (mise install ok)"
+'
+
 echo "Cleaning package manager caches from container writable layer..."
 docker exec codex-universal bash -c '
     rm -rf /root/.cache/pip
