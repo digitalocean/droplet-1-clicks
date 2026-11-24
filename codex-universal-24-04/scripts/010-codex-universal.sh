@@ -46,12 +46,13 @@ cp /opt/codex-universal/codex-universal.env /opt/codex-universal/.env
 chmod 600 /opt/codex-universal/.env
 
 CODEX_UPSTREAM_DIGEST="sha256:905e512f36460e1be4cfedb30928a8a28299edb0fcd5de7998ceaa72d27fe304"
-CODEX_LOCAL_IMAGE="codex-universal-do:cve-2026-11-19"
+CODEX_LOCAL_IMAGE="codex-universal-do:cve-2026-11-24"
 
 chmod +x /opt/codex-universal/patch-php-cve.sh
 chmod +x /opt/codex-universal/patch-node-cve.sh
+chmod +x /opt/codex-universal/patch-java-cve.sh
 
-echo "Building CVE-patched codex-universal image from pinned upstream digest (PHP rebuild ~60–90 min; Node/Bun nvm/mise upgrade after)..."
+echo "Building CVE-patched codex-universal image from pinned upstream digest (PHP rebuild ~60–90 min; Node/Bun/Java mise upgrades after)..."
 docker pull "ghcr.io/openai/codex-universal@${CODEX_UPSTREAM_DIGEST}"
 docker build -t "${CODEX_LOCAL_IMAGE}" \
     -f /opt/codex-universal/Dockerfile.cve-patched \
@@ -69,6 +70,32 @@ until docker exec codex-universal ps aux 2>/dev/null | grep -q '[s]leep infinity
     sleep 30
 done
 echo "Language runtime setup complete."
+
+echo "Verifying Temurin-only Java and default 21.0.13.1 in container (CVE-2026-114938)..."
+docker exec codex-universal bash -lc '
+set -euo pipefail
+mapfile -t java_versions < <(mise ls --installed --json java | jq -r ".[].version")
+if [ "${#java_versions[@]}" -eq 0 ]; then
+    echo "ERROR: no Java runtimes installed in container" >&2
+    exit 1
+fi
+for ver in "${java_versions[@]}"; do
+    case "$ver" in
+        temurin-25.0.5.1+2* | temurin-21.0.13.1+2* | temurin-17.0.21.1+2* | temurin-11.0.33.1+1*) ;;
+        *)
+            echo "ERROR: non-Temurin or unpatched Java still present: ${ver}" >&2
+            exit 1
+            ;;
+    esac
+done
+default_ver="$(java -version 2>&1 | head -1)"
+if ! echo "${default_ver}" | grep -q "21.0.13.1"; then
+    echo "ERROR: default java is not 21.0.13.1: ${default_ver}" >&2
+    exit 1
+fi
+echo "Java installs: ${java_versions[*]}"
+echo "Default: ${default_ver}"
+'
 
 RUBY_MIN_VERSION="3.4.13"
 echo "Verifying Ruby ${RUBY_MIN_VERSION}+ in container (CVE-2026-132825)..."
