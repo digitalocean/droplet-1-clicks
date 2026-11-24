@@ -175,6 +175,61 @@ PY
     fi
 }
 
+read_jicofo_xmpp_password() {
+    local secret
+    secret=$(sed -n 's/.*password[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' /etc/jitsi/jicofo/jicofo.conf 2>/dev/null | head -1)
+    if [ -z "$secret" ]; then
+        secret=$(sed -n 's/.*password:[[:space:]]*"\([^"]*\)".*/\1/p' /etc/jitsi/jicofo/jicofo.conf 2>/dev/null | head -1)
+    fi
+    printf '%s' "$secret"
+}
+
+read_jvb_xmpp_password() {
+    local secret
+    secret=$(sed -n 's/.*password[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' /etc/jitsi/videobridge/jvb.conf 2>/dev/null | head -1)
+    if [ -z "$secret" ]; then
+        secret=$(sed -n 's/.*PASSWORD[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' /etc/jitsi/videobridge/jvb.conf 2>/dev/null | head -1)
+    fi
+    if [ -z "$secret" ]; then
+        secret=$(sed -n 's/.*PASSWORD="*\([^"]*\)"*.*/\1/p' /etc/jitsi/videobridge/jvb.conf 2>/dev/null | head -1)
+    fi
+    printf '%s' "$secret"
+}
+
+register_prosody_focus_and_jvb() {
+    local _focus_secret _jvb_secret
+
+    _focus_secret=$(read_jicofo_xmpp_password)
+    _jvb_secret=$(read_jvb_xmpp_password)
+
+    if [ -z "$_focus_secret" ]; then
+        echo "ERROR: Could not read jicofo XMPP password from /etc/jitsi/jicofo/jicofo.conf." >&2
+        exit 1
+    fi
+    if [ -z "$_jvb_secret" ]; then
+        echo "ERROR: Could not read JVB XMPP password from /etc/jitsi/videobridge/jvb.conf." >&2
+        exit 1
+    fi
+
+    prosodyctl register focus "auth.${JITSI_HOSTNAME}" "${_focus_secret}"
+    prosodyctl register jvb "auth.${JITSI_HOSTNAME}" "${_jvb_secret}"
+    prosodyctl mod_roster_command subscribe "focus.${JITSI_HOSTNAME}" "focus@auth.${JITSI_HOSTNAME}" || true
+}
+
+wait_for_jicofo_videobridge() {
+    local log=/var/log/jitsi/jicofo.log
+    local attempt
+
+    for attempt in $(seq 1 30); do
+        if [ -f "$log" ] && grep -q "Added new videobridge" "$log"; then
+            return 0
+        fi
+        sleep 2
+    done
+    echo "WARNING: jicofo did not log \"Added new videobridge\" within 60 seconds (${log})." >&2
+    echo "Check jicofo and jitsi-videobridge2 for SASL or XMPP errors." >&2
+}
+
 ensure_https_listener() {
     local nginx_conf="/etc/nginx/sites-available/${JITSI_HOSTNAME}.conf"
 
@@ -426,6 +481,7 @@ fi
 
 ensure_prosody_host_config
 systemctl restart prosody
+register_prosody_focus_and_jvb
 ensure_https_listener
 
 ensure_acme_challenge_location "/etc/nginx/sites-available/${JITSI_HOSTNAME}.conf"
@@ -465,6 +521,7 @@ done
 systemctl restart prosody
 systemctl restart jicofo
 systemctl restart jitsi-videobridge2
+wait_for_jicofo_videobridge
 restart_nginx_safe
 
 if ! curl -kfsS -H "Host: ${JITSI_HOSTNAME}" "https://127.0.0.1/" >/dev/null 2>&1; then
