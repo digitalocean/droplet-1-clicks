@@ -14,6 +14,8 @@ JAVA_PATCH_VERSIONS=(
 JAVA_PATCH_MAJORS=(25 21 17 11)
 JAVA_EOL_MAJORS=(24 23 22)
 JAVA_DEFAULT_VERSION="temurin-21.0.13.1+2"
+IMAGE_MISE_CONFIG="/mise.toml"
+GLOBAL_MISE_CONFIG="${HOME}/.config/mise/config.toml"
 
 is_patched_temurin() {
     local ver="$1"
@@ -25,6 +27,53 @@ is_patched_temurin() {
             return 1
             ;;
     esac
+}
+
+is_patched_java_request() {
+    local req="$1"
+    case "$req" in
+        temurin-25.0.5.1+2* | temurin-21.0.13.1+2* | temurin-17.0.21.1+2* | temurin-11.0.33.1+1*)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+java_pin_in_config() {
+    local cfg="$1"
+    [ -f "${cfg}" ] || return 1
+    grep -qE '^[[:space:]]*java[[:space:]]*=' "${cfg}"
+}
+
+read_java_pin() {
+    local cfg="$1"
+    grep -E '^[[:space:]]*java[[:space:]]*=' "${cfg}" | head -1 \
+        | sed -E 's/^[[:space:]]*java[[:space:]]*=[[:space:]]*//' \
+        | tr -d "\"'"
+}
+
+set_image_default_java() {
+    echo "Setting image default Java to ${JAVA_DEFAULT_VERSION} in ${IMAGE_MISE_CONFIG}..."
+    mise use --path "${IMAGE_MISE_CONFIG}" "java@${JAVA_DEFAULT_VERSION}"
+    mise use --global "java@${JAVA_DEFAULT_VERSION}"
+}
+
+scrub_java_config_pins() {
+    local cfg pinned
+
+    for cfg in "${IMAGE_MISE_CONFIG}" "${GLOBAL_MISE_CONFIG}"; do
+        java_pin_in_config "${cfg}" || continue
+        pinned="$(read_java_pin "${cfg}")"
+        if is_patched_java_request "${pinned}"; then
+            continue
+        fi
+        echo "Replacing pinned OpenJDK Java ${pinned} in ${cfg}..."
+        mise use --path "${cfg}" "java@${JAVA_DEFAULT_VERSION}"
+    done
+
+    set_image_default_java
 }
 
 install_patched_java() {
@@ -39,9 +88,6 @@ install_patched_java() {
 for patch_ver in "${JAVA_PATCH_VERSIONS[@]}"; do
     install_patched_java "${patch_ver}"
 done
-
-echo "Setting default Java to ${JAVA_DEFAULT_VERSION}..."
-mise use --global "java@${JAVA_DEFAULT_VERSION}"
 
 mapfile -t installed_versions < <(mise ls --installed --json java | jq -r '.[].version')
 for ver in "${installed_versions[@]}"; do
@@ -95,16 +141,15 @@ if [ "${#leftovers[@]}" -gt 0 ]; then
 fi
 
 for major in "${JAVA_PATCH_MAJORS[@]}"; do
-  mise use "java@${major}" >/dev/null
-  actual="$(java -version 2>&1 | head -1)"
+  actual="$(mise exec "java@${major}" -- java -version 2>&1 | head -1)"
   if ! echo "${actual}" | grep -qE "openjdk version \"${major}\."; then
-    echo "ERROR: mise use java@${major} did not select expected major (${actual})" >&2
+    echo "ERROR: java@${major} did not select expected major (${actual})" >&2
     exit 1
   fi
   echo "  OK: Java ${major} → ${actual}"
 done
 
-mise use --global "java@${JAVA_DEFAULT_VERSION}"
+scrub_java_config_pins
 mise cache clear || true
 
 default_line="$(java -version 2>&1 | head -1)"
