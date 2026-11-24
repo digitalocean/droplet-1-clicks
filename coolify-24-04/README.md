@@ -142,12 +142,13 @@ Coolify itself is installed on first boot and includes:
 
 Located in `/opt/`:
 
-- **start-coolify.sh**: Start Coolify containers
-- **stop-coolify.sh**: Stop Coolify containers
-- **restart-coolify.sh**: Restart Coolify containers
+- **start-coolify.sh**: `systemctl start coolify`
+- **stop-coolify.sh**: `systemctl stop coolify`
+- **restart-coolify.sh**: `systemctl restart coolify` (recreates stack after stop)
 - **update-coolify.sh**: Update to latest Coolify version
 - **coolify-logs.sh**: View real-time logs
-- **coolify-status.sh**: Check container status
+- **coolify-status.sh**: Check systemd + container status
+- **configure-coolify-localhost.sh**: Repair localhost SSH trust and force SSH port 22
 
 ### Systemd Service
 
@@ -160,26 +161,21 @@ Located in `/opt/`:
 When a droplet is created from this image:
 
 1. **SSH Configuration**: Removes forced logout for root user
-2. **SSH Key Generation**: Generates unique SSH keys for Coolify localhost (not added to authorized_keys)
-3. **First-Login Setup**: Configures interactive localhost activation script
-4. **Coolify Installation**: Pulls and starts all Coolify containers
-5. **Service Startup**: Waits for containers to be ready
-6. **Information File**: Creates `/root/coolify_info.txt` with access details
-7. **MOTD Display**: Shows access information on SSH login
+2. **SSH Key Generation**: Generates unique Coolify localhost keys (`-C coolify`) and authorizes them in `/root/.ssh/authorized_keys`
+3. **Coolify Installation**: Starts Coolify via `systemctl enable --now coolify`
+4. **Service Startup**: Waits for containers to be ready; systemd unit is active
+5. **Information File**: Creates `/root/coolify_info.txt` with access details
+6. **MOTD Display**: Shows access information on SSH login
+
+Marketplace safety: Packer cleanup wipes `authorized_keys` at **image build** time. Authorization runs only on **per-instance** first boot.
 
 ## First Login Experience
 
-On first SSH login, users are greeted with an interactive setup:
+On first SSH login, users see a one-time notice that localhost SSH trust is already configured.
 
-- **Localhost Activation Prompt**: Asks if user wants to activate localhost server
-- **Automatic Configuration**: If accepted, activates SSH keys and restarts Coolify
-- **Skip Option**: Users can skip and activate later with `/opt/configure-coolify-localhost.sh`
-- **One-Time Only**: Setup runs once and removes itself from future logins
-
-This ensures:
-- Image passes marketplace validation (no SSH keys in authorized_keys during build)
-- Users can start deploying immediately after first login
-- Clear, guided setup experience similar to WordPress 1-Click
+- **SSH for Validate**: port **22** only
+- **Coolify UI**: `http://droplet-ip:8000` (do not put 8000 or 8080 in Servers → SSH port)
+- **Repair**: `/opt/configure-coolify-localhost.sh` re-syncs the key and resets localhost SSH port to 22
 
 ## Network Configuration
 
@@ -189,7 +185,7 @@ The following ports are automatically configured:
 
 | Port | Service | Description |
 |------|---------|-------------|
-| 22 | SSH | Rate-limited for security |
+| 22 | SSH | Rate-limited; also allowed from Docker bridges for Coolify localhost |
 | 80 | HTTP | Web traffic and Let's Encrypt |
 | 443 | HTTPS | Secure web traffic |
 | 8000 | Coolify UI | Web interface |
@@ -252,11 +248,13 @@ See Coolify documentation for full list: https://coolify.io/docs
 1. **Create a droplet** from the built snapshot
 2. **Wait 3-5 minutes** for first-boot completion
 3. **SSH into the droplet**: `ssh root@droplet-ip`
-4. **Check MOTD**: Verify access instructions are displayed
-5. **Check Coolify status**: Run `/opt/coolify-status.sh`
+4. **Check MOTD**: Verify access instructions and SSH port 22 guidance
+5. **Check Coolify status**: Run `/opt/coolify-status.sh` — systemd should be `active`
 6. **Access web interface**: Visit `http://droplet-ip:8000`
 7. **Create admin account**: Register first user
-8. **Deploy test application**: Try deploying a simple static site
+8. **Validate localhost**: Servers → localhost → SSH port **22** → Validate (green)
+9. **Lifecycle**: `/opt/stop-coolify.sh` then `/opt/restart-coolify.sh` — UI reachable again; `systemctl is-active coolify` is `active`
+10. **Deploy test application**: Try deploying a simple static site
 
 ### Automated Tests
 
@@ -267,10 +265,19 @@ docker --version
 # Check if Coolify containers are running
 docker ps | grep coolify
 
-# Check systemd service
+# Check systemd service is active (not just enabled)
+systemctl is-active coolify
 systemctl status coolify
 
-# Check firewall rules
+# Localhost SSH trust
+grep coolify /root/.ssh/authorized_keys
+ssh -i /data/coolify/ssh/keys/id.root@host.docker.internal \
+  -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@127.0.0.1 true
+
+# UI listening
+ss -lntp | grep ':8000'
+
+# Firewall rules (includes Docker → SSH allows)
 ufw status
 
 # Check directory structure
@@ -278,6 +285,12 @@ ls -la /data/coolify/
 
 # Check helper scripts
 ls -l /opt/*coolify*.sh
+
+# Stop then restart must restore :8000
+/opt/stop-coolify.sh
+/opt/restart-coolify.sh
+systemctl is-active coolify
+ss -lntp | grep ':8000'
 ```
 
 ## Troubleshooting Build Issues

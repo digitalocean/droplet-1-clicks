@@ -20,6 +20,12 @@ IMPORTANT FIRST STEPS:
   2. Create your admin account IMMEDIATELY
   3. The first user to register gets full admin access
 
+Localhost SSH (already configured on first boot):
+  - SSH port for Servers → Validate is 22 (never 8000 or 8080)
+  - Coolify UI is :8000 only — do not put 8080 in the SSH port field
+  - If Validate times out on port 8080: set SSH port to 22, then re-validate
+  - Repair helper: /opt/configure-coolify-localhost.sh
+
 Management Commands:
   Start Coolify:    /opt/start-coolify.sh
   Stop Coolify:     /opt/stop-coolify.sh
@@ -27,7 +33,7 @@ Management Commands:
   Update Coolify:   /opt/update-coolify.sh
   View logs:        /opt/coolify-logs.sh
   Check status:     /opt/coolify-status.sh
-  Setup localhost:  /opt/configure-coolify-localhost.sh
+  Repair localhost: /opt/configure-coolify-localhost.sh
 
 Using systemctl:
   Start:   systemctl start coolify
@@ -44,7 +50,7 @@ On the server:
 
 Security & Firewall:
   UFW firewall is enabled with these open ports:
-    - 22 (SSH)
+    - 22 (SSH — localhost Validate uses this)
     - 80 (HTTP)
     - 443 (HTTPS)
     - 8000 (Coolify Web Interface)
@@ -53,9 +59,7 @@ Security & Firewall:
 
 Next Steps:
   1. Set up your admin account at http://$myip:8000
-  2. Activate localhost server:
-     Run: /opt/configure-coolify-localhost.sh
-     (This enables Coolify to deploy on this server)
+  2. Confirm Servers → localhost → SSH port is 22, then Validate
   3. (Optional) Configure a custom domain for HTTPS
   4. Start deploying your applications!
 

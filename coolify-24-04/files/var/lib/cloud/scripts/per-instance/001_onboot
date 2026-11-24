@@ -12,24 +12,41 @@ systemctl restart ssh
 # Get the server's IP address
 myip=$(hostname -I | awk '{print$1}')
 
-# Set up first-login interactive localhost activation
-cat >> /root/.bashrc <<EOM
-chmod +x /opt/coolify_localhost_setup.sh
-/opt/coolify_localhost_setup.sh
-EOM
-
 echo "Generating SSH keys for Coolify localhost management..."
 
-# Generate SSH key for Coolify server management (unique per droplet)
-# Note: Key is generated but NOT added to authorized_keys yet
-# User must run /opt/configure-coolify-localhost.sh to enable localhost access
+# Generate and authorize SSH key for Coolify server management (unique per droplet).
+# Matches Coolify install.sh: comment "coolify", append to authorized_keys, chown 9999.
+# Safe for marketplace: Packer cleanup wipes authorized_keys at image build; this runs per-instance.
 SSH_KEY_PATH="/data/coolify/ssh/keys/id.root@host.docker.internal"
+mkdir -p "$(dirname "${SSH_KEY_PATH}")"
+mkdir -p /root/.ssh
+chmod 700 /root/.ssh
+touch /root/.ssh/authorized_keys
+chmod 600 /root/.ssh/authorized_keys
+
 if [ ! -f "${SSH_KEY_PATH}" ]; then
-    ssh-keygen -f "${SSH_KEY_PATH}" -t ed25519 -N '' -C root@coolify
+    ssh-keygen -t ed25519 -a 100 -f "${SSH_KEY_PATH}" -q -N '' -C coolify
     echo "SSH keys generated at ${SSH_KEY_PATH}"
 else
     echo "SSH keys already exist, skipping generation"
 fi
+
+# Remove prior Coolify keys (legacy root@coolify or coolify), then authorize current pubkey
+sed -i -E '/[[:space:]](root@)?coolify[[:space:]]*$/d' /root/.ssh/authorized_keys
+if [ -f "${SSH_KEY_PATH}.pub" ]; then
+    cat "${SSH_KEY_PATH}.pub" >> /root/.ssh/authorized_keys
+fi
+chown 9999:root "${SSH_KEY_PATH}"
+chmod 600 "${SSH_KEY_PATH}"
+chmod 600 /root/.ssh/authorized_keys
+
+echo "SSH key authorized for localhost management."
+
+# One-time notice on first SSH login (localhost already activated above)
+cat >> /root/.bashrc <<'EOM'
+chmod +x /opt/coolify_localhost_setup.sh
+/opt/coolify_localhost_setup.sh
+EOM
 
 echo "Generating secure random values for Coolify environment..."
 
@@ -47,23 +64,50 @@ echo "Environment variables configured with unique secure values."
 # Reapply proper permissions after key generation
 chown -R 9999:root /data/coolify
 chmod -R 700 /data/coolify
+# Private key must stay readable by Coolify (uid 9999)
+chown 9999:root "${SSH_KEY_PATH}"
+chmod 600 "${SSH_KEY_PATH}"
 
 echo "Permissions reapplied."
 
-# Start Coolify for the first time
+# Start Coolify via systemd so the unit is active (RemainAfterExit oneshot)
 echo "Starting Coolify for the first time..."
+systemctl daemon-reload
+systemctl enable --now coolify.service
 
-cd /data/coolify/source
-
-# Pull and start Coolify containers
-docker compose --env-file /data/coolify/source/.env \
-  -f /data/coolify/source/docker-compose.yml \
-  -f /data/coolify/source/docker-compose.prod.yml \
-  up -d --pull always --remove-orphans
-
-# Wait for Coolify to be ready
+# Wait for Coolify health + SSH key reseed (PopulateSshKeysDirectorySeeder
+# deletes id.root@host.docker.internal and writes ssh_key@<uuid>)
 echo "Waiting for Coolify to initialize..."
-sleep 30
+for i in $(seq 1 60); do
+    if curl -sf --connect-timeout 2 http://127.0.0.1:8000/api/health >/dev/null 2>&1; then
+        echo "Coolify health endpoint is up."
+        break
+    fi
+    sleep 5
+done
+
+# Give seeders a moment to rewrite keys, then sync trust for onboarding
+sleep 10
+if ls /data/coolify/ssh/keys/ssh_key@* >/dev/null 2>&1 || [ -f "${SSH_KEY_PATH}" ]; then
+    echo "Coolify SSH keys present; syncing authorized_keys and legacy key path..."
+else
+    echo "Waiting for Coolify to write SSH keys..."
+    for i in $(seq 1 24); do
+        if ls /data/coolify/ssh/keys/ssh_key@* >/dev/null 2>&1 || [ -f "${SSH_KEY_PATH}" ]; then
+            break
+        fi
+        sleep 5
+    done
+fi
+
+# Soft-fail: sync errors must not abort first-boot (coolify_info.txt / service markers)
+chmod +x /opt/coolify-sync-localhost-ssh.sh
+if /opt/coolify-sync-localhost-ssh.sh; then
+    echo "Coolify localhost SSH sync succeeded."
+else
+    echo "WARNING: Coolify localhost SSH sync failed (continuing first-boot)."
+    echo "  After Coolify is healthy, run: /opt/configure-coolify-localhost.sh"
+fi
 
 # Check if Coolify is running
 if docker compose --env-file /data/coolify/source/.env \
@@ -84,11 +128,12 @@ Coolify Installation Complete
 Access your Coolify instance at:
   http://${myip}:8000
 
-IMPORTANT: 
+IMPORTANT:
 - Create your admin account immediately after accessing the URL above
 - If someone else accesses the registration page first, they could gain control
 - The first user to register will have full administrative access
-- Run /opt/configure-coolify-localhost.sh to enable localhost deployments
+- Localhost SSH trust is already configured (port 22)
+- Coolify UI is :8000 — do NOT set Servers → localhost → SSH port to 8000 or 8080
 
 Management Commands:
   Start Coolify:    /opt/start-coolify.sh
@@ -97,7 +142,7 @@ Management Commands:
   Update Coolify:   /opt/update-coolify.sh
   View logs:        /opt/coolify-logs.sh
   Check status:     /opt/coolify-status.sh
-  Setup localhost:  /opt/configure-coolify-localhost.sh
+  Repair localhost: /opt/configure-coolify-localhost.sh
 
 Using systemctl:
   Start:   systemctl start coolify
@@ -113,11 +158,15 @@ Configuration:
   Backups:           /data/coolify/backups
 
 Firewall Ports:
+  22   - SSH (localhost Validate uses this port)
   8000 - Coolify Web Interface
   80   - HTTP
   443  - HTTPS
   6001 - Coolify Realtime
   6002 - Coolify Soketi
+
+If Validate times out on port 8080: set Servers → localhost → SSH port to 22,
+then re-validate (or run /opt/configure-coolify-localhost.sh).
 
 For more information, visit: https://coolify.io/docs
 
@@ -125,8 +174,7 @@ For more information, visit: https://coolify.io/docs
 EOF
 
 chmod 600 /root/coolify_info.txt
-
-systemctl enable coolify.service
+touch /root/.coolify_localhost_configured
 
 echo "Coolify first-boot initialization complete!"
 echo "Access information saved to /root/coolify_info.txt"

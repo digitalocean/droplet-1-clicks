@@ -1,12 +1,6 @@
 #!/bin/bash
 
 echo "Restarting Coolify..."
-
-cd /data/coolify/source
-
-docker compose --env-file /data/coolify/source/.env \
-  -f /data/coolify/source/docker-compose.yml \
-  -f /data/coolify/source/docker-compose.prod.yml \
-  restart
-
+# oneshot ExecStop=down + ExecStart=up -d recreates containers even after stop
+systemctl restart coolify
 echo "Coolify restarted successfully!"

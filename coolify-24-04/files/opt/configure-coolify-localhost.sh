@@ -1,74 +1,50 @@
 #!/bin/bash
-
-# Coolify Localhost Activation Script
-# This script activates SSH keys for Coolify to manage the localhost server
+#
+# Coolify localhost repair / re-sync
+# Restores SSH key files Coolify expects and re-authorizes them (port 22).
 
 set -e
 
 echo "=================================================="
-echo "Coolify Localhost Server Activation"
+echo "Coolify Localhost Server Repair"
 echo "=================================================="
 echo ""
 
-SSH_KEY_PATH="/data/coolify/ssh/keys/id.root@host.docker.internal"
+ENV_FILE="/data/coolify/source/.env"
+myip=$(hostname -I | awk '{print$1}')
 
 # Check if Coolify is running
-if ! docker compose --env-file /data/coolify/source/.env \
-  -f /data/coolify/source/docker-compose.yml \
-  -f /data/coolify/source/docker-compose.prod.yml \
-  ps | grep -q "coolify"; then
+if ! systemctl is-active --quiet coolify 2>/dev/null && \
+   ! docker compose --env-file "${ENV_FILE}" \
+     -f /data/coolify/source/docker-compose.yml \
+     -f /data/coolify/source/docker-compose.prod.yml \
+     ps 2>/dev/null | grep -q "coolify"; then
     echo "Error: Coolify is not running."
     echo "Please start Coolify first: systemctl start coolify"
     exit 1
 fi
 
-# Check if SSH key exists
-if [ ! -f "${SSH_KEY_PATH}" ]; then
-    echo "SSH keys not found. Generating new keys..."
-    mkdir -p "$(dirname "${SSH_KEY_PATH}")"
-    ssh-keygen -f "${SSH_KEY_PATH}" -t ed25519 -N '' -C root@coolify -q
-    chown -R 9999:root /data/coolify/ssh
-    chmod -R 700 /data/coolify/ssh
-    echo "✓ SSH keys generated"
-else
-    echo "✓ SSH keys found at ${SSH_KEY_PATH}"
-fi
+chmod +x /opt/coolify-sync-localhost-ssh.sh
+/opt/coolify-sync-localhost-ssh.sh
 
 echo ""
-
-# Check if key is already in authorized_keys
-if grep -q "root@coolify" /root/.ssh/authorized_keys 2>/dev/null; then
-    echo "Localhost is already activated!"
-    echo ""
-    echo "You can now use Coolify to deploy applications on this server."
-    exit 0
-fi
-
-# Add the public key to authorized_keys
-echo "Activating localhost access..."
-mkdir -p /root/.ssh
-chmod 700 /root/.ssh
-cat "${SSH_KEY_PATH}.pub" >> /root/.ssh/authorized_keys
-chmod 600 /root/.ssh/authorized_keys
-
-echo "✓ SSH key added to authorized_keys"
+echo "Reminder: Coolify UI is http://${myip}:8000 — SSH for Validate is always port 22."
+echo "Do not set SSH port to 8000 or 8080."
+echo ""
+echo "Onboarding check (point 3):"
+echo "  ssh -i /data/coolify/ssh/keys/id.root@host.docker.internal -o BatchMode=yes root@localhost true"
 echo ""
 
-# Restart Coolify to pick up the changes
-echo "Restarting Coolify to apply changes..."
-systemctl restart coolify
-echo "✓ Coolify restarted"
-echo ""
+touch /root/.coolify_localhost_configured
 
 echo "=================================================="
-echo "Localhost Activation Complete!"
+echo "Localhost Repair Complete!"
 echo "=================================================="
-echo ""
-echo "Your Coolify localhost server is now ready to use."
 echo ""
 echo "Next steps:"
-echo "1. Go to your Coolify dashboard at http://$(hostname -I | awk '{print$1}'):8000"
-echo "2. Navigate to 'Servers' in the sidebar"
-echo "3. The localhost server should now show as connected"
-echo "4. You can now deploy applications, databases, and services!"
+echo "1. Open http://${myip}:8000"
+echo "2. Onboarding / Servers → localhost → SSH port 22 → Check again"
+echo "3. If still failing, paste the UI 'Current Public Key' into:"
+echo "     /root/.ssh/authorized_keys"
+echo "   then run this script once more."
 echo ""

@@ -1,12 +1,5 @@
 #!/bin/bash
 
 echo "Stopping Coolify..."
-
-cd /data/coolify/source
-
-docker compose --env-file /data/coolify/source/.env \
-  -f /data/coolify/source/docker-compose.yml \
-  -f /data/coolify/source/docker-compose.prod.yml \
-  down
-
+systemctl stop coolify
 echo "Coolify stopped successfully!"

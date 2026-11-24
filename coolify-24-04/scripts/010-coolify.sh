@@ -13,6 +13,7 @@ ufw limit ssh/tcp
 ufw --force enable
 
 echo "Firewall configured successfully."
+# Docker→SSH allows are added after the coolify network exists (narrower than RFC1918).
 
 # Install Docker Engine (version 24+)
 # Add Docker's official GPG key
@@ -81,9 +82,30 @@ docker network create --attachable coolify 2>/dev/null || true
 
 echo "Docker network created."
 
+# Allow Coolify containers to reach host SSH (host.docker.internal) via bridge subnets only
+allow_docker_ssh_from_subnet() {
+    local subnet="$1"
+    local comment="$2"
+    [ -n "${subnet}" ] || return 0
+    ufw allow from "${subnet}" to any port 22 proto tcp comment "${comment}" >/dev/null 2>&1 || true
+}
+
+DOCKER0_SUBNET=$(ip -o -f inet addr show docker0 2>/dev/null | awk '{print $4}' | head -1 || true)
+COOLIFY_SUBNET=$(docker network inspect coolify -f '{{range .IPAM.Config}}{{.Subnet}}{{println}}{{end}}' 2>/dev/null | head -1 || true)
+
+# Default docker0 if not detectable yet
+if [ -z "${DOCKER0_SUBNET}" ]; then
+    DOCKER0_SUBNET="172.17.0.0/16"
+fi
+
+allow_docker_ssh_from_subnet "${DOCKER0_SUBNET}" "Docker0 to host SSH"
+allow_docker_ssh_from_subnet "${COOLIFY_SUBNET}" "Coolify net to host SSH"
+echo "UFW: allowed SSH from Docker bridges (${DOCKER0_SUBNET}, ${COOLIFY_SUBNET:-none})."
+
 # Make helper scripts executable (scripts were copied by Packer)
 chmod +x /opt/coolify_localhost_setup.sh
 chmod +x /opt/configure-coolify-localhost.sh
+chmod +x /opt/coolify-sync-localhost-ssh.sh
 chmod +x /opt/restart-coolify.sh
 chmod +x /opt/stop-coolify.sh
 chmod +x /opt/start-coolify.sh
