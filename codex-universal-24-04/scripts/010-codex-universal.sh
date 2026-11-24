@@ -74,6 +74,10 @@ echo "Language runtime setup complete."
 echo "Verifying Temurin-only Java and default 21.0.13.1 in container (CVE-2026-114938)..."
 docker exec codex-universal bash -lc '
 set -euo pipefail
+if [ -f /mise.toml ]; then
+    echo "ERROR: /mise.toml must not exist (overrides global config and breaks CODEX_ENV_JAVA_VERSION)" >&2
+    exit 1
+fi
 mapfile -t java_versions < <(mise ls --installed --json java | jq -r ".[].version")
 if [ "${#java_versions[@]}" -eq 0 ]; then
     echo "ERROR: no Java runtimes installed in container" >&2

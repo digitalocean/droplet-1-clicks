@@ -55,23 +55,23 @@ read_java_pin() {
 }
 
 set_image_default_java() {
-    echo "Setting image default Java to ${JAVA_DEFAULT_VERSION} in ${IMAGE_MISE_CONFIG}..."
-    mise use --path "${IMAGE_MISE_CONFIG}" "java@${JAVA_DEFAULT_VERSION}"
+    echo "Setting default Java to ${JAVA_DEFAULT_VERSION} (global config; remove ${IMAGE_MISE_CONFIG})..."
+    rm -f "${IMAGE_MISE_CONFIG}"
     mise use --global "java@${JAVA_DEFAULT_VERSION}"
 }
 
 scrub_java_config_pins() {
-    local cfg pinned
+    local pinned
 
-    for cfg in "${IMAGE_MISE_CONFIG}" "${GLOBAL_MISE_CONFIG}"; do
-        java_pin_in_config "${cfg}" || continue
-        pinned="$(read_java_pin "${cfg}")"
-        if is_patched_java_request "${pinned}"; then
-            continue
+    rm -f "${IMAGE_MISE_CONFIG}"
+
+    if java_pin_in_config "${GLOBAL_MISE_CONFIG}"; then
+        pinned="$(read_java_pin "${GLOBAL_MISE_CONFIG}")"
+        if ! is_patched_java_request "${pinned}"; then
+            echo "Replacing pinned OpenJDK Java ${pinned} in ${GLOBAL_MISE_CONFIG}..."
+            mise use --global "java@${JAVA_DEFAULT_VERSION}"
         fi
-        echo "Replacing pinned OpenJDK Java ${pinned} in ${cfg}..."
-        mise use --path "${cfg}" "java@${JAVA_DEFAULT_VERSION}"
-    done
+    fi
 
     set_image_default_java
 }
