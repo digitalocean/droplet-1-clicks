@@ -73,11 +73,8 @@ This 1-Click installs and configures the following components:
 
 2. **First SSH Login**
    - SSH into your droplet: `ssh root@your-droplet-ip`
-   - An interactive setup wizard will appear automatically
-   - You'll be prompted: "Would you like to activate localhost now?"
-   - Choose **Yes (recommended)** to enable deployments immediately
-   - The setup activates SSH keys and restarts Coolify
-   - This only runs once on first login
+   - A one-time notice reports whether localhost SSH trust was verified on first boot
+   - Localhost SSH trust is attempted/verified on first boot (Validate uses port **22**; UI stays `:8000` — never set SSH to 8000/8080)
 
 3. **Access Coolify Web Interface**
    - Navigate to `http://your-droplet-ip:8000` in your web browser
@@ -87,17 +84,18 @@ This 1-Click installs and configures the following components:
    - **CRITICAL**: Create your admin account immediately
    - The first user to register gets full administrative access
    - Use a strong password and save your credentials securely
-   - The localhost server should now show as connected
+   - Confirm Servers → localhost → SSH port is **22**, then Validate
 
 5. **Start Deploying**
    - Create your first project
    - Deploy applications, databases, or services
    - Configure domains and SSL certificates
 
-**Note**: If you skipped localhost activation during first login, you can activate it anytime by running:
+**Note**: Soft-fail first boot can leave localhost unverified. If Servers → localhost is Unavailable / `Permission denied (publickey)`, or first-login says trust was not verified, run:
 ```bash
 /opt/configure-coolify-localhost.sh
 ```
+Then Validate again with SSH port 22. That re-authorizes the Coolify SSH key and resets the localhost SSH port to 22.
 
 ### Setting Up a Custom Domain (Recommended)
 
@@ -202,12 +200,14 @@ systemctl enable coolify
 
 UFW firewall is pre-configured with the following ports:
 
-- **22** (SSH) - Limited rate to prevent brute force
+- **22** (SSH) - Limited rate; also allowed from Docker bridges for Coolify localhost Validate
 - **80** (HTTP) - For web traffic and Let's Encrypt validation
 - **443** (HTTPS) - For secure web traffic
-- **8000** (Coolify UI) - Coolify web interface
+- **8000** (Coolify UI) - Coolify web interface (not the SSH port)
 - **6001** (Coolify Realtime) - Real-time updates
 - **6002** (Coolify Soketi) - WebSocket server
+
+**Note:** Servers → localhost → SSH port must remain **22**. Do not set it to 8000 or 8080.
 
 **Add custom ports** (if needed for your applications):
 ```bash
