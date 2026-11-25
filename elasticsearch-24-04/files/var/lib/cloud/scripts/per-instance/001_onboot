@@ -17,13 +17,16 @@ unlock_ssh() {
 }
 trap unlock_ssh EXIT
 
-es_version_num() {
-  local ver
-  ver="$(dpkg-query -W -f='${Version}' elasticsearch)"
+normalize_es_upstream_version() {
+  local ver="$1"
   # Drop Debian revision / epoch noise: "9.5.7", "9.5.7-1", "1:9.5.7"
   ver="${ver##*:}"
   ver="${ver%%[-+]*}"
   printf '%s\n' "${ver}"
+}
+
+es_version_num() {
+  normalize_es_upstream_version "$(dpkg-query -W -f='${Version}' elasticsearch)"
 }
 
 es_meets_java4shell_floor() {
@@ -48,16 +51,50 @@ apply_java4shell_jvm_mitigation() {
   fi
 }
 
-try_install_fixed_elasticsearch() {
-  local pin
-  # Prefer current fixed 9.5.x, then fixed 9.4.x maintenance line.
-  for pin in "${MIN_ES_VERSION}" "${MIN_ES_9410}"; do
-    echo "Attempting elasticsearch=${pin} for CVE-2026-114938 (Java4Shell)"
-    if NEEDRESTART_MODE=a apt-get --assume-yes install "elasticsearch=${pin}"; then
-      return 0
+list_elasticsearch_apt_candidates() {
+  # Real apt versions (may include revision/epoch), not hard-coded equality pins.
+  {
+    apt-cache madison elasticsearch 2>/dev/null | awk -F'|' '{gsub(/^ +| +$/, "", $2); if ($2 != "") print $2}'
+    apt-cache policy elasticsearch 2>/dev/null | awk '
+      /Candidate:/ { print $2 }
+      /^ \*\*\* / { print $2 }
+      /^     [0-9]/ { print $1 }
+    '
+  } | awk 'NF && $0 != "(none)"' | sort -u
+}
+
+pick_fixed_elasticsearch_candidate() {
+  local cand norm best="" best_norm=""
+
+  while IFS= read -r cand; do
+    [ -n "${cand}" ] || continue
+    norm="$(normalize_es_upstream_version "${cand}")"
+    es_meets_java4shell_floor "${norm}" || continue
+
+    if [ -z "${best}" ] || dpkg --compare-versions "${norm}" gt "${best_norm}"; then
+      best="${cand}"
+      best_norm="${norm}"
+    elif [ "${norm}" = "${best_norm}" ] && dpkg --compare-versions "${cand}" gt "${best}"; then
+      # Prefer a newer debian revision of the same upstream (e.g. 9.5.7-1 > 9.5.7).
+      best="${cand}"
     fi
-  done
+  done < <(list_elasticsearch_apt_candidates)
+
+  if [ -n "${best}" ]; then
+    printf '%s\n' "${best}"
+    return 0
+  fi
   return 1
+}
+
+try_install_fixed_elasticsearch() {
+  local candidate
+  if ! candidate="$(pick_fixed_elasticsearch_candidate)"; then
+    echo "ERROR: no apt candidate for elasticsearch meets Java4Shell floor (>=${MIN_ES_VERSION}, or >=${MIN_ES_9410} on 9.4.x)" >&2
+    return 1
+  fi
+  echo "Installing elasticsearch=${candidate} for CVE-2026-114938 (Java4Shell)"
+  NEEDRESTART_MODE=a apt-get --assume-yes install "elasticsearch=${candidate}"
 }
 
 wait_for_elasticsearch() {
@@ -75,16 +112,34 @@ wait_for_elasticsearch() {
 
 reset_es_password() {
   local user="$1"
-  local out pass attempt
+  local out pass attempt rc
+  local errfile
+  errfile="$(mktemp)"
+
   for attempt in 1 2 3 4 5; do
-    out="$(echo "y" | /usr/share/elasticsearch/bin/elasticsearch-reset-password -u "${user}" --url https://localhost:9200 2>/dev/null || true)"
+    set +e
+    out="$(echo "y" | /usr/share/elasticsearch/bin/elasticsearch-reset-password -u "${user}" --url https://localhost:9200 2>"${errfile}")"
+    rc=$?
+    set -e
+
     pass="$(printf '%s\n' "${out}" | awk '/^New/{print $3; exit}')"
     if [ -n "${pass}" ]; then
+      rm -f "${errfile}"
       printf '%s\n' "${pass}"
       return 0
     fi
+
+    echo "WARNING: elasticsearch-reset-password for '${user}' attempt ${attempt}/5 failed (exit ${rc})" >&2
+    if [ -s "${errfile}" ]; then
+      sed 's/^/  stderr: /' "${errfile}" >&2 || true
+    fi
+    if [ -n "${out}" ]; then
+      printf '%s\n' "${out}" | sed 's/^/  stdout: /' >&2 || true
+    fi
     sleep 3
   done
+
+  rm -f "${errfile}"
   echo "ERROR: failed to reset password for Elasticsearch user '${user}'" >&2
   return 1
 }
@@ -94,7 +149,7 @@ sudo NEEDRESTART_MODE=a apt-get --assume-yes install elasticsearch
 
 es_version="$(es_version_num)"
 if ! es_meets_java4shell_floor "${es_version}"; then
-  echo "elasticsearch ${es_version} is below Java4Shell fix floor; attempting pinned fixed package" >&2
+  echo "elasticsearch ${es_version} is below Java4Shell fix floor; selecting a fixed apt candidate" >&2
   try_install_fixed_elasticsearch || true
   es_version="$(es_version_num)"
 fi
