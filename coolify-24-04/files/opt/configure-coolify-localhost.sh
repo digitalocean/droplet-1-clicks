@@ -25,26 +25,34 @@ if ! systemctl is-active --quiet coolify 2>/dev/null && \
 fi
 
 chmod +x /opt/coolify-sync-localhost-ssh.sh
-/opt/coolify-sync-localhost-ssh.sh
-
-echo ""
-echo "Reminder: Coolify UI is http://${myip}:8000 — SSH for Validate is always port 22."
-echo "Do not set SSH port to 8000 or 8080."
-echo ""
-echo "Onboarding check (point 3):"
-echo "  ssh -i /data/coolify/ssh/keys/id.root@host.docker.internal -o BatchMode=yes root@localhost true"
-echo ""
-
-touch /root/.coolify_localhost_configured
-
-echo "=================================================="
-echo "Localhost Repair Complete!"
-echo "=================================================="
-echo ""
-echo "Next steps:"
-echo "1. Open http://${myip}:8000"
-echo "2. Onboarding / Servers → localhost → SSH port 22 → Check again"
-echo "3. If still failing, paste the UI 'Current Public Key' into:"
-echo "     /root/.ssh/authorized_keys"
-echo "   then run this script once more."
-echo ""
+if /opt/coolify-sync-localhost-ssh.sh; then
+    touch /root/.coolify_localhost_configured
+    echo ""
+    echo "Reminder: Coolify UI is http://${myip}:8000 — SSH for Validate is always port 22."
+    echo "Do not set SSH port to 8000 or 8080."
+    echo ""
+    echo "Onboarding check (point 3):"
+    echo "  ssh -i /data/coolify/ssh/keys/id.root@host.docker.internal -o BatchMode=yes root@localhost true"
+    echo ""
+    echo "=================================================="
+    echo "Localhost Repair Complete!"
+    echo "=================================================="
+    echo ""
+    echo "Next steps:"
+    echo "1. Open http://${myip}:8000"
+    echo "2. Onboarding / Servers → localhost → SSH port 22 → Check again"
+    echo ""
+else
+    rm -f /root/.coolify_localhost_configured
+    echo ""
+    echo "=================================================="
+    echo "Localhost Repair FAILED"
+    echo "=================================================="
+    echo ""
+    echo "Host SSH check did not succeed. Next:"
+    echo "1. Ensure Coolify is running: systemctl start coolify"
+    echo "2. Paste the UI 'Current Public Key' into /root/.ssh/authorized_keys"
+    echo "3. Re-run: /opt/configure-coolify-localhost.sh"
+    echo ""
+    exit 1
+fi

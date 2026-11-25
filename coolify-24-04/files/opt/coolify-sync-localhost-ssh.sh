@@ -31,6 +31,19 @@ coolify_container() {
     docker ps --format '{{.Names}}' | grep -E '^coolify$' | head -1 || true
 }
 
+# Drop prior Coolify-managed trust lines (legacy coolify comment + Coolify cpk: lines)
+# so pre-reseed pubkeys do not linger as orphan root trust.
+strip_coolify_authorized_keys() {
+    if [ ! -f "${AUTH_KEYS}" ]; then
+        return 0
+    fi
+    sed -i -E \
+        -e '/[[:space:]](root@)?coolify[[:space:]]*$/d' \
+        -e '/[[:space:]]cpk:[^[:space:]]+/d' \
+        "${AUTH_KEYS}" 2>/dev/null || true
+    chmod 600 "${AUTH_KEYS}"
+}
+
 authorize_pubkey_line() {
     local body comment line
     body="$1"
@@ -76,7 +89,7 @@ install_validated_private_key() {
         return 1
     fi
 
-    cp -f "${src}" "${dest}"
+    safe_copy_key "${src}" "${dest}"
     ssh-keygen -y -f "${dest}" > "${dest}.pub"
     chown 9999:root "${dest}" "${dest}.pub"
     chmod 600 "${dest}"
@@ -115,7 +128,8 @@ file_put_contents("/tmp/coolify-localhost.pub", (string) ($k->public_key ?? ""))
     docker exec "${cid}" rm -f /tmp/coolify-localhost.key /tmp/coolify-localhost.uuid /tmp/coolify-localhost.pub >/dev/null 2>&1 || true
 
     if ! ssh-keygen -y -f "${key_tmp}" >/dev/null 2>&1; then
-        echo "Exported Coolify DB key failed ssh-keygen validation"
+        echo "Exported Coolify DB key failed ssh-keygen validation (will use on-disk key if present)"
+        # Keep uuid/pub for disk resolution; drop invalid private key material
         rm -f "${key_tmp}"
         return 1
     fi
@@ -123,48 +137,84 @@ file_put_contents("/tmp/coolify-localhost.pub", (string) ($k->public_key ?? ""))
     return 0
 }
 
+# Copy only when source and destination differ (avoids "are the same file" under set -e)
+safe_copy_key() {
+    local src="$1"
+    local dest="$2"
+
+    [ -f "${src}" ] || return 1
+    if [ "${src}" -ef "${dest}" ] 2>/dev/null || [ "${src}" = "${dest}" ]; then
+        return 0
+    fi
+    cp -f "${src}" "${dest}"
+}
+
+key_matches_app_pubkey() {
+    local key_file="$1"
+    local want pub_body
+
+    [ -f "${key_file}" ] || return 1
+    if [ ! -f "${TMP_DIR}/localhost.pub" ]; then
+        # No app pubkey to compare — accept if the key parses
+        ssh-keygen -y -f "${key_file}" >/dev/null 2>&1
+        return $?
+    fi
+
+    want=$(awk '{print $1" "$2}' "${TMP_DIR}/localhost.pub")
+    [ -n "${want}" ] || return 1
+    pub_body=$(ssh-keygen -y -f "${key_file}" 2>/dev/null | awk '{print $1" "$2}')
+    [ -n "${pub_body}" ] || return 1
+    [ "${pub_body}" = "${want}" ]
+}
+
 resolve_localhost_key_on_disk() {
     local uuid=""
     local candidate=""
 
-    # 1) Legacy path still present
-    if [ -f "${LEGACY_KEY_PATH}" ] && ssh-keygen -y -f "${LEGACY_KEY_PATH}" >/dev/null 2>&1; then
-        echo "${LEGACY_KEY_PATH}"
-        return 0
-    fi
-
-    # 2) ssh_key@<uuid> for localhost PrivateKey id 0 / named localhost
+    # Prefer Coolify runtime path by uuid (authoritative after reseed)
     if [ -f "${TMP_DIR}/localhost.uuid" ]; then
         uuid=$(tr -d '[:space:]' < "${TMP_DIR}/localhost.uuid" || true)
-        if [ -n "${uuid}" ] && [ -f "${SSH_KEYS_DIR}/ssh_key@${uuid}" ]; then
+        if [ -n "${uuid}" ] && key_matches_app_pubkey "${SSH_KEYS_DIR}/ssh_key@${uuid}"; then
             echo "${SSH_KEYS_DIR}/ssh_key@${uuid}"
             return 0
         fi
     fi
 
-    # 3) Single ssh_key@* file (fresh install typically has one)
-    shopt -s nullglob
-    local keys=("${SSH_KEYS_DIR}"/ssh_key@*)
-    shopt -u nullglob
-    if [ "${#keys[@]}" -eq 1 ] && ssh-keygen -y -f "${keys[0]}" >/dev/null 2>&1; then
-        echo "${keys[0]}"
+    # Legacy path only if it matches Coolify's current pubkey (avoid stale pre-reseed key)
+    if key_matches_app_pubkey "${LEGACY_KEY_PATH}"; then
+        echo "${LEGACY_KEY_PATH}"
         return 0
     fi
 
-    # 4) Match disk key public body to Coolify-exported pubkey
+    # Match any ssh_key@* to Coolify-exported pubkey
     if [ -f "${TMP_DIR}/localhost.pub" ]; then
         local want
         want=$(awk '{print $1" "$2}' "${TMP_DIR}/localhost.pub")
         if [ -n "${want}" ]; then
             shopt -s nullglob
             for candidate in "${SSH_KEYS_DIR}"/ssh_key@*; do
-                if ssh-keygen -y -f "${candidate}" 2>/dev/null | awk '{print $1" "$2}' | grep -qF "${want}"; then
+                if key_matches_app_pubkey "${candidate}"; then
                     shopt -u nullglob
                     echo "${candidate}"
                     return 0
                 fi
             done
             shopt -u nullglob
+        fi
+    fi
+
+    # Fresh install fallback: exactly one ssh_key@* and no app pubkey available yet
+    if [ ! -f "${TMP_DIR}/localhost.pub" ]; then
+        shopt -s nullglob
+        local keys=("${SSH_KEYS_DIR}"/ssh_key@*)
+        shopt -u nullglob
+        if [ "${#keys[@]}" -eq 1 ] && ssh-keygen -y -f "${keys[0]}" >/dev/null 2>&1; then
+            echo "${keys[0]}"
+            return 0
+        fi
+        if [ -f "${LEGACY_KEY_PATH}" ] && ssh-keygen -y -f "${LEGACY_KEY_PATH}" >/dev/null 2>&1; then
+            echo "${LEGACY_KEY_PATH}"
+            return 0
         fi
     fi
 
@@ -209,6 +259,9 @@ reset_localhost_ssh_port() {
 
 echo "Syncing Coolify localhost SSH trust..."
 
+# Clear prior Coolify trust lines before adding only the localhost key
+strip_coolify_authorized_keys
+
 # Prefer Coolify's own localhost key (DB) so UI "Current Public Key" matches host trust
 HAVE_APP_KEY=0
 if export_localhost_key_from_app; then
@@ -226,13 +279,22 @@ else
     SOURCE_KEY=""
 fi
 
+# Authorize ONLY the localhost key (not every ssh_key@* on disk)
 if [ -n "${SOURCE_KEY}" ] && [ -f "${SOURCE_KEY}" ]; then
     install_validated_private_key "${SOURCE_KEY}" "${LEGACY_KEY_PATH}"
     # Also ensure ssh_key@uuid exists when we know the uuid (Coolify runtime path)
     if [ -f "${TMP_DIR}/localhost.uuid" ]; then
         uuid=$(tr -d '[:space:]' < "${TMP_DIR}/localhost.uuid" || true)
         if [ -n "${uuid}" ]; then
-            install_validated_private_key "${SOURCE_KEY}" "${SSH_KEYS_DIR}/ssh_key@${uuid}" || true
+            runtime_key="${SSH_KEYS_DIR}/ssh_key@${uuid}"
+            # Skip when SOURCE_KEY is already that runtime file
+            if [ "${SOURCE_KEY}" != "${runtime_key}" ] && ! [ "${SOURCE_KEY}" -ef "${runtime_key}" ] 2>/dev/null; then
+                if ssh-keygen -y -f "${SOURCE_KEY}" >/dev/null 2>&1; then
+                    safe_copy_key "${SOURCE_KEY}" "${runtime_key}"
+                    chown 9999:root "${runtime_key}"
+                    chmod 600 "${runtime_key}"
+                fi
+            fi
         fi
     fi
 else
@@ -243,13 +305,6 @@ else
         echo "  then: /opt/configure-coolify-localhost.sh"
     fi
 fi
-
-# Authorize any remaining Coolify-managed private keys on disk (same material is idempotent)
-shopt -s nullglob
-for key_file in "${SSH_KEYS_DIR}"/ssh_key@* "${SSH_KEYS_DIR}"/id.*@host.docker.internal; do
-    authorize_private_key_file "${key_file}" || true
-done
-shopt -u nullglob
 
 chown -R 9999:root /data/coolify/ssh
 chmod -R 700 /data/coolify/ssh
@@ -262,15 +317,11 @@ else
     echo "Could not update Coolify DB port (UI: Servers → localhost → SSH port 22)"
 fi
 
-# Host-side smoke test (UI onboarding point 3)
+# Host-side smoke test (UI onboarding point 3) — only real SSH success counts as SYNC_OK
 SYNC_OK=0
 if [ -f "${LEGACY_KEY_PATH}" ] && ssh -i "${LEGACY_KEY_PATH}" -o BatchMode=yes \
     -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5 root@127.0.0.1 true 2>/dev/null; then
     echo "Host SSH check OK: ssh -i ${LEGACY_KEY_PATH} root@127.0.0.1"
-    SYNC_OK=1
-elif grep -qE 'coolify|cpk:' "${AUTH_KEYS}" 2>/dev/null; then
-    echo "WARNING: Host SSH check failed, but a Coolify-related pubkey is in authorized_keys"
-    echo "  Repair: /opt/configure-coolify-localhost.sh"
     SYNC_OK=1
 else
     echo "WARNING: Host SSH check failed for ${LEGACY_KEY_PATH:-missing}"
@@ -278,7 +329,6 @@ else
 fi
 
 echo "Coolify localhost SSH sync complete."
-# Non-zero only when we could not establish any Coolify trust (onboot soft-fails this)
 if [ "${SYNC_OK}" -eq 1 ]; then
     exit 0
 fi

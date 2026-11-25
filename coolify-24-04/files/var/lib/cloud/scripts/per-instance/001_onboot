@@ -101,12 +101,16 @@ else
 fi
 
 # Soft-fail: sync errors must not abort first-boot (coolify_info.txt / service markers)
+LOCALHOST_SSH_OK=0
 chmod +x /opt/coolify-sync-localhost-ssh.sh
 if /opt/coolify-sync-localhost-ssh.sh; then
     echo "Coolify localhost SSH sync succeeded."
+    LOCALHOST_SSH_OK=1
+    touch /root/.coolify_localhost_configured
 else
     echo "WARNING: Coolify localhost SSH sync failed (continuing first-boot)."
     echo "  After Coolify is healthy, run: /opt/configure-coolify-localhost.sh"
+    rm -f /root/.coolify_localhost_configured
 fi
 
 # Check if Coolify is running
@@ -117,6 +121,14 @@ if docker compose --env-file /data/coolify/source/.env \
     echo "Coolify started successfully!"
 else
     echo "Warning: Coolify may not have started correctly. Check logs with: /opt/coolify-logs.sh"
+fi
+
+if [ "${LOCALHOST_SSH_OK}" -eq 1 ]; then
+    LOCALHOST_STATUS_LINE="- Localhost SSH trust is configured (port 22)"
+    LOCALHOST_REPAIR_LINE="If Validate still fails: /opt/configure-coolify-localhost.sh"
+else
+    LOCALHOST_STATUS_LINE="- Localhost SSH trust NOT verified yet — run: /opt/configure-coolify-localhost.sh"
+    LOCALHOST_REPAIR_LINE="Required: /opt/configure-coolify-localhost.sh then Validate (SSH port 22)"
 fi
 
 # Create a file with access information
@@ -132,7 +144,7 @@ IMPORTANT:
 - Create your admin account immediately after accessing the URL above
 - If someone else accesses the registration page first, they could gain control
 - The first user to register will have full administrative access
-- Localhost SSH trust is already configured (port 22)
+${LOCALHOST_STATUS_LINE}
 - Coolify UI is :8000 — do NOT set Servers → localhost → SSH port to 8000 or 8080
 
 Management Commands:
@@ -165,8 +177,9 @@ Firewall Ports:
   6001 - Coolify Realtime
   6002 - Coolify Soketi
 
+${LOCALHOST_REPAIR_LINE}
 If Validate times out on port 8080: set Servers → localhost → SSH port to 22,
-then re-validate (or run /opt/configure-coolify-localhost.sh).
+then re-validate.
 
 For more information, visit: https://coolify.io/docs
 
@@ -174,7 +187,6 @@ For more information, visit: https://coolify.io/docs
 EOF
 
 chmod 600 /root/coolify_info.txt
-touch /root/.coolify_localhost_configured
 
 echo "Coolify first-boot initialization complete!"
 echo "Access information saved to /root/coolify_info.txt"

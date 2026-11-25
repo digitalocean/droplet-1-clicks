@@ -14,12 +14,18 @@ fi
 # Non-interactive sessions (scp, ansible, CI): clean hook and exit — do not block
 if [ ! -t 0 ] || [ ! -t 1 ]; then
     touch /root/.coolify_localhost_notice_shown
-    touch /root/.coolify_localhost_configured
     sed -i '/coolify_localhost_setup.sh/d' /root/.bashrc 2>/dev/null || true
     exit 0
 fi
 
 myip=$(hostname -I | awk '{print$1}')
+
+if [ -f /root/.coolify_localhost_configured ]; then
+    LOCALHOST_MSG="Localhost SSH trust was verified on first boot."
+else
+    LOCALHOST_MSG="Localhost SSH trust was NOT verified yet — run:
+  /opt/configure-coolify-localhost.sh"
+fi
 
 clear
 cat << EOF
@@ -29,9 +35,8 @@ cat << EOF
 
 Welcome to your Coolify droplet!
 
-Localhost SSH trust was configured automatically on first boot:
+${LOCALHOST_MSG}
   • Key: /data/coolify/ssh/keys/id.root@host.docker.internal
-  • Authorized in /root/.ssh/authorized_keys
   • SSH port for Validate: 22 (not 8000 or 8080)
 
 Access Coolify at: http://${myip}:8000
@@ -48,9 +53,9 @@ contention; add remote servers for production workloads.
 ================================================================================
 EOF
 
-# Mark done before optional prompt so Ctrl-D / errors cannot re-trigger the hook
+# Mark notice done before optional prompt so Ctrl-D cannot re-trigger the hook
+# Do NOT set .coolify_localhost_configured here — that flag means SSH sync succeeded
 touch /root/.coolify_localhost_notice_shown
-touch /root/.coolify_localhost_configured
 sed -i '/coolify_localhost_setup.sh/d' /root/.bashrc 2>/dev/null || true
 
 echo ""
