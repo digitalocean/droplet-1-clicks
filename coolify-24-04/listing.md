@@ -73,8 +73,8 @@ This 1-Click installs and configures the following components:
 
 2. **First SSH Login**
    - SSH into your droplet: `ssh root@your-droplet-ip`
-   - A one-time notice confirms localhost SSH trust was configured on first boot
-   - Localhost Validate uses SSH port **22** (Coolify UI is `:8000` — never set SSH to 8000/8080)
+   - A one-time notice reports whether localhost SSH trust was verified on first boot
+   - Localhost SSH trust is attempted/verified on first boot (Validate uses port **22**; UI stays `:8000` — never set SSH to 8000/8080)
 
 3. **Access Coolify Web Interface**
    - Navigate to `http://your-droplet-ip:8000` in your web browser
@@ -91,11 +91,11 @@ This 1-Click installs and configures the following components:
    - Deploy applications, databases, or services
    - Configure domains and SSL certificates
 
-**Note**: If localhost Validate fails (publickey or wrong port), repair with:
+**Note**: Soft-fail first boot can leave localhost unverified. If Servers → localhost is Unavailable / `Permission denied (publickey)`, or first-login says trust was not verified, run:
 ```bash
 /opt/configure-coolify-localhost.sh
 ```
-That re-authorizes the Coolify SSH key and resets the localhost SSH port to 22.
+Then Validate again with SSH port 22. That re-authorizes the Coolify SSH key and resets the localhost SSH port to 22.
 
 ### Setting Up a Custom Domain (Recommended)
 

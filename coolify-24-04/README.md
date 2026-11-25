@@ -161,21 +161,28 @@ Located in `/opt/`:
 When a droplet is created from this image:
 
 1. **SSH Configuration**: Removes forced logout for root user
-2. **SSH Key Generation**: Generates unique Coolify localhost keys (`-C coolify`) and authorizes them in `/root/.ssh/authorized_keys`
+2. **SSH Key Generation**: Generates unique Coolify localhost keys (`-C coolify`) and attempts authorization in `/root/.ssh/authorized_keys`
 3. **Coolify Installation**: Starts Coolify via `systemctl enable --now coolify`
 4. **Service Startup**: Waits for containers to be ready; systemd unit is active
-5. **Information File**: Creates `/root/coolify_info.txt` with access details
-6. **MOTD Display**: Shows access information on SSH login
+5. **Localhost SSH sync**: Runs `/opt/coolify-sync-localhost-ssh.sh` and marks trust configured only if a real host SSH check passes (soft-fail continues first boot if not)
+6. **Information File**: Creates `/root/coolify_info.txt` with access details (success vs repair messaging)
+7. **MOTD Display**: Shows access information on SSH login
 
 Marketplace safety: Packer cleanup wipes `authorized_keys` at **image build** time. Authorization runs only on **per-instance** first boot.
 
 ## First Login Experience
 
-On first SSH login, users see a one-time notice that localhost SSH trust is already configured.
+On first SSH login, users see a one-time notice that reports whether localhost SSH trust was verified.
 
-- **SSH for Validate**: port **22** only
-- **Coolify UI**: `http://droplet-ip:8000` (do not put 8000 or 8080 in Servers → SSH port)
-- **Repair**: `/opt/configure-coolify-localhost.sh` re-syncs the key and resets localhost SSH port to 22
+Localhost SSH trust is attempted/verified on first boot (SSH port **22** for Validate; UI stays `:8000`). Soft-fail first boot can leave localhost unverified.
+
+- **SSH for Validate**: port **22** only — do not set Servers → SSH port to 8000 or 8080
+- **Coolify UI**: `http://droplet-ip:8000`
+- If Servers → localhost is Unavailable / `Permission denied (publickey)`, or first-login says trust was not verified, run:
+  ```bash
+  /opt/configure-coolify-localhost.sh
+  ```
+  then Validate again with SSH port 22
 
 ## Network Configuration
 
@@ -248,11 +255,11 @@ See Coolify documentation for full list: https://coolify.io/docs
 1. **Create a droplet** from the built snapshot
 2. **Wait 3-5 minutes** for first-boot completion
 3. **SSH into the droplet**: `ssh root@droplet-ip`
-4. **Check MOTD**: Verify access instructions and SSH port 22 guidance
+4. **Check MOTD**: Verify access instructions and SSH port 22 / repair guidance
 5. **Check Coolify status**: Run `/opt/coolify-status.sh` — systemd should be `active`
 6. **Access web interface**: Visit `http://droplet-ip:8000`
 7. **Create admin account**: Register first user
-8. **Validate localhost**: Servers → localhost → SSH port **22** → Validate (green)
+8. **Validate localhost**: Servers → localhost → SSH port **22** → Validate (green); if Unavailable / publickey, run `/opt/configure-coolify-localhost.sh` and retry
 9. **Lifecycle**: `/opt/stop-coolify.sh` then `/opt/restart-coolify.sh` — UI reachable again; `systemctl is-active coolify` is `active`
 10. **Deploy test application**: Try deploying a simple static site
 
