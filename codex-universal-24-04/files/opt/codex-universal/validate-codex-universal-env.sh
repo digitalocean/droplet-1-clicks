@@ -58,8 +58,15 @@ validate_codex_env_value() {
             esac
             ;;
         CODEX_ENV_JAVA_VERSION)
+            # 22/23/24 are EOL with no CVE-2026-114938 fix; only patched Temurin majors ship.
             case "$value" in
-                25|24|23|22|21|17|11) return 0 ;;
+                25|21|17|11) return 0 ;;
+                22|23|24)
+                    echo "ERROR: ${var}=${value} is not available on this image." >&2
+                    echo "Java 22/23/24 are EOL with no CVE-2026-114938 fix; use 25, 21, 17, or 11." >&2
+                    echo "Upstream documents 22/23/24, but this 1-Click does not install them." >&2
+                    return 1
+                    ;;
             esac
             ;;
         *)
