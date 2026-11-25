@@ -33,7 +33,8 @@ On the server:
 For help and more information, visit https://opensearch.org/docs/
 
 ********************************************************************************
-NOTE:  This image includes version 3.4.0 of OpenSearch.
+NOTE:  This image includes OpenSearch 3.10.1 (Java4Shell-fixed JDK) and
+OpenSearch Dashboards 3.10.0 (matching 3.10.x; Dashboards 3.10.1 not yet published).
 To upgrade to a newer release, run the following commands:
 
 sudo mv /etc/apt/sources.list.d/opensearch-3.x.list.disabled /etc/apt/sources.list.d/opensearch-3.x.list
