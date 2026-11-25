@@ -175,6 +175,50 @@ install_dashboards() {
   NEEDRESTART_MODE=a apt-get --assume-yes install "opensearch-dashboards=${pin}"
 }
 
+# Newest apt candidate whose upstream version differs from the failed pin.
+pick_dashboards_alternate() {
+  local exclude="$1"
+  local exclude_norm cand norm best="" best_norm=""
+  exclude_norm="$(normalize_os_upstream_version "${exclude}")"
+
+  while IFS= read -r cand; do
+    [ -n "${cand}" ] || continue
+    [ "${cand}" = "${exclude}" ] && continue
+    norm="$(normalize_os_upstream_version "${cand}")"
+    [ "${norm}" = "${exclude_norm}" ] && continue
+
+    if [ -z "${best}" ] || dpkg --compare-versions "${norm}" gt "${best_norm}"; then
+      best="${cand}"
+      best_norm="${norm}"
+    elif [ "${norm}" = "${best_norm}" ] && dpkg --compare-versions "${cand}" gt "${best}"; then
+      best="${cand}"
+    fi
+  done < <(list_pkg_apt_candidates opensearch-dashboards)
+
+  if [ -n "${best}" ]; then
+    printf '%s\n' "${best}"
+    return 0
+  fi
+  return 1
+}
+
+# Idempotent: already-disabled or missing list must not abort first-boot under set -e.
+disable_apt_list() {
+  local src="$1"
+  local dst="${src}.disabled"
+
+  if [ -e "${dst}" ]; then
+    rm -f "${src}" || true
+    return 0
+  fi
+  if [ -e "${src}" ]; then
+    mv "${src}" "${dst}"
+    return 0
+  fi
+  echo "WARNING: apt source ${src} not found; skipping disable" >&2
+  return 0
+}
+
 source /root/packer_vars.sh
 application_version="${APPLICATION_VERSION}"
 dashboards_version="${DASHBOARDS_VERSION:-}"
@@ -224,7 +268,12 @@ fi
 
 dashboards_pin="$(pick_dashboards_candidate "${os_version}" "${dashboards_version}")" \
   || { echo "ERROR: no apt candidate for opensearch-dashboards" >&2; exit 1; }
-install_dashboards "${dashboards_pin}"
+if ! install_dashboards "${dashboards_pin}"; then
+  echo "Pinned Dashboards install failed; selecting an alternate apt candidate" >&2
+  dashboards_pin="$(pick_dashboards_alternate "${dashboards_pin}")" \
+    || { echo "ERROR: no alternate apt candidate for opensearch-dashboards" >&2; exit 1; }
+  install_dashboards "${dashboards_pin}"
+fi
 
 # Always apply JVM mitigation so Java4Shell is closed even on fixed JDK hosts
 # (defense in depth) and on any brief window before a package bump.
@@ -235,10 +284,8 @@ echo "opensearch-dashboards $(normalize_os_upstream_version "$(dpkg-query -W -f=
 export JAVA_HOME=/usr/share/opensearch/jdk
 
 # Disable the OpenSearch repository to prevent automatic updates
-sudo mv "/etc/apt/sources.list.d/opensearch-${repo_version}.list" \
-  "/etc/apt/sources.list.d/opensearch-${repo_version}.list.disabled"
-sudo mv "/etc/apt/sources.list.d/opensearch-dashboards-${repo_version}.list" \
-  "/etc/apt/sources.list.d/opensearch-dashboards-${repo_version}.list.disabled"
+disable_apt_list "/etc/apt/sources.list.d/opensearch-${repo_version}.list"
+disable_apt_list "/etc/apt/sources.list.d/opensearch-dashboards-${repo_version}.list"
 
 # Generate certificates (root CA, node, and admin)
 mkdir -p /etc/opensearch/certs

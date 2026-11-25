@@ -5,7 +5,30 @@
 # Read in the passwords....
 . /root/.digitalocean_passwords
 
+# Packer pins (repo path); installed versions come from dpkg so MOTD cannot drift.
+repo_version="3.x"
+if [ -f /root/packer_vars.sh ]; then
+  # shellcheck disable=SC1091
+  . /root/packer_vars.sh
+  repo_version="${REPO_VERSION:-3.x}"
+fi
+
+pkg_upstream_version() {
+  # Drop Debian revision / epoch noise: "3.10.1", "3.10.1-1", "1:3.10.1"
+  ver="$(dpkg-query -W -f='${Version}' "$1" 2>/dev/null)" || ver=""
+  ver="${ver##*:}"
+  ver="${ver%%[-+]*}"
+  if [ -n "${ver}" ]; then
+    printf '%s\n' "${ver}"
+  else
+    printf '%s\n' "unknown"
+  fi
+}
+
 myip=$(hostname -I | awk '{print$1}')
+os_version="$(pkg_upstream_version opensearch)"
+dashboards_version="$(pkg_upstream_version opensearch-dashboards)"
+
 cat <<EOF
 ********************************************************************************
 
@@ -33,12 +56,12 @@ On the server:
 For help and more information, visit https://opensearch.org/docs/
 
 ********************************************************************************
-NOTE:  This image includes OpenSearch 3.10.1 (Java4Shell-fixed JDK) and
-OpenSearch Dashboards 3.10.0 (matching 3.10.x; Dashboards 3.10.1 not yet published).
+NOTE:  This image includes OpenSearch ${os_version} (Java4Shell-fixed JDK) and
+OpenSearch Dashboards ${dashboards_version}.
 To upgrade to a newer release, run the following commands:
 
-sudo mv /etc/apt/sources.list.d/opensearch-3.x.list.disabled /etc/apt/sources.list.d/opensearch-3.x.list
-sudo mv /etc/apt/sources.list.d/opensearch-dashboards-3.x.list.disabled /etc/apt/sources.list.d/opensearch-dashboards-3.x.list
+sudo mv /etc/apt/sources.list.d/opensearch-${repo_version}.list.disabled /etc/apt/sources.list.d/opensearch-${repo_version}.list
+sudo mv /etc/apt/sources.list.d/opensearch-dashboards-${repo_version}.list.disabled /etc/apt/sources.list.d/opensearch-dashboards-${repo_version}.list
 sudo apt-get update
 sudo apt-get upgrade
 
