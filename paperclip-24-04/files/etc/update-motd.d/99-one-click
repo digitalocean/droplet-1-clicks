@@ -1,0 +1,76 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+pub=$(curl -fsS --retry 3 --retry-connrefused --max-time 3 \
+  http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address 2>/dev/null || true)
+myip="${pub:-$(hostname -I | awk '{print$1}')}"
+creds=/root/paperclip_admin_credentials
+email=$(grep "^ADMIN_EMAIL=" "$creds" 2>/dev/null | cut -d= -f2-)
+password=$(grep "^INITIAL_PASSWORD=" "$creds" 2>/dev/null | cut -d= -f2-)
+if [ -z "$email" ]; then
+  email=$(grep "^ADMIN_EMAIL=" /opt/paperclip.env 2>/dev/null | cut -d= -f2-)
+fi
+if [ -z "$password" ]; then
+  password=$(grep "^INITIAL_PASSWORD=" /opt/paperclip.env 2>/dev/null | cut -d= -f2-)
+fi
+inference_model=$(grep "^INFERENCE_MODEL=" /opt/paperclip.env 2>/dev/null | tail -n 1 | cut -d= -f2-)
+inference_model=${inference_model#\"}
+inference_model=${inference_model%\"}
+
+if [ -f /opt/paperclip/.provider-configured ] && [ -n "$inference_model" ]; then
+  inference_step="2. DigitalOcean Serverless Inference is configured (OpenCode adapter).
+     Model: ${inference_model} → digitalocean/${inference_model}
+     First DigitalOcean agent is hired on boot when the admin claim succeeds.
+     No Claude/OpenAI key is required for that path.
+     If the agent is missing or stuck verifying:
+       sudo /opt/bootstrap-paperclip-do-agent.sh
+     then open the agent and click Retry if needed.
+  3. Open the dashboard — org + DigitalOcean agent should already be present"
+else
+  inference_step="2. Complete the SSH setup wizard for DigitalOcean Serverless Inference
+     (optional: Intelligent Inference Router), or set MODEL_ACCESS_KEY
+     Then: sudo /opt/bootstrap-paperclip-do-agent.sh
+  3. Open the dashboard and define a goal"
+fi
+
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's One-Click Paperclip Droplet.
+
+Paperclip 2026.1117.0 — open-source orchestration for teams of AI agents.
+This image prefers DigitalOcean Serverless Inference via the OpenCode adapter
+when you supply a model access key.
+
+🌐 Access:
+  Dashboard: https://$myip
+  Email:     ${email:-(see /root/paperclip_admin_credentials)}
+  Password:  $password
+
+  Sign in with the email and password above.
+  Credentials file: /root/paperclip_admin_credentials (root-only)
+
+📝 First steps:
+  1. Open the Dashboard and sign in
+  ${inference_step}
+
+🔧 Management:
+  Restart:  /opt/restart-paperclip.sh
+  Status:   /opt/status-paperclip.sh
+  Update:   /opt/update-paperclip.sh
+  Domain:   /opt/setup-paperclip-domain.sh
+  Hire DO:  /opt/bootstrap-paperclip-do-agent.sh
+  Setup:    /etc/setup_wizard.sh
+  Logs:     journalctl -u paperclip -f
+
+  systemctl {start|stop|restart|status} paperclip
+  journalctl -u paperclip -f
+
+📚 Docs: https://docs.paperclip.ing
+🔗 Site: https://paperclip.ing
+🔗 GitHub: https://github.com/paperclipai/paperclip
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
