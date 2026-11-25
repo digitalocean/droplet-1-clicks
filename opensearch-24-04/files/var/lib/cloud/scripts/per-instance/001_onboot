@@ -1,15 +1,233 @@
 #!/bin/bash
+set -euo pipefail
+
+# CVE-2026-114938 (Java4Shell): OpenJDK Base64 intrinsic RCE/DoS on x86-64 with
+# AVX512_VBMI. OpenSearch 3.10.1+ bundles Temurin JDK 25.0.5.1+2. Enforce that
+# package floor and always apply the recommended JVM mitigation before start.
+# See: https://opensearch.org/blog/mitigating-cve-2026-114938-in-self-managed-opensearch-deployments/
+MIN_OS_VERSION=3.10.1
+
 generate_password() {
-  local upper=$(< /dev/urandom tr -dc 'A-Z' | head -c 1)
-  local lower=$(< /dev/urandom tr -dc 'a-z' | head -c 1)
-  local digit=$(< /dev/urandom tr -dc '0-9' | head -c 1)
-  local special=$(< /dev/urandom tr -dc '!@#%^&*_+-=' | head -c 1)
-  local rest=$(< /dev/urandom tr -dc 'A-Za-z0-9!@#%^&*_+-=' | head -c 12)
+  # head closes early on urandom pipelines; disable pipefail for this helper only.
+  set +o pipefail
+  local upper lower digit special rest
+  upper=$(< /dev/urandom tr -dc 'A-Z' | head -c 1)
+  lower=$(< /dev/urandom tr -dc 'a-z' | head -c 1)
+  digit=$(< /dev/urandom tr -dc '0-9' | head -c 1)
+  special=$(< /dev/urandom tr -dc '!@#%^&*_+-=' | head -c 1)
+  rest=$(< /dev/urandom tr -dc 'A-Za-z0-9!@#%^&*_+-=' | head -c 12)
   echo "${upper}${lower}${digit}${special}${rest}" | fold -w1 | shuf | tr -d '\n'
+  set -o pipefail
 }
+
+unlock_ssh() {
+  # Always clear the marketplace ForceCommand so a later failure cannot brick SSH.
+  sed -e '/Match User root/d' \
+      -e '/.*ForceCommand.*droplet.*/d' \
+      -i /etc/ssh/sshd_config || true
+  systemctl restart ssh || true
+}
+trap unlock_ssh EXIT
+
+normalize_os_upstream_version() {
+  local ver="$1"
+  # Drop Debian revision / epoch noise: "3.10.1", "3.10.1-1", "1:3.10.1"
+  ver="${ver##*:}"
+  ver="${ver%%[-+]*}"
+  printf '%s\n' "${ver}"
+}
+
+os_version_num() {
+  normalize_os_upstream_version "$(dpkg-query -W -f='${Version}' opensearch)"
+}
+
+os_meets_java4shell_floor() {
+  local ver="$1"
+  dpkg --compare-versions "${ver}" ge "${MIN_OS_VERSION}"
+}
+
+apply_java4shell_jvm_mitigation() {
+  # OpenSearch / Temurin mitigation: disable Base64 intrinsics.
+  install -d -o root -g opensearch -m 0750 /etc/opensearch/jvm.options.d
+  printf '%s\n' '-XX:-UseBASE64Intrinsics' \
+    > /etc/opensearch/jvm.options.d/99-java4shell.options
+  chown root:opensearch /etc/opensearch/jvm.options.d/99-java4shell.options
+  chmod 0640 /etc/opensearch/jvm.options.d/99-java4shell.options
+}
+
+list_pkg_apt_candidates() {
+  local pkg="$1"
+  {
+    apt-cache madison "${pkg}" 2>/dev/null | awk -F'|' '{gsub(/^ +| +$/, "", $2); if ($2 != "") print $2}'
+    apt-cache policy "${pkg}" 2>/dev/null | awk '
+      /Candidate:/ { print $2 }
+      /^ \*\*\* / { print $2 }
+      /^     [0-9]/ { print $1 }
+    '
+  } | awk 'NF && $0 != "(none)"' | sort -u
+}
+
+pick_fixed_opensearch_candidate() {
+  local cand norm best="" best_norm=""
+
+  while IFS= read -r cand; do
+    [ -n "${cand}" ] || continue
+    norm="$(normalize_os_upstream_version "${cand}")"
+    os_meets_java4shell_floor "${norm}" || continue
+
+    if [ -z "${best}" ] || dpkg --compare-versions "${norm}" gt "${best_norm}"; then
+      best="${cand}"
+      best_norm="${norm}"
+    elif [ "${norm}" = "${best_norm}" ] && dpkg --compare-versions "${cand}" gt "${best}"; then
+      best="${cand}"
+    fi
+  done < <(list_pkg_apt_candidates opensearch)
+
+  if [ -n "${best}" ]; then
+    printf '%s\n' "${best}"
+    return 0
+  fi
+  return 1
+}
+
+# Dashboards is Node.js (not Java4Shell-affected). Prefer a version matching
+# OpenSearch, then same major.minor, then Packer pin, then newest apt candidate.
+# As of 2026-11-25, Dashboards 3.10.1 is not published; artifacts pair OS 3.10.1
+# with Dashboards 3.10.0.
+pick_dashboards_candidate() {
+  local prefer_norm="$1"
+  local packer_pin="$2"
+  local prefer_mm cand norm best="" best_norm="" mm_best="" mm_best_norm=""
+  prefer_mm="$(printf '%s\n' "${prefer_norm}" | awk -F. '{print $1"."$2}')"
+
+  while IFS= read -r cand; do
+    [ -n "${cand}" ] || continue
+    norm="$(normalize_os_upstream_version "${cand}")"
+    if [ "${norm}" = "${prefer_norm}" ]; then
+      printf '%s\n' "${cand}"
+      return 0
+    fi
+    case "${norm}" in
+      "${prefer_mm}".*)
+        if [ -z "${mm_best}" ] || dpkg --compare-versions "${norm}" gt "${mm_best_norm}"; then
+          mm_best="${cand}"
+          mm_best_norm="${norm}"
+        elif [ "${norm}" = "${mm_best_norm}" ] && dpkg --compare-versions "${cand}" gt "${mm_best}"; then
+          mm_best="${cand}"
+        fi
+        ;;
+    esac
+    if [ -z "${best}" ] || dpkg --compare-versions "${norm}" gt "${best_norm}"; then
+      best="${cand}"
+      best_norm="${norm}"
+    elif [ "${norm}" = "${best_norm}" ] && dpkg --compare-versions "${cand}" gt "${best}"; then
+      best="${cand}"
+    fi
+  done < <(list_pkg_apt_candidates opensearch-dashboards)
+
+  if [ -n "${mm_best}" ]; then
+    printf '%s\n' "${mm_best}"
+    return 0
+  fi
+
+  if [ -n "${packer_pin}" ]; then
+    while IFS= read -r cand; do
+      norm="$(normalize_os_upstream_version "${cand}")"
+      if [ "${norm}" = "$(normalize_os_upstream_version "${packer_pin}")" ]; then
+        printf '%s\n' "${cand}"
+        return 0
+      fi
+    done < <(list_pkg_apt_candidates opensearch-dashboards)
+  fi
+
+  if [ -n "${best}" ]; then
+    printf '%s\n' "${best}"
+    return 0
+  fi
+  return 1
+}
+
+apt_pkg_version_available() {
+  local pkg="$1"
+  local want_norm="$2"
+  local cand
+  while IFS= read -r cand; do
+    [ -n "${cand}" ] || continue
+    if [ "$(normalize_os_upstream_version "${cand}")" = "${want_norm}" ]; then
+      printf '%s\n' "${cand}"
+      return 0
+    fi
+  done < <(list_pkg_apt_candidates "${pkg}")
+  return 1
+}
+
+install_opensearch() {
+  local pin="$1"
+  local admin_pass="$2"
+  echo "Installing opensearch=${pin} for CVE-2026-114938 (Java4Shell)"
+  NEEDRESTART_MODE=a env OPENSEARCH_INITIAL_ADMIN_PASSWORD="${admin_pass}" \
+    apt-get --assume-yes install "opensearch=${pin}"
+}
+
+install_dashboards() {
+  local pin="$1"
+  echo "Installing opensearch-dashboards=${pin}"
+  NEEDRESTART_MODE=a apt-get --assume-yes install "opensearch-dashboards=${pin}"
+}
+
+# Newest apt candidate whose upstream version differs from the failed pin.
+pick_dashboards_alternate() {
+  local exclude="$1"
+  local exclude_norm cand norm best="" best_norm=""
+  exclude_norm="$(normalize_os_upstream_version "${exclude}")"
+
+  while IFS= read -r cand; do
+    [ -n "${cand}" ] || continue
+    [ "${cand}" = "${exclude}" ] && continue
+    norm="$(normalize_os_upstream_version "${cand}")"
+    [ "${norm}" = "${exclude_norm}" ] && continue
+
+    if [ -z "${best}" ] || dpkg --compare-versions "${norm}" gt "${best_norm}"; then
+      best="${cand}"
+      best_norm="${norm}"
+    elif [ "${norm}" = "${best_norm}" ] && dpkg --compare-versions "${cand}" gt "${best}"; then
+      best="${cand}"
+    fi
+  done < <(list_pkg_apt_candidates opensearch-dashboards)
+
+  if [ -n "${best}" ]; then
+    printf '%s\n' "${best}"
+    return 0
+  fi
+  return 1
+}
+
+# Idempotent: already-disabled or missing list must not abort first-boot under set -e.
+disable_apt_list() {
+  local src="$1"
+  local dst="${src}.disabled"
+
+  if [ -e "${dst}" ]; then
+    rm -f "${src}" || true
+    return 0
+  fi
+  if [ -e "${src}" ]; then
+    mv "${src}" "${dst}"
+    return 0
+  fi
+  echo "WARNING: apt source ${src} not found; skipping disable" >&2
+  return 0
+}
+
 source /root/packer_vars.sh
-application_version=$APPLICATION_VERSION
+application_version="${APPLICATION_VERSION}"
+dashboards_version="${DASHBOARDS_VERSION:-}"
+repo_version="${REPO_VERSION:-3.x}"
 export DEBIAN_FRONTEND=noninteractive
+
+# Open app ports early so a later setup failure does not leave Dashboards firewalled.
+ufw allow 9200/tcp || true
+ufw allow 5601/tcp || true
 
 # Generate password for OpenSearch admin user
 admin_opensearch_pass=$(generate_password)
@@ -20,14 +238,54 @@ admin_opensearch_password="${admin_opensearch_pass}"
 EOM
 chmod 600 /root/.digitalocean_passwords
 
-# Update and install OpenSearch and OpenSearch Dashboards
-sudo env OPENSEARCH_INITIAL_ADMIN_PASSWORD=${admin_opensearch_pass} apt-get install -y opensearch=${application_version} opensearch-dashboards=${application_version}
+sudo apt-get --assume-yes update
+
+# Prefer the Packer-pinned OpenSearch version when it meets the Java4Shell floor;
+# otherwise select the newest apt candidate that does.
+os_pin="${application_version}"
+if ! os_meets_java4shell_floor "$(normalize_os_upstream_version "${os_pin}")"; then
+  echo "Packer pin opensearch=${os_pin} is below Java4Shell floor (>=${MIN_OS_VERSION}); selecting apt candidate" >&2
+  os_pin="$(pick_fixed_opensearch_candidate)" \
+    || { echo "ERROR: no apt candidate for opensearch meets Java4Shell floor (>=${MIN_OS_VERSION})" >&2; exit 1; }
+elif ! os_pin="$(apt_pkg_version_available opensearch "$(normalize_os_upstream_version "${os_pin}")")"; then
+  echo "Packer pin opensearch=${application_version} not in apt; selecting fixed candidate" >&2
+  os_pin="$(pick_fixed_opensearch_candidate)" \
+    || { echo "ERROR: no apt candidate for opensearch meets Java4Shell floor (>=${MIN_OS_VERSION})" >&2; exit 1; }
+fi
+
+if ! install_opensearch "${os_pin}" "${admin_opensearch_pass}"; then
+  echo "Pinned OpenSearch install failed; selecting a fixed apt candidate" >&2
+  os_pin="$(pick_fixed_opensearch_candidate)" \
+    || { echo "ERROR: no apt candidate for opensearch meets Java4Shell floor (>=${MIN_OS_VERSION})" >&2; exit 1; }
+  install_opensearch "${os_pin}" "${admin_opensearch_pass}"
+fi
+
+os_version="$(os_version_num)"
+if ! os_meets_java4shell_floor "${os_version}"; then
+  echo "ERROR: opensearch ${os_version} is below Java4Shell fix floor (need >=${MIN_OS_VERSION}). Refusing to finish setup." >&2
+  exit 1
+fi
+
+dashboards_pin="$(pick_dashboards_candidate "${os_version}" "${dashboards_version}")" \
+  || { echo "ERROR: no apt candidate for opensearch-dashboards" >&2; exit 1; }
+if ! install_dashboards "${dashboards_pin}"; then
+  echo "Pinned Dashboards install failed; selecting an alternate apt candidate" >&2
+  dashboards_pin="$(pick_dashboards_alternate "${dashboards_pin}")" \
+    || { echo "ERROR: no alternate apt candidate for opensearch-dashboards" >&2; exit 1; }
+  install_dashboards "${dashboards_pin}"
+fi
+
+# Always apply JVM mitigation so Java4Shell is closed even on fixed JDK hosts
+# (defense in depth) and on any brief window before a package bump.
+apply_java4shell_jvm_mitigation
+echo "opensearch ${os_version} meets Java4Shell package floor (CVE-2026-114938); JVM mitigation active"
+echo "opensearch-dashboards $(normalize_os_upstream_version "$(dpkg-query -W -f='${Version}' opensearch-dashboards)") installed"
 
 export JAVA_HOME=/usr/share/opensearch/jdk
 
 # Disable the OpenSearch repository to prevent automatic updates
-sudo mv /etc/apt/sources.list.d/opensearch-${repo_version}.list /etc/apt/sources.list.d/opensearch-${repo_version}.list.disabled
-sudo mv /etc/apt/sources.list.d/opensearch-dashboards-${repo_version}.list /etc/apt/sources.list.d/opensearch-dashboards-${repo_version}.list.disabled
+disable_apt_list "/etc/apt/sources.list.d/opensearch-${repo_version}.list"
+disable_apt_list "/etc/apt/sources.list.d/opensearch-dashboards-${repo_version}.list"
 
 # Generate certificates (root CA, node, and admin)
 mkdir -p /etc/opensearch/certs
@@ -134,14 +392,4 @@ sudo systemctl restart opensearch
 sudo systemctl enable opensearch-dashboards
 sudo systemctl start opensearch-dashboards
 
-# Allow OpenSearch and Dashboards ports in the firewall
-sudo ufw allow 9200/tcp
-sudo ufw allow 5601/tcp
-
-# Remove the SSH force logout command
-sed -e '/Match User root/d' \
-    -e '/.*ForceCommand.*droplet.*/d' \
-    -i /etc/ssh/sshd_config
-
-# Restart SSH service
-systemctl restart ssh
+# SSH unlock runs via EXIT trap
