@@ -1,6 +1,113 @@
 #!/bin/bash
+set -euo pipefail
 
-sudo apt-get --assume-yes update && sudo NEEDRESTART_MODE=a apt-get --assume-yes install elasticsearch
+# CVE-2026-114938 (Java4Shell): OpenJDK Base64 intrinsic RCE/DoS on x86-64 with
+# AVX512_VBMI. Elastic fixed releases bump the bundled JDK to 27.0.1.1+4
+# (Elasticsearch >= 9.5.7 / 9.4.10). Enforce that package floor and always apply
+# Elastic's recommended JVM mitigation before start.
+MIN_ES_VERSION=9.5.7
+MIN_ES_9410=9.4.10
+
+unlock_ssh() {
+  # Always clear the marketplace ForceCommand so a later failure cannot brick SSH.
+  sed -e '/Match User root/d' \
+      -e '/.*ForceCommand.*droplet.*/d' \
+      -i /etc/ssh/sshd_config || true
+  systemctl restart ssh || true
+}
+trap unlock_ssh EXIT
+
+es_version_num() {
+  local ver
+  ver="$(dpkg-query -W -f='${Version}' elasticsearch)"
+  # Drop Debian revision / epoch noise: "9.5.7", "9.5.7-1", "1:9.5.7"
+  ver="${ver##*:}"
+  ver="${ver%%[-+]*}"
+  printf '%s\n' "${ver}"
+}
+
+es_meets_java4shell_floor() {
+  local ver="$1"
+  if dpkg --compare-versions "${ver}" ge "${MIN_ES_VERSION}"; then
+    return 0
+  fi
+  if dpkg --compare-versions "${ver}" ge "${MIN_ES_9410}" \
+    && dpkg --compare-versions "${ver}" lt 9.5.0; then
+    return 0
+  fi
+  return 1
+}
+
+apply_java4shell_jvm_mitigation() {
+  # Elastic mitigation Option 1 (ESA-2026-vpcg-q2wh): disable Base64 intrinsics.
+  install -d -m 0755 /etc/elasticsearch/jvm.options.d
+  printf '%s\n' '-XX:-UseBASE64Intrinsics' > /etc/elasticsearch/jvm.options.d/cve-2026-114938.options
+  chmod 644 /etc/elasticsearch/jvm.options.d/cve-2026-114938.options
+  if getent group elasticsearch >/dev/null 2>&1; then
+    chown root:elasticsearch /etc/elasticsearch/jvm.options.d/cve-2026-114938.options
+  fi
+}
+
+try_install_fixed_elasticsearch() {
+  local pin
+  # Prefer current fixed 9.5.x, then fixed 9.4.x maintenance line.
+  for pin in "${MIN_ES_VERSION}" "${MIN_ES_9410}"; do
+    echo "Attempting elasticsearch=${pin} for CVE-2026-114938 (Java4Shell)"
+    if NEEDRESTART_MODE=a apt-get --assume-yes install "elasticsearch=${pin}"; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+wait_for_elasticsearch() {
+  local i=0
+  # TLS is on by default; any HTTP response (incl. 401) means the HTTP layer is up.
+  until curl -sk --max-time 5 "https://localhost:9200" >/dev/null 2>&1; do
+    i=$((i + 1))
+    if [ "${i}" -ge 90 ]; then
+      echo "ERROR: Elasticsearch did not become ready on https://localhost:9200" >&2
+      return 1
+    fi
+    sleep 2
+  done
+}
+
+reset_es_password() {
+  local user="$1"
+  local out pass attempt
+  for attempt in 1 2 3 4 5; do
+    out="$(echo "y" | /usr/share/elasticsearch/bin/elasticsearch-reset-password -u "${user}" --url https://localhost:9200 2>/dev/null || true)"
+    pass="$(printf '%s\n' "${out}" | awk '/^New/{print $3; exit}')"
+    if [ -n "${pass}" ]; then
+      printf '%s\n' "${pass}"
+      return 0
+    fi
+    sleep 3
+  done
+  echo "ERROR: failed to reset password for Elasticsearch user '${user}'" >&2
+  return 1
+}
+
+sudo apt-get --assume-yes update
+sudo NEEDRESTART_MODE=a apt-get --assume-yes install elasticsearch
+
+es_version="$(es_version_num)"
+if ! es_meets_java4shell_floor "${es_version}"; then
+  echo "elasticsearch ${es_version} is below Java4Shell fix floor; attempting pinned fixed package" >&2
+  try_install_fixed_elasticsearch || true
+  es_version="$(es_version_num)"
+fi
+
+# Always apply JVM mitigation so Java4Shell is closed even on fixed JDK hosts
+# (defense in depth) and on any brief window before a package bump.
+apply_java4shell_jvm_mitigation
+
+if ! es_meets_java4shell_floor "${es_version}"; then
+  echo "ERROR: elasticsearch ${es_version} is below Java4Shell fix floor (need >=${MIN_ES_VERSION}, or >=${MIN_ES_9410} on 9.4.x). Refusing to finish setup." >&2
+  exit 1
+fi
+echo "elasticsearch ${es_version} meets Java4Shell package floor (CVE-2026-114938); JVM mitigation active"
 
 # Set host for the ElasticSearch server
 cat >> /etc/elasticsearch/elasticsearch.yml <<EOM
@@ -12,16 +119,16 @@ sudo chmod 755 -R /var/log/elasticsearch/
 
 # Start elastic service
 sudo systemctl daemon-reload
-
 sudo systemctl enable elasticsearch.service
-
 sudo systemctl start elasticsearch.service
 
+wait_for_elasticsearch
+
 # Generate random password for elastic, kibana and logstash users
-export elasticPass=$(echo "y" | /usr/share/elasticsearch/bin/elasticsearch-reset-password -u elastic --url https://localhost:9200 | awk '/^New/{print $3}')
-export kibanaPass=$(echo "y" | /usr/share/elasticsearch/bin/elasticsearch-reset-password -u kibana --url https://localhost:9200 | awk '/^New/{print $3}')
-export logstashSystemPass=$(echo "y" | /usr/share/elasticsearch/bin/elasticsearch-reset-password -u logstash_system --url https://localhost:9200 | awk '/^New/{print $3}')
-export kibanaEnrollmentToken=$(/usr/share/elasticsearch/bin/elasticsearch-create-enrollment-token -s kibana --url https://localhost:9200)
+elasticPass="$(reset_es_password elastic)"
+kibanaPass="$(reset_es_password kibana)"
+logstashSystemPass="$(reset_es_password logstash_system)"
+kibanaEnrollmentToken="$(/usr/share/elasticsearch/bin/elasticsearch-create-enrollment-token -s kibana --url https://localhost:9200)"
 
 # Set env variable for elastic, kibana and logstash passwords
 cat > /root/.digitalocean_passwords <<EOM
@@ -30,10 +137,6 @@ KIBANA_PASSWORD=${kibanaPass}
 LOGSTASH_SYSTEM_PASSWORD=${logstashSystemPass}
 KIBANA_ENROLLMENT_TOKEN=${kibanaEnrollmentToken}
 EOM
+chmod 600 /root/.digitalocean_passwords
 
-# Remove the ssh force logout command
-sed -e '/Match User root/d' \
-    -e '/.*ForceCommand.*droplet.*/d' \
-    -i /etc/ssh/sshd_config
-
-systemctl restart ssh
+# SSH unlock runs via EXIT trap
