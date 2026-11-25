@@ -1,14 +1,26 @@
 #!/bin/sh
+set -eu
 
-# Add OpenSearch and OpenSearch Dashboard GPG keys
+# Official OpenSearch + Dashboards APT repos (see OpenSearch Debian install docs)
+install -d -m 0755 /etc/apt/keyrings
+
 curl -fsSL https://artifacts.opensearch.org/publickeys/opensearch-release.pgp \
- | sudo gpg --dearmor -o /etc/apt/keyrings/opensearch.gpg
+  | gpg --dearmor --batch --yes -o /etc/apt/keyrings/opensearch.gpg
+chmod a+r /etc/apt/keyrings/opensearch.gpg
 
-curl -o- https://artifacts.opensearch.org/publickeys/opensearch-release.pgp | sudo gpg --dearmor --batch --yes -o /etc/apt/keyrings/opensearch-release-keyring
+curl -fsSL https://artifacts.opensearch.org/publickeys/opensearch-release.pgp \
+  | gpg --dearmor --batch --yes -o /etc/apt/keyrings/opensearch-release-keyring
+chmod a+r /etc/apt/keyrings/opensearch-release-keyring
 
-# Add OpenSearch repository
 echo "deb [signed-by=/etc/apt/keyrings/opensearch.gpg] https://artifacts.opensearch.org/releases/bundle/opensearch/${repo_version}/apt stable main" \
-| sudo tee /etc/apt/sources.list.d/opensearch-${repo_version}.list
-echo "deb [signed-by=/etc/apt/keyrings/opensearch-release-keyring] https://artifacts.opensearch.org/releases/bundle/opensearch-dashboards/${repo_version}/apt stable main" | sudo tee /etc/apt/sources.list.d/opensearch-dashboards-${repo_version}.list
+  > /etc/apt/sources.list.d/opensearch-${repo_version}.list
 
-sudo apt-get update
+echo "deb [signed-by=/etc/apt/keyrings/opensearch-release-keyring] https://artifacts.opensearch.org/releases/bundle/opensearch-dashboards/${repo_version}/apt stable main" \
+  > /etc/apt/sources.list.d/opensearch-dashboards-${repo_version}.list
+
+apt-get update
+apt-get update --allow-releaseinfo-change || true
+
+# Ensure first-boot script and MOTD are executable for cloud-init / login
+chmod +x /var/lib/cloud/scripts/per-instance/001_onboot
+chmod +x /etc/update-motd.d/99-one-click

@@ -1,11 +1,12 @@
 
 {
   "variables": {
-    "token": "{{env `DIGITALOCEAN_TOKEN`}}",
+    "do_api_token": "{{env `DIGITALOCEAN_API_TOKEN`}}",
     "image_name": "opensearch-24-04-snapshot-{{timestamp}}",
     "apt_packages": "wget curl gnupg2 software-properties-common apt-transport-https ca-certificates lsb-release",
     "application_name": "OpenSearch",
-    "application_version": "3.4.0",
+    "application_version": "3.10.1",
+    "dashboards_version": "3.10.0",
     "repo_version": "3.x"
   },
   "sensitive-variables": ["do_api_token"],
@@ -30,10 +31,12 @@
     {
       "type": "shell",
       "environment_vars": [
-        "APPLICATION_VERSION={{user `application_version`}}"
+        "APPLICATION_VERSION={{user `application_version`}}",
+        "DASHBOARDS_VERSION={{user `dashboards_version`}}",
+        "REPO_VERSION={{user `repo_version`}}"
       ],
       "inline": [
-        "echo 'APPLICATION_VERSION={{user `application_version`}}' > /root/packer_vars.sh"
+        "printf '%s\\n' \"APPLICATION_VERSION={{user `application_version`}}\" \"DASHBOARDS_VERSION={{user `dashboards_version`}}\" \"REPO_VERSION={{user `repo_version`}}\" > /root/packer_vars.sh"
       ]
     },
     {
@@ -72,6 +75,7 @@
         "application_name={{user `application_name`}}",
         "application_version={{user `application_version`}}",
         "app_version={{user `application_version`}}",
+        "dashboards_version={{user `dashboards_version`}}",
         "repo_version={{user `repo_version`}}",
         "DEBIAN_FRONTEND=noninteractive",
         "LC_ALL=C",

@@ -5,7 +5,19 @@
 # Read in the passwords....
 . /root/.digitalocean_passwords
 
+# shellcheck disable=SC1091
+. /var/lib/digitalocean/application.info 2>/dev/null
+APP_VERSION="${application_version:-unknown}"
+
 myip=$(hostname -I | awk '{print$1}')
+
+# Percent-encode password for https://user:pass@host connection strings
+# (characters like : / @ # in the password break the URL otherwise)
+admin_opensearch_password_url=$(
+  printf '%s' "${admin_opensearch_password}" \
+    | python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.stdin.read(), safe=""))'
+)
+
 cat <<EOF
 ********************************************************************************
 
@@ -13,16 +25,22 @@ Welcome to DigitalOcean's 1-Click OpenSearch Droplet.
 To keep this Droplet secure, the UFW firewall is enabled.
 All ports are BLOCKED except 22 (SSH), 80 (HTTP), 443 (HTTPS), 9200 (OpenSearch) and 5601 (OpenSearch Dashboard).
 
+This image includes OpenSearch ${APP_VERSION} (see /var/lib/digitalocean/application.info).
+
 Use the following credentials to manage OpenSearch:
     Username: admin
     Password: ${admin_opensearch_password}
 
-Connection string for your OpenSearch:
-  https://admin:${admin_opensearch_password}@${myip}:9200
+Connection string for your OpenSearch (password is URL-encoded):
+  https://admin:${admin_opensearch_password_url}@${myip}:9200
 
-In a web browser, you can view:
- * OpenSearch API: https://${myip}:9200
- * OpenSearch Dashoards: https://${myip}:5601
+API check (preferred; do not put the raw password in a URL):
+  curl -k -u "admin:${admin_opensearch_password}" https://${myip}:9200
+
+OpenSearch Dashboards (browser UI):
+  https://${myip}:5601
+  Log in with username admin and the password above.
+  TLS uses a self-signed certificate — accept the browser warning to continue.
 
 On the server:
   * OpenSearch configuration is located at /etc/opensearch/opensearch.yml
@@ -33,7 +51,6 @@ On the server:
 For help and more information, visit https://opensearch.org/docs/
 
 ********************************************************************************
-NOTE:  This image includes version 3.4.0 of OpenSearch.
 To upgrade to a newer release, run the following commands:
 
 sudo mv /etc/apt/sources.list.d/opensearch-3.x.list.disabled /etc/apt/sources.list.d/opensearch-3.x.list
