@@ -8,7 +8,8 @@ Deploy self-hosted Supabase on Ubuntu 24.04 with Docker Compose and Nginx. Supab
 - **Docker Engine** and **Docker Compose plugin**
 - **Supabase** (pinned release from the image build, currently `v1.26.08`) — Studio, Kong, Auth, PostgREST, Realtime, Storage, and related services
 - **PostgreSQL** via the Supabase `db` container (`supabase/postgres`), or DigitalOcean Managed PostgreSQL when **Add a Database** is selected
-- **Nginx** reverse proxy from nginx.org mainline (≥1.31.9; ports 80/443 → Kong on `localhost:8000`; TLS without HTTP/2)
+- **Nginx** reverse proxy from nginx.org mainline (≥1.31.9; ports 80/443 → Kong on `localhost:8000`; custom-domain TLS with HTTP/2)
+- **Kong** `kong/kong:3.9.5` (CVE-2026-123007 / CVE-2026-123633 patched; HTTP/2 enabled on TLS)
 - **Certbot** (Snap) for optional custom-domain TLS
 - **UFW** — SSH, HTTP, and HTTPS
 - **postgresql-client** — used on first boot when a Managed Database is attached
@@ -105,7 +106,7 @@ Without that checkbox, `/root/.digitalocean_dbaas_credentials` is never injected
 
 - Change the Studio dashboard password after first login if needed (value in `/root/.digitalocean_passwords`)
 - Prefer restricting SSH (and optionally HTTP/HTTPS) with a Cloud Firewall
-- For production, configure a custom domain and TLS via `/var/supabase/supabase-setup.sh` (HTTPS is HTTP/1.1 only; Kong TLS on `:8443` also has HTTP/2 disabled for CVE-2026-123007)
+- For production, configure a custom domain and TLS via `/var/supabase/supabase-setup.sh` (HTTPS and Kong TLS on `:8443` negotiate HTTP/2)
 - Rotate default JWT / API secrets in `/srv/supabase/supabase/docker/.env` for production use
 
 ## Additional Resources

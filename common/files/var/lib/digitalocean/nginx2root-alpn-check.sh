@@ -38,6 +38,19 @@ assert_alpn_no_h2() {
   return 0
 }
 
+assert_alpn_h2() {
+  local label="${1:?label}"
+  local host="${2:?host}"
+  local port="${3:?port}"
+  local servername="${4:-localhost}"
+
+  if ! alpn_advertises_h2 "${host}" "${port}" "${servername}"; then
+    echo "regression: ${label} (${host}:${port}) did not negotiate ALPN h2" >&2
+    return 1
+  fi
+  return 0
+}
+
 # Active listen lines only (ignore comments and pseudo-directives in other contexts).
 nginx_site_listens_with_http2() {
   local f="${1:?config}"
