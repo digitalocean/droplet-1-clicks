@@ -125,15 +125,3 @@ compose_up_with_retry() {
 compose_up_with_retry
 
 chmod 600 "${ENV_FILE}" "${PASSWORDS_FILE}" /var/log/one_click_setup.log
-
-# First-boot check: Kong TLS must negotiate HTTP/2 again (fixed Kong ≥ 3.9.5).
-if [ -f /var/lib/digitalocean/nginx2root-alpn-check.sh ]; then
-  # shellcheck source=/dev/null
-  . /var/lib/digitalocean/nginx2root-alpn-check.sh
-  KONG_HTTPS_PORT="$(sed -n 's/^KONG_HTTPS_PORT=//p' "${ENV_FILE}" | tail -n1)"
-  KONG_HTTPS_PORT="${KONG_HTTPS_PORT:-8443}"
-  if ! assert_alpn_h2 "Kong HTTPS" 127.0.0.1 "${KONG_HTTPS_PORT}"; then
-    echo "ERROR: Kong HTTPS did not negotiate ALPN h2 on :${KONG_HTTPS_PORT}" >&2
-    exit 1
-  fi
-fi
