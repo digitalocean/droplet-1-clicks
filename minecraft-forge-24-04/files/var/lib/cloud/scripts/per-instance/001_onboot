@@ -1,14 +1,26 @@
 #!/bin/bash
+set -euo pipefail
 
 RAM_AVAILABLE=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
 RAM_FOR_MINECRAFT=$((RAM_AVAILABLE/1365))
 
-systemctl enable minecraft@${RAM_FOR_MINECRAFT}
-systemctl start minecraft@${RAM_FOR_MINECRAFT}
+# Forge reads heap settings from user_jvm_args.txt (not java -Xmx on the CLI).
+cat > /opt/minecraft/user_jvm_args.txt <<EOF
+-Xms${RAM_FOR_MINECRAFT}M
+-Xmx${RAM_FOR_MINECRAFT}M
+-XX:+UseG1GC
+-XX:ParallelGCThreads=2
+-XX:MinHeapFreeRatio=5
+-XX:MaxHeapFreeRatio=10
+EOF
+chown minecraft:minecraft /opt/minecraft/user_jvm_args.txt
 
-# Remove the ssh force logout command
+# Unlock SSH before starting Minecraft so a failed unit cannot leave root locked out.
 sed -e '/Match User root/d' \
     -e '/.*ForceCommand.*droplet.*/d' \
     -i /etc/ssh/sshd_config
 
 systemctl restart ssh
+
+systemctl enable "minecraft@${RAM_FOR_MINECRAFT}"
+systemctl start "minecraft@${RAM_FOR_MINECRAFT}"

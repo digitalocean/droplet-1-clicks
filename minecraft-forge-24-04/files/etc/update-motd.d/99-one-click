@@ -14,7 +14,9 @@ Welcome to DigitalOcean's 1-Click Minecraft Forge Droplet.
 
 * You can SSH to this Droplet in a terminal as root: ssh root@$myip
 
-* Minecraft is installed in /opt/minecraft
+* Minecraft Forge is installed in /opt/minecraft (start via ./run.sh / systemd)
+
+* Drop server mods into /opt/minecraft/mods
 
 * Minecraft service status can be checked with: systemctl status minecraft@${RAM_FOR_MINECRAFT}
 
