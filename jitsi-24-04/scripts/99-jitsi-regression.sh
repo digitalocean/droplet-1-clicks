@@ -39,6 +39,11 @@ if ! grep -q 'listen 443 ssl;' "${SETUP}"; then
   exit 1
 fi
 
+if ! grep -q 'register_prosody_focus_and_jvb' "${SETUP}"; then
+  echo "regression: complete-jitsi-setup.sh must register focus and jvb on auth.\${domain}" >&2
+  exit 1
+fi
+
 if command -v nginx >/dev/null 2>&1 && [ -f /etc/nginx/nginx.conf ]; then
   ver=$(nginx -v 2>&1 | sed -n 's/.*nginx\/\([0-9.]*\).*/\1/p')
   major=$(echo "${ver}" | cut -d. -f1)
