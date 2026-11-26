@@ -1,0 +1,7 @@
+#!/bin/sh
+# GitHub CLI for the DSH Superagent agent account only.
+#
+# It keeps its own configuration directory, so it never reads or writes a
+# personal GitHub login. dsh-superagent is configured to use this wrapper as
+# the agent's CLI (Sources > GitHub > cli).
+GH_CONFIG_DIR="$HOME/.config/gh-agent" exec /usr/local/bin/gh "$@"

@@ -1,0 +1,38 @@
+#!/bin/bash
+# First boot of each new Droplet. Model access keys may already be in the
+# droplet environment. GitHub setup still happens in /etc/setup_wizard.sh.
+set -euo pipefail
+
+# Remove the ssh force logout command added during image build.
+sed -e '/Match User root/d' \
+    -e '/.*ForceCommand.*droplet.*/d' \
+    -i /etc/ssh/sshd_config
+
+systemctl restart ssh
+
+chmod +x /opt/dsh-superagent/apply-inference-from-env.sh \
+    /opt/dsh-superagent/push-inference-model.sh \
+    /opt/dsh-superagent/retry-apply-inference-after-cloud-init.sh
+chmod +x /var/lib/digitalocean/inference-models.sh
+
+INFERENCE_APPLIED=0
+if /opt/dsh-superagent/apply-inference-from-env.sh; then
+    INFERENCE_APPLIED=1
+    echo "Serverless Inference pre-configured from droplet environment."
+fi
+
+systemctl daemon-reload
+systemctl enable dsh-superagent.service dsh-superagent-check.timer
+
+# Start without blocking boot. Until GitHub setup finishes the runtime reports
+# "waiting for setup" (exit 3), which is a normal state. A pre-configured
+# inference key is loaded by this start.
+systemctl --no-block start dsh-superagent.service
+systemctl start dsh-superagent-check.timer
+
+if [ "$INFERENCE_APPLIED" = "1" ]; then
+    /opt/dsh-superagent/push-inference-model.sh || true
+else
+    systemctl enable dsh-superagent-apply-inference.service
+    systemctl start dsh-superagent-apply-inference.service || true
+fi

@@ -1,0 +1,17 @@
+# DSH Superagent machine configuration, copied to
+# ~superagent/.dsh/profiles/superagent/cordis.patch.yml at image build.
+# The panel stays on loopback; reach it through an SSH tunnel (see the login message).
+- id: webserver
+  config:
+    host: 127.0.0.1
+    port: 3082
+- id: dsh-superagent
+  config:
+    stateDir: /home/superagent/.dsh/state/superagent
+# DigitalOcean Inference is added here when a model access key is applied.
+# An empty provider map leaves the adapter installed and unused.
+- insert:
+    - id: llm-pi-ai
+      name: '@deepseek-ai/dsh-llm-pi-ai'
+      config:
+        providers: {}

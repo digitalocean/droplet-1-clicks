@@ -1,0 +1,10 @@
+[Unit]
+Description=Check DSH Superagent and restart it if it stopped unexpectedly
+After=dsh-superagent.service
+
+[Service]
+Type=oneshot
+# check-dsh-superagent.sh maps status 2/3 (part error / waiting for setup) to
+# exit 0; only unexpected status codes fail the unit.
+ExecStart=/opt/dsh-superagent/check-dsh-superagent.sh
+TimeoutStartSec=400

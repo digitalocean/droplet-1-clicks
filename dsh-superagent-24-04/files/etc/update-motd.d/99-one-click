@@ -1,0 +1,48 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+cat <<'EOF'
+********************************************************************************
+
+Welcome to DSH Superagent, a proactive coding agent for one GitHub repository,
+packaged for DeepSeek Harness.
+
+If setup has not run yet, the setup wizard starts at this login. You will need:
+  - a DigitalOcean model access key (or a DeepSeek API key)
+  - a GitHub account for the agent (not your own)
+  - the repository as owner/name, and your GitHub login
+
+Model access keys:
+  https://cloud.digitalocean.com/model-studio/manage-keys
+A key in the droplet environment is applied automatically. Apply one later with:
+  sudo /opt/dsh-superagent/apply-inference-from-env.sh
+
+Run it again at any time:
+  sudo /etc/setup_wizard.sh --force
+
+Open the panel (it listens on 127.0.0.1 only, through an SSH tunnel):
+  ssh -L 3082:127.0.0.1:3082 root@<droplet-ip>
+  then open the URL printed by:
+  /opt/dsh-superagent/status-dsh-superagent.sh
+
+Manage the service:
+  /opt/dsh-superagent/status-dsh-superagent.sh     status and exit codes
+  /opt/dsh-superagent/start-dsh-superagent.sh      start
+  /opt/dsh-superagent/stop-dsh-superagent.sh       stop (also paused for the hourly check)
+  /opt/dsh-superagent/restart-dsh-superagent.sh    restart
+  /opt/dsh-superagent/update-dsh-superagent.sh <commit-or-tag>
+
+Files:
+  Checkout:    /home/superagent/dsh-superagent
+  Settings:    /home/superagent/.config/dsh-superagent/env   (model key)
+  Inference:   /opt/dsh-superagent/dsh-superagent-inference.env
+  State:       /home/superagent/.dsh/state/superagent
+  Logs:        /home/superagent/dsh-superagent/.artifacts/
+  Checkouts:   /home/superagent/src/
+
+Documentation: https://github.com/deepseek-ai/dsh-superagent-prototype
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF

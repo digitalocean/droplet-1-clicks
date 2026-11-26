@@ -1,0 +1,20 @@
+[Unit]
+Description=DSH Superagent (DeepSeek Harness)
+Documentation=https://github.com/deepseek-ai/dsh-superagent-prototype
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# The upstream control script starts DSH in a tmux session as the superagent
+# user and returns. Exit 2 (part error) and 3 (waiting for setup) are normal
+# states that a restart does not change, so the unit still counts as started.
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/opt/dsh-superagent/superagent-ctl.sh start
+ExecStop=/opt/dsh-superagent/superagent-ctl.sh stop
+SuccessExitStatus=2 3
+TimeoutStartSec=300
+TimeoutStopSec=330
+
+[Install]
+WantedBy=multi-user.target
