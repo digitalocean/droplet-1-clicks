@@ -5,10 +5,11 @@
 # DO_INFERENCE_ROUTER from the environment, /etc/environment, or
 # /opt/dsh-superagent/dsh-superagent-inference.env.
 #
-# The key is stored for the superagent user and removed from /etc/environment.
-# The profile patch names the gateway and its models, never the key. Eval and
-# executor selection is recorded for push-inference-model.sh, which runs after
-# the service is up.
+# The key is stored for the superagent user and removed from /etc/environment
+# as soon as a usable key is read, so a later failure cannot leave it
+# world-readable. Retries still read it from ENV_FILE. The profile patch names
+# the gateway and its models, never the key. Eval and executor selection is
+# recorded for push-inference-model.sh, which runs after the service is up.
 #
 # Returns 0 when a key was applied, 1 when skipped because no usable key is set.
 set -euo pipefail
@@ -144,6 +145,22 @@ strip_inference_keys() {
     chmod "$mode" "$env_file"
 }
 
+# Write inference vars to the root-owned 0600 env file (retries read this).
+persist_inference_env() {
+    local key="$1" model="${2:-}" router="${3:-}"
+    local tmp="${ENV_FILE}.tmp"
+    touch "$ENV_FILE"
+    chmod 600 "$ENV_FILE"
+    grep -Ev '^(MODEL_ACCESS_KEY|INFERENCE_MODEL|DO_INFERENCE_ROUTER)=' "$ENV_FILE" >"$tmp" 2>/dev/null || : >"$tmp"
+    {
+        printf 'MODEL_ACCESS_KEY=%q\n' "$key"
+        printf 'INFERENCE_MODEL=%q\n' "$model"
+        printf 'DO_INFERENCE_ROUTER=%q\n' "$router"
+    } >>"$tmp"
+    mv "$tmp" "$ENV_FILE"
+    chmod 600 "$ENV_FILE"
+}
+
 apply_inference() {
     local key model router chat_ids primary model_ids model_file id
     key=$(read_config_value MODEL_ACCESS_KEY || true)
@@ -152,6 +169,12 @@ apply_inference() {
     if ! env_value_usable "$key"; then
         return 1
     fi
+
+    # Move the key off world-readable /etc/environment before fallible work
+    # (model list, validation). Retries still find it in ENV_FILE / APP_ENV.
+    persist_inference_env "$key" "${model:-}" "${router:-}"
+    strip_inference_keys /etc/environment 644
+    write_app_env_kv MODEL_ACCESS_KEY "$key"
 
     chat_ids=""
     if [ -f "$INFERENCE_MODELS_LIB" ]; then
@@ -196,20 +219,7 @@ apply_inference() {
         return 1
     fi
 
-    touch "$ENV_FILE"
-    chmod 600 "$ENV_FILE"
-    local tmp="${ENV_FILE}.tmp"
-    grep -Ev '^(MODEL_ACCESS_KEY|INFERENCE_MODEL|DO_INFERENCE_ROUTER)=' "$ENV_FILE" >"$tmp" 2>/dev/null || : >"$tmp"
-    {
-        printf 'MODEL_ACCESS_KEY=%q\n' "$key"
-        printf 'INFERENCE_MODEL=%q\n' "${primary#router:}"
-        printf 'DO_INFERENCE_ROUTER=%q\n' "$router"
-    } >>"$tmp"
-    mv "$tmp" "$ENV_FILE"
-    chmod 600 "$ENV_FILE"
-    strip_inference_keys /etc/environment 644
-
-    write_app_env_kv MODEL_ACCESS_KEY "$key"
+    persist_inference_env "$key" "${primary#router:}" "$router"
 
     model_file="$(mktemp)"
     printf '%s\n' "$model_ids" >"$model_file"

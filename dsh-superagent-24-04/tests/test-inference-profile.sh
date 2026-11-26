@@ -55,6 +55,18 @@ strip_inference_keys "$env_file" 600
 assert_eq "$(cat "$env_file")" "KEEP=yes" "the access key is removed from the environment file"
 rm -f "$env_file"
 
+# persist_inference_env must land the key in ENV_FILE before strip so retries work
+# after an early apply failure (key already removed from /etc/environment).
+old_env_file=$ENV_FILE
+ENV_FILE="$(mktemp)"
+persist_inference_env "secret-key" "kimi-k3" ""
+assert_eq "$(grep -E '^MODEL_ACCESS_KEY=' "$ENV_FILE" | cut -d= -f2-)" "secret-key" \
+    "persist_inference_env stores the access key for retries"
+grep -q '^INFERENCE_MODEL=kimi-k3$' "$ENV_FILE"
+echo "OK: persist_inference_env stores the model id"
+rm -f "$ENV_FILE"
+ENV_FILE=$old_env_file
+
 if [ "$FAILURES" -ne 0 ]; then
     echo "$FAILURES check(s) failed."
     exit 1

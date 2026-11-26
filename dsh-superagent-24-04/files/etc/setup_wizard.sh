@@ -283,9 +283,10 @@ while [ "$(as_app "$GH_AGENT" api "repos/$REPO" --jq .permissions.push 2>/dev/nu
 done
 echo "The agent can push to ${REPO}."
 
-# Local clone that each Ticket's worktree is created from.
-CLONE_NAME=${REPO#*/}
-CLONE_DIR=$APP_HOME/src/$CLONE_NAME
+# Local clone keyed by owner/name so --force cannot reuse another owner's
+# repository that shares the same leaf name under $APP_HOME/src.
+CLONE_DIR=$APP_HOME/src/$REPO
+install -d -o "$APP_USER" -g "$APP_USER" -m 0755 "$(dirname "$CLONE_DIR")"
 if [ ! -d "$CLONE_DIR/.git" ]; then
     echo "Cloning ${REPO} to ${CLONE_DIR}..."
     if ! as_app git -c credential.helper= \
