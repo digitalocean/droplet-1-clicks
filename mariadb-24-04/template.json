@@ -5,7 +5,7 @@
     "image_name": "mariadb-24-04-snapshot-{{timestamp}}",
     "apt_packages": "curl apt-transport-https ca-certificates gnupg software-properties-common unzip",
     "application_name": "MariaDB",
-    "application_version": "10.11.19"
+    "application_version": "10.11.20"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
