@@ -1,5 +1,5 @@
 [Unit]
-Description=Minecraft Droplet Server
+Description=Minecraft Forge Droplet Server
 After=network.target
 
 [Service]
@@ -22,20 +22,14 @@ ProtectKernelModules=true
 
 ProtectControlGroups=true
 
-Environment="SHUTDOWN_DELAY=5" "RAM=%i" "POST_SHUTDOWN_DELAY=10"
+Environment="SHUTDOWN_DELAY=5" "POST_SHUTDOWN_DELAY=10"
 
+# Modern Forge boots via run.sh (reads user_jvm_args.txt). Heap size is set
+# on first boot in /opt/minecraft/user_jvm_args.txt from available RAM.
+# Instance name minecraft@<MB> is kept for MOTD/status compatibility only.
 ExecStart=/bin/sh -c \
             '/usr/bin/screen -dmS minecraft \
-                /usr/bin/java \
-                   -server \
-                   -Xms$${RAM}M \
-                   -Xmx$${RAM}M \
-                   -XX:+UseG1GC \
-                   -XX:ParallelGCThreads=2 \
-                   -XX:MinHeapFreeRatio=5 \
-                   -XX:MaxHeapFreeRatio=10 \
-                   -jar server.jar \
-                   --nogui'
+                ./run.sh nogui'
 
 ExecReload=/usr/bin/screen -p 0 -S minecraft -X eval 'stuff "reload"\\015'
 
