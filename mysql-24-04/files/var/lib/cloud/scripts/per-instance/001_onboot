@@ -18,6 +18,7 @@ root_mysql_pass="${root_mysql_pass}"
 admin_mysql_pass="${admin_mysql_pass}"
 app_mysql_pass="${app_mysql_pass}"
 EOM
+chmod 600 /root/.digitalocean_password
 
 # Set passwords (Ubuntu MySQL 8.0 defaults root to auth_socket)
 mysql -u root <<EOSQL
