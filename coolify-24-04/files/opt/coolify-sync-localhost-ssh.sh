@@ -7,23 +7,29 @@
 # (UI onboarding "point 3" path). This script:
 #   1) Resolves Coolify's real localhost private key (DB id 0 / ssh_key@uuid)
 #   2) Restores id.root@host.docker.internal from that same key material
-#   3) Authorizes the matching pubkey in /root/.ssh/authorized_keys
+#   3) Authorizes the matching pubkey in /etc/ssh/authorized_keys.d/coolify
+#      (follow-up to #509: keep Validate trust; img_check only looks at
+#      ~/.ssh/authorized_keys, so Coolify trust must stay elsewhere; sshd
+#      Match User root also reads this file for root)
 #   4) Forces Coolify localhost server SSH port to 22 when DB is reachable
 #
 # Never generates a new keypair Coolify does not already know — that would break
-# onboarding Validate (UI "Current Public Key" would not match authorized_keys).
+# onboarding Validate (UI "Current Public Key" would not match host trust).
 
 set -euo pipefail
 
 SSH_KEYS_DIR="/data/coolify/ssh/keys"
 LEGACY_KEY_PATH="${SSH_KEYS_DIR}/id.root@host.docker.internal"
 ENV_FILE="/data/coolify/source/.env"
-AUTH_KEYS="/root/.ssh/authorized_keys"
+# Coolify-managed trust only — see sshd_config.d/99-coolify-authorized-keys.conf
+AUTH_KEYS="/etc/ssh/authorized_keys.d/coolify"
+ROOT_AUTH_KEYS="/root/.ssh/authorized_keys"
 TMP_DIR=$(mktemp -d)
 trap 'rm -rf "${TMP_DIR}"' EXIT
 
-mkdir -p "${SSH_KEYS_DIR}" /root/.ssh
+mkdir -p "${SSH_KEYS_DIR}" /root/.ssh /etc/ssh/authorized_keys.d
 chmod 700 /root/.ssh "${SSH_KEYS_DIR}"
+chmod 755 /etc/ssh/authorized_keys.d
 touch "${AUTH_KEYS}"
 chmod 600 "${AUTH_KEYS}"
 
@@ -31,17 +37,25 @@ coolify_container() {
     docker ps --format '{{.Names}}' | grep -E '^coolify$' | head -1 || true
 }
 
-# Drop prior Coolify-managed trust lines (legacy coolify comment + Coolify cpk: lines)
-# so pre-reseed pubkeys do not linger as orphan root trust.
-strip_coolify_authorized_keys() {
-    if [ ! -f "${AUTH_KEYS}" ]; then
+# Drop Coolify-managed trust lines (legacy coolify comment + Coolify cpk: lines).
+strip_coolify_lines_from_file() {
+    local keys_file="$1"
+    if [ ! -f "${keys_file}" ]; then
         return 0
     fi
     sed -i -E \
         -e '/[[:space:]](root@)?coolify[[:space:]]*$/d' \
         -e '/[[:space:]]cpk:[^[:space:]]+/d' \
-        "${AUTH_KEYS}" 2>/dev/null || true
-    chmod 600 "${AUTH_KEYS}"
+        "${keys_file}" 2>/dev/null || true
+    chmod 600 "${keys_file}"
+}
+
+# Clear Coolify trust in the Coolify keys file, and scrub any leftover Coolify
+# lines from ~/.ssh/authorized_keys (pre-fix images / manual pastes) so
+# marketplace img_check and DO/user keys stay clean.
+strip_coolify_authorized_keys() {
+    strip_coolify_lines_from_file "${AUTH_KEYS}"
+    strip_coolify_lines_from_file "${ROOT_AUTH_KEYS}"
 }
 
 authorize_pubkey_line() {
@@ -302,6 +316,7 @@ else
     if ! authorize_coolify_pubkey_only; then
         echo "WARNING: Unable to authorize Coolify localhost key."
         echo "  Run again after Coolify is healthy, or paste the UI Current Public Key into ${AUTH_KEYS}"
+        echo "  (not ${ROOT_AUTH_KEYS} — marketplace img_check requires that file stay Coolify-free)"
         echo "  then: /opt/configure-coolify-localhost.sh"
     fi
 fi
