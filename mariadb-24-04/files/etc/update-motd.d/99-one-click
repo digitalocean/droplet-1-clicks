@@ -1,0 +1,36 @@
+#!/bin/sh
+#
+# Configured as part of the DigitalOcean 1-Click Image build process
+
+myip=$(hostname -I | awk '{print$1}')
+
+if grep -qF '/opt/digitalocean_mariadb/setup_mariadb.sh' /root/.bashrc 2>/dev/null; then
+  setup_blurb="On first SSH login, complete MariaDB secure installation when prompted.
+After setup, connect locally with:"
+else
+  setup_blurb="Connect locally with:"
+fi
+
+cat <<EOF
+********************************************************************************
+
+Welcome to DigitalOcean's 1-Click MariaDB Droplet.
+
+To keep this Droplet secure, the UFW firewall is enabled.
+All ports are BLOCKED except 22 (SSH) and 3306 (MariaDB).
+
+${setup_blurb}
+
+  mariadb -u root -p
+
+Your Droplet IP: $myip
+
+Service management:
+  systemctl status mariadb
+  systemctl start|stop|restart mariadb
+
+For help and more information, visit https://marketplace.digitalocean.com/apps/mariadb
+
+********************************************************************************
+To delete this message of the day: rm -rf $(readlink -f ${0})
+EOF
