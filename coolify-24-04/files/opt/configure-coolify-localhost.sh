@@ -51,7 +51,7 @@ else
     echo ""
     echo "Host SSH check did not succeed. Next:"
     echo "1. Ensure Coolify is running: systemctl start coolify"
-    echo "2. Paste the UI 'Current Public Key' into /root/.ssh/authorized_keys"
+    echo "2. Paste the UI 'Current Public Key' into /etc/ssh/authorized_keys.d/coolify"
     echo "3. Re-run: /opt/configure-coolify-localhost.sh"
     echo ""
     exit 1

@@ -15,14 +15,18 @@ myip=$(hostname -I | awk '{print$1}')
 echo "Generating SSH keys for Coolify localhost management..."
 
 # Generate and authorize SSH key for Coolify server management (unique per droplet).
-# Matches Coolify install.sh: comment "coolify", append to authorized_keys, chown 9999.
-# Safe for marketplace: Packer cleanup wipes authorized_keys at image build; this runs per-instance.
+# Matches Coolify install.sh: comment "coolify", authorize pubkey, chown 9999.
+# Follow-up to #509 / MP-9232: keep first-boot authorize, but write trust to
+# /etc/ssh/authorized_keys.d/coolify (sshd drop-in), NOT /root/.ssh/authorized_keys
+# — Vendor Portal img_check fails if that file is populated after onboot.
 SSH_KEY_PATH="/data/coolify/ssh/keys/id.root@host.docker.internal"
+COOLIFY_AUTH_KEYS="/etc/ssh/authorized_keys.d/coolify"
 mkdir -p "$(dirname "${SSH_KEY_PATH}")"
-mkdir -p /root/.ssh
+mkdir -p /root/.ssh /etc/ssh/authorized_keys.d
 chmod 700 /root/.ssh
-touch /root/.ssh/authorized_keys
-chmod 600 /root/.ssh/authorized_keys
+chmod 755 /etc/ssh/authorized_keys.d
+touch "${COOLIFY_AUTH_KEYS}"
+chmod 600 "${COOLIFY_AUTH_KEYS}"
 
 if [ ! -f "${SSH_KEY_PATH}" ]; then
     ssh-keygen -t ed25519 -a 100 -f "${SSH_KEY_PATH}" -q -N '' -C coolify
@@ -31,16 +35,25 @@ else
     echo "SSH keys already exist, skipping generation"
 fi
 
-# Remove prior Coolify keys (legacy root@coolify or coolify), then authorize current pubkey
-sed -i -E '/[[:space:]](root@)?coolify[[:space:]]*$/d' /root/.ssh/authorized_keys
+# Scrub Coolify lines from root authorized_keys (img_check + DO/user keys only there)
+if [ -f /root/.ssh/authorized_keys ]; then
+    sed -i -E \
+        -e '/[[:space:]](root@)?coolify[[:space:]]*$/d' \
+        -e '/[[:space:]]cpk:[^[:space:]]+/d' \
+        /root/.ssh/authorized_keys
+    chmod 600 /root/.ssh/authorized_keys
+fi
+
+# Authorize current pubkey in Coolify-only keys file
+sed -i -E '/[[:space:]](root@)?coolify[[:space:]]*$/d' "${COOLIFY_AUTH_KEYS}"
 if [ -f "${SSH_KEY_PATH}.pub" ]; then
-    cat "${SSH_KEY_PATH}.pub" >> /root/.ssh/authorized_keys
+    cat "${SSH_KEY_PATH}.pub" >> "${COOLIFY_AUTH_KEYS}"
 fi
 chown 9999:root "${SSH_KEY_PATH}"
 chmod 600 "${SSH_KEY_PATH}"
-chmod 600 /root/.ssh/authorized_keys
+chmod 600 "${COOLIFY_AUTH_KEYS}"
 
-echo "SSH key authorized for localhost management."
+echo "SSH key authorized for localhost management (${COOLIFY_AUTH_KEYS})."
 
 # One-time notice on first SSH login (localhost already activated above)
 cat >> /root/.bashrc <<'EOM'

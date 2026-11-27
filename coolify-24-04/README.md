@@ -161,14 +161,14 @@ Located in `/opt/`:
 When a droplet is created from this image:
 
 1. **SSH Configuration**: Removes forced logout for root user
-2. **SSH Key Generation**: Generates unique Coolify localhost keys (`-C coolify`) and attempts authorization in `/root/.ssh/authorized_keys`
+2. **SSH Key Generation**: Generates unique Coolify localhost keys (`-C coolify`) and authorizes them in `/etc/ssh/authorized_keys.d/coolify`
 3. **Coolify Installation**: Starts Coolify via `systemctl enable --now coolify`
 4. **Service Startup**: Waits for containers to be ready; systemd unit is active
 5. **Localhost SSH sync**: Runs `/opt/coolify-sync-localhost-ssh.sh` and marks trust configured only if a real host SSH check passes (soft-fail continues first boot if not)
 6. **Information File**: Creates `/root/coolify_info.txt` with access details (success vs repair messaging)
 7. **MOTD Display**: Shows access information on SSH login
 
-Marketplace safety: Packer cleanup wipes `authorized_keys` at **image build** time. Authorization runs only on **per-instance** first boot.
+Marketplace safety (follow-up to [#509](https://github.com/digitalocean/droplet-1-clicks/pull/509) / MP-9232): Packer cleanup still wipes `/root/.ssh/authorized_keys` at **image build** time. First-boot localhost trust from #509 is kept, but written to `/etc/ssh/authorized_keys.d/coolify` (`Match User root` sshd drop-in) so Vendor Portal `img_check` still sees an empty `~/.ssh/authorized_keys` while Validate keeps working.
 
 ## First Login Experience
 
@@ -276,8 +276,10 @@ docker ps | grep coolify
 systemctl is-active coolify
 systemctl status coolify
 
-# Localhost SSH trust
-grep coolify /root/.ssh/authorized_keys
+# Localhost SSH trust (Coolify keys live outside ~/.ssh/authorized_keys)
+grep coolify /etc/ssh/authorized_keys.d/coolify
+# img_check path must stay Coolify-free:
+! grep -E '(root@)?coolify|cpk:' /root/.ssh/authorized_keys 2>/dev/null
 ssh -i /data/coolify/ssh/keys/id.root@host.docker.internal \
   -o BatchMode=yes -o StrictHostKeyChecking=accept-new root@127.0.0.1 true
 
