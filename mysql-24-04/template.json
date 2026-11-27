@@ -5,8 +5,8 @@
     "image_name": "mysql-24-04-snapshot-{{timestamp}}",
     "apt_packages": "apache2 apache2-utils mysql-server php php-gd php-mysql phpmyadmin python3-certbot-apache libapache2-mod-php lamp-server^ ",
     "application_name": "MySQL",
-    "application_version": "8.0.21",
-    "phpmyadmin_version": "5.2.2"
+    "application_version": "latest",
+    "phpmyadmin_version": "5.2.3"
   },
   "sensitive-variables": ["do_api_token"],
   "builders": [
@@ -70,7 +70,7 @@
       ],
       "scripts": [
         "mysql-24-04/scripts/010-php-my-admin.sh",
-        "common/scripts/014-ufw-apache.sh",
+        "common/scripts/014-ufw-apache-http.sh",
         "common/scripts/014-ufw-mysql.sh",
         "common/scripts/018-force-ssh-logout.sh",
         "common/scripts/020-application-tag.sh",
