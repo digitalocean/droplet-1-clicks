@@ -50,7 +50,11 @@ done
 systemctl enable mariadb.service
 systemctl start mariadb.service
 
-# Add first-login task
+# MOTD (run-parts only runs executable scripts)
+chmod +x /etc/update-motd.d/99-one-click
+
+# First-login setup (runs once when root SSHs in)
+chmod +x /opt/digitalocean_mariadb/setup_mariadb.sh
 cat >> /root/.bashrc <<EOM
 /opt/digitalocean_mariadb/setup_mariadb.sh
 EOM

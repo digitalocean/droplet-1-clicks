@@ -6,7 +6,7 @@ Deploy [MariaDB](https://mariadb.org/) Community Server on Ubuntu 24.04. This im
 
 | Package | Version | License |
 |---------|---------|---------|
-| MariaDB Server | 10.11.19 (from `application_version` in `template.json`) | GPL |
+| MariaDB Server | 10.11.20 (from `application_version` in `template.json`) | GPL |
 | Ubuntu | 24.04 LTS | — |
 | UFW | enabled | — |
 

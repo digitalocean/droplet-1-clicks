@@ -7,7 +7,7 @@ Packer builder for the DigitalOcean Marketplace MariaDB image on Ubuntu 24.04.
 | Variable | Purpose |
 |----------|---------|
 | `DIGITALOCEAN_API_TOKEN` | API token for Packer |
-| `application_version` | Exact MariaDB version to pin (default in `template.json`: `10.11.19`) |
+| `application_version` | Exact MariaDB version to pin (default in `template.json`: `10.11.20`) |
 
 ## Validate / build
 
@@ -20,8 +20,8 @@ make build-mariadb-24-04
 Or:
 
 ```bash
-packer validate -var application_version=10.11.19 mariadb-24-04/template.json
-packer build -var application_version=10.11.19 mariadb-24-04/template.json
+packer validate -var application_version=10.11.20 mariadb-24-04/template.json
+packer build -var application_version=10.11.20 mariadb-24-04/template.json
 ```
 
 Autoupdate / Packer must pass a non-empty `application_version`; the install script fails closed if it is unset.
@@ -32,6 +32,7 @@ Autoupdate / Packer must pass a non-empty `application_version`; the install scr
 |------|------|
 | `template.json` | Packer template (UFW via `common/scripts/014-ufw-mysql.sh`) |
 | `scripts/010-mariadb.sh` | Official repo pin + install |
+| `files/etc/update-motd.d/99-one-click` | SSH MOTD (firewall, first-login setup, connect tips) |
 | `files/opt/digitalocean_mariadb/setup_mariadb.sh` | First-login `mysql_secure_installation` |
 | `listing.md` | Marketplace / Vendor Portal catalog copy |
 

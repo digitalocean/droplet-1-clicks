@@ -33,6 +33,11 @@
     },
     {
       "type": "file",
+      "source": "mariadb-24-04/files/etc/",
+      "destination": "/etc/"
+    },
+    {
+      "type": "file",
       "source": "mariadb-24-04/files/opt/",
       "destination": "/opt/"
     },
