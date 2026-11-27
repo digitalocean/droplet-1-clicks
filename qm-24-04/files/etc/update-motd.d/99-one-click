@@ -1,0 +1,14 @@
+#!/bin/sh
+myip=$(hostname -I | awk '{print$1}')
+cat <<EOF
+********************************************************************************
+
+QM — https://${myip}/
+
+Full access info: /root/qm_info.txt
+Manage: /srv/qm/start-qm.sh  /srv/qm/stop-qm.sh  /srv/qm/restart-qm.sh  /srv/qm/status-qm.sh  /srv/qm/update-qm.sh
+Setup:  sudo /etc/setup_wizard.sh
+
+********************************************************************************
+To remove this MOTD: rm -rf $(readlink -f "${0}")
+EOF
